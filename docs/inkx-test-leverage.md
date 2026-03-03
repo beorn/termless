@@ -250,14 +250,9 @@ All termless tests follow this structure:
 ```typescript
 import { createTerminal } from "termless"
 import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
 
 function createTestTerminal(cols: number, rows: number) {
-  return createTerminal({
-    backend: createXtermBackend({ cols, rows }),
-    cols, rows,
-    scrollbackLimit: 1000,
-  })
+  return createTerminal({ backend: createXtermBackend(), cols, rows, scrollbackLimit: 1000 })
 }
 
 test("description", () => {

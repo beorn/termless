@@ -1,8 +1,12 @@
 # API: Vitest Matchers
 
 ```typescript
-import "viterm/matchers"  // Auto-registers all matchers
-// or:
+import { createTerminalFixture } from "viterm" // Matchers auto-registered on import
+
+// Or register manually (e.g., when using createTerminal directly):
+import "viterm/matchers"
+
+// Or cherry-pick:
 import { terminalMatchers } from "viterm/matchers"
 expect.extend(terminalMatchers)
 ```

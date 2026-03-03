@@ -6,10 +6,8 @@ Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
 import { createTerminal } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
 
 const term = createTerminal({
-  backend: createXtermBackend(),
   cols: 80,    // default: 80
   rows: 24,    // default: 24
   scrollbackLimit: 1000,
@@ -20,7 +18,7 @@ const term = createTerminal({
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `backend` | `TerminalBackend` | *required* | Backend instance (e.g., from `createXtermBackend()`) |
+| `backend` | `TerminalBackend` | xterm.js | Backend instance (defaults to xterm.js) |
 | `cols` | `number` | `80` | Terminal width in columns |
 | `rows` | `number` | `24` | Terminal height in rows |
 | `scrollbackLimit` | `number` | -- | Maximum scrollback lines (backend-dependent) |

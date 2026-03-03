@@ -72,7 +72,6 @@ export default [
 // test/my-app.test.ts
 import { test, expect } from "vitest"
 import { createTerminal } from "termless"
-import "viterm/matchers"
 
 function createTerm(cols = 80, rows = 24) {
   return createTerminal({ backend: globalThis.createBackend(), cols, rows })

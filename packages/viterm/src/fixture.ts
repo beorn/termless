@@ -2,19 +2,14 @@
  * Terminal fixture factory for vitest tests.
  *
  * Creates Terminal instances that are automatically cleaned up after each test
- * via vitest's afterEach hook.
+ * via vitest's afterEach hook. Uses xterm.js backend by default.
  *
  * @example
  * ```typescript
- * import { createTerminalFixture } from "viterm/fixture"
- * import { createXtermBackend } from "termless-xtermjs"
+ * import { createTerminalFixture } from "viterm"
  *
  * test("renders prompt", async () => {
- *   const term = createTerminalFixture({
- *     backend: createXtermBackend(),
- *     cols: 80,
- *     rows: 24,
- *   })
+ *   const term = createTerminalFixture()
  *   term.feed("$ ")
  *   expect(term.screen).toContainText("$ ")
  * })
@@ -24,6 +19,15 @@
 import { afterEach } from "vitest"
 import type { Terminal, TerminalCreateOptions } from "../../../src/types.ts"
 import { createTerminal } from "../../../src/index.ts"
+import { createXtermBackend } from "../../xtermjs/src/backend.ts"
+
+/** Options for createTerminalFixture. Backend defaults to xterm.js. */
+export interface TerminalFixtureOptions {
+	backend?: TerminalCreateOptions["backend"]
+	cols?: number
+	rows?: number
+	scrollbackLimit?: number
+}
 
 // Track active fixtures for cleanup
 const activeFixtures: Terminal[] = []
@@ -41,9 +45,12 @@ afterEach(async () => {
  *
  * Wraps createTerminal() and registers the instance for automatic cleanup
  * in afterEach. No manual close() call needed.
+ *
+ * Uses xterm.js backend by default. Pass `backend` to override.
  */
-export function createTerminalFixture(options: TerminalCreateOptions): Terminal {
-	const terminal = createTerminal(options)
+export function createTerminalFixture(options?: TerminalFixtureOptions): Terminal {
+	const backend = options?.backend ?? createXtermBackend()
+	const terminal = createTerminal({ ...options, backend })
 	activeFixtures.push(terminal)
 	return terminal
 }

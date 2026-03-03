@@ -37,22 +37,15 @@ features:
 ## Quick Start
 
 ```bash
-bun add termless termless-xtermjs
 bun add -d viterm
 ```
 
 ```typescript
-import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { test, expect } from "vitest"
+import { createTerminalFixture } from "viterm"
 
 test("displays welcome message", () => {
-  const term = createTerminalFixture({
-    backend: createXtermBackend(),
-    cols: 80,
-    rows: 24,
-  })
+  const term = createTerminalFixture()
 
   term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
 
@@ -101,8 +94,10 @@ expect(term.cell(0, 0)).toHaveFg("#ff0000")
 | Feature | termless | Manual string testing | Playwright |
 |---------|----------|-----------------------|------------|
 | Speed | ~1ms/test | ~1ms/test | ~100ms+/test |
+| Terminal internals | Scrollback, cursor, modes, cell attrs | None | N/A |
 | ANSI awareness | Full (colors, bold, cursor) | None | N/A |
 | Multi-backend | 6 terminal emulators | N/A | 3 browsers |
+| Protocol capabilities | Kitty, sixel, OSC 8, reflow | None | N/A |
 | Wide char support | Cell-level width tracking | Broken | N/A |
 | Screenshots | SVG (no deps) | None | PNG (Chromium) |
 | PTY support | Spawn real processes | Manual | N/A |

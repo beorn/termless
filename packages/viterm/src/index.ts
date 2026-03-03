@@ -1,5 +1,6 @@
 export { terminalMatchers } from "./matchers.ts"
 export { createTerminalFixture } from "./fixture.ts"
+export type { TerminalFixtureOptions } from "./fixture.ts"
 export { terminalSerializer, terminalSnapshot } from "./serializer.ts"
 export type { TerminalSnapshotMarker } from "./serializer.ts"
 export { svgTerminalSerializer, svgTerminalSnapshot } from "./svg-serializer.ts"

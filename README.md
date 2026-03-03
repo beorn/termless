@@ -41,13 +41,11 @@ await term.close()
 ### Write tests with Vitest matchers
 
 ```typescript
-import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { test, expect } from "vitest"
+import { createTerminalFixture } from "viterm"
 
 test("renders bold red text", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend() })
+  const term = createTerminalFixture()
   term.feed("\x1b[1;38;2;255;0;0mError\x1b[0m")
 
   expect(term.screen).toContainText("Error")
@@ -186,8 +184,7 @@ expect(term).toHaveTitle("My App")
 ## Installation
 
 ```bash
-bun add termless termless-xtermjs   # Core + xterm.js backend
-bun add -d viterm                   # Vitest matchers + fixtures
+bun add -d viterm                   # Vitest matchers + fixtures (includes xterm.js backend)
 ```
 
 ## Multi-Backend Testing
@@ -269,12 +266,14 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 | Feature | termless | TUI Test | ttytest2 | pexpect | Textual | Ink |
 |---------|----------|----------|----------|---------|---------|-----|
+| **Terminal internals** | ✅ scrollback, cursor, modes, cell attrs | ❌ | ❌ | ❌ | ⚠️ | ❌ |
 | **Multi-backend** | ✅ 6 backends | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
 | **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ⚠️ | ❌ |
 | **Visual matchers** | ✅ 21+ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
+| **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **TypeScript** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Documentation
 

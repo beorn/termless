@@ -6,9 +6,7 @@ Import matchers and create fixtures:
 
 ```typescript
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers" // Registers all matchers on expect()
+import { createTerminalFixture } from "viterm"
 ```
 
 `createTerminalFixture()` wraps `createTerminal()` and registers cleanup in `afterEach` -- no manual `close()` needed.
@@ -141,7 +139,7 @@ import { terminalSerializer, terminalSnapshot } from "viterm"
 expect.addSnapshotSerializer(terminalSerializer)
 
 test("renders correctly", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend(), cols: 40, rows: 5 })
+  const term = createTerminalFixture({ cols: 40, rows: 5 })
   term.feed("\x1b[1mTitle\x1b[0m\r\nContent")
 
   expect(terminalSnapshot(term)).toMatchSnapshot()
@@ -172,7 +170,7 @@ With style annotations when cells have non-default attributes:
 
 ```typescript
 test("error message is red and bold", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend() })
+  const term = createTerminalFixture()
   term.feed("\x1b[1;31mError:\x1b[0m file not found")
 
   expect(term.screen).toContainText("Error: file not found")
@@ -186,7 +184,7 @@ test("error message is red and bold", () => {
 
 ```typescript
 test("cursor tracks input", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend() })
+  const term = createTerminalFixture()
   term.feed("Hello")
   expect(term).toHaveCursorAt(5, 0)
 
@@ -199,7 +197,7 @@ test("cursor tracks input", () => {
 
 ```typescript
 test("app enters alt screen", async () => {
-  const term = createTerminalFixture({ backend: createXtermBackend(), cols: 80, rows: 24 })
+  const term = createTerminalFixture({ cols: 80, rows: 24 })
   await term.spawn(["my-tui"])
   await term.waitForStable()
 
@@ -216,7 +214,7 @@ test("app enters alt screen", async () => {
 
 ```typescript
 test("find specific text", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend() })
+  const term = createTerminalFixture()
   term.feed("Line 0\r\nLine 1\r\nTarget here")
 
   const pos = term.find("Target")
@@ -234,7 +232,7 @@ test("find specific text", () => {
 
 ```typescript
 test("read text from different regions", () => {
-  const term = createTerminalFixture({ backend: createXtermBackend(), cols: 80, rows: 5 })
+  const term = createTerminalFixture({ cols: 80, rows: 5 })
 
   // Feed enough lines to create scrollback
   for (let i = 0; i < 10; i++) {

@@ -3,13 +3,10 @@
 ## Installation
 
 ```bash
-bun add termless termless-xtermjs
 bun add -d viterm
 ```
 
-- **termless** -- core library (Terminal, PTY, SVG screenshots, key mapping)
-- **termless-xtermjs** -- xterm.js backend (in-process terminal emulation via `@xterm/headless`)
-- **viterm** -- Vitest integration (25+ matchers, fixtures, snapshot serializer)
+- **viterm** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `termless` (core) and `termless-xtermjs` (xterm.js backend) as dependencies.
 
 ## First Test
 
@@ -18,14 +15,11 @@ Create a test file:
 ```typescript
 // tests/terminal.test.ts
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { createTerminalFixture } from "viterm"
 
 describe("my TUI app", () => {
   test("displays welcome message", () => {
     const term = createTerminalFixture({
-      backend: createXtermBackend(),
       cols: 80,
       rows: 24,
     })
@@ -45,7 +39,6 @@ describe("my TUI app", () => {
 
   test("renders colored status bar", () => {
     const term = createTerminalFixture({
-      backend: createXtermBackend(),
       cols: 40,
       rows: 10,
     })
@@ -71,13 +64,10 @@ To test a real TUI application with PTY:
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { createTerminalFixture } from "viterm"
 
 test("ls output contains files", async () => {
   const term = createTerminalFixture({
-    backend: createXtermBackend(),
     cols: 80,
     rows: 24,
   })
@@ -90,7 +80,6 @@ test("ls output contains files", async () => {
 
 test("interactive app responds to keypresses", async () => {
   const term = createTerminalFixture({
-    backend: createXtermBackend(),
     cols: 120,
     rows: 40,
   })

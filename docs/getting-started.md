@@ -3,13 +3,10 @@
 ## Installation
 
 ```bash
-bun add termless termless-xtermjs
 bun add -d viterm
 ```
 
-- **termless** -- core library (Terminal, PTY, SVG screenshots, key mapping)
-- **termless-xtermjs** -- xterm.js backend (in-process terminal emulation via `@xterm/headless`)
-- **viterm** -- Vitest integration (25+ matchers, fixtures, snapshot serializer)
+- **viterm** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Includes `termless` core and `termless-xtermjs` backend as dependencies.
 
 ## First Test
 
@@ -18,17 +15,11 @@ Create a test file:
 ```typescript
 // tests/terminal.test.ts
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { createTerminalFixture } from "viterm"
 
 describe("my TUI app", () => {
   test("displays welcome message", () => {
-    const term = createTerminalFixture({
-      backend: createXtermBackend(),
-      cols: 80,
-      rows: 24,
-    })
+    const term = createTerminalFixture({ cols: 80, rows: 24 })
 
     // Feed ANSI data (as if a terminal app wrote it)
     term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
@@ -44,11 +35,7 @@ describe("my TUI app", () => {
   })
 
   test("renders colored status bar", () => {
-    const term = createTerminalFixture({
-      backend: createXtermBackend(),
-      cols: 40,
-      rows: 10,
-    })
+    const term = createTerminalFixture({ cols: 40, rows: 10 })
 
     // Red foreground with truecolor
     term.feed("\x1b[38;2;255;0;0mERROR\x1b[0m: something went wrong")
@@ -71,16 +58,10 @@ To test a real TUI application with PTY:
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "viterm/fixture"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { createTerminalFixture } from "viterm"
 
 test("ls output contains files", async () => {
-  const term = createTerminalFixture({
-    backend: createXtermBackend(),
-    cols: 80,
-    rows: 24,
-  })
+  const term = createTerminalFixture({ cols: 80, rows: 24 })
 
   await term.spawn(["ls", "-la"])
   await term.waitFor("total") // Wait for ls output
@@ -89,11 +70,7 @@ test("ls output contains files", async () => {
 })
 
 test("interactive app responds to keypresses", async () => {
-  const term = createTerminalFixture({
-    backend: createXtermBackend(),
-    cols: 120,
-    rows: 40,
-  })
+  const term = createTerminalFixture({ cols: 120, rows: 40 })
 
   await term.spawn(["my-tui-app"])
   await term.waitFor("ready>")
@@ -115,11 +92,7 @@ import { createTerminal } from "termless"
 import { createXtermBackend } from "termless-xtermjs"
 
 test("with explicit cleanup", async () => {
-  await using term = createTerminal({
-    backend: createXtermBackend(),
-    cols: 80,
-    rows: 24,
-  })
+  await using term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
 
   term.feed("Hello")
   expect(term.getText()).toContain("Hello")
