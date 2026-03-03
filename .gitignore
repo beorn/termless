@@ -1,2 +1,4 @@
 node_modules/
 dist/
+docs/site/.vitepress/cache/
+docs/site/.vitepress/dist/

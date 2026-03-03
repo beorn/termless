@@ -1,0 +1,116 @@
+---
+layout: home
+
+hero:
+  name: "termless"
+  text: "Headless terminal testing"
+  tagline: "Like Playwright, but for terminal apps. Write tests once, run against any backend. ~1ms per test."
+  actions:
+    - theme: brand
+      text: Get Started
+      link: /guide/getting-started
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/beorn/termless
+
+features:
+  - icon: "\u26A1"
+    title: Fast
+    details: "Pure in-process terminal emulation. ~1ms per test, not ~100ms. No Chromium, no subprocesses, no flakiness."
+  - icon: "\U0001F4E6"
+    title: 6 Backends
+    details: "xterm.js, Ghostty, Alacritty, WezTerm, vt100, Peekaboo. Write once, verify across all of them."
+  - icon: "\u2705"
+    title: 21+ Matchers
+    details: "Text, style, cursor, mode, scrollback, snapshots. Composable region selectors for precise assertions."
+  - icon: "\U0001F50D"
+    title: Composable Selectors
+    details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert."
+  - icon: "\U0001F5BC\uFE0F"
+    title: SVG Screenshots
+    details: "Generate terminal screenshots as SVG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered."
+  - icon: "\U0001F527"
+    title: CLI + MCP
+    details: "termless capture for scripts, termless mcp for AI agents. Automate terminal interaction from the command line."
+---
+
+## Quick Start
+
+```bash
+bun add termless termless-xtermjs
+bun add -d viterm
+```
+
+```typescript
+import { describe, test, expect } from "vitest"
+import { createTerminalFixture } from "viterm/fixture"
+import { createXtermBackend } from "termless-xtermjs"
+import "viterm/matchers"
+
+test("displays welcome message", () => {
+  const term = createTerminalFixture({
+    backend: createXtermBackend(),
+    cols: 80,
+    rows: 24,
+  })
+
+  term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
+
+  expect(term.screen).toContainText("Welcome to MyApp v1.0")
+  expect(term.cell(0, 11)).toBeBold()
+})
+```
+
+## Why Not Just Assert on Strings?
+
+String assertions on terminal output break constantly:
+
+- **ANSI codes** make string matching fragile (`\x1b[1m` litters your test)
+- **Trailing whitespace** differs between terminals and runs
+- **Wide characters** (emoji, CJK) occupy 2 columns but 1 string position
+- **Colors** are invisible in `getText()` — a red error looks the same as a green success
+
+termless gives you **structured access** to the terminal buffer. Assert on what matters:
+
+```typescript
+// Instead of fragile string matching...
+expect(output).toContain("\x1b[1;31mError\x1b[0m")
+
+// ...assert on structure
+expect(term.screen).toContainText("Error")
+expect(term.cell(0, 0)).toBeBold()
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `termless` | Core: Terminal API, PTY, SVG screenshots, key mapping, region views |
+| `termless-xtermjs` | xterm.js backend via `@xterm/headless` |
+| `termless-ghostty` | Ghostty backend via `ghostty-web` WASM |
+| `termless-vt100` | Pure TypeScript VT100 emulator, zero native deps |
+| `termless-alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs) |
+| `termless-wezterm` | WezTerm backend via `wezterm-term` (napi-rs) |
+| `termless-peekaboo` | OS-level terminal automation (xterm.js + real app) |
+| `viterm` | Vitest integration: 25+ matchers, fixtures, snapshot serializer |
+| `termless-cli` | CLI tools + MCP server for AI agents |
+
+## How It Compares
+
+| Feature | termless | Manual string testing | Playwright |
+|---------|----------|-----------------------|------------|
+| Speed | ~1ms/test | ~1ms/test | ~100ms+/test |
+| ANSI awareness | Full (colors, bold, cursor) | None | N/A |
+| Multi-backend | 6 terminal emulators | N/A | 3 browsers |
+| Wide char support | Cell-level width tracking | Broken | N/A |
+| Screenshots | SVG (no deps) | None | PNG (Chromium) |
+| PTY support | Spawn real processes | Manual | N/A |
+| AI integration | MCP server | None | None |
+
+<style>
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(120deg, #41d1ff 30%, #bd34fe 100%);
+}
+</style>

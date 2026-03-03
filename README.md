@@ -230,13 +230,15 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) -- install, first test, run it
-- [Writing Tests](docs/writing-tests.md) -- matchers, fixtures, assertion patterns
-- [Terminal API](docs/terminal-api.md) -- `createTerminal()` and all Terminal methods
-- [Screenshots](docs/screenshots.md) -- SVG screenshots, themes, custom fonts
-- [Multi-Backend Testing](docs/multi-backend.md) -- test against xterm.js + Ghostty
-- [CLI](docs/cli.md) -- CLI usage and MCP server
-- **API Reference**: [Terminal](docs/api/terminal.md) | [Backend](docs/api/backend.md) | [Cell](docs/api/cell.md) | [Matchers](docs/api/matchers.md)
+**[Full documentation site](https://beorn.github.io/termless/)**
+
+- [Getting Started](https://beorn.github.io/termless/guide/getting-started) -- install, first test, run it
+- [Writing Tests](https://beorn.github.io/termless/guide/writing-tests) -- matchers, fixtures, assertion patterns
+- [Terminal API](https://beorn.github.io/termless/api/terminal) -- `createTerminal()` and all Terminal methods
+- [Screenshots](https://beorn.github.io/termless/guide/screenshots) -- SVG screenshots, themes, custom fonts
+- [Multi-Backend Testing](https://beorn.github.io/termless/guide/multi-backend) -- test against any backend
+- [CLI & MCP](https://beorn.github.io/termless/guide/cli) -- CLI usage and MCP server
+- **API Reference**: [Terminal](https://beorn.github.io/termless/api/terminal) | [Backend](https://beorn.github.io/termless/api/backend) | [Cell & Types](https://beorn.github.io/termless/api/cell) | [Matchers](https://beorn.github.io/termless/api/matchers)
 
 ## License
 
