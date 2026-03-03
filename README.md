@@ -216,24 +216,28 @@ bun add -d @termless/test                   # Vitest matchers + fixtures (includ
 Test your TUI against multiple terminal emulators with a single test suite. Write tests once, configure backends via vitest workspace:
 
 ```typescript
-// vitest.workspace.ts
+// vitest.workspace.ts — add as many backends as you want
 export default [
-  {
-    test: { name: "xterm", setupFiles: ["./test/setup-xterm.ts"] },
-  },
-  {
-    test: { name: "ghostty", setupFiles: ["./test/setup-ghostty.ts"] },
-  },
+  { test: { name: "xterm",     setupFiles: ["./test/setup-xterm.ts"] } },
+  { test: { name: "ghostty",   setupFiles: ["./test/setup-ghostty.ts"] } },
+  { test: { name: "vt100",     setupFiles: ["./test/setup-vt100.ts"] } },
+  // Also available: alacritty, wezterm (require Rust build), peekaboo (OS-level)
 ]
 ```
 
 ```typescript
-// test/setup-xterm.ts
-import { createXtermBackend } from "@termless/xtermjs"
-globalThis.createBackend = () => createXtermBackend()
+// test/setup-xterm.ts                         // test/setup-ghostty.ts
+import { createXtermBackend }                  import { createGhosttyBackend }
+  from "@termless/xtermjs"                       from "@termless/ghostty"
+globalThis.createBackend =                     globalThis.createBackend =
+  () => createXtermBackend()                     () => createGhosttyBackend()
+
+// test/setup-vt100.ts — pure TypeScript, zero native deps
+import { createVt100Backend } from "@termless/vt100"
+globalThis.createBackend = () => createVt100Backend()
 ```
 
-Your tests use `globalThis.createBackend()` and run against every configured backend automatically. See [docs/multi-backend.md](docs/multi-backend.md).
+Your tests use `globalThis.createBackend()` and run against every configured backend automatically. `vitest` runs the entire test suite once per workspace entry — same tests, different terminal emulators. See [docs/multi-backend.md](docs/multi-backend.md).
 
 ## CLI
 
