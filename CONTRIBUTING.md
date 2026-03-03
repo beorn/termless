@@ -38,6 +38,10 @@ bun run typecheck
 | `termless` (root) | Core types, Terminal API, PTY, SVG screenshots, key mapping |
 | `termless-xtermjs` | xterm.js backend using @xterm/headless |
 | `termless-ghostty` | Ghostty backend (ghostty-web WASM) |
+| `termless-vt100` | Pure TypeScript VT100 emulator (zero native deps) |
+| `termless-alacritty` | Alacritty backend (alacritty_terminal via napi-rs) |
+| `termless-wezterm` | WezTerm backend (wezterm-term via napi-rs) |
+| `termless-peekaboo` | OS-level terminal automation (xterm.js + real app) |
 | `viterm` | Vitest matchers, fixtures, and snapshot serializer |
 | `termless-cli` | CLI tool and MCP server |
 

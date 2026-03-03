@@ -1,14 +1,18 @@
 # Multi-Backend Testing
 
-termless separates the test API from the terminal emulator. Write tests once, run them against xterm.js and Ghostty.
+termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
 
 ## Architecture
 
 ```
 Your tests
   └── termless (Terminal API)
-        ├── termless-xtermjs  (xterm.js via @xterm/headless)
-        └── termless-ghostty  (Ghostty via ghostty-web WASM)
+        ├── termless-xtermjs   (xterm.js via @xterm/headless)
+        ├── termless-ghostty   (Ghostty via ghostty-web WASM)
+        ├── termless-vt100     (pure TypeScript, zero deps)
+        ├── termless-alacritty (alacritty_terminal via napi-rs)
+        ├── termless-wezterm   (wezterm-term via napi-rs)
+        └── termless-peekaboo  (xterm.js + OS automation)
 ```
 
 Tests interact with the `Terminal` interface. The backend is injected at creation time.

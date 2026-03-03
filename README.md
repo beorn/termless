@@ -208,6 +208,10 @@ termless mcp
 | [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
 | [termless-xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
 | [termless-ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
+| [termless-vt100](packages/vt100) | Pure TypeScript VT100 emulator (zero native deps) |
+| [termless-alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs) |
+| [termless-wezterm](packages/wezterm) | WezTerm backend (`wezterm-term` via napi-rs) |
+| [termless-peekaboo](packages/peekaboo) | OS-level terminal automation (xterm.js + real app) |
 | [viterm](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
 | [termless-cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
 
@@ -217,7 +221,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 | Feature | termless | TUI Test | ttytest2 | pexpect | Textual | Ink |
 |---------|----------|----------|----------|---------|---------|-----|
-| **Multi-backend** | ✅ xterm.js + Ghostty | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
+| **Multi-backend** | ✅ 6 backends | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
 | **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ⚠️ | ❌ |
 | **Visual matchers** | ✅ 21+ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
 | **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
