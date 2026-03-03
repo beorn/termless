@@ -25,7 +25,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "workspace:*"
+    "termless": "*"
   },
   "napi": {
     "binaryName": "termless-alacritty-native",

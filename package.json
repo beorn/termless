@@ -1,5 +1,5 @@
 {
-  "name": "termless",
+  "name": "termless-monorepo",
   "version": "0.1.0",
   "description": "Headless terminal library for cross-terminal TUI testing",
   "keywords": [
@@ -36,7 +36,6 @@
     "./svg": "./src/svg.ts"
   },
   "workspaces": [
-    ".",
     "packages/*"
   ],
   "scripts": {
@@ -54,6 +53,8 @@
     "@types/bun": "^1.1.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3",
+    "vitepress": "^1.5.0",
+    "vitepress-plugin-llms": "^1.0.0",
     "vitest": "^4.0.0"
   }
 }

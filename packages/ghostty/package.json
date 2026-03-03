@@ -28,6 +28,6 @@
     "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {
-    "termless": "workspace:*"
+    "termless": "*"
   }
 }

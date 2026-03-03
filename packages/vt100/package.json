@@ -25,6 +25,6 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "workspace:*"
+    "termless": "*"
   }
 }

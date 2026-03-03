@@ -27,7 +27,7 @@
     "./fixture": "./src/fixture.ts"
   },
   "peerDependencies": {
-    "termless": "workspace:*",
+    "termless": "*",
     "vitest": ">=2.0.0"
   }
 }

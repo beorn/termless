@@ -27,7 +27,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "workspace:*"
+    "termless": "*"
   },
   "scripts": {
     "build:native": "cd native && cargo build --release",
