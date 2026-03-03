@@ -288,16 +288,17 @@ termless mcp
 
 termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
 
-| Feature | termless | TUI Test | ttytest2 | pexpect | Textual | Ink |
-|---------|----------|----------|----------|---------|---------|-----|
-| **Terminal internals** | ✅ scrollback, cursor, modes, cell attrs | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Multi-backend** | ✅ 6 backends | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
-| **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Visual matchers** | ✅ 21+ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
-| **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **TypeScript** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Feature | termless | Playwright + xterm.js | TUI Test | ttytest2 | pexpect | Textual | Ink |
+|---------|----------|-----------------------|----------|----------|---------|---------|-----|
+| **Terminal internals** | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| **Multi-backend** | ✅ 6 backends | ❌ xterm.js only | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
+| **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| **Visual matchers** | ✅ 21+ | ❌ DIY | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
+| **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow | ❌ xterm.js subset | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **No browser/Chromium** | ✅ | ❌ needs Chromium | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **TypeScript** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 
 ## Documentation
 
@@ -310,6 +311,10 @@ termless is the **only** headless terminal testing library that supports multi-b
 - [Multi-Backend Testing](https://beorn.github.io/termless/guide/multi-backend) -- test against any backend
 - [CLI & MCP](https://beorn.github.io/termless/guide/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://beorn.github.io/termless/api/terminal) | [Backend](https://beorn.github.io/termless/api/backend) | [Cell & Types](https://beorn.github.io/termless/api/cell) | [Matchers](https://beorn.github.io/termless/api/matchers)
+
+## See Also
+
+**[inkx](https://github.com/beorn/inkx)** -- if termless is for *testing* terminal apps, inkx is for *building* them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — inkx handles the terminal complexity. Use `@termless/test` to verify your inkx app renders correctly across terminals.
 
 ## License
 
