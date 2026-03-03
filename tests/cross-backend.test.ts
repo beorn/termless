@@ -80,6 +80,12 @@ describe("cross-backend conformance", () => {
 				const cell = b.getCell(2, 9) // 0-based row 2, col 9
 				expect(cell.text).toBe("X")
 			})
+
+			test("line wrap at boundary", () => {
+				const b = init(create)
+				feedText(b, "1234567890".repeat(8) + "WRAP")
+				expect(b.getText()).toContain("WRAP")
+			})
 		})
 	})
 
@@ -138,6 +144,23 @@ describe("cross-backend conformance", () => {
 				expect(cell.italic).toBe(true)
 				expect(cell.fg).toEqual({ r: 255, g: 0, b: 0 })
 			})
+
+			test("reset (SGR 0) clears all styles", () => {
+				const b = init(create)
+				feedText(b, "\x1b[1;3;4;9mStyled\x1b[0mPlain")
+				const plain = b.getCell(0, 6) // 'P' in 'Plain'
+				expect(plain.bold).toBe(false)
+				expect(plain.italic).toBe(false)
+				expect(plain.strikethrough).toBe(false)
+				expect(plain.underline).toBe("none")
+			})
+
+			test("256-color FG (SGR 38;5)", () => {
+				const b = init(create)
+				feedText(b, "\x1b[38;5;196mR\x1b[0m")
+				const cell = b.getCell(0, 0)
+				expect(cell.fg).not.toBeNull()
+			})
 		})
 	})
 
@@ -166,6 +189,12 @@ describe("cross-backend conformance", () => {
 				expect(cursor.x).toBe(19) // 0-based
 				expect(cursor.y).toBe(9) // 0-based
 			})
+
+			test("CUF forward (\\e[5C)", () => {
+				const b = init(create)
+				feedText(b, "\x1b[5C")
+				expect(b.getCursor().x).toBe(5)
+			})
 		})
 	})
 
@@ -184,6 +213,11 @@ describe("cross-backend conformance", () => {
 				const b = init(create)
 				feedText(b, "\x1b[?2004h")
 				expect(b.getMode("bracketedPaste")).toBe(true)
+			})
+
+			test("auto wrap (default on)", () => {
+				const b = init(create)
+				expect(b.getMode("autoWrap")).toBe(true)
 			})
 		})
 	})
@@ -292,6 +326,48 @@ describe("cross-backend conformance", () => {
 				feedText(b, "Content here")
 				b.reset()
 				expect(b.getText()).not.toContain("Content here")
+			})
+
+			test("RIS (\\ec) clears screen", () => {
+				const b = init(create)
+				feedText(b, "Content\x1bc")
+				expect(b.getText()).not.toContain("Content")
+			})
+		})
+	})
+
+	describe("scrollback", () => {
+		forEachBackend((_name, create) => {
+			test("screen lines reported", () => {
+				const b = init(create)
+				const s = b.getScrollback()
+				expect(s.screenLines).toBe(24)
+			})
+
+			test("scrollback accumulates", () => {
+				const b = init(create)
+				feedText(b, Array.from({ length: 30 }, (_, i) => `Line ${i}`).join("\r\n"))
+				const s = b.getScrollback()
+				expect(s.totalLines).toBeGreaterThan(24)
+			})
+		})
+	})
+
+	describe("capabilities", () => {
+		forEachBackend((_name, create) => {
+			test("truecolor support", () => {
+				const b = init(create)
+				expect(b.capabilities.truecolor).toBe(true)
+			})
+
+			test("reflow support", () => {
+				const b = init(create)
+				expect(typeof b.capabilities.reflow).toBe("boolean")
+			})
+
+			test("kitty keyboard", () => {
+				const b = init(create)
+				expect(typeof b.capabilities.kittyKeyboard).toBe("boolean")
 			})
 		})
 	})

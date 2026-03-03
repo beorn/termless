@@ -146,12 +146,13 @@ const describeNative = nativeAvailable ? describe : describe.skip
 
 Then wrap your backend's test registration with `describeNative` so it is automatically skipped when the native build is not present.
 
-**`tests/compat-matrix.ts`** -- add to the `backendFactories` array:
+**`tests/cross-backend.test.ts`** -- add to the `backends` array:
 
 ```typescript
-const backendFactories: [string, () => TerminalBackend][] = [
-  ["xterm.js", () => createXtermBackend()],
+const backends: [string, BackendFactory][] = [
+  ["xterm", () => createXtermBackend()],
   ["ghostty", () => createGhosttyBackend(undefined, ghostty)],
+  ["vt100", () => createVt100Backend()],
   ["<name>", () => create<Name>Backend()],  // <-- add this
 ]
 ```
@@ -435,7 +436,6 @@ After your backend-specific tests pass, run the cross-backend conformance suite 
 
 ```bash
 bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
-bun vendor/beorn-termless/tests/compat-matrix.ts
 ```
 
 ## Reporting Issues

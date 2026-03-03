@@ -80,6 +80,5 @@ backend.destroy()
 
 - [ ] Set up napi-rs build pipeline (generates platform-specific .node binaries)
 - [ ] Add to cross-backend.test.ts once native module builds
-- [ ] Add to compat-matrix.ts
 - [ ] CI: build native binaries for all target platforms
 - [ ] Publish as npm package with prebuilt binaries

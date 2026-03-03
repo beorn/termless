@@ -26,7 +26,7 @@ export default defineConfig({
       {
         text: "Advanced",
         items: [
-          { text: "Conformance Matrix", link: "/advanced/compat-matrix" },
+          { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
           { text: "inkx Integration", link: "/advanced/inkx-integration" },
         ],
       },
@@ -64,7 +64,7 @@ export default defineConfig({
           text: "Advanced",
           collapsed: false,
           items: [
-            { text: "Conformance Matrix", link: "/advanced/compat-matrix" },
+            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
             { text: "inkx Integration", link: "/advanced/inkx-integration" },
           ],
         },
@@ -93,7 +93,7 @@ export default defineConfig({
         {
           text: "Advanced",
           items: [
-            { text: "Conformance Matrix", link: "/advanced/compat-matrix" },
+            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
             { text: "inkx Integration", link: "/advanced/inkx-integration" },
           ],
         },

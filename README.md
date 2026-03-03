@@ -2,9 +2,12 @@
 
 Headless terminal testing library. Like Playwright, but for terminal apps.
 
-- **Write tests once** -- run against xterm.js, Ghostty, or any backend
-- **Composable region selectors** -- `term.screen`, `term.cell(r, c)`, `term.row(n)` for precise assertions
-- **21 Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
+Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
+
+- **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
+- **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
+- **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
+- **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG screenshots** -- no Chromium, no native deps
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
@@ -52,6 +55,57 @@ test("renders bold red text", () => {
   expect(term.cell(0, 0)).toHaveFg("#ff0000")
 })
 ```
+
+## What You Can Test
+
+termless gives you structured access to terminal internals that are invisible to string matching or screenshot diffing:
+
+```typescript
+// Scrollback history — did output scroll correctly?
+expect(term.scrollback).toContainText("build complete")
+expect(term).toHaveScrollbackLines(150)
+expect(term).toBeAtBottomOfScrollback()
+
+// Terminal modes — did the app enter/exit alt screen?
+expect(term).toBeInMode("altScreen")
+expect(term).toBeInMode("bracketedPaste")
+expect(term).toBeInMode("mouseTracking")
+
+// Cursor state — position, visibility, style
+expect(term).toHaveCursorAt(5, 0)
+expect(term).toHaveCursorVisible()
+expect(term).toHaveCursorStyle("beam")
+
+// Cell-level inspection — colors, attributes, width
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
+expect(term.cell(0, 0)).toBeBold()
+expect(term.cell(0, 0)).toBeWide()  // CJK/emoji
+
+// Resize behavior — does content reflow correctly?
+term.resize(40, 10)
+expect(term.screen).toContainText("still visible")
+
+// Window title (OSC 2)
+expect(term).toHaveTitle("my-app — /home/user")
+
+// Backend capabilities — does this terminal support Kitty graphics? Sixel? Hyperlinks?
+const caps = term.backend.capabilities
+caps.truecolor        // true
+caps.kittyKeyboard    // Ghostty: true, xterm.js: false
+caps.kittyGraphics    // image protocol support
+caps.sixel            // sixel image support
+caps.osc8Hyperlinks   // clickable hyperlinks
+caps.reflow           // content reflow on resize
+
+// Backend extensions — hyperlinks, color palettes, dirty tracking
+if (term.backend.hasExtension("hyperlinks")) {
+  const url = term.backend.getHyperlinkAt(0, 5) // OSC 8 hyperlink at cell
+}
+```
+
+None of this is possible with `expect(output).toContain("text")`. String matching can't see colors, can't inspect scrollback, can't verify cursor position, can't test resize or reflow behavior, and can't query terminal capabilities. termless gives you the full terminal state machine.
+
+**Cross-terminal differences are real.** Emoji width, color palette mapping, scroll region behavior, key encoding, Kitty keyboard protocol support, and hyperlink handling all differ between terminals. Run the same test against xterm.js and Ghostty and you'll find them. The `cross-backend.test.ts` suite runs 120+ conformance tests across all backends, catching differences automatically in CI.
 
 ## Region Selectors
 
@@ -179,19 +233,13 @@ termless capture --command "my-app" \
   --timeout 5000
 ```
 
-## Conformance Matrix
+## Cross-Backend Conformance
 
-Generate a cross-terminal compatibility report comparing all backends:
+All backends are tested for conformance via `cross-backend.test.ts` — text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison. Run with:
 
 ```bash
-# Print to stdout
-termless matrix
-
-# Save to file
-termless matrix --output docs/compat-matrix.md
+bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
 ```
-
-See [docs/compat-matrix.md](docs/compat-matrix.md) for the latest report.
 
 ## MCP Server
 

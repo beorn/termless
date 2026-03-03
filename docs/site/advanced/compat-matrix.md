@@ -1,106 +1,32 @@
-# Cross-Terminal Conformance Matrix
+# Cross-Backend Conformance
 
-Generated: 2026-03-03
-Backends: xterm.js, ghostty
+termless verifies that all backends (xterm.js, Ghostty, vt100) produce identical results for the same VT100/ECMA-48 input sequences. Differences between backends are bugs — this is how we find and fix them.
 
-## Summary
+## Test Coverage
 
-| Metric | Count |
-|--------|-------|
-| Total tests | 36 |
-| All backends pass | 35 |
-| Any backend fails | 1 |
-| Backends differ | 2 |
+The `cross-backend.test.ts` suite runs 120+ tests across all backends, covering:
 
-## Text
+| Category | What's tested |
+|----------|--------------|
+| **Text rendering** | Plain text, multiline, CUP positioning, line wrap at boundary |
+| **Cell styles (SGR)** | Bold, italic, faint, strikethrough, inverse, underline, truecolor FG/BG, 256-color, combined styles, SGR reset |
+| **Cursor** | Position after text, after CRLF, CUP, CUF forward |
+| **Modes** | Alt screen toggle, bracketed paste, auto wrap, application cursor, mouse tracking, focus tracking |
+| **Wide characters** | Emoji width, CJK characters, column offset after wide chars |
+| **Scrollback** | Screen lines reported, scrollback accumulation |
+| **Reset** | `reset()` method, RIS (`\ec`) escape sequence |
+| **Capabilities** | Truecolor, reflow, Kitty keyboard |
+| **Key encoding** | Enter, Escape, Ctrl+C, ArrowUp |
+| **Cross-backend comparison** | Cell-by-cell text, cursor position, and style attribute comparison between xterm.js and Ghostty |
 
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Plain text | ok: Hello, world! | ok: Hello, world! | = |
-| Multiline (CRLF) | ok: 3 lines | ok: 3 lines | = |
-| CUP positioning (\e[3;10H) | ok: cell(2,9)=X | ok: cell(2,9)=X | = |
-| Line wrap at boundary | ok: wrapped | ok: wrapped | = |
+## Running
 
-## SGR
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Bold (SGR 1) | ok: B bold | ok: B bold | = |
-| Faint (SGR 2) | ok: F faint | ok: F faint | = |
-| Italic (SGR 3) | ok: I italic | ok: I italic | = |
-| Underline (SGR 4) | ok: U underline:single | ok: U underline:single | = |
-| Strikethrough (SGR 9) | ok: S strike | ok: S strike | = |
-| Inverse (SGR 7) | ok: I inverse | ok: I inverse | = |
-| True color FG (SGR 38;2) | ok: fg:rgb(255,128,0) | ok: fg:rgb(255,128,0) | = |
-| True color BG (SGR 48;2) | ok: bg:rgb(0,128,255) | ok: bg:rgb(0,128,255) | = |
-| Combined bold+italic+fg | ok: X bold italic fg:rgb(255,0,0) | ok: X bold italic fg:rgb(255,0,0) | = |
-| Reset (SGR 0) clears all | ok: P | ok: P | = |
-| 256-color FG (SGR 38;5;196 = red) | ok: fg:rgb(255,0,0) | ok: fg:rgb(255,0,0) | = |
-
-## Cursor
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Position after text | ok: (5,0) | ok: (5,0) | = |
-| Position after CRLF | ok: (5,1) | ok: (5,1) | = |
-| CUP (\e[5;10H) | ok: (9,4) | ok: (9,4) | = |
-| CUF forward (\e[5C) | ok: x=5 | ok: x=5 | = |
-
-## Modes
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Alt screen on | ok: true | ok: true | = |
-| Alt screen off | ok: false | ok: false | = |
-| Bracketed paste | ok: true | ok: true | = |
-| Auto wrap (default on) | ok: true | ok: true | = |
-
-## Scrollback
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Screen lines reported | ok: screenLines=24 | ok: screenLines=24 | = |
-| Scrollback accumulates | ok: totalLines=30 | ok: totalLines=30 | = |
-
-## Control
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| RIS clears screen | ok: cleared | ok: cleared | = |
-| Resize preserves content | ok: preserved | ok: preserved | = |
-
-## Keys
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Enter → CR (0x0d) | ok: [0xd] | ok: [0xd] | = |
-| Escape → ESC (0x1b) | ok: [0x1b] | ok: [0x1b] | = |
-| Ctrl+C → ETX (0x03) | ok: [0x3] | ok: [0x3] | = |
-| ArrowUp → \e[A | ok: "\u001b[A" | ok: "\u001b[A" | = |
-
-## Unicode
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| Wide emoji | FAIL: wide=false text="🎉" | ok: wide=true text="🎉" | DIFF |
-| CJK character | ok: wide=true text="漢" | ok: wide=true text="漢" | = |
-
-## Capabilities
-
-| Test | xterm.js | ghostty | Match |
-|------|------| ------| ------|
-| True color support | ok: true | ok: true | = |
-| Reflow support | ok: true | ok: true | = |
-| Kitty keyboard | ok: false | ok: true | DIFF |
+```bash
+bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
+```
 
 ## Known Differences
 
-### Unicode: Wide emoji
-
-- xterm.js: wide=false text="🎉"
-- ghostty: wide=true text="🎉"
-
-### Capabilities: Kitty keyboard
-
-- xterm.js: false
-- ghostty: true
+- **Emoji width**: xterm.js headless does not report emoji as wide (CJK works correctly)
+- **Kitty keyboard**: Ghostty supports it, xterm.js and vt100 do not
+- **OSC title**: Ghostty WASM has no title change callback; vt100 backend has limited OSC support

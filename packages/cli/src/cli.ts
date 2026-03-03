@@ -112,26 +112,6 @@ program
     })
   })
 
-// ── matrix ──
-
-program
-  .command("matrix")
-  .description("Generate cross-terminal conformance matrix report")
-  .option("--output <path>", "Write report to file instead of stdout")
-  .action(async (opts) => {
-    const { runMatrix, generateReport } = await import("../../../tests/compat-matrix.ts")
-    const data = await runMatrix()
-    const report = generateReport(data)
-
-    if (opts.output) {
-      const { writeFile } = await import("node:fs/promises")
-      await writeFile(opts.output, report, "utf-8")
-      console.log(`Conformance matrix written to ${opts.output}`)
-    } else {
-      console.log(report)
-    }
-  })
-
 // ── mcp ──
 
 program

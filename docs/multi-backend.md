@@ -113,14 +113,11 @@ Example of what multi-backend testing catches:
 
 ## Conformance Matrix
 
-Beyond running individual tests, `termless matrix` generates a full compatibility report comparing backends side-by-side:
+Cross-backend conformance is verified via `cross-backend.test.ts`, which runs as part of the standard vitest suite. It covers text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison.
 
 ```bash
-termless matrix                              # Print report
-termless matrix --output docs/compat-matrix.md  # Save to file
+bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
 ```
-
-The matrix runs a 36-test battery (text, SGR, cursor, modes, scrollback, keys, unicode, capabilities) and produces a markdown table showing pass/fail per backend and flagging differences. See [docs/compat-matrix.md](compat-matrix.md) for the latest report.
 
 ## How termless Compares to Other Matrix Testing
 

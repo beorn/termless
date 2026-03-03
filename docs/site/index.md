@@ -14,18 +14,18 @@ hero:
       link: https://github.com/beorn/termless
 
 features:
+  - icon: "\U0001F50D"
+    title: Terminal Internals
+    details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
+  - icon: "\U0001F310"
+    title: Cross-Terminal Conformance
+    details: "Run the same tests against 6 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
   - icon: "\u26A1"
     title: Fast
     details: "Pure in-process terminal emulation. ~1ms per test, not ~100ms. No Chromium, no subprocesses, no flakiness."
-  - icon: "\U0001F4E6"
-    title: 6 Backends
-    details: "xterm.js, Ghostty, Alacritty, WezTerm, vt100, Peekaboo. Write once, verify across all of them."
-  - icon: "\u2705"
-    title: 21+ Matchers
-    details: "Text, style, cursor, mode, scrollback, snapshots. Composable region selectors for precise assertions."
   - icon: "\U0001F50D"
     title: Composable Selectors
-    details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert."
+    details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - icon: "\U0001F5BC\uFE0F"
     title: SVG Screenshots
     details: "Generate terminal screenshots as SVG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered."
