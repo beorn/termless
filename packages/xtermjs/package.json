@@ -4,6 +4,21 @@
   "description": "xterm.js backend for termless",
   "license": "MIT",
   "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless",
+    "directory": "packages/xtermjs"
+  },
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "module": "./src/index.ts",
   "exports": {

@@ -16,6 +16,19 @@
     "type": "git",
     "url": "https://github.com/beorn/termless"
   },
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
   "module": "./src/index.ts",
   "exports": {

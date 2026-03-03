@@ -10,6 +10,7 @@ Pluggable headless terminal library for cross-terminal TUI testing. Write tests 
 | `termless-xtermjs` | xterm.js backend (@xterm/headless) | Active |
 | `termless-ghostty` | Ghostty backend (N-API/Zig) | Stub (Phase 2) |
 | `viterm` | Vitest integration: matchers, fixtures, snapshots | Active |
+| `termless-cli` | CLI + MCP server | Active |
 
 ## Architecture
 
