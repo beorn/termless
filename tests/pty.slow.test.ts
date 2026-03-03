@@ -1,0 +1,90 @@
+/**
+ * PTY integration tests for termless.
+ *
+ * Spawns real child processes with PTYs via createTerminal + createXtermBackend.
+ * Marked .slow. because real process spawning is inherently slower.
+ */
+
+import { describe, test, expect } from "vitest"
+import { createTerminal } from "../src/terminal.ts"
+import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
+
+// ── Helper ──
+
+function createXterm(cols = 80, rows = 24) {
+  return createTerminal({ backend: createXtermBackend(), cols, rows })
+}
+
+// ── Tests ──
+
+describe("PTY integration", () => {
+  test("spawn echo captures output", async () => {
+    const term = createXterm()
+    try {
+      await term.spawn(["echo", "hello termless"])
+      await term.waitFor("hello termless", 5000)
+      expect(term.getText()).toContain("hello termless")
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("alive is true during running process", async () => {
+    const term = createXterm()
+    try {
+      await term.spawn(["sleep", "10"])
+      expect(term.alive).toBe(true)
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("exitInfo populated after process exits", async () => {
+    const term = createXterm()
+    try {
+      await term.spawn(["echo", "done"])
+      // Wait for process to complete and exit code to be captured
+      await new Promise((r) => setTimeout(r, 500))
+      expect(term.exitInfo).toContain("exit=")
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("press sends key to PTY", async () => {
+    const term = createXterm()
+    try {
+      // Single-element command: spawnPty already wraps in bash -c
+      await term.spawn(["read line && echo got:$line"])
+      term.type("hello")
+      term.press("Enter")
+      await term.waitFor("got:hello", 5000)
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("type sends text to PTY", async () => {
+    const term = createXterm()
+    try {
+      // Single-element command: spawnPty already wraps in bash -c
+      await term.spawn(["read line && echo got:$line"])
+      term.type("typed text\n")
+      await term.waitFor("got:typed text", 5000)
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("resize during active process", async () => {
+    const term = createXterm(80, 24)
+    try {
+      await term.spawn(["cat"])
+      term.resize(120, 40)
+      expect(term.cols).toBe(120)
+      expect(term.rows).toBe(40)
+    } finally {
+      await term.close()
+    }
+  })
+})

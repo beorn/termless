@@ -1,0 +1,16 @@
+[package]
+name = "termless-wezterm-native"
+version = "0.1.0"
+edition = "2021"
+description = "napi-rs bindings for wezterm-term (tattoy fork)"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", features = ["napi8"] }
+napi-derive = "3"
+tattoy-wezterm-term = "0.1"
+
+[build-dependencies]
+napi-build = "2"

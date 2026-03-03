@@ -300,4 +300,37 @@ describe("screenshotSvg", () => {
     expect(svg).toContain(`height="2"`)
     expect(svg).toContain(`fill="#aeafad"`)
   })
+
+  test("wide (double-width) character renders in SVG", () => {
+    // Wide char occupies two columns; the second cell is a continuation (empty text)
+    // Use a CJK character that is a single JS char (U+4E16 = 世)
+    const term = createMockReadable(["世x"], {
+      cellOverrides: { "0,0": { wide: true }, "0,1": { text: "" } },
+    })
+    const svg = screenshotSvg(term)
+    // The wide char should appear; the continuation cell (col 1) should be skipped
+    expect(svg).toContain("世")
+    expect(svg).toContain("<tspan")
+  })
+
+  test("whitespace-only lines render valid SVG", () => {
+    const term = createMockReadable(["     "])
+    const svg = screenshotSvg(term)
+    expect(svg).toContain("<svg")
+    expect(svg).toContain("xmlns=")
+    expect(svg).toContain("</svg>")
+    // Whitespace-only line still gets a text element
+    expect(svg).toContain("<text")
+  })
+
+  test("curly, dotted, and dashed underline styles all render as text-decoration underline", () => {
+    // svg.ts treats all non-"none" underline values identically as underline=true
+    for (const style of ["curly", "dotted", "dashed"] as UnderlineStyle[]) {
+      const term = createMockReadable(["ab"], {
+        cellOverrides: { "0,0": { underline: style } },
+      })
+      const svg = screenshotSvg(term)
+      expect(svg).toContain(`text-decoration="underline"`)
+    }
+  })
 })

@@ -518,6 +518,29 @@ describe("scrollback matchers", () => {
 })
 
 // =============================================================================
+// Snapshot Matchers (TerminalReadable)
+// =============================================================================
+
+describe("snapshot matchers", () => {
+	test("toMatchTerminalSnapshot creates and matches snapshot", () => {
+		const term = createMockTerminal({
+			lines: ["Hello World", "Line 2"],
+			cursor: { x: 5, y: 0, visible: true, style: "block" },
+		})
+		// Should not throw — matcher constructs snapshot from terminal state
+		expect(term).toMatchTerminalSnapshot()
+	})
+
+	test("toMatchTerminalSnapshot with custom name", () => {
+		const term = createMockTerminal({
+			lines: ["Hello World", "Line 2"],
+			cursor: { x: 5, y: 0, visible: true, style: "block" },
+		})
+		expect(term).toMatchTerminalSnapshot({ name: "my-snapshot" })
+	})
+})
+
+// =============================================================================
 // Error Handling — wrong type errors
 // =============================================================================
 

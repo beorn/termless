@@ -11,6 +11,7 @@
  */
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createGhosttyBackend, initGhostty } from "../packages/ghostty/src/backend.ts"
+import { createVt100Backend } from "../packages/vt100/src/backend.ts"
 import type { TerminalBackend, Cell, RGB, TerminalMode } from "../src/types.ts"
 
 // ── Types ──
@@ -282,6 +283,34 @@ const tests: TestCase[] = [
 		},
 	},
 
+	{
+		category: "Modes",
+		name: "Application cursor (DECCKM)",
+		input: "\x1b[?1h",
+		check: (b) => {
+			const mode = b.getMode("applicationCursor")
+			return { pass: mode === true, value: String(mode) }
+		},
+	},
+	{
+		category: "Modes",
+		name: "Mouse tracking (DECSET 1000)",
+		input: "\x1b[?1000h",
+		check: (b) => {
+			const mode = b.getMode("mouseTracking")
+			return { pass: mode === true, value: String(mode) }
+		},
+	},
+	{
+		category: "Modes",
+		name: "Focus tracking (DECSET 1004)",
+		input: "\x1b[?1004h",
+		check: (b) => {
+			const mode = b.getMode("focusTracking")
+			return { pass: mode === true, value: String(mode) }
+		},
+	},
+
 	// ── Scrollback ──
 	{
 		category: "Scrollback",
@@ -375,6 +404,28 @@ const tests: TestCase[] = [
 		},
 	},
 
+	// ── Title ──
+	{
+		category: "Title",
+		name: "OSC 2 set title",
+		input: "\x1b]2;My Title\x07",
+		check: (b) => {
+			const title = b.getTitle()
+			return { pass: title === "My Title", value: `title="${title}"` }
+		},
+	},
+
+	{
+		category: "Unicode",
+		name: "Wide char column offset",
+		input: "🎉A",
+		check: (b) => {
+			const aCell = b.getCell(0, 2)
+			const text = aCell.text || " "
+			return { pass: text === "A", value: `cell(0,2)="${text}"` }
+		},
+	},
+
 	// ── Resize ──
 	{
 		category: "Control",
@@ -422,6 +473,7 @@ export async function runMatrix(): Promise<{ backends: BackendResult[]; tests: T
 	const backendFactories: [string, () => TerminalBackend][] = [
 		["xterm.js", () => createXtermBackend()],
 		["ghostty", () => createGhosttyBackend(undefined, ghostty)],
+		["vt100", () => createVt100Backend()],
 	]
 
 	const results: BackendResult[] = []

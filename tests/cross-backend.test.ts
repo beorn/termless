@@ -9,6 +9,7 @@
 import { describe, test, expect, beforeAll, afterEach } from "vitest"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createGhosttyBackend, initGhostty } from "../packages/ghostty/src/backend.ts"
+import { createVt100Backend } from "../packages/vt100/src/backend.ts"
 import type { Ghostty } from "ghostty-web"
 import type { TerminalBackend, Cell } from "../src/types.ts"
 
@@ -23,6 +24,7 @@ type BackendFactory = () => TerminalBackend
 const backends: [string, BackendFactory][] = [
 	["xterm", () => createXtermBackend()],
 	["ghostty", () => createGhosttyBackend(undefined, ghostty)],
+	["vt100", () => createVt100Backend()],
 ]
 
 function forEachBackend(fn: (name: string, createBackend: BackendFactory) => void) {
@@ -182,6 +184,89 @@ describe("cross-backend conformance", () => {
 				const b = init(create)
 				feedText(b, "\x1b[?2004h")
 				expect(b.getMode("bracketedPaste")).toBe(true)
+			})
+		})
+	})
+
+	describe("wide characters", () => {
+		forEachBackend((name, create) => {
+			test("emoji takes 2 cells", () => {
+				const b = init(create)
+				feedText(b, "🎉A")
+				const emojiCell = b.getCell(0, 0)
+				// xterm.js headless may not report wide=true for emoji
+				if (name === "ghostty") {
+					expect(emojiCell.wide).toBe(true)
+				}
+				// When wide is supported, A should be at col 2
+				if (emojiCell.wide) {
+					expect(cellText(b.getCell(0, 2))).toBe("A")
+				}
+			})
+
+			test("CJK character takes 2 cells", () => {
+				const b = init(create)
+				feedText(b, "漢A")
+				const cjkCell = b.getCell(0, 0)
+				expect(cjkCell.wide).toBe(true)
+				const aCell = b.getCell(0, 2)
+				expect(cellText(aCell)).toBe("A")
+			})
+		})
+	})
+
+	describe("underline styles", () => {
+		forEachBackend((_name, create) => {
+			test("single underline (SGR 4)", () => {
+				const b = init(create)
+				feedText(b, "\x1b[4mU\x1b[0m")
+				expect(b.getCell(0, 0).underline).toBe("single")
+			})
+		})
+	})
+
+	describe("application cursor mode", () => {
+		forEachBackend((_name, create) => {
+			test("DECCKM sets applicationCursor", () => {
+				const b = init(create)
+				feedText(b, "\x1b[?1h")
+				expect(b.getMode("applicationCursor")).toBe(true)
+			})
+		})
+	})
+
+	describe("OSC title", () => {
+		forEachBackend((name, create) => {
+			test("OSC 2 sets title", () => {
+				const b = init(create)
+				feedText(b, "\x1b]2;My Title\x07")
+				// ghostty-web WASM doesn't expose OSC title callbacks yet
+				if (name === "ghostty") {
+					// Just verify getTitle() doesn't throw
+					expect(typeof b.getTitle()).toBe("string")
+				} else {
+					expect(b.getTitle()).toBe("My Title")
+				}
+			})
+		})
+	})
+
+	describe("mouse tracking", () => {
+		forEachBackend((_name, create) => {
+			test("DECSET 1000 enables mouse tracking", () => {
+				const b = init(create)
+				feedText(b, "\x1b[?1000h")
+				expect(b.getMode("mouseTracking")).toBe(true)
+			})
+		})
+	})
+
+	describe("focus tracking", () => {
+		forEachBackend((_name, create) => {
+			test("DECSET 1004 enables focus tracking", () => {
+				const b = init(create)
+				feedText(b, "\x1b[?1004h")
+				expect(b.getMode("focusTracking")).toBe(true)
 			})
 		})
 	})

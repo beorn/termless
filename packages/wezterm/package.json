@@ -1,0 +1,36 @@
+{
+  "name": "termless-wezterm",
+  "version": "0.1.0",
+  "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs",
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless",
+    "directory": "packages/wezterm"
+  },
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "files": [
+    "src",
+    "native",
+    "*.node"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "termless": "workspace:*"
+  },
+  "scripts": {
+    "build:native": "cd native && cargo build --release",
+    "postbuild:native": "cp native/target/release/libtermless_wezterm_native.dylib termless-wezterm.node"
+  }
+}

@@ -1,0 +1,21 @@
+[package]
+name = "termless-alacritty-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "napi-rs bridge for alacritty_terminal — headless VT emulation"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+alacritty_terminal = "0.25"
+napi = { version = "3", features = ["napi9"] }
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+strip = "symbols"

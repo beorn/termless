@@ -8,6 +8,7 @@
 import { describe, test, expect } from "vitest"
 import { parseKey, keyToAnsi } from "../src/key-mapping.ts"
 import { createTerminal } from "../src/terminal.ts"
+import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import type {
   Cell,
   CursorState,
@@ -698,6 +699,74 @@ describe("region selectors", () => {
     term.feed("Hello")
 
     expect(term.scrollback.getText()).toBe("")
+
+    term.close()
+  })
+
+  test("viewport returns a RegionView", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 3 })
+    term.feed("Row A\nRow B\nRow C")
+
+    const vp = term.viewport
+    expect(vp.getText()).toContain("Row A")
+    expect(vp.getText()).toContain("Row C")
+    expect(vp.containsText("Row B")).toBe(true)
+    expect(vp.containsText("nonexistent")).toBe(false)
+
+    const lines = vp.getLines()
+    expect(lines.length).toBe(3)
+
+    term.close()
+  })
+
+  test("range returns a RegionView for rectangular selection", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+    term.feed("ABCDEFGHIJ\nKLMNOPQRST\nUVWXYZ0123")
+
+    // range(r1, c1, r2, c2) — rows 0-1, cols 0-5
+    const region = term.range(0, 0, 1, 5)
+    const text = region.getText()
+    expect(text).toContain("ABCDE")
+    expect(text).toContain("KLMNO")
+    // Should NOT contain text from row 2
+    expect(text).not.toContain("UVWXY")
+
+    expect(region.containsText("ABCDE")).toBe(true)
+
+    term.close()
+  })
+
+  test("scrollback with actual data (xterm backend)", () => {
+    // Mock backend doesn't track scrollback — need real xterm.js
+    const term = createTerminal({
+      backend: createXtermBackend(),
+      cols: 40,
+      rows: 10,
+    })
+
+    // Feed 30 lines so ~20 scroll off the 10-row screen
+    const allLines: string[] = []
+    for (let i = 1; i <= 30; i++) {
+      allLines.push(`line-${String(i).padStart(2, "0")}`)
+    }
+    term.feed(allLines.join("\r\n"))
+
+    // Scrollback should contain old lines that scrolled off
+    const scrollbackText = term.scrollback.getText()
+    expect(scrollbackText).toContain("line-01")
+    expect(scrollbackText).toContain("line-10")
+
+    // Screen should contain the newest lines
+    const screenText = term.screen.getText()
+    expect(screenText).toContain("line-30")
+
+    // Buffer should contain everything
+    const bufferText = term.buffer.getText()
+    expect(bufferText).toContain("line-01")
+    expect(bufferText).toContain("line-15")
+    expect(bufferText).toContain("line-30")
 
     term.close()
   })
