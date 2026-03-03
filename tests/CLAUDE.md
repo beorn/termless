@@ -8,7 +8,9 @@
 - **Terminal API**: `createTerminal()` lifecycle (init, feed, resize, close, `Symbol.asyncDispose`), region selectors (`screen`, `scrollback`, `buffer`, `viewport`, `row(n)`, `cell(r, c)`, `range(r1, c1, r2, c2)`, `firstRow()`, `lastRow()`), text search (`find`, `findAll`), cursor/cell delegation, `waitFor`/`waitForStable`, PTY-less error paths
 - **Region views**: `RegionView` (getText, getLines, containsText), `CellView` (positional cell with style), `RowView` (extends RegionView with row number and cellAt)
 - **SVG rendering**: `screenshotSvg()` output validity, cell styling (bold, italic, faint, fg/bg color, inverse, underline, strikethrough), cursor styles (block, beam, underline), custom themes/fonts, XML escaping, dimension calculation, bg-rect merging
-- **Integration**: Terminal + XtermBackend + Viterm matchers + snapshot serializer wired together end-to-end, cross-backend test pattern
+- **Integration**: Terminal + XtermBackend + Viterm matchers + snapshot serializer wired together end-to-end
+- **Cross-backend**: xterm.js vs Ghostty conformance (`cross-backend.test.ts`) — same input sequences, cell-by-cell comparison
+- **Conformance matrix**: `compat-matrix.ts` — 36-test battery generating markdown reports (`bun tests/compat-matrix.ts`)
 
 ## What NOT to Test Here
 
@@ -56,6 +58,8 @@ bun vitest run vendor/beorn-termless/tests/                    # All root tests
 bun vitest run vendor/beorn-termless/tests/terminal.test.ts    # Key mapping + Terminal API
 bun vitest run vendor/beorn-termless/tests/svg.test.ts         # SVG screenshot renderer
 bun vitest run vendor/beorn-termless/tests/integration.test.ts # Full-stack integration
+bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor # Cross-backend conformance
+bun vendor/beorn-termless/tests/compat-matrix.ts              # Generate conformance matrix report
 ```
 
 ## Efficiency
@@ -65,3 +69,5 @@ Mock backend tests (~30ms) are pure in-memory. Integration tests with xterm.js (
 ## See Also
 
 - [Test layering philosophy](../../.claude/skills/tests/test-layers.md)
+- [Cross-backend conformance tests](cross-backend.test.ts)
+- [Conformance matrix report](../docs/compat-matrix.md)

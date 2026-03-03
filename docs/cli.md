@@ -65,6 +65,44 @@ Keys use the same format as `terminal.press()`:
 - Function keys: `F1` through `F12`
 - With modifiers: `Ctrl+c`, `Shift+Tab`, `Alt+x`
 
+## `termless record`
+
+Record a terminal session as SVG frames or an HTML slideshow.
+
+```bash
+termless record --command "htop" --duration 5 --format frames
+termless record --command "bun km view /path" --format html --output-dir ./demo.html
+```
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--command <cmd>` | Command to run (required, split on spaces) | -- |
+| `--cols <n>` | Terminal columns | `120` |
+| `--rows <n>` | Terminal rows | `40` |
+| `--interval <ms>` | Capture interval in milliseconds | `100` |
+| `--duration <seconds>` | Stop after N seconds | -- |
+| `--output-dir <path>` | Output directory or file path | `./termless-recording/` |
+| `--format <type>` | Output format: `frames` or `html` | `frames` |
+
+## `termless matrix`
+
+Generate a cross-terminal conformance matrix report comparing all available backends.
+
+```bash
+termless matrix                              # Print to stdout
+termless matrix --output docs/compat-matrix.md  # Save to file
+```
+
+Runs a 36-test battery across text rendering, SGR styles, cursor, modes, scrollback, key encoding, unicode, and capabilities. Produces a markdown table showing pass/fail per backend and highlighting differences.
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--output <path>` | Write report to file instead of stdout | -- |
+
 ## `termless mcp`
 
 Start a stdio MCP server for AI agents (Claude Code, etc.). The server manages terminal sessions -- AI agents can spawn processes, send input, read output, and take screenshots.
