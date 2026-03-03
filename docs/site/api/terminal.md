@@ -5,9 +5,9 @@
 Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
-import { createTerminal } from "termless"
-import type { Terminal, TerminalCreateOptions } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
+import { createTerminal } from "@termless/core"
+import type { Terminal, TerminalCreateOptions } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({
   backend: createXtermBackend(),
@@ -277,7 +277,7 @@ Returns: `TextPosition[]` -- array of `{ row, col, text }`.
 
 ## Reading State
 
-These methods are part of the `TerminalReadable` interface and work with viterm matchers.
+These methods are part of the `TerminalReadable` interface and work with @termless/test matchers.
 
 ### `getText()`
 
@@ -400,7 +400,7 @@ await using term = createTerminal({ backend: createXtermBackend() })
 ## Key Utilities
 
 ```typescript
-import { parseKey, keyToAnsi } from "termless"
+import { parseKey, keyToAnsi } from "@termless/core"
 
 // Parse "Ctrl+a" -> { key: "a", ctrl: true }
 const desc = parseKey("Ctrl+Shift+ArrowUp")
@@ -415,8 +415,8 @@ const ansi = keyToAnsi({ key: "ArrowUp", ctrl: true }) // "\x1b[1;5A"
 Type-safe extension check for backend capabilities:
 
 ```typescript
-import { hasExtension } from "termless"
-import type { MouseEncodingExtension } from "termless"
+import { hasExtension } from "@termless/core"
+import type { MouseEncodingExtension } from "@termless/core"
 
 if (hasExtension<MouseEncodingExtension>(backend, "mouse")) {
   const encoded = backend.encodeMouse({ x: 5, y: 10, button: "left", action: "press" })

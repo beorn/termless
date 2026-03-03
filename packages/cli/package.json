@@ -1,5 +1,5 @@
 {
-  "name": "termless-cli",
+  "name": "@termless/cli",
   "version": "0.1.0",
   "description": "CLI and MCP server for termless headless terminal library",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "zod": "^3.24.0"
   },
   "peerDependencies": {
-    "termless": "*",
-    "termless-xtermjs": "*"
+    "@termless/core": "*",
+    "@termless/xtermjs": "*"
   }
 }

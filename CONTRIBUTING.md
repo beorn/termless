@@ -23,7 +23,7 @@ bun vitest run                    # Run all tests
 bun vitest run packages/xtermjs/  # Run tests for a specific package
 ```
 
-Write tests for all new functionality. For rendering/terminal behavior, use the `viterm` matchers.
+Write tests for all new functionality. For rendering/terminal behavior, use the `@termless/test` matchers.
 
 ### Type Checking
 
@@ -36,14 +36,14 @@ bun run typecheck
 | Package | What it does |
 |---------|-------------|
 | `termless` (root) | Core types, Terminal API, PTY, SVG screenshots, key mapping |
-| `termless-xtermjs` | xterm.js backend using @xterm/headless |
-| `termless-ghostty` | Ghostty backend (ghostty-web WASM) |
-| `termless-vt100` | Pure TypeScript VT100 emulator (zero native deps) |
-| `termless-alacritty` | Alacritty backend (alacritty_terminal via napi-rs) |
-| `termless-wezterm` | WezTerm backend (wezterm-term via napi-rs) |
-| `termless-peekaboo` | OS-level terminal automation (xterm.js + real app) |
-| `viterm` | Vitest matchers, fixtures, and snapshot serializer |
-| `termless-cli` | CLI tool and MCP server |
+| `@termless/xtermjs` | xterm.js backend using @xterm/headless |
+| `@termless/ghostty` | Ghostty backend (ghostty-web WASM) |
+| `@termless/vt100` | Pure TypeScript VT100 emulator (zero native deps) |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs) |
+| `@termless/wezterm` | WezTerm backend (wezterm-term via napi-rs) |
+| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) |
+| `@termless/test` | Vitest matchers, fixtures, and snapshot serializer |
+| `@termless/cli` | CLI tool and MCP server |
 
 ## Submitting Changes
 
@@ -108,7 +108,7 @@ export { create<Name>Backend } from "./backend.ts"
 
 **`packages/<name>/tests/backend.test.ts`** -- unit tests covering lifecycle, text I/O, colors, attributes, cursor, modes, key encoding, scrollback, resize, reset, wide characters, and capabilities.
 
-**`packages/<name>/tests/CLAUDE.md`** -- test scope documentation. Follow the pattern from `packages/xtermjs/tests/CLAUDE.md`: describe what to test here, what NOT to test here (cross-backend goes in root `tests/`, matchers go in viterm), patterns, and ad-hoc testing commands.
+**`packages/<name>/tests/CLAUDE.md`** -- test scope documentation. Follow the pattern from `packages/xtermjs/tests/CLAUDE.md`: describe what to test here, what NOT to test here (cross-backend goes in root `tests/`, matchers go in @termless/test), patterns, and ad-hoc testing commands.
 
 #### 2. Registration (modify existing files)
 

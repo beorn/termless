@@ -1,5 +1,5 @@
 {
-  "name": "termless-vt100",
+  "name": "@termless/vt100",
   "version": "0.1.0",
   "description": "Pure TypeScript VT100 backend for termless — lightweight terminal emulator inspired by the Rust vt100 crate",
   "license": "MIT",
@@ -25,6 +25,6 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "*"
+    "@termless/core": "*"
   }
 }

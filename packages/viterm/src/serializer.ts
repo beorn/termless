@@ -6,7 +6,7 @@
  * are annotated inline.
  *
  * Register with vitest:
- *   import { terminalSerializer } from "viterm"
+ *   import { terminalSerializer } from "@termless/test"
  *   expect.addSnapshotSerializer(terminalSerializer)
  */
 

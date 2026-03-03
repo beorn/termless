@@ -1,5 +1,5 @@
 /**
- * Tests for viterm custom Vitest matchers — composable view API.
+ * Tests for @termless/test custom Vitest matchers — composable view API.
  *
  * Matchers operate on views (RegionView, CellView, RowView) and
  * TerminalReadable, not flat (row, col) arguments. Tests use lightweight

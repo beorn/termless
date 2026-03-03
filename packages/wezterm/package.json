@@ -1,5 +1,5 @@
 {
-  "name": "termless-wezterm",
+  "name": "@termless/wezterm",
   "version": "0.1.0",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs",
   "license": "MIT",
@@ -27,7 +27,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "*"
+    "@termless/core": "*"
   },
   "scripts": {
     "build:native": "cd native && cargo build --release",

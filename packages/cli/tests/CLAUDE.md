@@ -1,4 +1,4 @@
-# termless-cli Tests
+# @termless/cli Tests
 
 **Layer 0 -- Platform**: CLI session manager and recording -- session lifecycle, text I/O, frame change detection, HTML slideshow generation.
 
@@ -13,7 +13,7 @@
 
 ## What NOT to Test Here
 
-- Terminal or backend internals -- that's termless core and termless-xtermjs
+- Terminal or backend internals -- that's @termless/core and @termless/xtermjs
 - MCP server protocol handling -- requires integration testing with MCP client
 - PTY spawning -- CLI tests use feed-only mode
 - SVG rendering correctness -- that's the root `tests/svg.test.ts`

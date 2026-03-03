@@ -1,7 +1,7 @@
 # API: TerminalBackend
 
 ```typescript
-import type { TerminalBackend, TerminalOptions, TerminalCapabilities } from "termless"
+import type { TerminalBackend, TerminalOptions, TerminalCapabilities } from "@termless/core"
 ```
 
 ## TerminalBackend Interface
@@ -67,7 +67,7 @@ interface TerminalCapabilities {
 ### xterm.js
 
 ```typescript
-import { createXtermBackend } from "termless-xtermjs"
+import { createXtermBackend } from "@termless/xtermjs"
 
 const backend = createXtermBackend()
 // or with eager initialization:
@@ -79,7 +79,7 @@ Uses `@xterm/headless` for in-process terminal emulation. No browser needed.
 ### Ghostty
 
 ```typescript
-import { createGhosttyBackend, initGhostty } from "termless-ghostty"
+import { createGhosttyBackend, initGhostty } from "@termless/ghostty"
 
 // WASM must be loaded first
 const ghostty = await initGhostty()
@@ -92,7 +92,7 @@ backend.init({ cols: 80, rows: 24 })
 To create a new backend, implement the full `TerminalBackend` interface:
 
 ```typescript
-import type { TerminalBackend, TerminalOptions, Cell, /* ... */ } from "termless"
+import type { TerminalBackend, TerminalOptions, Cell, /* ... */ } from "@termless/core"
 
 export function createMyBackend(): TerminalBackend {
   return {
@@ -140,7 +140,7 @@ export function createMyBackend(): TerminalBackend {
 Backends can optionally implement extension interfaces. Use `hasExtension()` to check:
 
 ```typescript
-import { hasExtension } from "termless"
+import { hasExtension } from "@termless/core"
 
 // Mouse encoding
 interface MouseEncodingExtension {

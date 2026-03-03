@@ -1,11 +1,11 @@
 # CLI & MCP Server
 
-The `termless-cli` package provides a command-line tool for terminal capture and an MCP server for AI agent integration.
+The `@termless/cli` package provides a command-line tool for terminal capture and an MCP server for AI agent integration.
 
 ## Installation
 
 ```bash
-bun add termless-cli
+bun add @termless/cli
 ```
 
 Or run directly:
@@ -121,7 +121,7 @@ Add to your Claude Code MCP configuration:
 The session manager is also available as a library:
 
 ```typescript
-import { createSessionManager } from "termless-cli"
+import { createSessionManager } from "@termless/cli"
 
 const manager = createSessionManager()
 

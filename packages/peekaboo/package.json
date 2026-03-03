@@ -1,5 +1,5 @@
 {
-  "name": "termless-peekaboo",
+  "name": "@termless/peekaboo",
   "version": "0.1.0",
   "description": "Peekaboo backend for termless — OS-level terminal control via real terminal apps",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "@xterm/headless": "^5.5.0"
   },
   "peerDependencies": {
-    "termless": "*",
-    "termless-xtermjs": "*"
+    "@termless/core": "*",
+    "@termless/xtermjs": "*"
   }
 }

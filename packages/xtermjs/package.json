@@ -1,5 +1,5 @@
 {
-  "name": "termless-xtermjs",
+  "name": "@termless/xtermjs",
   "version": "0.1.0",
   "description": "xterm.js backend for termless",
   "license": "MIT",
@@ -28,6 +28,6 @@
     "@xterm/headless": "^5.5.0"
   },
   "peerDependencies": {
-    "termless": "*"
+    "@termless/core": "*"
   }
 }

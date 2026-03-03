@@ -1,9 +1,9 @@
 # API: Vitest Matchers
 
 ```typescript
-import { createTerminalFixture } from "viterm"  // Matchers auto-registered on import
+import { createTerminalFixture } from "@termless/test"  // Matchers auto-registered on import
 // or manually:
-import { terminalMatchers } from "viterm/matchers"
+import { terminalMatchers } from "@termless/test/matchers"
 expect.extend(terminalMatchers)
 ```
 
@@ -219,7 +219,7 @@ expect(term).toMatchTerminalSnapshot({ name: "after-input" })
 For human-readable `.snap` files, register the serializer:
 
 ```typescript
-import { terminalSerializer, terminalSnapshot } from "viterm"
+import { terminalSerializer, terminalSnapshot } from "@termless/test"
 
 expect.addSnapshotSerializer(terminalSerializer)
 

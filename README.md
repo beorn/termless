@@ -17,8 +17,8 @@ Built alongside [inkx](https://github.com/beorn/inkx), a React TUI framework, bu
 ## Quick Start
 
 ```typescript
-import { createTerminal } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
+import { createTerminal } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
 
 // Feed data directly
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
@@ -44,15 +44,37 @@ await term.close()
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 
-test("renders bold red text", () => {
-  const term = createTerminalFixture()
-  term.feed("\x1b[1;38;2;255;0;0mError\x1b[0m")
+test("inspect what string matching can't see", () => {
+  const term = createTerminalFixture({ cols: 60, rows: 10 })
 
-  expect(term.screen).toContainText("Error")
+  // Simulate a TUI app: alt screen, window title, styled output
+  term.feed("\x1b[?1049h")                              // enter alt screen
+  term.feed("\x1b]2;my-app — dashboard\x07")            // set window title
+  term.feed("\x1b[1mServer Status\x1b[0m\r\n")
+  term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
+  term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
+  term.feed("\x1b[4;1H")                                // position cursor
+
+  // Terminal modes, title, cursor — invisible to string assertions
+  expect(term).toBeInMode("altScreen")
+  expect(term).toHaveTitle("my-app — dashboard")
+  expect(term).toHaveCursorAt(0, 3)
+
+  // Composable region selectors — WHERE to look + WHAT to assert
+  expect(term.screen).toContainText("Server Status")
+  expect(term.row(0)).toHaveText("Server Status")
+
+  // Cell-level style inspection — colors that getText() can't see
   expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(0, 0)).toHaveFg("#ff0000")
+  expect(term.cell(1, 8)).toHaveFg("#00ff00")           // green dot = healthy
+  expect(term.cell(2, 8)).toHaveFg("#ff0000")           // red dot = down
+
+  // Resize — verify content survives terminal resize
+  term.resize(30, 10)
+  expect(term.screen).toContainText("● online")
+  expect(term.screen).toContainText("● down")
 })
 ```
 
@@ -186,7 +208,7 @@ expect(term).toHaveTitle("My App")
 ## Installation
 
 ```bash
-bun add -d viterm                   # Vitest matchers + fixtures (includes xterm.js backend)
+bun add -d @termless/test                   # Vitest matchers + fixtures (includes xterm.js backend)
 ```
 
 ## Multi-Backend Testing
@@ -207,7 +229,7 @@ export default [
 
 ```typescript
 // test/setup-xterm.ts
-import { createXtermBackend } from "termless-xtermjs"
+import { createXtermBackend } from "@termless/xtermjs"
 globalThis.createBackend = () => createXtermBackend()
 ```
 
@@ -253,14 +275,14 @@ termless mcp
 | Package | Description |
 |---------|-------------|
 | [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
-| [termless-xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
-| [termless-ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
-| [termless-vt100](packages/vt100) | Pure TypeScript VT100 emulator (zero native deps) |
-| [termless-alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs) |
-| [termless-wezterm](packages/wezterm) | WezTerm backend (`wezterm-term` via napi-rs) |
-| [termless-peekaboo](packages/peekaboo) | OS-level terminal automation (xterm.js + real app) |
-| [viterm](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
-| [termless-cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
+| [@termless/xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
+| [@termless/ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
+| [@termless/vt100](packages/vt100) | Pure TypeScript VT100 emulator (zero native deps) |
+| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs) |
+| [@termless/wezterm](packages/wezterm) | WezTerm backend (`wezterm-term` via napi-rs) |
+| [@termless/peekaboo](packages/peekaboo) | OS-level terminal automation (xterm.js + real app) |
+| [@termless/test](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
+| [@termless/cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
 
 ## How termless Compares
 

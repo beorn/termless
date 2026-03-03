@@ -1,4 +1,4 @@
-# termless-wezterm Tests
+# @termless/wezterm Tests
 
 **Layer 0 — Platform**: WezTerm backend via napi-rs native bindings — verifies wezterm-term's VT parser produces correct cells, colors, styles, cursor, modes, scrollback.
 
@@ -16,8 +16,8 @@
 
 ## What NOT to Test Here
 
-- xterm.js backend — that's termless-xtermjs
-- Ghostty backend — that's termless-ghostty
+- xterm.js backend — that's @termless/xtermjs
+- Ghostty backend — that's @termless/ghostty
 - Cross-backend comparison — that's `tests/cross-backend.test.ts`
 - Vitest matchers — that's viterm
 

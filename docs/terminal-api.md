@@ -5,7 +5,7 @@
 Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
-import { createTerminal } from "termless"
+import { createTerminal } from "@termless/core"
 
 const term = createTerminal({
   cols: 80,    // default: 80
@@ -143,7 +143,7 @@ Returns: `TextPosition[]` -- array of `{ row, col, text }`.
 
 ## Reading State
 
-These methods are part of the `TerminalReadable` interface and work with viterm matchers.
+These methods are part of the `TerminalReadable` interface and work with @termless/test matchers.
 
 ### `getText()`
 

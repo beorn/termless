@@ -1,5 +1,5 @@
 {
-  "name": "termless",
+  "name": "@termless/core",
   "version": "0.1.0",
   "description": "Headless terminal library for cross-terminal TUI testing",
   "license": "MIT",

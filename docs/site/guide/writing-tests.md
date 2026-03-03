@@ -6,10 +6,10 @@ Import the fixture:
 
 ```typescript
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 ```
 
-`createTerminalFixture()` wraps `createTerminal()` with the xterm.js backend and registers cleanup in `afterEach` -- no manual `close()` needed. Matchers are auto-registered when importing from `"viterm"`.
+`createTerminalFixture()` wraps `createTerminal()` with the xterm.js backend and registers cleanup in `afterEach` -- no manual `close()` needed. Matchers are auto-registered when importing from `"@termless/test"`.
 
 ## Composable API
 
@@ -134,7 +134,7 @@ For readable terminal snapshots in `.snap` files:
 
 ```typescript
 import { expect } from "vitest"
-import { terminalSerializer, terminalSnapshot } from "viterm"
+import { terminalSerializer, terminalSnapshot } from "@termless/test"
 
 expect.addSnapshotSerializer(terminalSerializer)
 

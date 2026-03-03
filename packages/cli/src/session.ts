@@ -5,9 +5,9 @@
  * Each session wraps a Terminal instance with optional PTY process.
  */
 
-import { createTerminal } from "termless"
-import type { Terminal, SvgScreenshotOptions } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
+import { createTerminal } from "@termless/core"
+import type { Terminal, SvgScreenshotOptions } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
 
 // ── Types ──
 

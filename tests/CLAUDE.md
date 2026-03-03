@@ -8,14 +8,14 @@
 - **Terminal API**: `createTerminal()` lifecycle (init, feed, resize, close, `Symbol.asyncDispose`), region selectors (`screen`, `scrollback`, `buffer`, `viewport`, `row(n)`, `cell(r, c)`, `range(r1, c1, r2, c2)`, `firstRow()`, `lastRow()`), text search (`find`, `findAll`), cursor/cell delegation, `waitFor`/`waitForStable`, PTY-less error paths
 - **Region views**: `RegionView` (getText, getLines, containsText), `CellView` (positional cell with style), `RowView` (extends RegionView with row number and cellAt)
 - **SVG rendering**: `screenshotSvg()` output validity, cell styling (bold, italic, faint, fg/bg color, inverse, underline, strikethrough), cursor styles (block, beam, underline), custom themes/fonts, XML escaping, dimension calculation, bg-rect merging
-- **Integration**: Terminal + XtermBackend + Viterm matchers + snapshot serializer wired together end-to-end
+- **Integration**: Terminal + XtermBackend + @termless/test matchers + snapshot serializer wired together end-to-end
 - **Cross-backend**: xterm.js vs Ghostty vs vt100 conformance (`cross-backend.test.ts`) — same input sequences, cell-by-cell comparison. Covers text rendering, SGR styles, cursor, modes, wide characters, underlines, scrollback, capabilities, key encoding, and cross-backend output comparison.
 
 ## What NOT to Test Here
 
-- xterm.js backend internals -- that's termless-xtermjs
-- Vitest matcher logic in isolation -- that's viterm
-- CLI/MCP server behavior -- that's termless-cli
+- xterm.js backend internals -- that's @termless/xtermjs
+- Vitest matcher logic in isolation -- that's @termless/test
+- CLI/MCP server behavior -- that's @termless/cli
 - PTY spawning (requires real shell) -- integration tests use feed-only mode
 
 ## Helpers

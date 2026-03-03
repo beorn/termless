@@ -3,7 +3,7 @@
 termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
 
 ::: tip Single-backend testing
-If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "viterm"` -- it handles the backend automatically.
+If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "@termless/test"` -- it handles the backend automatically.
 :::
 
 ## Architecture
@@ -11,12 +11,12 @@ If you only need the default xterm.js backend, you don't need any of this. Just 
 ```
 Your tests
   └── termless (Terminal API)
-        ├── termless-xtermjs   (xterm.js via @xterm/headless)
-        ├── termless-ghostty   (Ghostty via ghostty-web WASM)
-        ├── termless-vt100     (pure TypeScript, zero deps)
-        ├── termless-alacritty (alacritty_terminal via napi-rs)
-        ├── termless-wezterm   (wezterm-term via napi-rs)
-        └── termless-peekaboo  (xterm.js + OS automation)
+        ├── @termless/xtermjs   (xterm.js via @xterm/headless)
+        ├── @termless/ghostty   (Ghostty via ghostty-web WASM)
+        ├── @termless/vt100     (pure TypeScript, zero deps)
+        ├── @termless/alacritty (alacritty_terminal via napi-rs)
+        ├── @termless/wezterm   (wezterm-term via napi-rs)
+        └── @termless/peekaboo  (xterm.js + OS automation)
 ```
 
 Tests interact with the `Terminal` interface. The backend is injected at creation time.
@@ -27,7 +27,7 @@ Tests interact with the `Terminal` interface. The backend is injected at creatio
 
 ```typescript
 // test/setup-xterm.ts
-import { createXtermBackend } from "termless-xtermjs"
+import { createXtermBackend } from "@termless/xtermjs"
 
 declare global {
   var createBackend: () => import("termless").TerminalBackend
@@ -38,7 +38,7 @@ globalThis.createBackend = () => createXtermBackend()
 
 ```typescript
 // test/setup-ghostty.ts
-import { createGhosttyBackend, initGhostty } from "termless-ghostty"
+import { createGhosttyBackend, initGhostty } from "@termless/ghostty"
 
 declare global {
   var createBackend: () => import("termless").TerminalBackend
@@ -75,8 +75,8 @@ export default [
 ```typescript
 // test/my-app.test.ts
 import { test, expect } from "vitest"
-import { createTerminal } from "termless"
-import "viterm/matchers" // Needed when using createTerminal directly (auto-registered with createTerminalFixture)
+import { createTerminal } from "@termless/core"
+import "@termless/test/matchers" // Needed when using createTerminal directly (auto-registered with createTerminalFixture)
 
 function createTerm(cols = 80, rows = 24) {
   return createTerminal({ backend: globalThis.createBackend(), cols, rows })

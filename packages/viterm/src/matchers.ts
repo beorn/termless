@@ -9,10 +9,10 @@
  *   expect(term).toHaveCursorAt(5, 10)              // Terminal matcher
  *
  * Import this module for side-effect registration:
- *   import "viterm/matchers"
+ *   import "@termless/test/matchers"
  *
  * Or import the matcher object for manual registration:
- *   import { terminalMatchers } from "viterm/matchers"
+ *   import { terminalMatchers } from "@termless/test/matchers"
  *   expect.extend(terminalMatchers)
  *
  * All assertion logic is delegated to termless/src/assertions.ts — this module

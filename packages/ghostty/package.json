@@ -1,5 +1,5 @@
 {
-  "name": "termless-ghostty",
+  "name": "@termless/ghostty",
   "version": "0.1.0",
   "description": "Ghostty backend for termless — Ghostty's VT parser via WASM",
   "license": "MIT",
@@ -28,6 +28,6 @@
     "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {
-    "termless": "*"
+    "@termless/core": "*"
   }
 }

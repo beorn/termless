@@ -1,4 +1,4 @@
-# termless-peekaboo
+# @termless/peekaboo
 
 Peekaboo backend for termless -- OS-level terminal control via real terminal apps.
 
@@ -13,8 +13,8 @@ This enables tests to verify both programmatic output (via xterm.js) AND real te
 ## Usage
 
 ```typescript
-import { createPeekabooBackend } from "termless-peekaboo"
-import { createTerminal } from "termless"
+import { createPeekabooBackend } from "@termless/peekaboo"
+import { createTerminal } from "@termless/core"
 
 // Data-only mode (no terminal app launched)
 const backend = createPeekabooBackend()

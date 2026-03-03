@@ -1,5 +1,5 @@
 {
-  "name": "termless-alacritty",
+  "name": "@termless/alacritty",
   "version": "0.1.0",
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs",
   "license": "MIT",
@@ -25,7 +25,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "termless": "*"
+    "@termless/core": "*"
   },
   "napi": {
     "binaryName": "termless-alacritty-native",

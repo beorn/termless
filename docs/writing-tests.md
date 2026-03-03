@@ -6,7 +6,7 @@ Import matchers and create fixtures:
 
 ```typescript
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 ```
 
 `createTerminalFixture()` wraps `createTerminal()` and registers cleanup in `afterEach` -- no manual `close()` needed.
@@ -134,7 +134,7 @@ For readable terminal snapshots in `.snap` files:
 
 ```typescript
 import { expect } from "vitest"
-import { terminalSerializer, terminalSnapshot } from "viterm"
+import { terminalSerializer, terminalSnapshot } from "@termless/test"
 
 expect.addSnapshotSerializer(terminalSerializer)
 

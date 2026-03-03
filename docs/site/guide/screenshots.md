@@ -5,8 +5,8 @@ termless generates SVG screenshots from terminal state -- no Chromium, no native
 ## Basic Usage
 
 ```typescript
-import { createTerminal } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
+import { createTerminal } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
 term.feed("\x1b[1;38;2;255;85;85mError:\x1b[0m file not found")

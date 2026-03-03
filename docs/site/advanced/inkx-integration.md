@@ -248,9 +248,9 @@ Use the `-termless` suffix: `output-diff-termless.test.tsx`, `ghost-chars-termle
 All termless tests follow this structure:
 
 ```typescript
-import { createTerminal } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
-import "viterm/matchers"
+import { createTerminal } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
+import "@termless/test/matchers"
 
 function createTestTerminal(cols: number, rows: number) {
   return createTerminal({

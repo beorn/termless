@@ -1,4 +1,4 @@
-# termless-wezterm
+# @termless/wezterm
 
 WezTerm backend for [termless](../../README.md) — headless terminal emulation using the [wezterm-term](https://crates.io/crates/tattoy-wezterm-term) Rust crate via [napi-rs](https://napi.rs) native bindings.
 
@@ -26,20 +26,20 @@ cd packages/wezterm/native
 cargo build --release
 
 # Copy to package root (macOS)
-cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node
+cp target/release/libtermless_wezterm_native.dylib ../@termless/wezterm.node
 
 # Linux
-# cp target/release/libtermless_wezterm_native.so ../termless-wezterm.node
+# cp target/release/libtermless_wezterm_native.so ../@termless/wezterm.node
 
 # Windows
-# cp target/release/termless_wezterm_native.dll ../termless-wezterm.node
+# cp target/release/termless_wezterm_native.dll ../@termless/wezterm.node
 ```
 
 ## Usage
 
 ```typescript
-import { createWeztermBackend } from "termless-wezterm"
-import { createTerminal } from "termless"
+import { createWeztermBackend } from "@termless/wezterm"
+import { createTerminal } from "@termless/core"
 
 const term = createTerminal({
   backend: createWeztermBackend(),

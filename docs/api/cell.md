@@ -1,7 +1,7 @@
 # API: Cell, Cursor, Colors
 
 ```typescript
-import type { Cell, CursorState, CursorStyle, RGB, UnderlineStyle, TerminalMode, ScrollbackState } from "termless"
+import type { Cell, CursorState, CursorStyle, RGB, UnderlineStyle, TerminalMode, ScrollbackState } from "@termless/core"
 ```
 
 ## Cell

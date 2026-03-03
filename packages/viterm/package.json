@@ -1,7 +1,7 @@
 {
-  "name": "viterm",
+  "name": "@termless/test",
   "version": "0.1.0",
-  "description": "Vitest integration for termless — terminal matchers, fixtures, and snapshots",
+  "description": "Vitest integration for termless (@termless/test) — terminal matchers, fixtures, and snapshots",
   "license": "MIT",
   "author": "Beorn",
   "repository": {
@@ -27,7 +27,7 @@
     "./fixture": "./src/fixture.ts"
   },
   "peerDependencies": {
-    "termless": "*",
+    "@termless/core": "*",
     "vitest": ">=2.0.0"
   }
 }

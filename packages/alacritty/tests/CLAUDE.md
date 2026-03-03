@@ -1,4 +1,4 @@
-# termless-alacritty Tests
+# @termless/alacritty Tests
 
 **Layer 0 -- Platform**: Alacritty backend via napi-rs -- verifies alacritty_terminal's VT parser produces correct cells, colors, styles, cursor, modes, scrollback.
 

@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { createTerminalFixture } from "viterm"
+ * import { createTerminalFixture } from "@termless/test"
  *
  * test("renders prompt", async () => {
  *   const term = createTerminalFixture()

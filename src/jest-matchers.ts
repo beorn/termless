@@ -6,7 +6,7 @@
  * runner that supports `expect.extend({ matcherName(received, ...args) })`.
  *
  * Usage:
- *   import { termlessMatchers } from "termless"
+ *   import { termlessMatchers } from "@termless/core"
  *   expect.extend(termlessMatchers)
  *
  *   // Then use matchers:
@@ -57,7 +57,7 @@ function toMatcherResult(result: AssertionResult) {
  *
  * @example
  * ```typescript
- * import { termlessMatchers } from "termless"
+ * import { termlessMatchers } from "@termless/core"
  * expect.extend(termlessMatchers)
  * ```
  */

@@ -1,4 +1,4 @@
-# termless-ghostty Tests
+# @termless/ghostty Tests
 
 **Layer 0 — Platform**: Ghostty backend via WASM — verifies Ghostty's VT parser produces correct cells, colors, styles, cursor, modes, scrollback.
 
@@ -16,7 +16,7 @@
 
 ## What NOT to Test Here
 
-- xterm.js backend — that's termless-xtermjs
+- xterm.js backend — that's @termless/xtermjs
 - Cross-backend comparison — that's `tests/cross-backend.test.ts`
 - Vitest matchers — that's viterm
 

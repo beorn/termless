@@ -1,4 +1,4 @@
-# termless-alacritty
+# @termless/alacritty
 
 Alacritty backend for [termless](../../) -- headless terminal emulation using
 the [alacritty_terminal](https://crates.io/crates/alacritty_terminal) Rust
@@ -67,7 +67,7 @@ bun vitest run vendor/beorn-termless/packages/alacritty/tests/ --project vendor
 ## Usage
 
 ```typescript
-import { createAlacrittyBackend } from "termless-alacritty"
+import { createAlacrittyBackend } from "@termless/alacritty"
 
 const backend = createAlacrittyBackend()
 backend.init({ cols: 80, rows: 24 })

@@ -6,7 +6,7 @@
  * visual snapshots.
  *
  * Register with vitest:
- *   import { svgTerminalSerializer } from "viterm"
+ *   import { svgTerminalSerializer } from "@termless/test"
  *   expect.addSnapshotSerializer(svgTerminalSerializer)
  */
 

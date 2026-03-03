@@ -37,20 +37,39 @@ features:
 ## Quick Start
 
 ```bash
-bun add -d viterm
+bun add -d @termless/test
 ```
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 
-test("displays welcome message", () => {
-  const term = createTerminalFixture()
+test("inspect what string matching can't see", () => {
+  const term = createTerminalFixture({ cols: 60, rows: 10 })
 
-  term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
+  // Simulate a TUI app: alt screen, window title, styled output
+  term.feed("\x1b[?1049h")                              // enter alt screen
+  term.feed("\x1b]2;my-app — dashboard\x07")            // set window title
+  term.feed("\x1b[1mServer Status\x1b[0m\r\n")
+  term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
+  term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
+  term.feed("\x1b[4;1H")                                // position cursor
 
-  expect(term.screen).toContainText("Welcome to MyApp v1.0")
-  expect(term.cell(0, 11)).toBeBold()
+  // Terminal modes, title, cursor — invisible to string assertions
+  expect(term).toBeInMode("altScreen")
+  expect(term).toHaveTitle("my-app — dashboard")
+  expect(term).toHaveCursorAt(0, 3)
+
+  // Region selectors + cell-level styles — colors getText() can't see
+  expect(term.row(0)).toHaveText("Server Status")
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(1, 8)).toHaveFg("#00ff00")           // green = healthy
+  expect(term.cell(2, 8)).toHaveFg("#ff0000")           // red = down
+
+  // Resize — verify content survives terminal resize
+  term.resize(30, 10)
+  expect(term.screen).toContainText("● online")
+  expect(term.screen).toContainText("● down")
 })
 ```
 
@@ -69,10 +88,12 @@ termless gives you **structured access** to the terminal buffer. Assert on what 
 // Instead of fragile string matching...
 expect(output).toContain("\x1b[1;31mError\x1b[0m")
 
-// ...assert on structure
+// ...assert on terminal state
 expect(term.screen).toContainText("Error")
 expect(term.cell(0, 0)).toBeBold()
 expect(term.cell(0, 0)).toHaveFg("#ff0000")
+expect(term).toBeInMode("altScreen")
+expect(term).toHaveTitle("my-app")
 ```
 
 ## Packages
@@ -80,14 +101,14 @@ expect(term.cell(0, 0)).toHaveFg("#ff0000")
 | Package | Description |
 |---------|-------------|
 | `termless` | Core: Terminal API, PTY, SVG screenshots, key mapping, region views |
-| `termless-xtermjs` | xterm.js backend via `@xterm/headless` |
-| `termless-ghostty` | Ghostty backend via `ghostty-web` WASM |
-| `termless-vt100` | Pure TypeScript VT100 emulator, zero native deps |
-| `termless-alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs) |
-| `termless-wezterm` | WezTerm backend via `wezterm-term` (napi-rs) |
-| `termless-peekaboo` | OS-level terminal automation (xterm.js + real app) |
-| `viterm` | Vitest integration: 25+ matchers, fixtures, snapshot serializer |
-| `termless-cli` | CLI tools + MCP server for AI agents |
+| `@termless/xtermjs` | xterm.js backend via `@xterm/headless` |
+| `@termless/ghostty` | Ghostty backend via `ghostty-web` WASM |
+| `@termless/vt100` | Pure TypeScript VT100 emulator, zero native deps |
+| `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs) |
+| `@termless/wezterm` | WezTerm backend via `wezterm-term` (napi-rs) |
+| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) |
+| `@termless/test` | Vitest integration: 25+ matchers, fixtures, snapshot serializer |
+| `@termless/cli` | CLI tools + MCP server for AI agents |
 
 ## How It Compares
 

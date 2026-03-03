@@ -1,8 +1,8 @@
 # API: Terminal
 
 ```typescript
-import { createTerminal } from "termless"
-import type { Terminal, TerminalCreateOptions } from "termless"
+import { createTerminal } from "@termless/core"
+import type { Terminal, TerminalCreateOptions } from "@termless/core"
 ```
 
 ## `createTerminal(options: TerminalCreateOptions): Terminal`
@@ -173,7 +173,7 @@ interface SpawnOptions {
 ## Key Utilities
 
 ```typescript
-import { parseKey, keyToAnsi } from "termless"
+import { parseKey, keyToAnsi } from "@termless/core"
 
 // Parse "Ctrl+a" -> { key: "a", ctrl: true }
 const desc = parseKey("Ctrl+Shift+ArrowUp")
@@ -188,8 +188,8 @@ const ansi = keyToAnsi({ key: "ArrowUp", ctrl: true }) // "\x1b[1;5A"
 Type-safe extension check for backend capabilities:
 
 ```typescript
-import { hasExtension } from "termless"
-import type { MouseEncodingExtension } from "termless"
+import { hasExtension } from "@termless/core"
+import type { MouseEncodingExtension } from "@termless/core"
 
 if (hasExtension<MouseEncodingExtension>(backend, "mouse")) {
   const encoded = backend.encodeMouse({ x: 5, y: 10, button: "left", action: "press" })

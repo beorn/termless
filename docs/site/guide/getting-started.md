@@ -3,10 +3,10 @@
 ## Installation
 
 ```bash
-bun add -d viterm
+bun add -d @termless/test
 ```
 
-- **viterm** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `termless` (core) and `termless-xtermjs` (xterm.js backend) as dependencies.
+- **@termless/test** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `termless` (core) and `@termless/xtermjs` (xterm.js backend) as dependencies.
 
 ## First Test
 
@@ -15,7 +15,7 @@ Create a test file:
 ```typescript
 // tests/terminal.test.ts
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 
 describe("my TUI app", () => {
   test("displays welcome message", () => {
@@ -64,7 +64,7 @@ To test a real TUI application with PTY:
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "viterm"
+import { createTerminalFixture } from "@termless/test"
 
 test("ls output contains files", async () => {
   const term = createTerminalFixture({
@@ -100,8 +100,8 @@ test("interactive app responds to keypresses", async () => {
 Terminal implements `Symbol.asyncDispose`, so you can use `using` instead of fixtures:
 
 ```typescript
-import { createTerminal } from "termless"
-import { createXtermBackend } from "termless-xtermjs"
+import { createTerminal } from "@termless/core"
+import { createXtermBackend } from "@termless/xtermjs"
 
 test("with explicit cleanup", async () => {
   await using term = createTerminal({

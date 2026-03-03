@@ -1,4 +1,4 @@
-# termless-xtermjs Tests
+# @termless/xtermjs Tests
 
 **Layer 0 -- Platform**: xterm.js headless backend correctness -- ANSI parsing, cell attributes, cursor tracking, terminal modes, and key encoding.
 

@@ -1,4 +1,4 @@
-# termless-vt100 Tests
+# @termless/vt100 Tests
 
 **Layer 0 -- Platform**: Pure TypeScript VT100 backend correctness -- ANSI parsing, cell attributes, cursor tracking, terminal modes, and key encoding.
 

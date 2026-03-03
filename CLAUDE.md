@@ -6,27 +6,27 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| `termless` | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active |
-| `termless-xtermjs` | xterm.js backend (@xterm/headless) | Active |
-| `termless-ghostty` | Ghostty backend (ghostty-web WASM) | Active |
-| `termless-vt100` | Pure TypeScript VT100 emulator (zero native deps) | Active |
-| `termless-alacritty` | Alacritty backend (alacritty_terminal via napi-rs) | Needs Rust build |
-| `termless-wezterm` | WezTerm backend (wezterm-term via napi-rs) | Needs Rust build |
-| `termless-peekaboo` | OS-level terminal automation (xterm.js + real app) | Active |
-| `viterm` | Vitest integration: matchers, fixtures, snapshots | Active |
-| `termless-cli` | CLI + MCP server | Active |
+| `@termless/core` | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active |
+| `@termless/xtermjs` | xterm.js backend (@xterm/headless) | Active |
+| `@termless/ghostty` | Ghostty backend (ghostty-web WASM) | Active |
+| `@termless/vt100` | Pure TypeScript VT100 emulator (zero native deps) | Active |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs) | Needs Rust build |
+| `@termless/wezterm` | WezTerm backend (wezterm-term via napi-rs) | Needs Rust build |
+| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) | Active |
+| `@termless/test` | Vitest integration: matchers, fixtures, snapshots | Active |
+| `@termless/cli` | CLI + MCP server | Active |
 
 ## Architecture
 
 ```
-viterm (Vitest matchers + fixtures)
-  └── termless (TerminalBackend interface + PTY + SVG + region views)
-        ├── termless-xtermjs (@xterm/headless)
-        ├── termless-ghostty (ghostty-web WASM)
-        ├── termless-vt100 (pure TypeScript)
-        ├── termless-alacritty (Rust napi-rs)
-        ├── termless-wezterm (Rust napi-rs)
-        └── termless-peekaboo (xterm.js + OS automation)
+@termless/test (Vitest matchers + fixtures)
+  └── @termless/core (TerminalBackend interface + PTY + SVG + region views)
+        ├── @termless/xtermjs (@xterm/headless)
+        ├── @termless/ghostty (ghostty-web WASM)
+        ├── @termless/vt100 (pure TypeScript)
+        ├── @termless/alacritty (Rust napi-rs)
+        ├── @termless/wezterm (Rust napi-rs)
+        └── @termless/peekaboo (xterm.js + OS automation)
 ```
 
 ## Commands
