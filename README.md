@@ -146,10 +146,9 @@ export default [
   {
     test: { name: "xterm", setupFiles: ["./test/setup-xterm.ts"] },
   },
-  // Phase 2:
-  // {
-  //   test: { name: "ghostty", setupFiles: ["./test/setup-ghostty.ts"] },
-  // },
+  {
+    test: { name: "ghostty", setupFiles: ["./test/setup-ghostty.ts"] },
+  },
 ]
 ```
 
@@ -194,7 +193,7 @@ termless mcp
 |---------|-------------|
 | [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
 | [termless-xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
-| [termless-ghostty](packages/ghostty) | Ghostty backend (Phase 2 -- not yet implemented) |
+| [termless-ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
 | [viterm](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
 | [termless-cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
 

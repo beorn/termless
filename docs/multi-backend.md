@@ -1,14 +1,14 @@
 # Multi-Backend Testing
 
-termless separates the test API from the terminal emulator. Write tests once, run them against xterm.js today and Ghostty when it's ready.
+termless separates the test API from the terminal emulator. Write tests once, run them against xterm.js and Ghostty.
 
 ## Architecture
 
 ```
 Your tests
   └── termless (Terminal API)
-        ├── termless-xtermjs  (xterm.js -- available now)
-        └── termless-ghostty  (Ghostty -- Phase 2)
+        ├── termless-xtermjs  (xterm.js via @xterm/headless)
+        └── termless-ghostty  (Ghostty via ghostty-web WASM)
 ```
 
 Tests interact with the `Terminal` interface. The backend is injected at creation time.
@@ -29,14 +29,15 @@ globalThis.createBackend = () => createXtermBackend()
 ```
 
 ```typescript
-// test/setup-ghostty.ts (Phase 2)
-import { createGhosttyBackend } from "termless-ghostty"
+// test/setup-ghostty.ts
+import { createGhosttyBackend, initGhostty } from "termless-ghostty"
 
 declare global {
   var createBackend: () => import("termless").TerminalBackend
 }
 
-globalThis.createBackend = () => createGhosttyBackend()
+const ghostty = await initGhostty()
+globalThis.createBackend = () => createGhosttyBackend(undefined, ghostty)
 ```
 
 ### 2. Configure vitest workspace
@@ -51,14 +52,13 @@ export default [
       include: ["test/**/*.test.ts"],
     },
   },
-  // Uncomment when ghostty backend is ready:
-  // {
-  //   test: {
-  //     name: "ghostty",
-  //     setupFiles: ["./test/setup-ghostty.ts"],
-  //     include: ["test/**/*.test.ts"],
-  //   },
-  // },
+  {
+    test: {
+      name: "ghostty",
+      setupFiles: ["./test/setup-ghostty.ts"],
+      include: ["test/**/*.test.ts"],
+    },
+  },
 ]
 ```
 

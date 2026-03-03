@@ -76,13 +76,15 @@ const backend = createXtermBackend({ cols: 80, rows: 24 })
 
 Uses `@xterm/headless` for in-process terminal emulation. No browser needed.
 
-### Ghostty (Phase 2)
+### Ghostty
 
 ```typescript
-import { createGhosttyBackend } from "termless-ghostty"
+import { createGhosttyBackend, initGhostty } from "termless-ghostty"
 
-// Not yet implemented -- throws an error
-const backend = createGhosttyBackend()
+// WASM must be loaded first
+const ghostty = await initGhostty()
+const backend = createGhosttyBackend(undefined, ghostty)
+backend.init({ cols: 80, rows: 24 })
 ```
 
 ## Implementing a Custom Backend

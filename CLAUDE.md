@@ -8,7 +8,7 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 |---------|-------------|--------|
 | `termless` | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active |
 | `termless-xtermjs` | xterm.js backend (@xterm/headless) | Active |
-| `termless-ghostty` | Ghostty backend (N-API/Zig) | Stub (Phase 2) |
+| `termless-ghostty` | Ghostty backend (ghostty-web WASM) | Active |
 | `viterm` | Vitest integration: matchers, fixtures, snapshots | Active |
 | `termless-cli` | CLI + MCP server | Active |
 
@@ -18,7 +18,7 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 viterm (Vitest matchers + fixtures)
   └── termless (TerminalBackend interface + PTY + SVG + region views)
         ├── termless-xtermjs (@xterm/headless)
-        └── termless-ghostty (libghostty-vt, future)
+        └── termless-ghostty (ghostty-web WASM)
 ```
 
 ## Commands

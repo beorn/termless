@@ -19,7 +19,9 @@ Initial release.
 - Terminal mode detection
 
 ### termless-ghostty
-- Ghostty backend (stub — planned for Phase 2)
+- Ghostty backend via ghostty-web WASM
+- Full TerminalBackend implementation (text, styles, colors, cursor, modes, scrollback, key encoding)
+- 35 backend-specific tests + 47 cross-backend conformance tests
 
 ### viterm
 - 25 Vitest matchers for terminal assertions

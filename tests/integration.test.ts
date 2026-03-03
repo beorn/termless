@@ -237,7 +237,7 @@ describe("Cross-backend test structure", () => {
     // vary backend via setup files
     const backends = [
       { name: "xterm", create: () => createXtermBackend() },
-      // When ghostty is ready: { name: "ghostty", create: () => createGhosttyBackend() }
+      // Ghostty backend tested in tests/cross-backend.test.ts
     ]
 
     for (const { name, create } of backends) {

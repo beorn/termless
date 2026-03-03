@@ -37,7 +37,7 @@ bun run typecheck
 |---------|-------------|
 | `termless` (root) | Core types, Terminal API, PTY, SVG screenshots, key mapping |
 | `termless-xtermjs` | xterm.js backend using @xterm/headless |
-| `termless-ghostty` | Ghostty backend (planned — Phase 2) |
+| `termless-ghostty` | Ghostty backend (ghostty-web WASM) |
 | `viterm` | Vitest matchers, fixtures, and snapshot serializer |
 | `termless-cli` | CLI tool and MCP server |
 
