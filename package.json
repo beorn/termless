@@ -36,13 +36,19 @@
     "./svg": "./src/svg.ts"
   },
   "workspaces": [
+    ".",
     "packages/*"
   ],
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ci": "bun vitest run",
-    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "docs:dev": "vitepress dev docs/site",
+    "docs:build": "vitepress build docs/site",
+    "docs:preview": "vitepress preview docs/site",
+    "cli": "bun packages/cli/src/cli.ts",
+    "matrix": "bun packages/cli/src/cli.ts matrix"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
