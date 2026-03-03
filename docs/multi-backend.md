@@ -106,3 +106,45 @@ Example of what multi-backend testing catches:
 - Reflow behavior on resize
 - Unicode/wide character edge cases
 - Escape sequence support differences
+
+## Conformance Matrix
+
+Beyond running individual tests, `termless matrix` generates a full compatibility report comparing backends side-by-side:
+
+```bash
+termless matrix                              # Print report
+termless matrix --output docs/compat-matrix.md  # Save to file
+```
+
+The matrix runs a 36-test battery (text, SGR, cursor, modes, scrollback, keys, unicode, capabilities) and produces a markdown table showing pass/fail per backend and flagging differences. See [docs/compat-matrix.md](compat-matrix.md) for the latest report.
+
+## How termless Compares to Other Matrix Testing
+
+Matrix testing — running the same tests across multiple implementations — is a well-established pattern. Here's how termless fits in:
+
+| System | What it matrices | How it works | Output |
+|--------|-----------------|--------------|--------|
+| **GitHub Actions `strategy.matrix`** | OS, runtime version, config variants | CI runs same workflow N times with different env vars | Per-combination pass/fail |
+| **Playwright `projects`** | Browsers (Chromium, Firefox, WebKit) | Same tests injected with different browser launcher | Per-browser test results |
+| **Vitest `workspace`** | Any axis (backends, configs, environments) | Named projects with different setup files | Per-project test results |
+| **BrowserStack / Sauce Labs** | Browsers + devices + OS combinations | Cloud farms running tests across hundreds of targets | Compatibility matrix reports |
+| **termless `matrix`** | Terminal emulator VT parsers | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Markdown conformance report with diffs |
+
+### Key differences
+
+**Playwright** is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Playwright runs tests independently per browser; termless additionally **compares backends side-by-side** in the same test run and produces a diff report. Playwright has no built-in "cross-browser conformance report" — you'd need a custom reporter.
+
+**GitHub CI matrix** is infrastructure-level: "does our code build on Linux and macOS?" It varies the environment, not the system under test. termless varies the terminal emulator implementation itself.
+
+**BrowserStack/Sauce Labs** are the commercial-scale version of what termless does for terminals. They run thousands of browser combinations and produce compatibility matrices. termless aims to be the open-source equivalent for terminal emulators — currently xterm.js and Ghostty, with WezTerm and Alacritty planned.
+
+**Vitest workspace** is the underlying mechanism termless uses. Each backend gets a workspace project with its own setup file. `termless matrix` adds the conformance reporting layer on top.
+
+### What's unique about termless
+
+No existing tool does automated cross-terminal-emulator conformance testing. Individual terminals test their own VT parser (Ghostty has vttest, xterm.js has its own suite), but no one feeds the **same sequences through multiple parsers and compares cell-by-cell**. termless is the first cross-terminal conformance testing framework. The long-term vision:
+
+1. **Conformance suite**: Shared VT100/ECMA-48 tests all backends must pass
+2. **Auto-generated reports**: Which features are identical, which differ, which are unsupported
+3. **Regression detection**: CI catches when a new backend version changes behavior
+4. **Upstream contribution**: Published findings for terminal emulator projects ("here's where xterm.js and Ghostty disagree on sequence X")

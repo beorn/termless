@@ -2,7 +2,7 @@
 
 Headless terminal testing library. Like Playwright, but for terminal apps.
 
-- **Write tests once** -- run against xterm.js, Ghostty (coming soon), or any backend
+- **Write tests once** -- run against xterm.js, Ghostty, or any backend
 - **Composable region selectors** -- `term.screen`, `term.cell(r, c)`, `term.row(n)` for precise assertions
 - **21 Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG screenshots** -- no Chromium, no native deps
@@ -210,6 +210,19 @@ termless mcp
 | [termless-ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
 | [viterm](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
 | [termless-cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
+
+## How termless Compares
+
+termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
+
+| Feature | termless | TUI Test | ttytest2 | pexpect | Textual | Ink |
+|---------|----------|----------|----------|---------|---------|-----|
+| **Multi-backend** | ✅ xterm.js + Ghostty | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
+| **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| **Visual matchers** | ✅ 21+ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
+| **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **TypeScript** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Documentation
 
