@@ -100,71 +100,70 @@ describe("Terminal + XtermBackend integration", () => {
 })
 
 describe("Terminal + Viterm matchers integration", () => {
-  test("toContainText works with real xterm backend", () => {
+  test("toContainText works with screen region", () => {
     const term = createXterm()
     term.feed("Hello World")
-    expect(term).toContainText("Hello World")
-    expect(term).not.toContainText("Goodbye")
+    expect(term.screen).toContainText("Hello World")
+    expect(term.screen).not.toContainText("Goodbye")
     term.close()
   })
 
-  test("toHaveTextAt works with real xterm backend", () => {
+  test("toHaveText works with row", () => {
     const term = createXterm()
     term.feed("ABCDE")
-    expect(term).toHaveTextAt(0, 0, "ABCDE")
+    expect(term.row(0)).toContainText("ABCDE")
     term.close()
   })
 
-  test("toBeBoldAt works with real xterm backend", () => {
+  test("toBeBold works with cell", () => {
     const term = createXterm()
     term.feed("\x1b[1mBold\x1b[0m")
-    expect(term).toBeBoldAt(0, 0)
+    expect(term.cell(0, 0)).toBeBold()
     term.close()
   })
 
-  test("toHaveFgColor works with real xterm backend", () => {
+  test("toHaveFg works with cell", () => {
     const term = createXterm()
     // Truecolor: ESC[38;2;255;0;0m
     term.feed("\x1b[38;2;255;0;0mRed\x1b[0m")
-    expect(term).toHaveFgColor(0, 0, "#ff0000")
+    expect(term.cell(0, 0)).toHaveFg("#ff0000")
     term.close()
   })
 
-  test("toHaveCursorAt works with real xterm backend", () => {
+  test("toHaveCursorAt works with terminal", () => {
     const term = createXterm()
     term.feed("Hi")
     expect(term).toHaveCursorAt(2, 0)
     term.close()
   })
 
-  test("toBeInAltScreen works with real xterm backend", () => {
+  test("toBeInMode works with terminal", () => {
     const term = createXterm()
-    expect(term).not.toBeInAltScreen()
+    expect(term).not.toBeInMode("altScreen")
     term.feed("\x1b[?1049h")
-    expect(term).toBeInAltScreen()
+    expect(term).toBeInMode("altScreen")
     term.close()
   })
 
-  test("toHaveTitle works with real xterm backend", () => {
+  test("toHaveTitle works with terminal", () => {
     const term = createXterm()
     term.feed("\x1b]2;Test Title\x07")
     expect(term).toHaveTitle("Test Title")
     term.close()
   })
 
-  test("toContainTextInRow works with real xterm backend", () => {
+  test("toContainText works with row region", () => {
     const term = createXterm()
     term.feed("Line 0\r\nLine 1\r\nLine 2")
-    expect(term).toContainTextInRow(1, "Line 1")
-    expect(term).not.toContainTextInRow(0, "Line 1")
+    expect(term.row(1)).toContainText("Line 1")
+    expect(term.row(0)).not.toContainText("Line 1")
     term.close()
   })
 
-  test("toHaveEmptyRow works with real xterm backend", () => {
+  test("toHaveText works for empty row", () => {
     const term = createXterm()
     term.feed("Content")
-    expect(term).not.toHaveEmptyRow(0)
-    expect(term).toHaveEmptyRow(5) // Row 5 should be empty
+    expect(term.row(5)).toHaveText("") // Row 5 should be empty
     term.close()
   })
 })
@@ -244,9 +243,65 @@ describe("Cross-backend test structure", () => {
     for (const { name, create } of backends) {
       const term = createTerminal({ backend: create(), cols: 80, rows: 24 })
       term.feed("Cross-backend test")
-      expect(term).toContainText("Cross-backend test")
+      expect(term.screen).toContainText("Cross-backend test")
       expect(term.getCursor().x).toBe(18) // "Cross-backend test" is 18 chars
       term.close()
     }
+  })
+})
+
+describe("Region selectors with real backend", () => {
+  test("screen vs buffer vs scrollback regions", () => {
+    const term = createXterm(40, 4)
+
+    // Feed more lines than the terminal can hold to create scrollback
+    for (let i = 0; i < 10; i++) {
+      term.feed(`Line ${i}\r\n`)
+    }
+
+    // Buffer should contain all lines
+    expect(term.buffer).toContainText("Line 0")
+    expect(term.buffer).toContainText("Line 9")
+
+    // Screen should only show the bottom rows
+    expect(term.screen).toContainText("Line 9")
+
+    // Scrollback should have early lines
+    expect(term.scrollback).toContainText("Line 0")
+
+    term.close()
+  })
+
+  test("cell style assertions with real xterm backend", () => {
+    const term = createXterm()
+    term.feed("\x1b[1;38;2;255;0;0mStyled\x1b[0m")
+
+    const cell = term.cell(0, 0)
+    expect(cell).toBeBold()
+    expect(cell).toHaveFg("#ff0000")
+    expect(cell.text).toBe("S")
+
+    term.close()
+  })
+
+  test("row view with cellAt()", () => {
+    const term = createXterm()
+    term.feed("\x1b[1mBold\x1b[0m Normal")
+
+    const row = term.row(0)
+    expect(row).toContainText("Bold")
+    expect(row.cellAt(0)).toBeBold()
+    expect(row.cellAt(5)).not.toBeBold()
+
+    term.close()
+  })
+
+  test("toMatchLines with screen region", () => {
+    const term = createXterm(20, 3)
+    term.feed("Alpha\r\nBeta\r\nGamma")
+
+    expect(term.screen).toMatchLines(["Alpha", "Beta", "Gamma"])
+
+    term.close()
   })
 })

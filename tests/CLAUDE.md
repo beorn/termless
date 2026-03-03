@@ -1,20 +1,21 @@
 # termless Tests
 
-**Layer 0 — Platform**: Core terminal API, key mapping, SVG screenshot rendering, and full-stack integration.
+**Layer 0 -- Platform**: Core terminal API, key mapping, SVG screenshot rendering, region views, and full-stack integration.
 
 ## What to Test Here
 
-- **Key mapping**: `parseKey()` string→descriptor, `keyToAnsi()` descriptor→ANSI sequences, modifiers (Ctrl, Alt, Shift, Meta/Cmd), named keys (arrows, function keys, Home/End)
-- **Terminal API**: `createTerminal()` lifecycle (init, feed, resize, close, `Symbol.asyncDispose`), text read-back (`getText`, `find`, `findAll`), cursor/cell delegation, `waitFor`/`waitForStable`, PTY-less error paths
+- **Key mapping**: `parseKey()` string->descriptor, `keyToAnsi()` descriptor->ANSI sequences, modifiers (Ctrl, Alt, Shift, Meta/Cmd), named keys (arrows, function keys, Home/End)
+- **Terminal API**: `createTerminal()` lifecycle (init, feed, resize, close, `Symbol.asyncDispose`), region selectors (`screen`, `scrollback`, `buffer`, `viewport`, `row(n)`, `cell(r, c)`, `range(r1, c1, r2, c2)`, `firstRow()`, `lastRow()`), text search (`find`, `findAll`), cursor/cell delegation, `waitFor`/`waitForStable`, PTY-less error paths
+- **Region views**: `RegionView` (getText, getLines, containsText), `CellView` (positional cell with style), `RowView` (extends RegionView with row number and cellAt)
 - **SVG rendering**: `screenshotSvg()` output validity, cell styling (bold, italic, faint, fg/bg color, inverse, underline, strikethrough), cursor styles (block, beam, underline), custom themes/fonts, XML escaping, dimension calculation, bg-rect merging
 - **Integration**: Terminal + XtermBackend + Viterm matchers + snapshot serializer wired together end-to-end, cross-backend test pattern
 
 ## What NOT to Test Here
 
-- xterm.js backend internals — that's termless-xtermjs
-- Vitest matcher logic in isolation — that's viterm
-- CLI/MCP server behavior — that's termless-cli
-- PTY spawning (requires real shell) — integration tests use feed-only mode
+- xterm.js backend internals -- that's termless-xtermjs
+- Vitest matcher logic in isolation -- that's viterm
+- CLI/MCP server behavior -- that's termless-cli
+- PTY spawning (requires real shell) -- integration tests use feed-only mode
 
 ## Helpers
 
@@ -25,11 +26,13 @@
 ## Patterns
 
 ```typescript
-// Terminal API with mock backend
+// Terminal API with mock backend + region selectors
 const backend = createMockBackend()
 const term = createTerminal({ backend, cols: 40, rows: 10 })
 term.feed("Hello")
-expect(term.getText()).toContain("Hello")
+expect(term.screen).toContainText("Hello")
+expect(term.row(0)).toHaveText("Hello")
+expect(term.cell(0, 0)).toBeBold()
 term.close()
 
 // SVG with cell overrides
@@ -39,11 +42,11 @@ const readable = createMockReadable(["ab"], {
 const svg = screenshotSvg(readable)
 expect(svg).toContain('font-weight="bold"')
 
-// Integration: real xterm backend + viterm matchers
+// Integration: real xterm backend + region selectors + viterm matchers
 const term = createXterm()
 term.feed("\x1b[31mRed\x1b[0m")
-expect(term).toContainText("Red")
-expect(term).toHaveFgColor(0, 0, "#ff0000")
+expect(term.screen).toContainText("Red")
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
 ```
 
 ## Ad-Hoc Testing
@@ -57,7 +60,7 @@ bun vitest run vendor/beorn-termless/tests/integration.test.ts # Full-stack inte
 
 ## Efficiency
 
-Mock backend tests (~30ms) are pure in-memory. Integration tests with xterm.js (~100ms) are heavier due to WASM backend. SVG tests are string-only — no I/O.
+Mock backend tests (~30ms) are pure in-memory. Integration tests with xterm.js (~100ms) are heavier due to WASM backend. SVG tests are string-only -- no I/O.
 
 ## See Also
 

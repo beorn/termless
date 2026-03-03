@@ -34,11 +34,11 @@ describe("my TUI app", () => {
     term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
 
     // Assert text content
-    expect(term).toContainText("Welcome to MyApp v1.0")
+    expect(term.screen).toContainText("Welcome to MyApp v1.0")
 
     // Assert styling
-    expect(term).toBeBoldAt(0, 11) // "M" in "MyApp" is bold
-    expect(term).not.toBeBoldAt(0, 0) // "W" in "Welcome" is not
+    expect(term.cell(0, 11)).toBeBold() // "M" in "MyApp" is bold
+    expect(term.cell(0, 0)).not.toBeBold() // "W" in "Welcome" is not
 
     // No manual cleanup needed -- createTerminalFixture handles it
   })
@@ -53,8 +53,8 @@ describe("my TUI app", () => {
     // Red foreground with truecolor
     term.feed("\x1b[38;2;255;0;0mERROR\x1b[0m: something went wrong")
 
-    expect(term).toContainText("ERROR: something went wrong")
-    expect(term).toHaveFgColor(0, 0, "#ff0000")
+    expect(term.screen).toContainText("ERROR: something went wrong")
+    expect(term.cell(0, 0)).toHaveFg("#ff0000")
   })
 })
 ```

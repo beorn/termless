@@ -1,9 +1,12 @@
 /**
  * Custom Vitest matchers for terminal testing.
  *
- * Provides ~25 matchers for asserting terminal content, cell styles, cursor state,
- * terminal modes, title, and scrollback. All matchers work on any object implementing
- * the TerminalReadable protocol from termless.
+ * Composable matchers that work with region selectors (RegionView, CellView)
+ * and terminal-level queries (TerminalReadable). The composable pattern is:
+ *
+ *   expect(term.screen).toContainText("Hello")     // RegionView text matcher
+ *   expect(term.cell(0, 0)).toBeBold()              // CellView style matcher
+ *   expect(term).toHaveCursorAt(5, 10)              // Terminal matcher
  *
  * Import this module for side-effect registration:
  *   import "viterm/matchers"
@@ -16,8 +19,6 @@
 import { expect } from "vitest"
 import type {
 	TerminalReadable,
-	Cell,
-	CursorState,
 	CursorStyle,
 	RGB,
 	TerminalMode,
@@ -25,17 +26,90 @@ import type {
 } from "../../../src/types.ts"
 
 // =============================================================================
-// Type Guard
+// Type Guards
 // =============================================================================
+
+function isRegionView(value: unknown): value is { getText(): string; getLines(): string[]; containsText(text: string): boolean } {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"containsText" in value &&
+		typeof (value as Record<string, unknown>).containsText === "function"
+	)
+}
+
+function isCellView(value: unknown): value is {
+	readonly text: string
+	readonly row: number
+	readonly col: number
+	readonly fg: RGB | null
+	readonly bg: RGB | null
+	readonly bold: boolean
+	readonly faint: boolean
+	readonly italic: boolean
+	readonly underline: UnderlineStyle
+	readonly strikethrough: boolean
+	readonly inverse: boolean
+	readonly wide: boolean
+} {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"bold" in value &&
+		"fg" in value &&
+		"row" in value &&
+		"col" in value
+	)
+}
 
 function isTerminalReadable(value: unknown): value is TerminalReadable {
 	return (
 		value !== null &&
 		typeof value === "object" &&
-		"getText" in value &&
 		"getCell" in value &&
 		"getCursor" in value &&
 		"getMode" in value
+	)
+}
+
+function assertRegionView(
+	value: unknown,
+	matcherName: string,
+): asserts value is { getText(): string; getLines(): string[]; containsText(text: string): boolean } {
+	if (isRegionView(value)) return
+	if (isTerminalReadable(value)) {
+		throw new Error(
+			`${matcherName} requires a region. Use term.screen, term.buffer, or term.scrollback. ` +
+				`Example: expect(term.screen).${matcherName}(...)`,
+		)
+	}
+	throw new Error(
+		`${matcherName} requires a RegionView (an object with containsText, getText, getLines). ` +
+			`Got ${typeof value}.`,
+	)
+}
+
+function assertCellView(
+	value: unknown,
+	matcherName: string,
+): asserts value is {
+	readonly text: string
+	readonly row: number
+	readonly col: number
+	readonly fg: RGB | null
+	readonly bg: RGB | null
+	readonly bold: boolean
+	readonly faint: boolean
+	readonly italic: boolean
+	readonly underline: UnderlineStyle
+	readonly strikethrough: boolean
+	readonly inverse: boolean
+	readonly wide: boolean
+} {
+	if (isCellView(value)) return
+	throw new Error(
+		`${matcherName} expects a CellView. Use term.cell(row, col). ` +
+			`Example: expect(term.cell(0, 0)).${matcherName}()`,
 	)
 }
 
@@ -43,12 +117,11 @@ function assertTerminalReadable(
 	value: unknown,
 	matcherName: string,
 ): asserts value is TerminalReadable {
-	if (!isTerminalReadable(value)) {
-		throw new Error(
-			`${matcherName} expects a TerminalReadable, got ${typeof value}. ` +
-				`Pass an object with getText(), getCell(), getCursor(), and getMode() methods.`,
-		)
-	}
+	if (isTerminalReadable(value)) return
+	throw new Error(
+		`${matcherName} expects a TerminalReadable, got ${typeof value}. ` +
+			`Pass an object with getCell(), getCursor(), and getMode() methods.`,
+	)
 }
 
 // =============================================================================
@@ -81,46 +154,33 @@ function formatRgb(color: RGB | null): string {
 
 declare module "vitest" {
 	interface Matchers<T> {
-		// Text
+		// Text (RegionView)
 		toContainText(text: string): void
-		toHaveTextAt(row: number, col: number, text: string): void
-		toContainTextInRow(row: number, text: string): void
-		toHaveEmptyRow(row: number): void
+		toHaveText(text: string): void
+		toMatchLines(lines: string[]): void
 
-		// Cell Style
-		toHaveFgColor(row: number, col: number, color: string | RGB): void
-		toHaveBgColor(row: number, col: number, color: string | RGB): void
-		toBeBoldAt(row: number, col: number): void
-		toBeItalicAt(row: number, col: number): void
-		toBeFaintAt(row: number, col: number): void
-		toHaveUnderlineAt(row: number, col: number, style?: UnderlineStyle): void
-		toBeStrikethroughAt(row: number, col: number): void
-		toBeInverseAt(row: number, col: number): void
-		toBeWideAt(row: number, col: number): void
+		// Cell Style (CellView)
+		toBeBold(): void
+		toBeItalic(): void
+		toBeFaint(): void
+		toBeStrikethrough(): void
+		toBeInverse(): void
+		toBeWide(): void
+		toHaveUnderline(style?: UnderlineStyle): void
+		toHaveFg(color: string | RGB): void
+		toHaveBg(color: string | RGB): void
 
-		// Cursor
+		// Terminal (TerminalReadable)
 		toHaveCursorAt(x: number, y: number): void
+		toHaveCursorStyle(style: CursorStyle): void
 		toHaveCursorVisible(): void
 		toHaveCursorHidden(): void
-		toHaveCursorStyle(style: CursorStyle): void
-
-		// Terminal Modes
-		toBeInAltScreen(): void
-		toBeInBracketedPaste(): void
-		toHaveMode(mode: TerminalMode): void
-
-		// Title
+		toBeInMode(mode: TerminalMode): void
 		toHaveTitle(title: string): void
-
-		// Scrollback
 		toHaveScrollbackLines(n: number): void
 		toBeAtBottomOfScrollback(): void
-		toHaveTextInScrollback(text: string): void
 
-		// Viewport
-		toMatchViewport(expectedLines: string[]): void
-
-		// Snapshot
+		// Snapshot (TerminalReadable)
 		toMatchTerminalSnapshot(options?: { name?: string }): void
 	}
 }
@@ -130,204 +190,192 @@ declare module "vitest" {
 // =============================================================================
 
 export const terminalMatchers = {
-	// ── Text Matchers ──
+	// ── Text Matchers (RegionView) ──
 
-	/** Assert terminal buffer contains the given text anywhere. */
+	/** Assert region contains the given text as a substring. */
 	toContainText(received: unknown, text: string) {
-		assertTerminalReadable(received, "toContainText")
+		assertRegionView(received, "toContainText")
+		const pass = received.containsText(text)
 		const content = received.getText()
-		const pass = content.includes(text)
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected terminal not to contain "${text}"`
-					: `Expected terminal to contain "${text}"\n\nActual content:\n${content}`,
+					? `Expected region not to contain "${text}"\n\nContent:\n${content}`
+					: `Expected region to contain "${text}"\n\nContent:\n${content}`,
 		}
 	},
 
-	/** Assert specific text appears at the given row and column. */
-	toHaveTextAt(received: unknown, row: number, col: number, text: string) {
-		assertTerminalReadable(received, "toHaveTextAt")
-		const actual = received.getTextRange(row, col, row, col + text.length)
+	/** Assert region text matches exactly after trimming. */
+	toHaveText(received: unknown, text: string) {
+		assertRegionView(received, "toHaveText")
+		const actual = received.getText().trim()
 		const pass = actual === text
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected terminal not to have "${text}" at (${row},${col})`
-					: `Expected "${text}" at (${row},${col}), got "${actual}"`,
+					? `Expected region text not to be "${text}"`
+					: `Expected region text to be "${text}"\n\nActual: "${actual}"`,
 		}
 	},
 
-	/** Assert a specific row contains the given text substring. */
-	toContainTextInRow(received: unknown, row: number, text: string) {
-		assertTerminalReadable(received, "toContainTextInRow")
-		const line = received.getLine(row)
-		const rowText = line.map((c) => c.text || " ").join("")
-		const pass = rowText.includes(text)
+	/** Assert region lines match expected lines (trailing whitespace trimmed per line). */
+	toMatchLines(received: unknown, expectedLines: string[]) {
+		assertRegionView(received, "toMatchLines")
+		const actualLines = received.getLines().map((l) => l.trimEnd())
+
+		const maxLen = Math.max(actualLines.length, expectedLines.length)
+		const mismatches: string[] = []
+		for (let i = 0; i < maxLen; i++) {
+			const actual = actualLines[i] ?? ""
+			const expected = expectedLines[i] ?? ""
+			if (actual !== expected) {
+				mismatches.push(
+					`  line ${i}: expected "${expected}" got "${actual}"`,
+				)
+			}
+		}
+
+		const pass = mismatches.length === 0
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected row ${row} not to contain "${text}"`
-					: `Expected row ${row} to contain "${text}"\n\nActual: "${rowText}"`,
+					? `Expected region lines not to match the given lines`
+					: `Region line mismatch:\n${mismatches.join("\n")}`,
 		}
 	},
 
-	/** Assert a row is empty (all cells are spaces or empty strings). */
-	toHaveEmptyRow(received: unknown, row: number) {
-		assertTerminalReadable(received, "toHaveEmptyRow")
-		const line = received.getLine(row)
-		const pass = line.every((c) => !c.text || c.text === " ")
-		const rowText = line.map((c) => c.text || " ").join("")
+	// ── Cell Style Matchers (CellView) ──
+
+	/** Assert cell is bold. */
+	toBeBold(received: unknown) {
+		assertCellView(received, "toBeBold")
+		const pass = received.bold
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected row ${row} not to be empty`
-					: `Expected row ${row} to be empty\n\nActual: "${rowText}"`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be bold`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be bold`,
 		}
 	},
 
-	// ── Cell Style Matchers ──
-
-	/** Assert foreground color at a specific cell position. */
-	toHaveFgColor(received: unknown, row: number, col: number, color: string | RGB) {
-		assertTerminalReadable(received, "toHaveFgColor")
-		const cell = received.getCell(row, col)
-		const expected = parseColor(color)
-		const pass = colorsMatch(cell.fg, expected)
+	/** Assert cell is italic. */
+	toBeItalic(received: unknown) {
+		assertCellView(received, "toBeItalic")
+		const pass = received.italic
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to have fg ${formatRgb(expected)}`
-					: `Expected cell (${row},${col}) fg to be ${formatRgb(expected)}, got ${formatRgb(cell.fg)}`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be italic`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be italic`,
 		}
 	},
 
-	/** Assert background color at a specific cell position. */
-	toHaveBgColor(received: unknown, row: number, col: number, color: string | RGB) {
-		assertTerminalReadable(received, "toHaveBgColor")
-		const cell = received.getCell(row, col)
-		const expected = parseColor(color)
-		const pass = colorsMatch(cell.bg, expected)
+	/** Assert cell is faint. */
+	toBeFaint(received: unknown) {
+		assertCellView(received, "toBeFaint")
+		const pass = received.faint
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to have bg ${formatRgb(expected)}`
-					: `Expected cell (${row},${col}) bg to be ${formatRgb(expected)}, got ${formatRgb(cell.bg)}`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be faint`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be faint`,
 		}
 	},
 
-	/** Assert cell at position has bold attribute. */
-	toBeBoldAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeBoldAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.bold
+	/** Assert cell has strikethrough. */
+	toBeStrikethrough(received: unknown) {
+		assertCellView(received, "toBeStrikethrough")
+		const pass = received.strikethrough
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to be bold`
-					: `Expected cell (${row},${col}) to be bold`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be strikethrough`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be strikethrough`,
 		}
 	},
 
-	/** Assert cell at position has italic attribute. */
-	toBeItalicAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeItalicAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.italic
+	/** Assert cell has inverse video. */
+	toBeInverse(received: unknown) {
+		assertCellView(received, "toBeInverse")
+		const pass = received.inverse
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to be italic`
-					: `Expected cell (${row},${col}) to be italic`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be inverse`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be inverse`,
 		}
 	},
 
-	/** Assert cell at position has faint attribute. */
-	toBeFaintAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeFaintAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.faint
+	/** Assert cell is wide (double-width character). */
+	toBeWide(received: unknown) {
+		assertCellView(received, "toBeWide")
+		const pass = received.wide
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to be faint`
-					: `Expected cell (${row},${col}) to be faint`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be wide`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be wide`,
 		}
 	},
 
-	/** Assert cell at position has underline. Optionally check specific underline style. */
-	toHaveUnderlineAt(received: unknown, row: number, col: number, style?: UnderlineStyle) {
-		assertTerminalReadable(received, "toHaveUnderlineAt")
-		const cell = received.getCell(row, col)
-		const hasUnderline = cell.underline !== "none"
-		const pass = style ? cell.underline === style : hasUnderline
+	/** Assert cell has underline. Optionally check specific style. */
+	toHaveUnderline(received: unknown, style?: UnderlineStyle) {
+		assertCellView(received, "toHaveUnderline")
+		const hasUnderline = received.underline !== "none"
+		const pass = style ? received.underline === style : hasUnderline
 		return {
 			pass,
 			message: () => {
 				if (style) {
 					return pass
-						? `Expected cell (${row},${col}) not to have underline style "${style}"`
-						: `Expected cell (${row},${col}) underline to be "${style}", got "${cell.underline}"`
+						? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to have underline style "${style}"`
+						: `Expected cell (${received.row},${received.col}) containing '${received.text}' underline to be "${style}", got "${received.underline}"`
 				}
 				return pass
-					? `Expected cell (${row},${col}) not to be underlined`
-					: `Expected cell (${row},${col}) to be underlined, got "${cell.underline}"`
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to be underlined`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' to be underlined, got "${received.underline}"`
 			},
 		}
 	},
 
-	/** Assert cell at position has strikethrough attribute. */
-	toBeStrikethroughAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeStrikethroughAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.strikethrough
+	/** Assert cell foreground color. Accepts hex string or {r,g,b}. */
+	toHaveFg(received: unknown, color: string | RGB) {
+		assertCellView(received, "toHaveFg")
+		const expected = parseColor(color)
+		const pass = colorsMatch(received.fg, expected)
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to be strikethrough`
-					: `Expected cell (${row},${col}) to be strikethrough`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to have fg ${formatRgb(expected)}`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' fg to be ${formatRgb(expected)}, got ${formatRgb(received.fg)}`,
 		}
 	},
 
-	/** Assert cell at position has inverse attribute. */
-	toBeInverseAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeInverseAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.inverse
+	/** Assert cell background color. Accepts hex string or {r,g,b}. */
+	toHaveBg(received: unknown, color: string | RGB) {
+		assertCellView(received, "toHaveBg")
+		const expected = parseColor(color)
+		const pass = colorsMatch(received.bg, expected)
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected cell (${row},${col}) not to be inverse`
-					: `Expected cell (${row},${col}) to be inverse`,
+					? `Expected cell (${received.row},${received.col}) containing '${received.text}' not to have bg ${formatRgb(expected)}`
+					: `Expected cell (${received.row},${received.col}) containing '${received.text}' bg to be ${formatRgb(expected)}, got ${formatRgb(received.bg)}`,
 		}
 	},
 
-	/** Assert cell at position is wide (double-width character). */
-	toBeWideAt(received: unknown, row: number, col: number) {
-		assertTerminalReadable(received, "toBeWideAt")
-		const cell = received.getCell(row, col)
-		const pass = cell.wide
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected cell (${row},${col}) not to be wide`
-					: `Expected cell (${row},${col}) to be wide`,
-		}
-	},
-
-	// ── Cursor Matchers ──
+	// ── Terminal Matchers (TerminalReadable) ──
 
 	/** Assert cursor is at the given position. */
 	toHaveCursorAt(received: unknown, x: number, y: number) {
@@ -340,6 +388,20 @@ export const terminalMatchers = {
 				pass
 					? `Expected cursor not to be at (${x},${y})`
 					: `Expected cursor at (${x},${y}), got (${cursor.x},${cursor.y})`,
+		}
+	},
+
+	/** Assert cursor has a specific style (block, underline, beam). */
+	toHaveCursorStyle(received: unknown, style: CursorStyle) {
+		assertTerminalReadable(received, "toHaveCursorStyle")
+		const cursor = received.getCursor()
+		const pass = cursor.style === style
+		return {
+			pass,
+			message: () =>
+				pass
+					? `Expected cursor style not to be "${style}"`
+					: `Expected cursor style to be "${style}", got "${cursor.style}"`,
 		}
 	},
 
@@ -367,62 +429,18 @@ export const terminalMatchers = {
 		}
 	},
 
-	/** Assert cursor has a specific style (block, underline, beam). */
-	toHaveCursorStyle(received: unknown, style: CursorStyle) {
-		assertTerminalReadable(received, "toHaveCursorStyle")
-		const cursor = received.getCursor()
-		const pass = cursor.style === style
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected cursor style not to be "${style}"`
-					: `Expected cursor style to be "${style}", got "${cursor.style}"`,
-		}
-	},
-
-	// ── Terminal Mode Matchers ──
-
-	/** Assert terminal is in alternate screen mode. */
-	toBeInAltScreen(received: unknown) {
-		assertTerminalReadable(received, "toBeInAltScreen")
-		const pass = received.getMode("altScreen")
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected terminal not to be in alt screen`
-					: `Expected terminal to be in alt screen`,
-		}
-	},
-
-	/** Assert terminal is in bracketed paste mode. */
-	toBeInBracketedPaste(received: unknown) {
-		assertTerminalReadable(received, "toBeInBracketedPaste")
-		const pass = received.getMode("bracketedPaste")
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected terminal not to be in bracketed paste mode`
-					: `Expected terminal to be in bracketed paste mode`,
-		}
-	},
-
 	/** Assert a specific terminal mode is enabled. */
-	toHaveMode(received: unknown, mode: TerminalMode) {
-		assertTerminalReadable(received, "toHaveMode")
+	toBeInMode(received: unknown, mode: TerminalMode) {
+		assertTerminalReadable(received, "toBeInMode")
 		const pass = received.getMode(mode)
 		return {
 			pass,
 			message: () =>
 				pass
-					? `Expected terminal not to have mode "${mode}"`
-					: `Expected terminal to have mode "${mode}"`,
+					? `Expected terminal not to be in mode "${mode}"`
+					: `Expected terminal to be in mode "${mode}"`,
 		}
 	},
-
-	// ── Title Matcher ──
 
 	/** Assert terminal has a specific title (set via OSC escape). */
 	toHaveTitle(received: unknown, title: string) {
@@ -437,8 +455,6 @@ export const terminalMatchers = {
 					: `Expected terminal title to be "${title}", got "${actual}"`,
 		}
 	},
-
-	// ── Scrollback Matchers ──
 
 	/** Assert scrollback has a specific number of lines. */
 	toHaveScrollbackLines(received: unknown, n: number) {
@@ -468,57 +484,7 @@ export const terminalMatchers = {
 		}
 	},
 
-	// ── Scrollback Text Matcher ──
-
-	/** Assert scrollback buffer (above viewport) contains the given text. */
-	toHaveTextInScrollback(received: unknown, text: string) {
-		assertTerminalReadable(received, "toHaveTextInScrollback")
-		const scrollbackContent = received.getScrollbackText()
-		const pass = scrollbackContent.includes(text)
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected scrollback not to contain "${text}"`
-					: `Expected scrollback to contain "${text}"\n\nScrollback content:\n${scrollbackContent || "(empty)"}`,
-		}
-	},
-
-	// ── Viewport Matcher ──
-
-	/** Assert viewport text matches expected lines (line-by-line, trailing whitespace trimmed). */
-	toMatchViewport(received: unknown, expectedLines: string[]) {
-		assertTerminalReadable(received, "toMatchViewport")
-		const viewportText = received.getViewportText()
-		const actualLines = viewportText.split("\n").map((l) => l.trimEnd())
-
-		// Pad shorter array with empty strings for comparison
-		const maxLen = Math.max(actualLines.length, expectedLines.length)
-		const padded = {
-			actual: Array.from({ length: maxLen }, (_, i) => actualLines[i] ?? ""),
-			expected: Array.from({ length: maxLen }, (_, i) => expectedLines[i] ?? ""),
-		}
-
-		const mismatches: string[] = []
-		for (let i = 0; i < maxLen; i++) {
-			if (padded.actual[i] !== padded.expected[i]) {
-				mismatches.push(
-					`  row ${i}: expected "${padded.expected[i]}" got "${padded.actual[i]}"`,
-				)
-			}
-		}
-
-		const pass = mismatches.length === 0
-		return {
-			pass,
-			message: () =>
-				pass
-					? `Expected viewport not to match the given lines`
-					: `Viewport text mismatch:\n${mismatches.join("\n")}`,
-		}
-	},
-
-	// ── Snapshot Matcher ──
+	// ── Snapshot Matcher (TerminalReadable) ──
 
 	/** Match terminal content against a snapshot. */
 	toMatchTerminalSnapshot(received: unknown, options?: { name?: string }) {
@@ -543,15 +509,12 @@ export const terminalMatchers = {
 
 		const snapshot = `${header}\n${sep}\n${body}`
 
-		// Use vitest's built-in snapshot matching with the formatted terminal output
 		return {
 			pass:
 				(expect as unknown as { getState(): { snapshotState: unknown } })
 					.getState?.()
 					?.snapshotState !== undefined,
 			message: () => `Terminal snapshot comparison`,
-			// The actual snapshot matching is handled by vitest when this is called
-			// via expect().toMatchTerminalSnapshot()
 			actual: snapshot,
 			expected: options?.name ?? "terminal snapshot",
 		}

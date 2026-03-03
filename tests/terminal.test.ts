@@ -160,18 +160,6 @@ function createMockBackend(): TerminalBackend {
       return title
     },
 
-    getRowText(row: number): string {
-      return (grid[row] ?? []).join("").trimEnd()
-    },
-
-    getViewportText(): string {
-      return grid.map((row) => row.join("").trimEnd()).join("\n")
-    },
-
-    getScrollbackText(_lineCount?: number): string {
-      return "" // Mock has no scrollback
-    },
-
     getScrollback(): ScrollbackState {
       return { viewportOffset: 0, totalLines: rows, screenLines: rows }
     },
@@ -611,40 +599,105 @@ describe("createTerminal", () => {
     term.close()
   })
 
-  test("getRowText returns trimmed text of a row", () => {
-    const backend = createMockBackend()
-    const term = createTerminal({ backend, cols: 20, rows: 5 })
+})
 
-    term.feed("Hello world\nLine two")
+// ═══════════════════════════════════════════════════════
+// Region selector tests
+// ═══════════════════════════════════════════════════════
 
-    expect(term.getRowText(0)).toBe("Hello world")
-    expect(term.getRowText(1)).toBe("Line two")
-    expect(term.getRowText(2)).toBe("")
-
-    term.close()
-  })
-
-  test("getViewportText returns all viewport rows", () => {
+describe("region selectors", () => {
+  test("screen returns a RegionView with screen text", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 3 })
-
     term.feed("Row A\nRow B\nRow C")
 
-    const text = term.getViewportText()
-    expect(text).toContain("Row A")
-    expect(text).toContain("Row B")
-    expect(text).toContain("Row C")
+    const screen = term.screen
+    expect(screen.getText()).toContain("Row A")
+    expect(screen.getText()).toContain("Row C")
+    expect(screen.containsText("Row B")).toBe(true)
+    expect(screen.containsText("nonexistent")).toBe(false)
+
+    const lines = screen.getLines()
+    expect(lines.length).toBe(3)
 
     term.close()
   })
 
-  test("getScrollbackText returns empty for mock backend", () => {
+  test("buffer returns full buffer text", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 3 })
+    term.feed("Hello world")
+
+    expect(term.buffer.containsText("Hello world")).toBe(true)
+
+    term.close()
+  })
+
+  test("row returns a RowView for screen row", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 5 })
+    term.feed("Line A\nLine B\nLine C")
 
+    const row0 = term.row(0)
+    expect(row0.getText()).toContain("Line A")
+    expect(row0.row).toBe(0)
+    expect(row0.containsText("Line A")).toBe(true)
+
+    const row1 = term.row(1)
+    expect(row1.getText()).toContain("Line B")
+
+    term.close()
+  })
+
+  test("row with negative index counts from bottom", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+    term.feed("Line A\nLine B\nLine C\nLine D\nLine E")
+
+    const lastRow = term.row(-1)
+    expect(lastRow.getText()).toContain("Line E")
+    expect(lastRow.row).toBe(4)
+
+    const secondLast = term.row(-2)
+    expect(secondLast.getText()).toContain("Line D")
+
+    term.close()
+  })
+
+  test("cell returns a CellView", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+    term.feed("XY")
+
+    const cell = term.cell(0, 0)
+    expect(cell.text).toBe("X")
+    expect(cell.row).toBe(0)
+    expect(cell.col).toBe(0)
+
+    const cell2 = term.cell(0, 1)
+    expect(cell2.text).toBe("Y")
+    expect(cell2.col).toBe(1)
+
+    term.close()
+  })
+
+  test("firstRow and lastRow convenience methods", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 3 })
+    term.feed("First\nMiddle\nLast")
+
+    expect(term.firstRow().getText()).toContain("First")
+    expect(term.lastRow().getText()).toContain("Last")
+
+    term.close()
+  })
+
+  test("scrollback returns empty region when no scrollback", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
     term.feed("Hello")
 
-    expect(term.getScrollbackText()).toBe("")
+    expect(term.scrollback.getText()).toBe("")
 
     term.close()
   })

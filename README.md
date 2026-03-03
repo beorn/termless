@@ -3,7 +3,8 @@
 Headless terminal testing library. Like Playwright, but for terminal apps.
 
 - **Write tests once** -- run against xterm.js, Ghostty (coming soon), or any backend
-- **25+ Vitest matchers** -- `toBeBoldAt`, `toHaveFgColor`, `toContainText`, and more
+- **Composable region selectors** -- `term.screen`, `term.cell(r, c)`, `term.row(n)` for precise assertions
+- **21 Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG screenshots** -- no Chromium, no native deps
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
@@ -17,7 +18,7 @@ import { createXtermBackend } from "termless-xtermjs"
 // Feed data directly
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
 term.feed("\x1b[1mHello\x1b[0m, termless!")
-console.log(term.getText()) // "Hello, termless!"
+console.log(term.screen.getText()) // "Hello, termless!"
 await term.close()
 ```
 
@@ -28,7 +29,7 @@ const term = createTerminal({ backend: createXtermBackend(), cols: 120, rows: 40
 await term.spawn(["ls", "-la"])
 await term.waitFor("total")
 
-console.log(term.getText())
+console.log(term.screen.getText())
 const svg = term.screenshotSvg()
 
 await term.close()
@@ -46,11 +47,87 @@ test("renders bold red text", () => {
   const term = createTerminalFixture({ backend: createXtermBackend() })
   term.feed("\x1b[1;38;2;255;0;0mError\x1b[0m")
 
-  expect(term).toContainText("Error")
-  expect(term).toBeBoldAt(0, 0)
-  expect(term).toHaveFgColor(0, 0, "#ff0000")
+  expect(term.screen).toContainText("Error")
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(0, 0)).toHaveFg("#ff0000")
 })
 ```
+
+## Region Selectors
+
+The composable API separates **where** to look from **what** to assert:
+
+```typescript
+// Region selectors (getter properties — no parens)
+term.screen      // the rows x cols visible area
+term.scrollback  // history above screen
+term.buffer      // everything (scrollback + screen)
+term.viewport    // current scroll position view
+
+// Region selectors (methods with args)
+term.row(n)                      // screen row (negative from bottom)
+term.cell(row, col)              // single cell
+term.range(r1, c1, r2, c2)      // rectangular region
+term.firstRow()                  // first screen row
+term.lastRow()                   // last screen row
+```
+
+Then assert using the appropriate matchers for each view type:
+
+```typescript
+// Text matchers work on RegionView (screen, scrollback, buffer, viewport, row, range)
+expect(term.screen).toContainText("Hello")
+expect(term.row(0)).toHaveText("Title")
+expect(term.screen).toMatchLines(["Line 1", "Line 2"])
+
+// Style matchers work on CellView
+expect(term.cell(0, 0)).toBeBold()
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
+expect(term.cell(2, 5)).toHaveUnderline("curly")
+
+// Terminal matchers work on the terminal itself
+expect(term).toHaveCursorAt(5, 0)
+expect(term).toBeInMode("altScreen")
+expect(term).toHaveTitle("My App")
+```
+
+## Matchers Reference
+
+### Text Matchers (on RegionView / RowView)
+
+| Matcher | Description |
+|---------|-------------|
+| `toContainText(text)` | Region contains text as substring |
+| `toHaveText(text)` | Region text matches exactly (trimmed) |
+| `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) |
+
+### Cell Style Matchers (on CellView)
+
+| Matcher | Description |
+|---------|-------------|
+| `toBeBold()` | Cell is bold |
+| `toBeItalic()` | Cell is italic |
+| `toBeFaint()` | Cell is faint/dim |
+| `toBeStrikethrough()` | Cell has strikethrough |
+| `toBeInverse()` | Cell has inverse video |
+| `toBeWide()` | Cell is double-width (CJK, emoji) |
+| `toHaveUnderline(style?)` | Cell has underline; optional style: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"` |
+| `toHaveFg(color)` | Foreground color (`"#rrggbb"` or `{ r, g, b }`) |
+| `toHaveBg(color)` | Background color (`"#rrggbb"` or `{ r, g, b }`) |
+
+### Terminal Matchers (on TerminalReadable)
+
+| Matcher | Description |
+|---------|-------------|
+| `toHaveCursorAt(x, y)` | Cursor at position |
+| `toHaveCursorVisible()` | Cursor is visible |
+| `toHaveCursorHidden()` | Cursor is hidden |
+| `toHaveCursorStyle(style)` | Cursor style: `"block"`, `"underline"`, `"beam"` |
+| `toBeInMode(mode)` | Terminal mode is enabled |
+| `toHaveTitle(title)` | OSC 2 title matches |
+| `toHaveScrollbackLines(n)` | Scrollback has N total lines |
+| `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset) |
+| `toMatchTerminalSnapshot()` | Vitest snapshot of terminal state |
 
 ## Installation
 
@@ -115,7 +192,7 @@ termless mcp
 
 | Package | Description |
 |---------|-------------|
-| [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping |
+| [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
 | [termless-xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
 | [termless-ghostty](packages/ghostty) | Ghostty backend (Phase 2 -- not yet implemented) |
 | [viterm](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |

@@ -7,126 +7,122 @@ import { terminalMatchers } from "viterm/matchers"
 expect.extend(terminalMatchers)
 ```
 
-All matchers work on any object implementing `TerminalReadable`. All support `.not` negation.
+Matchers are composable: use region selectors to pick **where**, then assert **what**. All support `.not` negation.
 
-## Text Matchers
+## Text Matchers (on RegionView / RowView)
 
 ### `toContainText(text: string)`
 
-Assert terminal buffer contains the given text anywhere.
+Assert region contains the given text as a substring.
 
 ```typescript
-expect(term).toContainText("Hello")
-expect(term).not.toContainText("error")
+expect(term.screen).toContainText("Hello")
+expect(term.scrollback).not.toContainText("error")
+expect(term.row(0)).toContainText("Title")
 ```
 
-### `toHaveTextAt(row: number, col: number, text: string)`
+### `toHaveText(text: string)`
 
-Assert specific text appears at the given row and column.
+Assert region text matches exactly after trimming.
 
 ```typescript
-expect(term).toHaveTextAt(0, 0, "Title")
-expect(term).toHaveTextAt(2, 5, "value")
+expect(term.row(0)).toHaveText("Title")
+expect(term.row(2)).toHaveText("status: ok")
 ```
 
-### `toContainTextInRow(row: number, text: string)`
+### `toMatchLines(lines: string[])`
 
-Assert a specific row contains the given text as a substring.
+Assert region lines match expected array. Trailing whitespace is trimmed per line.
 
 ```typescript
-expect(term).toContainTextInRow(0, "Status: OK")
-expect(term).not.toContainTextInRow(1, "Error")
+expect(term.screen).toMatchLines([
+  "Line 1",
+  "Line 2",
+  "",
+  "Line 4",
+])
 ```
 
-### `toHaveEmptyRow(row: number)`
+## Cell Style Matchers (on CellView)
 
-Assert a row is empty (all spaces or empty strings).
+### `toHaveFg(color: string | RGB)`
+
+Assert foreground color. Accepts `"#rrggbb"` string or `{ r, g, b }` object.
 
 ```typescript
-expect(term).toHaveEmptyRow(10)
-expect(term).not.toHaveEmptyRow(0)
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
+expect(term.cell(0, 0)).toHaveFg({ r: 255, g: 0, b: 0 })
 ```
 
-## Cell Style Matchers
+### `toHaveBg(color: string | RGB)`
 
-### `toHaveFgColor(row: number, col: number, color: string | RGB)`
-
-Assert foreground color at a specific cell. Accepts `"#rrggbb"` string or `{ r, g, b }` object.
+Assert background color.
 
 ```typescript
-expect(term).toHaveFgColor(0, 0, "#ff0000")
-expect(term).toHaveFgColor(0, 0, { r: 255, g: 0, b: 0 })
+expect(term.cell(0, 0)).toHaveBg("#282a36")
 ```
 
-### `toHaveBgColor(row: number, col: number, color: string | RGB)`
+### `toBeBold()`
 
-Assert background color at a specific cell.
+Assert cell is bold.
 
 ```typescript
-expect(term).toHaveBgColor(0, 0, "#282a36")
+expect(term.cell(0, 0)).toBeBold()
 ```
 
-### `toBeBoldAt(row: number, col: number)`
+### `toBeItalic()`
 
-Assert cell has bold attribute.
+Assert cell is italic.
 
 ```typescript
-expect(term).toBeBoldAt(0, 0)
+expect(term.cell(0, 0)).toBeItalic()
 ```
 
-### `toBeItalicAt(row: number, col: number)`
+### `toBeFaint()`
 
-Assert cell has italic attribute.
+Assert cell is faint/dim.
 
 ```typescript
-expect(term).toBeItalicAt(0, 0)
+expect(term.cell(0, 0)).toBeFaint()
 ```
 
-### `toBeFaintAt(row: number, col: number)`
-
-Assert cell has faint/dim attribute.
-
-```typescript
-expect(term).toBeFaintAt(0, 0)
-```
-
-### `toHaveUnderlineAt(row: number, col: number, style?: UnderlineStyle)`
+### `toHaveUnderline(style?: UnderlineStyle)`
 
 Assert cell has underline. Optionally check specific style.
 
 ```typescript
-expect(term).toHaveUnderlineAt(0, 0)            // Any underline
-expect(term).toHaveUnderlineAt(0, 0, "single")  // Specific style
-expect(term).toHaveUnderlineAt(0, 0, "curly")   // Curly underline (e.g., spell check)
+expect(term.cell(0, 0)).toHaveUnderline()            // Any underline
+expect(term.cell(0, 0)).toHaveUnderline("single")    // Specific style
+expect(term.cell(0, 0)).toHaveUnderline("curly")     // Curly underline (e.g., spell check)
 ```
 
 Styles: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"`.
 
-### `toBeStrikethroughAt(row: number, col: number)`
+### `toBeStrikethrough()`
 
-Assert cell has strikethrough attribute.
-
-```typescript
-expect(term).toBeStrikethroughAt(0, 0)
-```
-
-### `toBeInverseAt(row: number, col: number)`
-
-Assert cell has inverse (reverse video) attribute.
+Assert cell has strikethrough.
 
 ```typescript
-expect(term).toBeInverseAt(0, 0)
+expect(term.cell(0, 0)).toBeStrikethrough()
 ```
 
-### `toBeWideAt(row: number, col: number)`
+### `toBeInverse()`
+
+Assert cell has inverse (reverse video).
+
+```typescript
+expect(term.cell(0, 0)).toBeInverse()
+```
+
+### `toBeWide()`
 
 Assert cell is a double-width character (CJK, emoji).
 
 ```typescript
-expect(term).toBeWideAt(0, 0) // First cell of a wide char
+expect(term.cell(0, 0)).toBeWide() // First cell of a wide char
 ```
 
-## Cursor Matchers
+## Cursor Matchers (on TerminalReadable)
 
 ### `toHaveCursorAt(x: number, y: number)`
 
@@ -163,36 +159,23 @@ expect(term).toHaveCursorStyle("beam")
 expect(term).toHaveCursorStyle("underline")
 ```
 
-## Terminal Mode Matchers
+## Terminal Mode Matcher (on TerminalReadable)
 
-### `toBeInAltScreen()`
+### `toBeInMode(mode: TerminalMode)`
 
-Assert terminal is in alternate screen mode.
-
-```typescript
-expect(term).toBeInAltScreen()
-expect(term).not.toBeInAltScreen()
-```
-
-### `toBeInBracketedPaste()`
-
-Assert terminal is in bracketed paste mode.
+Assert a specific terminal mode is enabled. Replaces the old `toBeInAltScreen()`, `toBeInBracketedPaste()`, and `toHaveMode()` matchers.
 
 ```typescript
-expect(term).toBeInBracketedPaste()
+expect(term).toBeInMode("altScreen")
+expect(term).toBeInMode("bracketedPaste")
+expect(term).toBeInMode("mouseTracking")
+expect(term).toBeInMode("applicationCursor")
+expect(term).not.toBeInMode("insertMode")
 ```
 
-### `toHaveMode(mode: TerminalMode)`
+Available modes: `altScreen`, `cursorVisible`, `bracketedPaste`, `applicationCursor`, `applicationKeypad`, `autoWrap`, `mouseTracking`, `focusTracking`, `originMode`, `insertMode`, `reverseVideo`.
 
-Assert a specific terminal mode is enabled.
-
-```typescript
-expect(term).toHaveMode("mouseTracking")
-expect(term).toHaveMode("applicationCursor")
-expect(term).not.toHaveMode("insertMode")
-```
-
-## Title Matcher
+## Title Matcher (on TerminalReadable)
 
 ### `toHaveTitle(title: string)`
 
@@ -202,7 +185,7 @@ Assert terminal title (set via OSC 2 escape sequence).
 expect(term).toHaveTitle("vim - file.txt")
 ```
 
-## Scrollback Matchers
+## Scrollback Matchers (on TerminalReadable)
 
 ### `toHaveScrollbackLines(n: number)`
 
@@ -220,7 +203,7 @@ Assert viewport is at the bottom (no scroll offset).
 expect(term).toBeAtBottomOfScrollback()
 ```
 
-## Snapshot Matcher
+## Snapshot Matcher (on TerminalReadable)
 
 ### `toMatchTerminalSnapshot(options?)`
 

@@ -16,7 +16,7 @@
  *     rows: 24,
  *   })
  *   term.feed("$ ")
- *   expect(term).toContainText("$ ")
+ *   expect(term.screen).toContainText("$ ")
  * })
  * ```
  */

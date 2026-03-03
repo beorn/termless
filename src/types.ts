@@ -88,7 +88,41 @@ export interface TerminalCapabilities {
 }
 
 // ═══════════════════════════════════════════════════════
-// TerminalReadable — shared protocol for matchers
+// View Types — composable regions for matchers
+// ═══════════════════════════════════════════════════════
+
+/** A region of the terminal that can produce text. Used with text matchers. */
+export interface RegionView {
+  getText(): string
+  getLines(): string[]
+  containsText(text: string): boolean
+}
+
+/** A single cell with positional context. Used with style matchers. */
+export interface CellView {
+  readonly text: string
+  readonly row: number
+  readonly col: number
+  readonly fg: RGB | null
+  readonly bg: RGB | null
+  readonly bold: boolean
+  readonly faint: boolean
+  readonly italic: boolean
+  readonly underline: UnderlineStyle
+  readonly strikethrough: boolean
+  readonly inverse: boolean
+  readonly wide: boolean
+}
+
+/** A row is a RegionView with positional context and cell access. */
+export interface RowView extends RegionView {
+  readonly row: number
+  readonly cells: Cell[]
+  cellAt(col: number): CellView
+}
+
+// ═══════════════════════════════════════════════════════
+// TerminalReadable — shared protocol for backends
 // ═══════════════════════════════════════════════════════
 
 export interface TerminalReadable {
@@ -97,9 +131,6 @@ export interface TerminalReadable {
   getCell(row: number, col: number): Cell
   getLine(row: number): Cell[]
   getLines(): Cell[][]
-  getRowText(row: number): string
-  getViewportText(): string
-  getScrollbackText(lines?: number): string
   getCursor(): CursorState
   getMode(mode: TerminalMode): boolean
   getTitle(): string
@@ -159,6 +190,17 @@ export interface Terminal extends TerminalReadable {
   readonly cols: number
   readonly rows: number
   readonly backend: TerminalBackend
+
+  // Region selectors (WHERE)
+  readonly screen: RegionView
+  readonly scrollback: RegionView
+  readonly buffer: RegionView
+  readonly viewport: RegionView
+  row(n: number): RowView
+  cell(row: number, col: number): CellView
+  range(r1: number, c1: number, r2: number, c2: number): RegionView
+  firstRow(): RowView
+  lastRow(): RowView
 
   // Direct data feed (no PTY)
   feed(data: Uint8Array | string): void

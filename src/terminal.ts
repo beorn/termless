@@ -7,7 +7,10 @@
 
 import type {
   Cell,
+  CellView,
   CursorState,
+  RegionView,
+  RowView,
   ScrollbackState,
   SvgScreenshotOptions,
   Terminal,
@@ -19,6 +22,15 @@ import type {
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
 import { screenshotSvg } from "./svg.ts"
+import {
+  createBufferView,
+  createCellView,
+  createRangeView,
+  createRowView,
+  createScreenView,
+  createScrollbackView,
+  createViewportView,
+} from "./views.ts"
 
 // ── Constants ──
 
@@ -76,18 +88,6 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   function getLines(): Cell[][] {
     return backend.getLines()
-  }
-
-  function getRowText(row: number): string {
-    return backend.getRowText(row)
-  }
-
-  function getViewportText(): string {
-    return backend.getViewportText()
-  }
-
-  function getScrollbackText(lineCount?: number): string {
-    return backend.getScrollbackText(lineCount)
   }
 
   function getCursor(): CursorState {
@@ -273,13 +273,45 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     getCell,
     getLine,
     getLines,
-    getRowText,
-    getViewportText,
-    getScrollbackText,
     getCursor,
     getMode,
     getTitle,
     getScrollback,
+
+    // Region selectors
+    get screen(): RegionView {
+      return createScreenView(backend)
+    },
+    get scrollback(): RegionView {
+      return createScrollbackView(backend)
+    },
+    get buffer(): RegionView {
+      return createBufferView(backend)
+    },
+    get viewport(): RegionView {
+      return createViewportView(backend)
+    },
+    row(n: number): RowView {
+      const { totalLines, screenLines } = backend.getScrollback()
+      const base = totalLines - screenLines
+      const screenRow = n >= 0 ? n : screenLines + n
+      return createRowView(backend, base + screenRow, screenRow)
+    },
+    cell(r: number, c: number): CellView {
+      const { totalLines, screenLines } = backend.getScrollback()
+      const base = totalLines - screenLines
+      const screenRow = r >= 0 ? r : screenLines + r
+      return createCellView(backend.getCell(base + screenRow, c), screenRow, c)
+    },
+    range(r1: number, c1: number, r2: number, c2: number): RegionView {
+      return createRangeView(backend, r1, c1, r2, c2)
+    },
+    firstRow(): RowView {
+      return this.row(0)
+    },
+    lastRow(): RowView {
+      return this.row(-1)
+    },
 
     // Data feed
     feed,

@@ -77,15 +77,15 @@ function createTerm(cols = 80, rows = 24) {
 test("renders text correctly", () => {
   const term = createTerm()
   term.feed("Hello, world!")
-  expect(term).toContainText("Hello, world!")
+  expect(term.screen).toContainText("Hello, world!")
   term.close()
 })
 
 test("bold text renders as bold", () => {
   const term = createTerm()
   term.feed("\x1b[1mBold\x1b[0m Normal")
-  expect(term).toBeBoldAt(0, 0)
-  expect(term).not.toBeBoldAt(0, 5)
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(0, 5)).not.toBeBold()
   term.close()
 })
 ```

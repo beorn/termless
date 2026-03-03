@@ -13,46 +13,61 @@ import "viterm/matchers" // Registers all matchers on expect()
 
 `createTerminalFixture()` wraps `createTerminal()` and registers cleanup in `afterEach` -- no manual `close()` needed.
 
-## Matchers Reference
+## Composable API
 
-All matchers work on any object implementing `TerminalReadable` (including `Terminal`).
-
-### Text Matchers
+The key design principle: separate **where** to look from **what** to assert.
 
 ```typescript
-// Contains text anywhere in the buffer
-expect(term).toContainText("Hello")
+// WHERE: region selectors
+term.screen      // visible rows x cols area
+term.scrollback  // history above screen
+term.buffer      // everything (scrollback + screen)
+term.viewport    // current scroll position view
+term.row(n)      // screen row (negative from bottom)
+term.cell(r, c)  // single cell
+term.range(r1, c1, r2, c2) // rectangular region
+term.firstRow()  // convenience: first screen row
+term.lastRow()   // convenience: last screen row
 
-// Exact text at a specific position (row, col, text)
-expect(term).toHaveTextAt(0, 5, "world")
-
-// Row contains text substring (row, text)
-expect(term).toContainTextInRow(2, "status: ok")
-
-// Row is empty (all spaces)
-expect(term).toHaveEmptyRow(10)
+// WHAT: matchers
+expect(term.screen).toContainText("Hello")    // text matcher on region
+expect(term.cell(0, 0)).toBeBold()            // style matcher on cell
+expect(term).toHaveCursorAt(5, 0)             // terminal matcher
 ```
 
-### Cell Style Matchers
+## Matchers Reference
 
-All take `(row, col)` coordinates:
+### Text Matchers (on RegionView / RowView)
+
+```typescript
+// Contains text anywhere in the region
+expect(term.screen).toContainText("Hello")
+
+// Exact text match (trimmed)
+expect(term.row(0)).toHaveText("Title")
+
+// Line-by-line match (trailing whitespace trimmed)
+expect(term.screen).toMatchLines(["Line 1", "Line 2", "Line 3"])
+```
+
+### Cell Style Matchers (on CellView)
 
 ```typescript
 // Colors -- accepts "#rrggbb" string or { r, g, b } object
-expect(term).toHaveFgColor(0, 0, "#ff0000")
-expect(term).toHaveBgColor(0, 0, { r: 0, g: 255, b: 0 })
+expect(term.cell(0, 0)).toHaveFg("#ff0000")
+expect(term.cell(0, 0)).toHaveBg({ r: 0, g: 255, b: 0 })
 
 // Text attributes
-expect(term).toBeBoldAt(0, 0)
-expect(term).toBeItalicAt(0, 0)
-expect(term).toBeFaintAt(0, 0)
-expect(term).toBeStrikethroughAt(0, 0)
-expect(term).toBeInverseAt(0, 0)
-expect(term).toBeWideAt(0, 0) // Double-width character
+expect(term.cell(0, 0)).toBeBold()
+expect(term.cell(0, 0)).toBeItalic()
+expect(term.cell(0, 0)).toBeFaint()
+expect(term.cell(0, 0)).toBeStrikethrough()
+expect(term.cell(0, 0)).toBeInverse()
+expect(term.cell(0, 0)).toBeWide() // Double-width character
 
 // Underline -- optional style: "single" | "double" | "curly" | "dotted" | "dashed"
-expect(term).toHaveUnderlineAt(0, 0)           // Any underline
-expect(term).toHaveUnderlineAt(0, 0, "curly")  // Specific style
+expect(term.cell(0, 0)).toHaveUnderline()          // Any underline
+expect(term.cell(0, 0)).toHaveUnderline("curly")   // Specific style
 ```
 
 ### Cursor Matchers
@@ -72,15 +87,11 @@ expect(term).toHaveCursorStyle("beam")
 ### Terminal Mode Matchers
 
 ```typescript
-// Alt screen (fullscreen TUI mode)
-expect(term).toBeInAltScreen()
-
-// Bracketed paste mode
-expect(term).toBeInBracketedPaste()
-
-// Generic mode check
-expect(term).toHaveMode("mouseTracking")
-expect(term).toHaveMode("applicationCursor")
+// Generic mode check (replaces toBeInAltScreen, toBeInBracketedPaste, toHaveMode)
+expect(term).toBeInMode("altScreen")
+expect(term).toBeInMode("bracketedPaste")
+expect(term).toBeInMode("mouseTracking")
+expect(term).toBeInMode("applicationCursor")
 ```
 
 Available modes: `altScreen`, `cursorVisible`, `bracketedPaste`, `applicationCursor`, `applicationKeypad`, `autoWrap`, `mouseTracking`, `focusTracking`, `originMode`, `insertMode`, `reverseVideo`.
@@ -114,9 +125,9 @@ expect(term).toMatchTerminalSnapshot()
 All matchers support `.not`:
 
 ```typescript
-expect(term).not.toContainText("error")
-expect(term).not.toBeBoldAt(0, 5)
-expect(term).not.toBeInAltScreen()
+expect(term.screen).not.toContainText("error")
+expect(term.cell(0, 5)).not.toBeBold()
+expect(term).not.toBeInMode("altScreen")
 ```
 
 ## Snapshot Serializer
@@ -164,10 +175,10 @@ test("error message is red and bold", () => {
   const term = createTerminalFixture({ backend: createXtermBackend() })
   term.feed("\x1b[1;31mError:\x1b[0m file not found")
 
-  expect(term).toContainText("Error: file not found")
-  expect(term).toBeBoldAt(0, 0)
-  expect(term).toHaveFgColor(0, 0, "#800000") // ANSI red (palette index 1)
-  expect(term).not.toBeBoldAt(0, 7) // Space after "Error:" is not bold
+  expect(term.screen).toContainText("Error: file not found")
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(0, 0)).toHaveFg("#800000") // ANSI red (palette index 1)
+  expect(term.cell(0, 7)).not.toBeBold()       // Space after "Error:" is not bold
 })
 ```
 
@@ -192,12 +203,12 @@ test("app enters alt screen", async () => {
   await term.spawn(["my-tui"])
   await term.waitForStable()
 
-  expect(term).toBeInAltScreen()
-  expect(term).toContainText("Welcome")
+  expect(term).toBeInMode("altScreen")
+  expect(term.screen).toContainText("Welcome")
 
   term.press("q")
   await term.waitForStable()
-  expect(term).not.toBeInAltScreen()
+  expect(term).not.toBeInMode("altScreen")
 })
 ```
 
@@ -218,3 +229,41 @@ test("find specific text", () => {
   expect(matches).toHaveLength(2)
 })
 ```
+
+### Reading text from regions
+
+```typescript
+test("read text from different regions", () => {
+  const term = createTerminalFixture({ backend: createXtermBackend(), cols: 80, rows: 5 })
+
+  // Feed enough lines to create scrollback
+  for (let i = 0; i < 10; i++) {
+    term.feed(`Line ${i}\r\n`)
+  }
+
+  // Screen shows the last 5 rows
+  const screenText = term.screen.getText()
+
+  // Scrollback has the history
+  const scrollbackText = term.scrollback.getText()
+
+  // Buffer has everything
+  const bufferText = term.buffer.getText()
+
+  // Single row
+  const rowText = term.row(0).getText()
+})
+```
+
+## Migration from Old API
+
+| Old | New |
+|-----|-----|
+| `expect(term).toContainText("x")` | `expect(term.screen).toContainText("x")` |
+| `expect(term).toBeBoldAt(r, c)` | `expect(term.cell(r, c)).toBeBold()` |
+| `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)` |
+| `expect(term).toBeInAltScreen()` | `expect(term).toBeInMode("altScreen")` |
+| `expect(term).toMatchViewport(lines)` | `expect(term.screen).toMatchLines(lines)` |
+| `term.getViewportText()` | `term.screen.getText()` |
+| `term.getScrollbackText()` | `term.scrollback.getText()` |
+| `term.getRowText(n)` | `term.row(n).getText()` |

@@ -1,8 +1,9 @@
 /**
- * Tests for viterm custom Vitest matchers.
+ * Tests for viterm custom Vitest matchers — composable view API.
  *
- * Uses a mock TerminalReadable to verify each matcher's pass/fail behavior
- * without requiring a real terminal backend.
+ * Matchers operate on views (RegionView, CellView, RowView) and
+ * TerminalReadable, not flat (row, col) arguments. Tests use lightweight
+ * mock factories — no real backend needed.
  */
 
 import { describe, test, expect } from "vitest"
@@ -16,69 +17,101 @@ import type {
 	ScrollbackState,
 	RGB,
 	UnderlineStyle,
+	RegionView,
+	CellView,
+	RowView,
 } from "../../../src/types.ts"
 
 // =============================================================================
-// Mock Terminal Factory
+// Mock Factories
 // =============================================================================
 
-const DEFAULT_CELL: Cell = {
-	text: " ",
-	fg: null,
-	bg: null,
-	bold: false,
-	faint: false,
-	italic: false,
-	underline: "none",
-	strikethrough: false,
-	inverse: false,
-	wide: false,
+function mockRegion(lines: string[]): RegionView {
+	const text = lines.join("\n")
+	return {
+		getText: () => text,
+		getLines: () => lines,
+		containsText: (t: string) => text.includes(t),
+	}
+}
+
+function mockCell(overrides: Partial<CellView> = {}): CellView {
+	return {
+		text: " ",
+		row: 0,
+		col: 0,
+		fg: null,
+		bg: null,
+		bold: false,
+		faint: false,
+		italic: false,
+		underline: "none",
+		strikethrough: false,
+		inverse: false,
+		wide: false,
+		...overrides,
+	}
+}
+
+function mockRow(text: string, row = 0): RowView {
+	const cells: Cell[] = [...text].map((ch) => ({
+		text: ch,
+		fg: null,
+		bg: null,
+		bold: false,
+		faint: false,
+		italic: false,
+		underline: "none" as UnderlineStyle,
+		strikethrough: false,
+		inverse: false,
+		wide: false,
+	}))
+	return {
+		row,
+		cells,
+		getText: () => text,
+		getLines: () => [text],
+		containsText: (t: string) => text.includes(t),
+		cellAt: (col: number): CellView => mockCell({ text: text[col] ?? " ", row, col }),
+	}
 }
 
 interface MockTerminalOptions {
-	/** Lines of text to populate the terminal buffer. */
 	lines?: string[]
-	/** Specific cell overrides keyed as "row,col". */
-	cells?: Map<string, Partial<Cell>>
-	/** Cursor state. */
 	cursor?: Partial<CursorState>
-	/** Terminal mode overrides. */
 	modes?: Partial<Record<TerminalMode, boolean>>
-	/** Terminal title. */
 	title?: string
-	/** Scrollback state override. */
 	scrollback?: Partial<ScrollbackState>
-	/** Scrollback text lines (above viewport). */
-	scrollbackLines?: string[]
 }
 
 function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable {
 	const {
 		lines = [""],
-		cells = new Map(),
 		cursor = {},
 		modes = {},
 		title = "",
 		scrollback = {},
 	} = options
 
-	// Build the cell grid from text lines
 	const maxCols = Math.max(...lines.map((l) => l.length), 1)
 	const grid: Cell[][] = lines.map((line) => {
 		const row: Cell[] = []
 		for (let col = 0; col < maxCols; col++) {
-			row.push({ ...DEFAULT_CELL, text: line[col] ?? " " })
+			row.push({
+				text: line[col] ?? " ",
+				fg: null,
+				bg: null,
+				bold: false,
+				faint: false,
+				italic: false,
+				underline: "none",
+				strikethrough: false,
+				inverse: false,
+				wide: false,
+			})
 		}
 		return row
 	})
-
-	// Apply cell overrides
-	for (const [key, overrides] of cells) {
-		const [r, c] = key.split(",").map(Number) as [number, number]
-		if (grid[r]?.[c]) {
-			grid[r]![c] = { ...grid[r]![c]!, ...overrides }
-		}
-	}
 
 	const cursorState: CursorState = {
 		x: cursor.x ?? 0,
@@ -92,9 +125,6 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 		totalLines: scrollback.totalLines ?? lines.length,
 		screenLines: scrollback.screenLines ?? lines.length,
 	}
-
-	// Scrollback text for testing (separate from viewport)
-	const scrollbackLines = options.scrollbackLines ?? []
 
 	return {
 		getText(): string {
@@ -118,24 +148,16 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 			return result.join("\n")
 		},
 		getCell(row: number, col: number): Cell {
-			return grid[row]?.[col] ?? { ...DEFAULT_CELL }
+			return grid[row]?.[col] ?? {
+				text: " ", fg: null, bg: null, bold: false, faint: false, italic: false,
+				underline: "none", strikethrough: false, inverse: false, wide: false,
+			}
 		},
 		getLine(row: number): Cell[] {
 			return grid[row] ?? []
 		},
 		getLines(): Cell[][] {
 			return grid
-		},
-		getRowText(row: number): string {
-			return (grid[row] ?? []).map((c) => c.text || " ").join("").trimEnd()
-		},
-		getViewportText(): string {
-			return grid.map((row) => row.map((c) => c.text || " ").join("").trimEnd()).join("\n")
-		},
-		getScrollbackText(lineCount?: number): string {
-			if (scrollbackLines.length === 0) return ""
-			const start = lineCount != null ? Math.max(0, scrollbackLines.length - lineCount) : 0
-			return scrollbackLines.slice(start).join("\n")
 		},
 		getCursor(): CursorState {
 			return cursorState
@@ -153,198 +175,203 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 }
 
 // =============================================================================
-// Text Matchers
+// Text Matchers (RegionView / RowView)
 // =============================================================================
 
 describe("text matchers", () => {
 	test("toContainText passes when text is present", () => {
-		const term = createMockTerminal({ lines: ["Hello World", "Second line"] })
-		expect(term).toContainText("Hello")
-		expect(term).toContainText("World")
-		expect(term).toContainText("Second")
+		const region = mockRegion(["Hello World", "Second line"])
+		expect(region).toContainText("Hello")
+		expect(region).toContainText("World")
+		expect(region).toContainText("Second")
 	})
 
 	test("toContainText fails when text is absent", () => {
-		const term = createMockTerminal({ lines: ["Hello World"] })
-		expect(() => expect(term).toContainText("Goodbye")).toThrow()
+		const region = mockRegion(["Hello World"])
+		expect(() => expect(region).toContainText("Goodbye")).toThrow()
 	})
 
-	test("toContainText with .not negation works", () => {
-		const term = createMockTerminal({ lines: ["Hello World"] })
-		expect(term).not.toContainText("Goodbye")
+	test("toContainText with .not negation", () => {
+		const region = mockRegion(["Hello World"])
+		expect(region).not.toContainText("Goodbye")
 	})
 
-	test("toContainText with .not fails when text IS present", () => {
-		const term = createMockTerminal({ lines: ["Hello World"] })
-		expect(() => expect(term).not.toContainText("Hello")).toThrow()
+	test("toContainText .not fails when text IS present", () => {
+		const region = mockRegion(["Hello World"])
+		expect(() => expect(region).not.toContainText("Hello")).toThrow()
 	})
 
-	test("toHaveTextAt verifies text at specific row/col", () => {
-		const term = createMockTerminal({ lines: ["Hello World"] })
-		expect(term).toHaveTextAt(0, 0, "Hello")
-		expect(term).toHaveTextAt(0, 6, "World")
+	test("toContainText works on RowView", () => {
+		const row = mockRow("Hello World")
+		expect(row).toContainText("Hello")
+		expect(row).not.toContainText("Goodbye")
 	})
 
-	test("toHaveTextAt fails with wrong text", () => {
-		const term = createMockTerminal({ lines: ["Hello World"] })
-		expect(() => expect(term).toHaveTextAt(0, 0, "Bye")).toThrow()
+	test("toHaveText matches trimmed text exactly", () => {
+		const region = mockRegion(["Hello  "])
+		expect(region).toHaveText("Hello")
 	})
 
-	test("toContainTextInRow finds text within a specific row", () => {
-		const term = createMockTerminal({ lines: ["First line", "Second line", "Third line"] })
-		expect(term).toContainTextInRow(0, "First")
-		expect(term).toContainTextInRow(1, "Second")
-		expect(term).toContainTextInRow(2, "Third")
+	test("toHaveText fails on substring match", () => {
+		const region = mockRegion(["Hello World"])
+		expect(() => expect(region).toHaveText("Hello")).toThrow()
 	})
 
-	test("toContainTextInRow fails when text is in a different row", () => {
-		const term = createMockTerminal({ lines: ["First line", "Second line"] })
-		expect(() => expect(term).toContainTextInRow(0, "Second")).toThrow()
+	test("toHaveText with .not negation", () => {
+		const region = mockRegion(["Hello World"])
+		expect(region).not.toHaveText("Hello")
 	})
 
-	test("toHaveEmptyRow passes for empty row", () => {
-		const term = createMockTerminal({ lines: ["Hello", "     ", "World"] })
-		expect(term).toHaveEmptyRow(1)
+	test("toHaveText works on RowView", () => {
+		const row = mockRow("Hello World")
+		expect(row).toHaveText("Hello World")
+		expect(row).not.toHaveText("Hello")
 	})
 
-	test("toHaveEmptyRow fails for non-empty row", () => {
-		const term = createMockTerminal({ lines: ["Hello", "World"] })
-		expect(() => expect(term).toHaveEmptyRow(0)).toThrow()
-	})
-})
-
-// =============================================================================
-// Cell Style Matchers
-// =============================================================================
-
-describe("cell style matchers", () => {
-	test("toHaveFgColor with hex string", () => {
-		const cells = new Map([["0,0", { fg: { r: 255, g: 0, b: 0 } }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toHaveFgColor(0, 0, "#ff0000")
+	test("toMatchLines matches line-by-line with trailing whitespace trimmed", () => {
+		const region = mockRegion(["Hello  ", "World  "])
+		expect(region).toMatchLines(["Hello", "World"])
 	})
 
-	test("toHaveFgColor with RGB object", () => {
-		const cells = new Map([["0,0", { fg: { r: 255, g: 0, b: 0 } }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toHaveFgColor(0, 0, { r: 255, g: 0, b: 0 })
+	test("toMatchLines fails when lines differ", () => {
+		const region = mockRegion(["Hello", "World"])
+		expect(() => expect(region).toMatchLines(["Hello", "Earth"])).toThrow()
 	})
 
-	test("toHaveFgColor fails with wrong color", () => {
-		const cells = new Map([["0,0", { fg: { r: 255, g: 0, b: 0 } }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(() => expect(term).toHaveFgColor(0, 0, "#00ff00")).toThrow()
+	test("toMatchLines with .not negation", () => {
+		const region = mockRegion(["Hello", "World"])
+		expect(region).not.toMatchLines(["Goodbye", "World"])
 	})
 
-	test("toHaveFgColor fails when fg is null", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toHaveFgColor(0, 0, "#ff0000")).toThrow()
-	})
-
-	test("toHaveBgColor with hex string", () => {
-		const cells = new Map([["0,2", { bg: { r: 0, g: 128, b: 255 } }]])
-		const term = createMockTerminal({ lines: ["ABC"], cells })
-		expect(term).toHaveBgColor(0, 2, "#0080ff")
-	})
-
-	test("toHaveBgColor with RGB object", () => {
-		const cells = new Map([["0,0", { bg: { r: 0, g: 0, b: 0 } }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toHaveBgColor(0, 0, { r: 0, g: 0, b: 0 })
-	})
-
-	test("toBeBoldAt passes when cell is bold", () => {
-		const cells = new Map([["0,0", { bold: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeBoldAt(0, 0)
-	})
-
-	test("toBeBoldAt fails when cell is not bold", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeBoldAt(0, 0)).toThrow()
-	})
-
-	test("toBeItalicAt passes when cell is italic", () => {
-		const cells = new Map([["0,0", { italic: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeItalicAt(0, 0)
-	})
-
-	test("toBeItalicAt fails when cell is not italic", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeItalicAt(0, 0)).toThrow()
-	})
-
-	test("toBeFaintAt passes when cell is faint", () => {
-		const cells = new Map([["0,0", { faint: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeFaintAt(0, 0)
-	})
-
-	test("toBeFaintAt fails when cell is not faint", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeFaintAt(0, 0)).toThrow()
-	})
-
-	test("toHaveUnderlineAt passes when underlined", () => {
-		const cells = new Map([["0,0", { underline: "single" as UnderlineStyle }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toHaveUnderlineAt(0, 0)
-	})
-
-	test("toHaveUnderlineAt checks specific style", () => {
-		const cells = new Map([["0,0", { underline: "curly" as UnderlineStyle }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toHaveUnderlineAt(0, 0, "curly")
-	})
-
-	test("toHaveUnderlineAt fails when style does not match", () => {
-		const cells = new Map([["0,0", { underline: "single" as UnderlineStyle }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(() => expect(term).toHaveUnderlineAt(0, 0, "double")).toThrow()
-	})
-
-	test("toHaveUnderlineAt fails when not underlined", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toHaveUnderlineAt(0, 0)).toThrow()
-	})
-
-	test("toBeStrikethroughAt passes when strikethrough", () => {
-		const cells = new Map([["0,0", { strikethrough: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeStrikethroughAt(0, 0)
-	})
-
-	test("toBeStrikethroughAt fails when not strikethrough", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeStrikethroughAt(0, 0)).toThrow()
-	})
-
-	test("toBeInverseAt passes when inverse", () => {
-		const cells = new Map([["0,0", { inverse: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeInverseAt(0, 0)
-	})
-
-	test("toBeInverseAt fails when not inverse", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeInverseAt(0, 0)).toThrow()
-	})
-
-	test("toBeWideAt passes when cell is wide", () => {
-		const cells = new Map([["0,0", { wide: true }]])
-		const term = createMockTerminal({ lines: ["X"], cells })
-		expect(term).toBeWideAt(0, 0)
-	})
-
-	test("toBeWideAt fails when cell is not wide", () => {
-		const term = createMockTerminal({ lines: ["X"] })
-		expect(() => expect(term).toBeWideAt(0, 0)).toThrow()
+	test("toMatchLines handles empty lines", () => {
+		const region = mockRegion(["Hello", "", "World"])
+		expect(region).toMatchLines(["Hello", "", "World"])
 	})
 })
 
 // =============================================================================
-// Cursor Matchers
+// Style Matchers (CellView)
+// =============================================================================
+
+describe("style matchers", () => {
+	test("toBeBold passes when cell is bold", () => {
+		const cell = mockCell({ bold: true })
+		expect(cell).toBeBold()
+	})
+
+	test("toBeBold fails when cell is not bold", () => {
+		const cell = mockCell({ bold: false })
+		expect(() => expect(cell).toBeBold()).toThrow()
+	})
+
+	test("toBeBold .not works", () => {
+		const cell = mockCell({ bold: false })
+		expect(cell).not.toBeBold()
+	})
+
+	test("toBeItalic passes when cell is italic", () => {
+		const cell = mockCell({ italic: true })
+		expect(cell).toBeItalic()
+	})
+
+	test("toBeItalic fails when cell is not italic", () => {
+		const cell = mockCell({ italic: false })
+		expect(() => expect(cell).toBeItalic()).toThrow()
+	})
+
+	test("toBeFaint passes when cell is faint", () => {
+		const cell = mockCell({ faint: true })
+		expect(cell).toBeFaint()
+	})
+
+	test("toBeFaint fails when cell is not faint", () => {
+		const cell = mockCell({ faint: false })
+		expect(() => expect(cell).toBeFaint()).toThrow()
+	})
+
+	test("toBeStrikethrough passes when cell is strikethrough", () => {
+		const cell = mockCell({ strikethrough: true })
+		expect(cell).toBeStrikethrough()
+	})
+
+	test("toBeStrikethrough fails when cell is not strikethrough", () => {
+		const cell = mockCell({ strikethrough: false })
+		expect(() => expect(cell).toBeStrikethrough()).toThrow()
+	})
+
+	test("toBeInverse passes when cell is inverse", () => {
+		const cell = mockCell({ inverse: true })
+		expect(cell).toBeInverse()
+	})
+
+	test("toBeInverse fails when cell is not inverse", () => {
+		const cell = mockCell({ inverse: false })
+		expect(() => expect(cell).toBeInverse()).toThrow()
+	})
+
+	test("toBeWide passes when cell is wide", () => {
+		const cell = mockCell({ wide: true })
+		expect(cell).toBeWide()
+	})
+
+	test("toBeWide fails when cell is not wide", () => {
+		const cell = mockCell({ wide: false })
+		expect(() => expect(cell).toBeWide()).toThrow()
+	})
+
+	test("toHaveUnderline passes when cell has any underline", () => {
+		const cell = mockCell({ underline: "single" })
+		expect(cell).toHaveUnderline()
+	})
+
+	test("toHaveUnderline passes with specific style", () => {
+		const cell = mockCell({ underline: "curly" })
+		expect(cell).toHaveUnderline("curly")
+	})
+
+	test("toHaveUnderline fails when style does not match", () => {
+		const cell = mockCell({ underline: "single" })
+		expect(() => expect(cell).toHaveUnderline("double")).toThrow()
+	})
+
+	test("toHaveUnderline fails when not underlined", () => {
+		const cell = mockCell({ underline: "none" })
+		expect(() => expect(cell).toHaveUnderline()).toThrow()
+	})
+
+	test("toHaveFg with hex string", () => {
+		const cell = mockCell({ fg: { r: 255, g: 0, b: 0 } })
+		expect(cell).toHaveFg("#ff0000")
+	})
+
+	test("toHaveFg with RGB object", () => {
+		const cell = mockCell({ fg: { r: 255, g: 0, b: 0 } })
+		expect(cell).toHaveFg({ r: 255, g: 0, b: 0 })
+	})
+
+	test("toHaveFg fails with wrong color", () => {
+		const cell = mockCell({ fg: { r: 255, g: 0, b: 0 } })
+		expect(() => expect(cell).toHaveFg("#00ff00")).toThrow()
+	})
+
+	test("toHaveFg fails when fg is null", () => {
+		const cell = mockCell({ fg: null })
+		expect(() => expect(cell).toHaveFg("#ff0000")).toThrow()
+	})
+
+	test("toHaveBg with hex string", () => {
+		const cell = mockCell({ bg: { r: 0, g: 128, b: 255 } })
+		expect(cell).toHaveBg("#0080ff")
+	})
+
+	test("toHaveBg with RGB object", () => {
+		const cell = mockCell({ bg: { r: 0, g: 0, b: 0 } })
+		expect(cell).toHaveBg({ r: 0, g: 0, b: 0 })
+	})
+})
+
+// =============================================================================
+// Cursor Matchers (TerminalReadable)
 // =============================================================================
 
 describe("cursor matchers", () => {
@@ -400,48 +427,48 @@ describe("cursor matchers", () => {
 })
 
 // =============================================================================
-// Terminal Mode Matchers
+// Terminal Mode Matchers (TerminalReadable)
 // =============================================================================
 
 describe("terminal mode matchers", () => {
-	test("toBeInAltScreen passes when alt screen is enabled", () => {
+	test("toBeInMode passes when altScreen is enabled", () => {
 		const term = createMockTerminal({ modes: { altScreen: true } })
-		expect(term).toBeInAltScreen()
+		expect(term).toBeInMode("altScreen")
 	})
 
-	test("toBeInAltScreen fails when alt screen is disabled", () => {
+	test("toBeInMode fails when altScreen is disabled", () => {
 		const term = createMockTerminal({ modes: { altScreen: false } })
-		expect(() => expect(term).toBeInAltScreen()).toThrow()
+		expect(() => expect(term).toBeInMode("altScreen")).toThrow()
 	})
 
-	test("toBeInBracketedPaste passes when bracketed paste is enabled", () => {
+	test("toBeInMode passes when bracketedPaste is enabled", () => {
 		const term = createMockTerminal({ modes: { bracketedPaste: true } })
-		expect(term).toBeInBracketedPaste()
+		expect(term).toBeInMode("bracketedPaste")
 	})
 
-	test("toBeInBracketedPaste fails when bracketed paste is disabled", () => {
+	test("toBeInMode fails when bracketedPaste is disabled", () => {
 		const term = createMockTerminal({ modes: {} })
-		expect(() => expect(term).toBeInBracketedPaste()).toThrow()
+		expect(() => expect(term).toBeInMode("bracketedPaste")).toThrow()
 	})
 
-	test("toHaveMode generic mode check passes", () => {
+	test("toBeInMode passes when applicationCursor is enabled", () => {
 		const term = createMockTerminal({ modes: { applicationCursor: true } })
-		expect(term).toHaveMode("applicationCursor")
+		expect(term).toBeInMode("applicationCursor")
 	})
 
-	test("toHaveMode generic mode check fails", () => {
+	test("toBeInMode with .not negation", () => {
 		const term = createMockTerminal({ modes: {} })
-		expect(() => expect(term).toHaveMode("applicationCursor")).toThrow()
+		expect(term).not.toBeInMode("mouseTracking")
 	})
 
-	test("toHaveMode with .not negation", () => {
-		const term = createMockTerminal({ modes: {} })
-		expect(term).not.toHaveMode("mouseTracking")
+	test("toBeInMode .not fails when mode IS enabled", () => {
+		const term = createMockTerminal({ modes: { altScreen: true } })
+		expect(() => expect(term).not.toBeInMode("altScreen")).toThrow()
 	})
 })
 
 // =============================================================================
-// Title Matcher
+// Title Matcher (TerminalReadable)
 // =============================================================================
 
 describe("title matcher", () => {
@@ -462,7 +489,7 @@ describe("title matcher", () => {
 })
 
 // =============================================================================
-// Scrollback Matchers
+// Scrollback Matchers (TerminalReadable)
 // =============================================================================
 
 describe("scrollback matchers", () => {
@@ -491,97 +518,25 @@ describe("scrollback matchers", () => {
 })
 
 // =============================================================================
-// Scrollback Text Matcher
-// =============================================================================
-
-describe("scrollback text matcher", () => {
-	test("toHaveTextInScrollback passes when text is in scrollback", () => {
-		const term = createMockTerminal({
-			lines: ["Viewport line"],
-			scrollbackLines: ["Old line 1", "Old line 2"],
-		})
-		expect(term).toHaveTextInScrollback("Old line 1")
-		expect(term).toHaveTextInScrollback("Old line 2")
-	})
-
-	test("toHaveTextInScrollback fails when text is only in viewport", () => {
-		const term = createMockTerminal({
-			lines: ["Viewport line"],
-			scrollbackLines: ["Old line"],
-		})
-		expect(() => expect(term).toHaveTextInScrollback("Viewport line")).toThrow()
-	})
-
-	test("toHaveTextInScrollback fails when scrollback is empty", () => {
-		const term = createMockTerminal({ lines: ["Viewport line"] })
-		expect(() => expect(term).toHaveTextInScrollback("anything")).toThrow()
-	})
-
-	test("toHaveTextInScrollback with .not negation", () => {
-		const term = createMockTerminal({
-			lines: ["Viewport"],
-			scrollbackLines: ["Old"],
-		})
-		expect(term).not.toHaveTextInScrollback("Viewport")
-	})
-})
-
-// =============================================================================
-// Viewport Matcher
-// =============================================================================
-
-describe("viewport matcher", () => {
-	test("toMatchViewport passes when lines match", () => {
-		const term = createMockTerminal({ lines: ["Hello", "World"] })
-		expect(term).toMatchViewport(["Hello", "World"])
-	})
-
-	test("toMatchViewport trims trailing whitespace", () => {
-		const term = createMockTerminal({ lines: ["Hello   ", "World   "] })
-		expect(term).toMatchViewport(["Hello", "World"])
-	})
-
-	test("toMatchViewport fails when lines differ", () => {
-		const term = createMockTerminal({ lines: ["Hello", "World"] })
-		expect(() => expect(term).toMatchViewport(["Hello", "Earth"])).toThrow(/row 1/)
-	})
-
-	test("toMatchViewport handles empty lines", () => {
-		const term = createMockTerminal({ lines: ["Hello", "", "World"] })
-		expect(term).toMatchViewport(["Hello", "", "World"])
-	})
-
-	test("toMatchViewport pads shorter expected with empty strings", () => {
-		const term = createMockTerminal({ lines: ["Hello", "World", ""] })
-		expect(term).toMatchViewport(["Hello", "World"])
-	})
-
-	test("toMatchViewport with .not negation", () => {
-		const term = createMockTerminal({ lines: ["Hello", "World"] })
-		expect(term).not.toMatchViewport(["Goodbye", "World"])
-	})
-})
-
-// =============================================================================
-// Error Handling
+// Error Handling — wrong type errors
 // =============================================================================
 
 describe("error handling", () => {
-	test("matchers throw when given non-TerminalReadable", () => {
-		expect(() => expect("not a terminal").toContainText("foo")).toThrow(
-			"toContainText expects a TerminalReadable",
-		)
+	test("text matcher on string gives generic error", () => {
+		expect(() => expect("not a region").toContainText("foo")).toThrow()
 	})
 
-	test("matchers throw when given null", () => {
-		expect(() => expect(null).toContainText("foo")).toThrow(
-			"toContainText expects a TerminalReadable",
-		)
+	test("text matcher on TerminalReadable gives helpful region error", () => {
+		const term = createMockTerminal({ lines: ["Hello"] })
+		expect(() => expect(term).toContainText("Hello")).toThrow(/region/i)
 	})
 
-	test("matchers throw when given plain object", () => {
-		expect(() => expect({ foo: "bar" }).toHaveCursorAt(0, 0)).toThrow(
-			"toHaveCursorAt expects a TerminalReadable",
-		)
+	test("cell matcher on RegionView gives helpful cell error", () => {
+		const region = mockRegion(["Hello"])
+		expect(() => expect(region).toBeBold()).toThrow(/cell/i)
+	})
+
+	test("cell matcher on null gives generic error", () => {
+		expect(() => expect(null).toBeBold()).toThrow()
 	})
 })

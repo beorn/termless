@@ -1,19 +1,21 @@
 # viterm Tests
 
-**Layer 0 — Platform**: Vitest integration for terminal testing — custom matchers, auto-cleanup fixtures, and snapshot serializer.
+**Layer 0 -- Platform**: Vitest integration for terminal testing -- custom matchers, auto-cleanup fixtures, and snapshot serializer.
 
 ## What to Test Here
 
-- **Matchers**: `toContainText`, `toHaveTextAt`, `toContainTextInRow`, `toHaveEmptyRow`, `toHaveFgColor`/`toHaveBgColor` (hex + RGB), `toBeBoldAt`/`toBeItalicAt`/`toBeFaintAt`/`toBeInverseAt`/`toBeWideAt`/`toBeStrikethroughAt`, `toHaveUnderlineAt` (with style), `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInAltScreen`/`toBeInBracketedPaste`/`toHaveMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`
-- **Matcher edge cases**: `.not` negation, non-TerminalReadable error handling (string, null, plain object)
+- **Text matchers (RegionView)**: `toContainText`, `toHaveText`, `toMatchLines`
+- **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeFaint`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + RGB)
+- **Terminal matchers (TerminalReadable)**: `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`, `toMatchTerminalSnapshot`
+- **Matcher edge cases**: `.not` negation, wrong-type error handling (passing TerminalReadable to a RegionView matcher, passing string/null/plain object)
 - **Fixtures**: `createTerminalFixture()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach
 - **Serializer**: `terminalSnapshot()` marker creation, `terminalSerializer.test()` identification, `serialize()` output format (header, dimensions, cursor, line numbers, separator, style annotations, altScreen mode, custom name, hidden cursor)
 
 ## What NOT to Test Here
 
-- Actual terminal rendering — matchers test against mock `TerminalReadable`, not real backends
-- xterm.js or Ghostty backend behavior — that's their own test directories
-- Full-stack integration — that's the root `tests/` directory
+- Actual terminal rendering -- matchers test against mock `TerminalReadable` / `RegionView` / `CellView`, not real backends
+- xterm.js or Ghostty backend behavior -- that's their own test directories
+- Full-stack integration -- that's the root `tests/` directory
 
 ## Helpers
 
@@ -23,16 +25,23 @@
 ## Patterns
 
 ```typescript
-// Matcher tests use mock TerminalReadable
+// Text matcher tests use mock RegionView
+const region = { getText: () => "Hello World", getLines: () => ["Hello World"], containsText: (t) => "Hello World".includes(t) }
+expect(region).toContainText("Hello")
+expect(region).toHaveText("Hello World")
+
+// Cell style matcher tests use mock CellView
+const cell = { text: "H", row: 0, col: 0, bold: true, faint: false, italic: false, underline: "none", strikethrough: false, inverse: false, wide: false, fg: { r: 255, g: 0, b: 0 }, bg: null }
+expect(cell).toBeBold()
+expect(cell).toHaveFg("#ff0000")
+
+// Terminal matchers use mock TerminalReadable
 const term = createMockTerminal({
   lines: ["Hello World"],
-  cells: new Map([["0,0", { bold: true, fg: { r: 255, g: 0, b: 0 } }]]),
   cursor: { x: 5, y: 0, visible: true, style: "block" },
-  modes: { altScreen: true },
 })
-expect(term).toContainText("Hello")
-expect(term).toBeBoldAt(0, 0)
-expect(term).toHaveFgColor(0, 0, "#ff0000")
+expect(term).toHaveCursorAt(5, 0)
+expect(term).toBeInMode("altScreen")
 
 // Serializer tests
 const marker = terminalSnapshot(term, "step-1")

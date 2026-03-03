@@ -31,6 +31,19 @@ interface Terminal extends TerminalReadable {
   readonly alive: boolean         // PTY process running?
   readonly exitInfo: string | null // e.g. "exit=0"
 
+  // Region selectors (WHERE) — getter properties
+  readonly screen: RegionView      // visible rows x cols area
+  readonly scrollback: RegionView  // history above screen
+  readonly buffer: RegionView      // everything (scrollback + screen)
+  readonly viewport: RegionView    // current scroll position view
+
+  // Region selectors (WHERE) — methods
+  row(n: number): RowView                               // screen row (negative from bottom)
+  cell(row: number, col: number): CellView              // single cell
+  range(r1: number, c1: number, r2: number, c2: number): RegionView // rectangular region
+  firstRow(): RowView                                    // convenience: first screen row
+  lastRow(): RowView                                     // convenience: last screen row
+
   // Data feed (no PTY)
   feed(data: Uint8Array | string): void
 
@@ -61,9 +74,67 @@ interface Terminal extends TerminalReadable {
 }
 ```
 
+## Region Selectors
+
+Region selectors separate **where** to look from **what** to assert.
+
+### Properties (no parentheses)
+
+```typescript
+term.screen      // RegionView — the rows x cols visible area
+term.scrollback  // RegionView — history above screen (empty in alt screen)
+term.buffer      // RegionView — everything (scrollback + screen)
+term.viewport    // RegionView — current scroll position view
+```
+
+### Methods
+
+```typescript
+term.row(0)              // RowView — first screen row
+term.row(-1)             // RowView — last screen row (negative from bottom)
+term.cell(0, 0)          // CellView — single cell at row 0, col 0
+term.range(0, 0, 5, 40)  // RegionView — rectangular region
+term.firstRow()          // RowView — convenience for first screen row
+term.lastRow()           // RowView — convenience for last screen row
+```
+
+### View Types
+
+```typescript
+// RegionView — text access for a region
+interface RegionView {
+  getText(): string
+  getLines(): string[]
+  containsText(text: string): boolean
+}
+
+// RowView — a row with positional context (extends RegionView)
+interface RowView extends RegionView {
+  readonly row: number
+  readonly cells: Cell[]
+  cellAt(col: number): CellView
+}
+
+// CellView — a single cell with positional context and style
+interface CellView {
+  readonly text: string
+  readonly row: number
+  readonly col: number
+  readonly fg: RGB | null
+  readonly bg: RGB | null
+  readonly bold: boolean
+  readonly faint: boolean
+  readonly italic: boolean
+  readonly underline: UnderlineStyle
+  readonly strikethrough: boolean
+  readonly inverse: boolean
+  readonly wide: boolean
+}
+```
+
 ## TerminalReadable Interface
 
-The read-only subset that viterm matchers accept:
+The read-only subset that terminal matchers accept:
 
 ```typescript
 interface TerminalReadable {
