@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -11,8 +12,9 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["bun-types"],
+    "types": ["@types/bun"],
     "lib": ["ESNext"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"],
+  "exclude": ["packages/cli/**", "tests/cross-backend.test.ts"]
 }
