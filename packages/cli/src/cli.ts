@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * termless CLI — one-shot terminal capture and MCP server.
+ * termless CLI — one-shot terminal capture, recording, and MCP server.
  *
  * @example
  * ```bash
@@ -9,6 +9,12 @@
  *
  * # Text-only
  * termless capture --command "ls -la" --wait-for "total" --text
+ *
+ * # Record terminal session as SVG frames
+ * termless record --command "htop" --duration 5 --format frames
+ *
+ * # Record as HTML slideshow
+ * termless record --command "bun km view /path" --format html --output-dir ./demo.html
  *
  * # Start MCP server
  * termless mcp
@@ -79,6 +85,31 @@ program
     } finally {
       await manager.stopAll()
     }
+  })
+
+// ── record ──
+
+program
+  .command("record")
+  .description("Record a terminal session as SVG frames or HTML slideshow")
+  .requiredOption("--command <cmd>", "Command to run (split on spaces)")
+  .option("--cols <n>", "Terminal columns", "120")
+  .option("--rows <n>", "Terminal rows", "40")
+  .option("--interval <ms>", "Capture interval in ms", "100")
+  .option("--duration <seconds>", "Stop after N seconds")
+  .option("--output-dir <path>", "Output directory or file path", "./termless-recording/")
+  .option("--format <type>", "Output format: frames or html", "frames")
+  .action(async (opts) => {
+    const { recordCommand } = await import("./record.ts")
+    await recordCommand({
+      command: opts.command.split(/\s+/),
+      cols: Number.parseInt(opts.cols, 10),
+      rows: Number.parseInt(opts.rows, 10),
+      interval: Number.parseInt(opts.interval, 10),
+      duration: opts.duration ? Number.parseFloat(opts.duration) : null,
+      outputDir: opts.outputDir,
+      format: opts.format as "frames" | "html",
+    })
   })
 
 // ── mcp ──
