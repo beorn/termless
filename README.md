@@ -179,6 +179,20 @@ termless capture --command "my-app" \
   --timeout 5000
 ```
 
+## Conformance Matrix
+
+Generate a cross-terminal compatibility report comparing all backends:
+
+```bash
+# Print to stdout
+termless matrix
+
+# Save to file
+termless matrix --output docs/compat-matrix.md
+```
+
+See [docs/compat-matrix.md](docs/compat-matrix.md) for the latest report.
+
 ## MCP Server
 
 For AI agents (Claude Code, etc.) -- start a stdio MCP server that exposes terminal session management:
