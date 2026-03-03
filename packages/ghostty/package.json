@@ -1,7 +1,7 @@
 {
   "name": "termless-ghostty",
   "version": "0.1.0",
-  "description": "Ghostty backend for termless (Phase 2 — not yet implemented)",
+  "description": "Ghostty backend for termless — Ghostty's VT parser via WASM",
   "license": "MIT",
   "author": "Beorn",
   "repository": {
@@ -23,6 +23,9 @@
   "module": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {
     "termless": "workspace:*"

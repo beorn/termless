@@ -1,0 +1,284 @@
+/**
+ * Cross-backend conformance tests.
+ *
+ * Verifies that xterm.js and Ghostty backends produce identical results
+ * for the same input sequences. Differences = bugs in one backend.
+ *
+ * This is the core value of termless: write tests once, run against every backend.
+ */
+import { describe, test, expect, beforeAll, afterEach } from "vitest"
+import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
+import { createGhosttyBackend, initGhostty } from "../packages/ghostty/src/backend.ts"
+import type { Ghostty } from "ghostty-web"
+import type { TerminalBackend, Cell } from "../src/types.ts"
+
+let ghostty: Ghostty
+
+beforeAll(async () => {
+	ghostty = await initGhostty()
+})
+
+type BackendFactory = () => TerminalBackend
+
+const backends: [string, BackendFactory][] = [
+	["xterm", () => createXtermBackend()],
+	["ghostty", () => createGhosttyBackend(undefined, ghostty)],
+]
+
+function forEachBackend(fn: (name: string, createBackend: BackendFactory) => void) {
+	for (const [name, factory] of backends) {
+		describe(name, () => fn(name, factory))
+	}
+}
+
+function feedText(backend: TerminalBackend, text: string): void {
+	backend.feed(new TextEncoder().encode(text))
+}
+
+/** Compare cells ignoring differences in empty cell representation */
+function cellText(cell: Cell): string {
+	return cell.text || " "
+}
+
+describe("cross-backend conformance", () => {
+	const activeBackends: TerminalBackend[] = []
+
+	afterEach(() => {
+		for (const b of activeBackends) b.destroy()
+		activeBackends.length = 0
+	})
+
+	function init(factory: BackendFactory, cols = 80, rows = 24): TerminalBackend {
+		const b = factory()
+		b.init({ cols, rows })
+		activeBackends.push(b)
+		return b
+	}
+
+	describe("text rendering", () => {
+		forEachBackend((_name, create) => {
+			test("plain text", () => {
+				const b = init(create)
+				feedText(b, "Hello, world!")
+				expect(b.getText()).toContain("Hello, world!")
+			})
+
+			test("multiline", () => {
+				const b = init(create)
+				feedText(b, "Line 1\r\nLine 2\r\nLine 3")
+				const text = b.getText()
+				expect(text).toContain("Line 1")
+				expect(text).toContain("Line 2")
+				expect(text).toContain("Line 3")
+			})
+
+			test("cursor positioning", () => {
+				const b = init(create, 40, 10)
+				feedText(b, "\x1b[3;10HX")
+				const cell = b.getCell(2, 9) // 0-based row 2, col 9
+				expect(cell.text).toBe("X")
+			})
+		})
+	})
+
+	describe("cell styles", () => {
+		forEachBackend((_name, create) => {
+			test("bold", () => {
+				const b = init(create)
+				feedText(b, "\x1b[1mB\x1b[0mN")
+				expect(b.getCell(0, 0).bold).toBe(true)
+				expect(b.getCell(0, 1).bold).toBe(false)
+			})
+
+			test("italic", () => {
+				const b = init(create)
+				feedText(b, "\x1b[3mI\x1b[0m")
+				expect(b.getCell(0, 0).italic).toBe(true)
+			})
+
+			test("faint", () => {
+				const b = init(create)
+				feedText(b, "\x1b[2mF\x1b[0m")
+				expect(b.getCell(0, 0).faint).toBe(true)
+			})
+
+			test("strikethrough", () => {
+				const b = init(create)
+				feedText(b, "\x1b[9mS\x1b[0m")
+				expect(b.getCell(0, 0).strikethrough).toBe(true)
+			})
+
+			test("inverse", () => {
+				const b = init(create)
+				feedText(b, "\x1b[7mI\x1b[0m")
+				expect(b.getCell(0, 0).inverse).toBe(true)
+			})
+
+			test("truecolor foreground", () => {
+				const b = init(create)
+				feedText(b, "\x1b[38;2;255;128;0mR\x1b[0m")
+				const cell = b.getCell(0, 0)
+				expect(cell.fg).toEqual({ r: 255, g: 128, b: 0 })
+			})
+
+			test("truecolor background", () => {
+				const b = init(create)
+				feedText(b, "\x1b[48;2;0;128;255mB\x1b[0m")
+				const cell = b.getCell(0, 0)
+				expect(cell.bg).toEqual({ r: 0, g: 128, b: 255 })
+			})
+
+			test("combined styles", () => {
+				const b = init(create)
+				feedText(b, "\x1b[1;3;38;2;255;0;0mX\x1b[0m")
+				const cell = b.getCell(0, 0)
+				expect(cell.bold).toBe(true)
+				expect(cell.italic).toBe(true)
+				expect(cell.fg).toEqual({ r: 255, g: 0, b: 0 })
+			})
+		})
+	})
+
+	describe("cursor", () => {
+		forEachBackend((_name, create) => {
+			test("reports position after text", () => {
+				const b = init(create)
+				feedText(b, "Hello")
+				const cursor = b.getCursor()
+				expect(cursor.x).toBe(5)
+				expect(cursor.y).toBe(0)
+			})
+
+			test("reports position after newline", () => {
+				const b = init(create)
+				feedText(b, "Line1\r\nLine2")
+				const cursor = b.getCursor()
+				expect(cursor.x).toBe(5)
+				expect(cursor.y).toBe(1)
+			})
+
+			test("reports position after CUP", () => {
+				const b = init(create)
+				feedText(b, "\x1b[10;20H")
+				const cursor = b.getCursor()
+				expect(cursor.x).toBe(19) // 0-based
+				expect(cursor.y).toBe(9) // 0-based
+			})
+		})
+	})
+
+	describe("modes", () => {
+		forEachBackend((_name, create) => {
+			test("alt screen toggle", () => {
+				const b = init(create)
+				expect(b.getMode("altScreen")).toBe(false)
+				feedText(b, "\x1b[?1049h")
+				expect(b.getMode("altScreen")).toBe(true)
+				feedText(b, "\x1b[?1049l")
+				expect(b.getMode("altScreen")).toBe(false)
+			})
+
+			test("bracketed paste", () => {
+				const b = init(create)
+				feedText(b, "\x1b[?2004h")
+				expect(b.getMode("bracketedPaste")).toBe(true)
+			})
+		})
+	})
+
+	describe("resize", () => {
+		forEachBackend((_name, create) => {
+			test("content preserved after resize", () => {
+				const b = init(create, 40, 10)
+				feedText(b, "Before")
+				b.resize(80, 24)
+				expect(b.getText()).toContain("Before")
+			})
+		})
+	})
+
+	describe("reset", () => {
+		forEachBackend((_name, create) => {
+			test("clears content", () => {
+				const b = init(create)
+				feedText(b, "Content here")
+				b.reset()
+				expect(b.getText()).not.toContain("Content here")
+			})
+		})
+	})
+
+	describe("key encoding", () => {
+		forEachBackend((_name, create) => {
+			test("Enter → CR", () => {
+				const b = init(create)
+				expect(b.encodeKey({ key: "Enter" })).toEqual(new Uint8Array([0x0d]))
+			})
+
+			test("Escape → ESC", () => {
+				const b = init(create)
+				expect(b.encodeKey({ key: "Escape" })).toEqual(new Uint8Array([0x1b]))
+			})
+
+			test("Ctrl+C → ETX", () => {
+				const b = init(create)
+				expect(b.encodeKey({ key: "c", ctrl: true })).toEqual(new Uint8Array([3]))
+			})
+
+			test("ArrowUp → ESC[A", () => {
+				const b = init(create)
+				expect(new TextDecoder().decode(b.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+			})
+		})
+	})
+
+	// ── Cross-backend comparison ──
+
+	describe("identical output", () => {
+		test("same text rendering", () => {
+			const xt = init(backends[0]![1], 40, 10)
+			const gt = init(backends[1]![1], 40, 10)
+
+			const input = "Hello, \x1b[1mworld\x1b[0m!\r\nLine 2 with \x1b[38;2;255;0;0mred\x1b[0m text"
+			feedText(xt, input)
+			feedText(gt, input)
+
+			// Compare screen text
+			for (let row = 0; row < 10; row++) {
+				const xtLine = xt.getLine(row).map(cellText).join("")
+				const gtLine = gt.getLine(row).map(cellText).join("")
+				expect(gtLine).toBe(xtLine)
+			}
+		})
+
+		test("same cursor position", () => {
+			const xt = init(backends[0]![1])
+			const gt = init(backends[1]![1])
+
+			feedText(xt, "Hello\r\n\x1b[5Cworld")
+			feedText(gt, "Hello\r\n\x1b[5Cworld")
+
+			expect(gt.getCursor().x).toBe(xt.getCursor().x)
+			expect(gt.getCursor().y).toBe(xt.getCursor().y)
+		})
+
+		test("same style attributes", () => {
+			const xt = init(backends[0]![1])
+			const gt = init(backends[1]![1])
+
+			const input = "\x1b[1;3;38;2;100;200;50mStyled\x1b[0m Plain"
+			feedText(xt, input)
+			feedText(gt, input)
+
+			for (let col = 0; col < 12; col++) {
+				const xc = xt.getCell(0, col)
+				const gc = gt.getCell(0, col)
+				expect(gc.bold).toBe(xc.bold)
+				expect(gc.italic).toBe(xc.italic)
+				expect(gc.fg?.r).toBe(xc.fg?.r)
+				expect(gc.fg?.g).toBe(xc.fg?.g)
+				expect(gc.fg?.b).toBe(xc.fg?.b)
+			}
+		})
+	})
+})

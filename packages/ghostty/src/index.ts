@@ -1,1 +1,1 @@
-export { createGhosttyBackend } from "./backend.ts"
+export { createGhosttyBackend, initGhostty } from "./backend.ts"
