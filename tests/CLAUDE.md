@@ -43,7 +43,7 @@ const readable = createMockReadable(["ab"], {
 const svg = screenshotSvg(readable)
 expect(svg).toContain('font-weight="bold"')
 
-// Integration: real xterm backend + region selectors + viterm matchers
+// Integration: real xterm backend + region selectors + @termless/test matchers
 const term = createXterm()
 term.feed("\x1b[31mRed\x1b[0m")
 expect(term.screen).toContainText("Red")

@@ -1,4 +1,4 @@
-# viterm Tests
+# @termless/test Tests
 
 **Layer 0 -- Platform**: Vitest integration for terminal testing -- custom matchers, auto-cleanup fixtures, and snapshot serializer.
 
@@ -53,7 +53,7 @@ expect(output).toContain("terminal 11x1")
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/beorn-termless/packages/viterm/tests/                   # All viterm tests
+bun vitest run vendor/beorn-termless/packages/viterm/tests/                   # All @termless/test tests
 bun vitest run vendor/beorn-termless/packages/viterm/tests/matchers.test.ts   # Matcher pass/fail
 bun vitest run vendor/beorn-termless/packages/viterm/tests/fixture.test.ts    # Fixture auto-cleanup
 bun vitest run vendor/beorn-termless/packages/viterm/tests/serializer.test.ts # Snapshot format

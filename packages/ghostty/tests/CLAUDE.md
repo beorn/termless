@@ -18,7 +18,7 @@
 
 - xterm.js backend — that's @termless/xtermjs
 - Cross-backend comparison — that's `tests/cross-backend.test.ts`
-- Vitest matchers — that's viterm
+- Vitest matchers — that's @termless/test
 
 ## Patterns
 

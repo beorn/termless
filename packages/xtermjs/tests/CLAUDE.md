@@ -18,7 +18,7 @@
 
 - Terminal API (`createTerminal`) and region views -- that's the root `tests/` directory
 - Cross-backend comparison -- that's `tests/cross-backend.test.ts`
-- Viterm matchers/serializer -- that's the viterm package
+- Vitest matchers/serializer -- that's @termless/test
 - Ghostty backend -- that's the ghostty package
 
 ## Patterns
