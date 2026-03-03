@@ -138,7 +138,7 @@ Matrix testing — running the same tests across multiple implementations — is
 
 **BrowserStack/Sauce Labs** are the commercial-scale version of what termless does for terminals. They run thousands of browser combinations and produce compatibility matrices. termless aims to be the open-source equivalent for terminal emulators — currently xterm.js and Ghostty, with WezTerm and Alacritty planned.
 
-**Vitest workspace** is the underlying mechanism termless uses. Each backend gets a workspace project with its own setup file. `termless matrix` adds the conformance reporting layer on top.
+**Vitest workspace** is the underlying mechanism termless uses. Each backend gets a workspace project with its own setup file. `cross-backend.test.ts` runs the same test cases against all available backends and compares results.
 
 ### What's unique about termless
 
