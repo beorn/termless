@@ -1,0 +1,38 @@
+{
+  "name": "termless",
+  "version": "0.1.0",
+  "description": "Headless terminal library for cross-terminal TUI testing",
+  "keywords": [
+    "terminal",
+    "headless",
+    "tui",
+    "testing",
+    "xterm",
+    "ghostty"
+  ],
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless"
+  },
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./svg": "./src/svg.ts"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  }
+}

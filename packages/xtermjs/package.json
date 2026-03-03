@@ -1,0 +1,18 @@
+{
+  "name": "termless-xtermjs",
+  "version": "0.1.0",
+  "description": "xterm.js backend for termless",
+  "license": "MIT",
+  "author": "Beorn",
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xterm/headless": "^5.5.0"
+  },
+  "peerDependencies": {
+    "termless": "workspace:*"
+  }
+}
