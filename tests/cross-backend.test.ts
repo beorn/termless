@@ -194,8 +194,9 @@ describe("cross-backend conformance", () => {
 				const b = init(create)
 				feedText(b, "🎉A")
 				const emojiCell = b.getCell(0, 0)
-				// xterm.js headless may not report wide=true for emoji
-				if (name === "ghostty") {
+				// xterm.js headless correctly reports wide for CJK but not emoji
+				// due to how @xterm/headless handles Unicode East Asian Width
+				if (name === "ghostty" || name === "vt100") {
 					expect(emojiCell.wide).toBe(true)
 				}
 				// When wide is supported, A should be at col 2
@@ -240,9 +241,11 @@ describe("cross-backend conformance", () => {
 			test("OSC 2 sets title", () => {
 				const b = init(create)
 				feedText(b, "\x1b]2;My Title\x07")
-				// ghostty-web WASM doesn't expose OSC title callbacks yet
 				if (name === "ghostty") {
-					// Just verify getTitle() doesn't throw
+					// ghostty-web WASM: no title change callback, always returns ""
+					expect(b.getTitle()).toBe("")
+				} else if (name === "vt100") {
+					// vt100 backend does not support OSC title
 					expect(typeof b.getTitle()).toBe("string")
 				} else {
 					expect(b.getTitle()).toBe("My Title")
@@ -321,8 +324,8 @@ describe("cross-backend conformance", () => {
 
 	describe("identical output", () => {
 		test("same text rendering", () => {
-			const xt = init(backends[0]![1], 40, 10)
-			const gt = init(backends[1]![1], 40, 10)
+			const xt = init(backends.find(([n]) => n === "xterm")![1], 40, 10)
+			const gt = init(backends.find(([n]) => n === "ghostty")![1], 40, 10)
 
 			const input = "Hello, \x1b[1mworld\x1b[0m!\r\nLine 2 with \x1b[38;2;255;0;0mred\x1b[0m text"
 			feedText(xt, input)
@@ -337,8 +340,8 @@ describe("cross-backend conformance", () => {
 		})
 
 		test("same cursor position", () => {
-			const xt = init(backends[0]![1])
-			const gt = init(backends[1]![1])
+			const xt = init(backends.find(([n]) => n === "xterm")![1])
+			const gt = init(backends.find(([n]) => n === "ghostty")![1])
 
 			feedText(xt, "Hello\r\n\x1b[5Cworld")
 			feedText(gt, "Hello\r\n\x1b[5Cworld")
@@ -348,8 +351,8 @@ describe("cross-backend conformance", () => {
 		})
 
 		test("same style attributes", () => {
-			const xt = init(backends[0]![1])
-			const gt = init(backends[1]![1])
+			const xt = init(backends.find(([n]) => n === "xterm")![1])
+			const gt = init(backends.find(([n]) => n === "ghostty")![1])
 
 			const input = "\x1b[1;3;38;2;100;200;50mStyled\x1b[0m Plain"
 			feedText(xt, input)

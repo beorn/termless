@@ -311,6 +311,17 @@ describe("screenshotSvg", () => {
     // The wide char should appear; the continuation cell (col 1) should be skipped
     expect(svg).toContain("世")
     expect(svg).toContain("<tspan")
+
+    // Verify continuation cell is properly handled:
+    // The continuation cell (col 1, empty text) should be skipped, so
+    // the output contains "世x" (or merged span), not "世 x" with a space
+    // from the continuation cell. "x" starts at col 2 position (wide char = 2 cols).
+    expect(svg).toContain("x")
+    // The continuation cell should NOT produce a visible character —
+    // verify no extra space between 世 and x by checking the merged text
+    const tspanMatches = svg.match(/<tspan[^>]*>([^<]+)<\/tspan>/g) ?? []
+    const allText = tspanMatches.map((m) => m.replace(/<[^>]+>/g, "")).join("")
+    expect(allText).not.toContain("世 x") // no space from continuation cell
   })
 
   test("whitespace-only lines render valid SVG", () => {

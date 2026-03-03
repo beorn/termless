@@ -19,6 +19,8 @@ export interface CellColor {
 	b: number
 }
 
+export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+
 export interface ScreenCell {
 	char: string
 	fg: CellColor | null
@@ -26,25 +28,30 @@ export interface ScreenCell {
 	bold: boolean
 	faint: boolean
 	italic: boolean
-	underline: boolean
+	underline: UnderlineStyle
 	strikethrough: boolean
 	inverse: boolean
+	hidden: boolean
 	wide: boolean
 }
 
+/** Frozen sentinel for unwritten cells — never mutate, copy-on-write in writeChar(). */
+const EMPTY_CELL: ScreenCell = Object.freeze({
+	char: "",
+	fg: null,
+	bg: null,
+	bold: false,
+	faint: false,
+	italic: false,
+	underline: "none" as UnderlineStyle,
+	strikethrough: false,
+	inverse: false,
+	hidden: false,
+	wide: false,
+})
+
 function emptyCell(): ScreenCell {
-	return {
-		char: "",
-		fg: null,
-		bg: null,
-		bold: false,
-		faint: false,
-		italic: false,
-		underline: false,
-		strikethrough: false,
-		inverse: false,
-		wide: false,
-	}
+	return { ...EMPTY_CELL }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -104,10 +111,12 @@ function isWide(codePoint: number): boolean {
 		(codePoint >= 0xa960 && codePoint <= 0xa97c) || // Hangul Jamo Extended-A
 		(codePoint >= 0xac00 && codePoint <= 0xd7a3) || // Hangul Syllables
 		(codePoint >= 0xf900 && codePoint <= 0xfaff) || // CJK Compatibility Ideographs
+		(codePoint >= 0xfe10 && codePoint <= 0xfe19) || // Vertical Forms
 		(codePoint >= 0xfe30 && codePoint <= 0xfe6b) || // CJK Compatibility Forms
 		(codePoint >= 0xff01 && codePoint <= 0xff60) || // Fullwidth Forms
 		(codePoint >= 0xffe0 && codePoint <= 0xffe6) || // Fullwidth Signs
 		(codePoint >= 0x1f300 && codePoint <= 0x1f9ff) || // Misc Symbols/Emoticons
+		(codePoint >= 0x1fa00 && codePoint <= 0x1faff) || // Extended Symbols & Pictographs
 		(codePoint >= 0x20000 && codePoint <= 0x2fffd) || // CJK Extension B-F
 		(codePoint >= 0x30000 && codePoint <= 0x3fffd) // CJK Extension G+
 	)
@@ -129,9 +138,10 @@ interface Attrs {
 	bold: boolean
 	faint: boolean
 	italic: boolean
-	underline: boolean
+	underline: UnderlineStyle
 	strikethrough: boolean
 	inverse: boolean
+	hidden: boolean
 }
 
 export interface Screen {
@@ -170,6 +180,22 @@ export function createScreen(opts: ScreenOptions): Screen {
 	let curVisible = true
 	let savedCurX = 0
 	let savedCurY = 0
+
+	// DECSC/DECRC saved state (cursor + attrs + modes)
+	interface SavedState {
+		curX: number
+		curY: number
+		attrs: Attrs
+		originMode: boolean
+		autoWrap: boolean
+	}
+	let savedState: SavedState = {
+		curX: 0,
+		curY: 0,
+		attrs: resetAttrs(),
+		originMode: false,
+		autoWrap: true,
+	}
 
 	// Current drawing attributes
 	let attrs: Attrs = resetAttrs()
@@ -213,7 +239,7 @@ export function createScreen(opts: ScreenOptions): Screen {
 	function makeRow(c: number): ScreenCell[] {
 		const row: ScreenCell[] = []
 		for (let col = 0; col < c; col++) {
-			row.push(emptyCell())
+			row.push(EMPTY_CELL)
 		}
 		return row
 	}
@@ -225,9 +251,10 @@ export function createScreen(opts: ScreenOptions): Screen {
 			bold: false,
 			faint: false,
 			italic: false,
-			underline: false,
+			underline: "none",
 			strikethrough: false,
 			inverse: false,
+			hidden: false,
 		}
 	}
 
@@ -244,8 +271,9 @@ export function createScreen(opts: ScreenOptions): Screen {
 		// Move top row to scrollback (only if main screen & top of screen)
 		if (grid === mainGrid && top === 0) {
 			scrollback.push(grid[0]!)
-			if (scrollback.length > scrollbackLimit) {
-				scrollback.shift()
+			// Bulk trim when exceeding 2x limit to avoid O(n) shift() on every scroll
+			if (scrollback.length > scrollbackLimit * 2) {
+				scrollback.splice(0, scrollback.length - scrollbackLimit)
 			}
 		}
 		// Shift rows up within the region
@@ -283,7 +311,22 @@ export function createScreen(opts: ScreenOptions): Screen {
 			}
 		}
 
-		const cell = grid[curY]![curX]!
+		// Insert mode: shift existing characters right before writing
+		if (insertMode) {
+			const row = grid[curY]!
+			for (let i = 0; i < charWidth; i++) {
+				row.splice(curX, 0, EMPTY_CELL)
+				row.pop()
+			}
+		}
+
+		// Copy-on-write: if cell is the shared EMPTY_CELL sentinel, create a fresh object
+		const row = grid[curY]!
+		let cell = row[curX]!
+		if (cell === EMPTY_CELL) {
+			cell = { ...EMPTY_CELL }
+			row[curX] = cell
+		}
 		cell.char = ch
 		cell.fg = attrs.fg ? { ...attrs.fg } : null
 		cell.bg = attrs.bg ? { ...attrs.bg } : null
@@ -293,20 +336,26 @@ export function createScreen(opts: ScreenOptions): Screen {
 		cell.underline = attrs.underline
 		cell.strikethrough = attrs.strikethrough
 		cell.inverse = attrs.inverse
+		cell.hidden = attrs.hidden
 		cell.wide = wide
 
 		if (wide && curX + 1 < cols) {
-			// Spacer cell for wide character
-			const spacer = grid[curY]![curX + 1]!
+			// Spacer cell for wide character — always create fresh
+			let spacer = row[curX + 1]!
+			if (spacer === EMPTY_CELL) {
+				spacer = { ...EMPTY_CELL }
+				row[curX + 1] = spacer
+			}
 			spacer.char = ""
 			spacer.fg = null
 			spacer.bg = null
 			spacer.bold = false
 			spacer.faint = false
 			spacer.italic = false
-			spacer.underline = false
+			spacer.underline = "none"
 			spacer.strikethrough = false
 			spacer.inverse = false
+			spacer.hidden = false
 			spacer.wide = false
 		}
 
@@ -391,7 +440,7 @@ export function createScreen(opts: ScreenOptions): Screen {
 				clampCursor()
 				break
 			case "m": // SGR - Select Graphic Rendition
-				handleSGR(parts)
+				handleSGR(params)
 				break
 			case "r": // DECSTBM - Set Scrolling Region
 				scrollTop = (parts[0] ?? 1) - 1
@@ -585,7 +634,22 @@ export function createScreen(opts: ScreenOptions): Screen {
 
 	// ── SGR (Select Graphic Rendition) ──
 
-	function handleSGR(params: number[]): void {
+	function handleSGR(rawParams: string): void {
+		// Parse SGR parameters, handling colon sub-parameters (e.g., "4:3" for curly underline)
+		const segments = rawParams.split(";")
+		const params: number[] = []
+		// Map from param index to colon sub-parameters (e.g., index of "4" -> [4, 3])
+		const subParams = new Map<number, number[]>()
+		for (const seg of segments) {
+			if (seg.includes(":")) {
+				const subs = seg.split(":").map((s) => (s === "" ? 0 : parseInt(s, 10)))
+				subParams.set(params.length, subs)
+				params.push(subs[0]!)
+			} else {
+				params.push(seg === "" ? 0 : parseInt(seg, 10))
+			}
+		}
+
 		if (params.length === 0 || (params.length === 1 && params[0] === 0)) {
 			attrs = resetAttrs()
 			return
@@ -607,17 +671,50 @@ export function createScreen(opts: ScreenOptions): Screen {
 				case 3:
 					attrs.italic = true
 					break
-				case 4:
-					attrs.underline = true
+				case 4: {
+					// SGR 4 with optional sub-parameter: 4:0=none, 4:1=single, 4:3=curly, etc.
+					const subs = subParams.get(i)
+					if (subs && subs.length > 1) {
+						const sub = subs[1]!
+						switch (sub) {
+							case 0:
+								attrs.underline = "none"
+								break
+							case 1:
+								attrs.underline = "single"
+								break
+							case 2:
+								attrs.underline = "double"
+								break
+							case 3:
+								attrs.underline = "curly"
+								break
+							case 4:
+								attrs.underline = "dotted"
+								break
+							case 5:
+								attrs.underline = "dashed"
+								break
+							default:
+								attrs.underline = "single"
+								break
+						}
+					} else {
+						attrs.underline = "single"
+					}
 					break
+				}
 				case 7:
 					attrs.inverse = true
+					break
+				case 8: // Hidden/conceal
+					attrs.hidden = true
 					break
 				case 9:
 					attrs.strikethrough = true
 					break
-				case 21: // Double underline — treat as underline
-					attrs.underline = true
+				case 21: // Double underline
+					attrs.underline = "double"
 					break
 				case 22: // Normal intensity (neither bold nor faint)
 					attrs.bold = false
@@ -627,10 +724,13 @@ export function createScreen(opts: ScreenOptions): Screen {
 					attrs.italic = false
 					break
 				case 24:
-					attrs.underline = false
+					attrs.underline = "none"
 					break
 				case 27:
 					attrs.inverse = false
+					break
+				case 28: // Reveal (turn off hidden/conceal)
+					attrs.hidden = false
 					break
 				case 29:
 					attrs.strikethrough = false
@@ -829,14 +929,26 @@ export function createScreen(opts: ScreenOptions): Screen {
 						}
 						parserState = "ground"
 					} else if (ch === "7") {
-						// DECSC - Save Cursor
-						savedCurX = curX
-						savedCurY = curY
+						// DECSC - Save Cursor + attributes + modes
+						savedState = {
+							curX,
+							curY,
+							attrs: { ...attrs, fg: attrs.fg ? { ...attrs.fg } : null, bg: attrs.bg ? { ...attrs.bg } : null },
+							originMode,
+							autoWrap,
+						}
 						parserState = "ground"
 					} else if (ch === "8") {
-						// DECRC - Restore Cursor
-						curX = savedCurX
-						curY = savedCurY
+						// DECRC - Restore Cursor + attributes + modes
+						curX = savedState.curX
+						curY = savedState.curY
+						attrs = {
+							...savedState.attrs,
+							fg: savedState.attrs.fg ? { ...savedState.attrs.fg } : null,
+							bg: savedState.attrs.bg ? { ...savedState.attrs.bg } : null,
+						}
+						originMode = savedState.originMode
+						autoWrap = savedState.autoWrap
 						clampCursor()
 						parserState = "ground"
 					} else if (ch === "E") {
@@ -863,6 +975,9 @@ export function createScreen(opts: ScreenOptions): Screen {
 							handleCSI(escBuf, ch)
 						}
 						parserState = "ground"
+					} else if (escBuf.length >= 256) {
+						// Buffer overflow — drop to ground to avoid unbounded accumulation
+						parserState = "ground"
 					} else {
 						// Parameter or intermediate byte
 						escBuf += ch
@@ -877,6 +992,9 @@ export function createScreen(opts: ScreenOptions): Screen {
 					} else if (code === 0x1b) {
 						// ESC might be start of ST (\x1b\\)
 						parserState = "oscString"
+					} else if (oscBuf.length >= 4096) {
+						// Buffer overflow — drop to ground to avoid unbounded accumulation
+						parserState = "ground"
 					} else {
 						oscBuf += ch
 					}
@@ -911,6 +1029,7 @@ export function createScreen(opts: ScreenOptions): Screen {
 		curVisible = true
 		savedCurX = 0
 		savedCurY = 0
+		savedState = { curX: 0, curY: 0, attrs: resetAttrs(), originMode: false, autoWrap: true }
 		attrs = resetAttrs()
 		title = ""
 		useAltScreen = false
@@ -995,16 +1114,14 @@ export function createScreen(opts: ScreenOptions): Screen {
 
 	function rowToString(row: ScreenCell[]): string {
 		let line = ""
-		for (const cell of row) {
+		for (let i = 0; i < row.length; i++) {
+			const cell = row[i]!
 			if (cell.wide) {
 				line += cell.char
 			} else if (cell.char === "") {
-				// Check if this is a spacer after wide char
-				// (empty char with the preceding cell being wide)
-				// Skip spacers, otherwise it's a space
-				const idx = row.indexOf(cell)
-				if (idx > 0 && row[idx - 1]?.wide) {
-					continue // Skip spacer cell
+				// Skip spacer cells after wide chars, otherwise treat as space
+				if (i > 0 && row[i - 1]?.wide) {
+					continue
 				}
 				line += " "
 			} else {

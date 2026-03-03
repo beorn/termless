@@ -703,19 +703,39 @@ describe("region selectors", () => {
     term.close()
   })
 
-  test("viewport returns a RegionView", () => {
-    const backend = createMockBackend()
-    const term = createTerminal({ backend, cols: 20, rows: 3 })
-    term.feed("Row A\nRow B\nRow C")
+  test("viewport returns a RegionView with scrolled content", () => {
+    // Use real xterm backend so viewport can differ from screen
+    const term = createTerminal({
+      backend: createXtermBackend(),
+      cols: 40,
+      rows: 5,
+    })
+
+    // Feed 20 lines so ~15 scroll off the 5-row screen
+    const allLines: string[] = []
+    for (let i = 1; i <= 20; i++) {
+      allLines.push(`vp-line-${String(i).padStart(2, "0")}`)
+    }
+    term.feed(allLines.join("\r\n"))
+
+    // Screen should show the latest lines
+    const screenText = term.screen.getText()
+    expect(screenText).toContain("vp-line-20")
+    expect(screenText).not.toContain("vp-line-01")
+
+    // Scroll viewport up to see older content
+    term.backend.scrollViewport(-10)
 
     const vp = term.viewport
-    expect(vp.getText()).toContain("Row A")
-    expect(vp.getText()).toContain("Row C")
-    expect(vp.containsText("Row B")).toBe(true)
-    expect(vp.containsText("nonexistent")).toBe(false)
+    const vpText = vp.getText()
+
+    // Viewport should now show different content than the screen
+    expect(vpText).not.toContain("vp-line-20")
+    // Viewport should contain older lines that are not on the screen
+    expect(vpText).toContain("vp-line-")
 
     const lines = vp.getLines()
-    expect(lines.length).toBe(3)
+    expect(lines.length).toBe(5)
 
     term.close()
   })
@@ -732,6 +752,11 @@ describe("region selectors", () => {
     expect(text).toContain("KLMNO")
     // Should NOT contain text from row 2
     expect(text).not.toContain("UVWXY")
+    // endCol clamps the last row — PQRST (row 1, cols 5-9) should not appear
+    expect(text).not.toContain("PQRST")
+    // startCol/endCol only apply to first/last rows respectively, so
+    // FGHIJ (row 0, cols 5-9) IS included since row 0 uses startCol=0 to end
+    expect(text).toContain("FGHIJ")
 
     expect(region.containsText("ABCDE")).toBe(true)
 

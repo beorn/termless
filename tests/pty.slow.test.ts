@@ -43,8 +43,11 @@ describe("PTY integration", () => {
     const term = createXterm()
     try {
       await term.spawn(["echo", "done"])
-      // Wait for process to complete and exit code to be captured
-      await new Promise((r) => setTimeout(r, 500))
+      // Poll for exit info instead of fixed delay — avoids race condition
+      const deadline = Date.now() + 5000
+      while (!term.exitInfo && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 50))
+      }
       expect(term.exitInfo).toContain("exit=")
     } finally {
       await term.close()

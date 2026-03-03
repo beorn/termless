@@ -92,15 +92,19 @@ Create `packages/<name>/` with these files:
 
 Native dependencies go in `dependencies`. termless core goes in `peerDependencies` as `workspace:*`.
 
+> After creating the package directory and `package.json`, run `bun install` from the repo root to wire up workspace dependencies.
+
 **`packages/<name>/src/index.ts`** -- re-export the factory function (and async init if needed):
 
 ```typescript
 export { create<Name>Backend } from "./backend.ts"
 // If async init is needed (e.g., WASM loading):
 // export { create<Name>Backend, init<Name> } from "./backend.ts"
+// If native module loading is needed (e.g., napi-rs):
+// export { create<Name>Backend, load<Name>Native } from "./backend.ts"
 ```
 
-**`packages/<name>/src/backend.ts`** -- the `TerminalBackend` implementation (see [TerminalBackend Interface](#terminalbackend-interface-18-methods) below).
+**`packages/<name>/src/backend.ts`** -- the `TerminalBackend` implementation (see [TerminalBackend Interface](#terminalbackend-interface-16-methods--2-properties) below).
 
 **`packages/<name>/tests/backend.test.ts`** -- unit tests covering lifecycle, text I/O, colors, attributes, cursor, modes, key encoding, scrollback, resize, reset, wide characters, and capabilities.
 
@@ -130,6 +134,18 @@ beforeAll(async () => {
 })
 ```
 
+##### Conditional registration for native backends
+
+Backends requiring native builds (e.g., napi-rs Rust modules) should NOT be added unconditionally to `cross-backend.test.ts`. If the native module is unavailable (not compiled), the entire test suite would fail. Use the try/catch skip pattern that the alacritty and wezterm backends use:
+
+```typescript
+let nativeAvailable = false
+try { loadNative(); nativeAvailable = true } catch {}
+const describeNative = nativeAvailable ? describe : describe.skip
+```
+
+Then wrap your backend's test registration with `describeNative` so it is automatically skipped when the native build is not present.
+
 **`tests/compat-matrix.ts`** -- add to the `backendFactories` array:
 
 ```typescript
@@ -148,7 +164,7 @@ const backendFactories: [string, () => TerminalBackend][] = [
 - **`CHANGELOG.md`** -- add a section under the current version
 - **`docs/multi-backend.md`** -- add a setup file example for the new backend
 
-### TerminalBackend Interface (18 methods)
+### TerminalBackend Interface (16 methods + 2 properties)
 
 All backends implement `TerminalBackend` (defined in `src/types.ts`). The interface extends `TerminalReadable` and adds lifecycle, data flow, key encoding, scrollback, and capability methods.
 
@@ -166,9 +182,9 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `feed` | `(data: Uint8Array) => void` | Feed raw terminal data (escape sequences, text). Must be synchronous -- callers expect state to be updated immediately after `feed()` returns. |
+| `feed` | `(data: Uint8Array) => void` | Feed raw terminal data (escape sequences, text). Must be synchronous -- callers expect state to be updated immediately after `feed()` returns. If your native module expects Node.js `Buffer` instead of `Uint8Array`, wrap: `nativeTerm.feed(Buffer.from(data))`. |
 | `resize` | `(cols: number, rows: number) => void` | Resize the terminal. Content should be preserved. |
-| `reset` | `() => void` | Reset to initial state (equivalent to RIS `\x1bc`). Clear screen, reset modes, clear title. |
+| `reset` | `() => void` | Reset to initial state (equivalent to RIS `\x1bc`). Clear screen, reset modes, clear title. Also reset any closure state (like `title`) that the backend tracks outside the native terminal instance. |
 
 #### Reading (9 methods from TerminalReadable)
 
@@ -181,7 +197,7 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 | `getLines` | `() => Cell[][]` | All screen rows (length = rows). |
 | `getCursor` | `() => CursorState` | Cursor position (`x`, `y`), `visible`, and `style`. |
 | `getMode` | `(mode: TerminalMode) => boolean` | Query a terminal mode. Must support all 11 modes in the `TerminalMode` union. |
-| `getTitle` | `() => string` | Current OSC 2 title. |
+| `getTitle` | `() => string` | Current OSC 2 title. Your backend must capture OSC 2 title changes. Common approaches: (1) callback from native terminal (xterm.js `onTitleChange`), (2) built-in getter on native object (alacritty/wezterm `getTitle()`), (3) manual tracking in the parser (vt100). |
 | `getScrollback` | `() => ScrollbackState` | Scrollback state: `viewportOffset`, `totalLines`, `screenLines`. |
 
 #### Key Encoding (1 method)
@@ -223,6 +239,8 @@ interface Cell {
 
 Colors must be `null` for the terminal's default fg/bg (not `{ r: 0, g: 0, b: 0 }`). This is critical for correct matcher behavior. See how the Ghostty backend uses `isDefaultColor()` to detect and map default colors to `null`.
 
+For wide characters, the cell at position N+1 is a continuation cell. Return empty text for it in `getCell()`. In `getText()` and row-to-string conversions, skip cells with width 0.
+
 ### Key Patterns
 
 #### Factory function with closure state
@@ -247,7 +265,7 @@ export function create<Name>Backend(opts?: Partial<TerminalOptions>): TerminalBa
     title = ""
   }
 
-  // ... implement all 18 methods ...
+  // ... implement all methods and properties ...
 
   return {
     name: "<name>",
@@ -328,7 +346,15 @@ function feed(data: Uint8Array): void {
 
 #### Key encoding
 
-Key encoding is identical across both existing backends -- standard ANSI escape sequences. You can reuse the same `encodeKeyToAnsi()` function. The shared logic handles:
+Key encoding is standard ANSI escape sequences, shared across all backends. Import the canonical implementation from `src/key-encoding.ts`:
+
+```typescript
+import { encodeKeyToAnsi } from "termless/key-encoding"
+```
+
+Then wire it into your backend: `encodeKey: encodeKeyToAnsi`.
+
+The shared logic handles:
 
 - **Ctrl+letter**: ASCII control codes 1-26 (`charCodeAt(0) - 96`)
 - **Alt+letter**: ESC prefix (`\x1b` + character)
@@ -346,6 +372,13 @@ Map the native library's color representation to termless `RGB | null`:
 - **True color (24-bit)**: Extract R, G, B from the native format.
 - **256-color palette**: Convert palette index to RGB using the standard 256-color table (16 base + 216 cube + 24 grayscale). See `buildPalette256()` in the xterm.js backend.
 - **ANSI 16-color**: Use the standard ANSI palette mapping.
+
+##### Default color detection
+
+How you detect default colors depends on the native API:
+
+- **API-based** (xterm.js): The native API distinguishes color types directly via methods like `isFgRGB()` and `isFgPalette()`. If neither is set, the color is the terminal default -- return `null`.
+- **Capture-and-compare** (Ghostty): The native API always returns RGB values, even for default colors. Capture the default fg/bg RGB values at init time, then compare every cell's color against them. If it matches the default, return `null`.
 
 #### Terminal modes
 

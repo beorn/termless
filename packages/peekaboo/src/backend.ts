@@ -38,9 +38,6 @@ export interface PeekabooOptions {
   app?: TerminalApp
   /** Whether to launch the terminal app for visual verification. Default: false */
   visual?: boolean
-  /** Initial terminal dimensions */
-  cols?: number
-  rows?: number
   scrollbackLimit?: number
 }
 
@@ -76,7 +73,7 @@ async function launchTerminalApp(
   command: string[],
   opts?: { env?: Record<string, string>; cwd?: string },
 ): Promise<{ pid: number; close: () => Promise<void> }> {
-  const cmd = command.join(" ")
+  const cmd = command.map((arg) => `'${arg.replace(/'/g, "'\\''")}'`).join(" ")
   const cwd = opts?.cwd ?? process.cwd()
 
   // Build env export string for the shell command
@@ -165,7 +162,7 @@ async function launchTerminalApp(
 
 /** Capture a screenshot of a specific application window using screencapture (macOS). */
 async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
-  const tmpPath = `/tmp/peekaboo-screenshot-${Date.now()}.png`
+  const tmpPath = `/tmp/peekaboo-screenshot-${crypto.randomUUID()}.png`
 
   // Use screencapture with window selection by app name
   // First, get the window ID of the terminal app
@@ -184,17 +181,21 @@ async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
   })
 
   const windowIdText = await new Response(windowIdProc.stdout).text()
-  await windowIdProc.exited
+  const windowIdExit = await windowIdProc.exited
 
   const windowId = windowIdText.trim()
 
-  if (windowId) {
+  if (windowId && windowIdExit === 0) {
     // Capture specific window by ID
     const captureProc = Bun.spawn(["screencapture", "-l", windowId, "-o", "-x", tmpPath], {
       stdout: "ignore",
-      stderr: "ignore",
+      stderr: "pipe",
     })
-    await captureProc.exited
+    const captureExit = await captureProc.exited
+    if (captureExit !== 0) {
+      const stderr = await new Response(captureProc.stderr).text()
+      throw new Error(`screencapture failed with exit code ${captureExit}: ${stderr.trim()}`)
+    }
   } else {
     // Fallback: capture the frontmost window
     // Bring the app to front first
@@ -208,9 +209,13 @@ async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
 
     const captureProc = Bun.spawn(["screencapture", "-w", "-o", "-x", tmpPath], {
       stdout: "ignore",
-      stderr: "ignore",
+      stderr: "pipe",
     })
-    await captureProc.exited
+    const captureExit = await captureProc.exited
+    if (captureExit !== 0) {
+      const stderr = await new Response(captureProc.stderr).text()
+      throw new Error(`screencapture failed with exit code ${captureExit}: ${stderr.trim()}`)
+    }
   }
 
   // Read the screenshot file
