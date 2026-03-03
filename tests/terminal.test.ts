@@ -160,6 +160,18 @@ function createMockBackend(): TerminalBackend {
       return title
     },
 
+    getRowText(row: number): string {
+      return (grid[row] ?? []).join("").trimEnd()
+    },
+
+    getViewportText(): string {
+      return grid.map((row) => row.join("").trimEnd()).join("\n")
+    },
+
+    getScrollbackText(_lineCount?: number): string {
+      return "" // Mock has no scrollback
+    },
+
     getScrollback(): ScrollbackState {
       return { viewportOffset: 0, totalLines: rows, screenLines: rows }
     },
@@ -595,6 +607,44 @@ describe("createTerminal", () => {
 
     // Content is static, should stabilize within stableMs
     await term.waitForStable(50, 1000)
+
+    term.close()
+  })
+
+  test("getRowText returns trimmed text of a row", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+
+    term.feed("Hello world\nLine two")
+
+    expect(term.getRowText(0)).toBe("Hello world")
+    expect(term.getRowText(1)).toBe("Line two")
+    expect(term.getRowText(2)).toBe("")
+
+    term.close()
+  })
+
+  test("getViewportText returns all viewport rows", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 3 })
+
+    term.feed("Row A\nRow B\nRow C")
+
+    const text = term.getViewportText()
+    expect(text).toContain("Row A")
+    expect(text).toContain("Row B")
+    expect(text).toContain("Row C")
+
+    term.close()
+  })
+
+  test("getScrollbackText returns empty for mock backend", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+
+    term.feed("Hello")
+
+    expect(term.getScrollbackText()).toBe("")
 
     term.close()
   })

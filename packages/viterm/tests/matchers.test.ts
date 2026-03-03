@@ -48,6 +48,8 @@ interface MockTerminalOptions {
 	title?: string
 	/** Scrollback state override. */
 	scrollback?: Partial<ScrollbackState>
+	/** Scrollback text lines (above viewport). */
+	scrollbackLines?: string[]
 }
 
 function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable {
@@ -91,6 +93,9 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 		screenLines: scrollback.screenLines ?? lines.length,
 	}
 
+	// Scrollback text for testing (separate from viewport)
+	const scrollbackLines = options.scrollbackLines ?? []
+
 	return {
 		getText(): string {
 			return grid.map((row) => row.map((c) => c.text || " ").join("")).join("\n")
@@ -120,6 +125,17 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 		},
 		getLines(): Cell[][] {
 			return grid
+		},
+		getRowText(row: number): string {
+			return (grid[row] ?? []).map((c) => c.text || " ").join("").trimEnd()
+		},
+		getViewportText(): string {
+			return grid.map((row) => row.map((c) => c.text || " ").join("").trimEnd()).join("\n")
+		},
+		getScrollbackText(lineCount?: number): string {
+			if (scrollbackLines.length === 0) return ""
+			const start = lineCount != null ? Math.max(0, scrollbackLines.length - lineCount) : 0
+			return scrollbackLines.slice(start).join("\n")
 		},
 		getCursor(): CursorState {
 			return cursorState
@@ -471,6 +487,78 @@ describe("scrollback matchers", () => {
 	test("toBeAtBottomOfScrollback fails when scrolled up", () => {
 		const term = createMockTerminal({ scrollback: { viewportOffset: 10 } })
 		expect(() => expect(term).toBeAtBottomOfScrollback()).toThrow()
+	})
+})
+
+// =============================================================================
+// Scrollback Text Matcher
+// =============================================================================
+
+describe("scrollback text matcher", () => {
+	test("toHaveTextInScrollback passes when text is in scrollback", () => {
+		const term = createMockTerminal({
+			lines: ["Viewport line"],
+			scrollbackLines: ["Old line 1", "Old line 2"],
+		})
+		expect(term).toHaveTextInScrollback("Old line 1")
+		expect(term).toHaveTextInScrollback("Old line 2")
+	})
+
+	test("toHaveTextInScrollback fails when text is only in viewport", () => {
+		const term = createMockTerminal({
+			lines: ["Viewport line"],
+			scrollbackLines: ["Old line"],
+		})
+		expect(() => expect(term).toHaveTextInScrollback("Viewport line")).toThrow()
+	})
+
+	test("toHaveTextInScrollback fails when scrollback is empty", () => {
+		const term = createMockTerminal({ lines: ["Viewport line"] })
+		expect(() => expect(term).toHaveTextInScrollback("anything")).toThrow()
+	})
+
+	test("toHaveTextInScrollback with .not negation", () => {
+		const term = createMockTerminal({
+			lines: ["Viewport"],
+			scrollbackLines: ["Old"],
+		})
+		expect(term).not.toHaveTextInScrollback("Viewport")
+	})
+})
+
+// =============================================================================
+// Viewport Matcher
+// =============================================================================
+
+describe("viewport matcher", () => {
+	test("toMatchViewport passes when lines match", () => {
+		const term = createMockTerminal({ lines: ["Hello", "World"] })
+		expect(term).toMatchViewport(["Hello", "World"])
+	})
+
+	test("toMatchViewport trims trailing whitespace", () => {
+		const term = createMockTerminal({ lines: ["Hello   ", "World   "] })
+		expect(term).toMatchViewport(["Hello", "World"])
+	})
+
+	test("toMatchViewport fails when lines differ", () => {
+		const term = createMockTerminal({ lines: ["Hello", "World"] })
+		expect(() => expect(term).toMatchViewport(["Hello", "Earth"])).toThrow(/row 1/)
+	})
+
+	test("toMatchViewport handles empty lines", () => {
+		const term = createMockTerminal({ lines: ["Hello", "", "World"] })
+		expect(term).toMatchViewport(["Hello", "", "World"])
+	})
+
+	test("toMatchViewport pads shorter expected with empty strings", () => {
+		const term = createMockTerminal({ lines: ["Hello", "World", ""] })
+		expect(term).toMatchViewport(["Hello", "World"])
+	})
+
+	test("toMatchViewport with .not negation", () => {
+		const term = createMockTerminal({ lines: ["Hello", "World"] })
+		expect(term).not.toMatchViewport(["Goodbye", "World"])
 	})
 })
 

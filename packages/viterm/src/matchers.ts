@@ -115,6 +115,10 @@ declare module "vitest" {
 		// Scrollback
 		toHaveScrollbackLines(n: number): void
 		toBeAtBottomOfScrollback(): void
+		toHaveTextInScrollback(text: string): void
+
+		// Viewport
+		toMatchViewport(expectedLines: string[]): void
 
 		// Snapshot
 		toMatchTerminalSnapshot(options?: { name?: string }): void
@@ -461,6 +465,56 @@ export const terminalMatchers = {
 				pass
 					? `Expected terminal not to be at bottom of scrollback`
 					: `Expected terminal to be at bottom of scrollback, got offset ${scrollback.viewportOffset}`,
+		}
+	},
+
+	// ── Scrollback Text Matcher ──
+
+	/** Assert scrollback buffer (above viewport) contains the given text. */
+	toHaveTextInScrollback(received: unknown, text: string) {
+		assertTerminalReadable(received, "toHaveTextInScrollback")
+		const scrollbackContent = received.getScrollbackText()
+		const pass = scrollbackContent.includes(text)
+		return {
+			pass,
+			message: () =>
+				pass
+					? `Expected scrollback not to contain "${text}"`
+					: `Expected scrollback to contain "${text}"\n\nScrollback content:\n${scrollbackContent || "(empty)"}`,
+		}
+	},
+
+	// ── Viewport Matcher ──
+
+	/** Assert viewport text matches expected lines (line-by-line, trailing whitespace trimmed). */
+	toMatchViewport(received: unknown, expectedLines: string[]) {
+		assertTerminalReadable(received, "toMatchViewport")
+		const viewportText = received.getViewportText()
+		const actualLines = viewportText.split("\n").map((l) => l.trimEnd())
+
+		// Pad shorter array with empty strings for comparison
+		const maxLen = Math.max(actualLines.length, expectedLines.length)
+		const padded = {
+			actual: Array.from({ length: maxLen }, (_, i) => actualLines[i] ?? ""),
+			expected: Array.from({ length: maxLen }, (_, i) => expectedLines[i] ?? ""),
+		}
+
+		const mismatches: string[] = []
+		for (let i = 0; i < maxLen; i++) {
+			if (padded.actual[i] !== padded.expected[i]) {
+				mismatches.push(
+					`  row ${i}: expected "${padded.expected[i]}" got "${padded.actual[i]}"`,
+				)
+			}
+		}
+
+		const pass = mismatches.length === 0
+		return {
+			pass,
+			message: () =>
+				pass
+					? `Expected viewport not to match the given lines`
+					: `Viewport text mismatch:\n${mismatches.join("\n")}`,
 		}
 	},
 

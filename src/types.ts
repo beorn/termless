@@ -97,6 +97,9 @@ export interface TerminalReadable {
   getCell(row: number, col: number): Cell
   getLine(row: number): Cell[]
   getLines(): Cell[][]
+  getRowText(row: number): string
+  getViewportText(): string
+  getScrollbackText(lines?: number): string
   getCursor(): CursorState
   getMode(mode: TerminalMode): boolean
   getTitle(): string

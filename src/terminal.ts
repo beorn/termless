@@ -78,6 +78,18 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return backend.getLines()
   }
 
+  function getRowText(row: number): string {
+    return backend.getRowText(row)
+  }
+
+  function getViewportText(): string {
+    return backend.getViewportText()
+  }
+
+  function getScrollbackText(lineCount?: number): string {
+    return backend.getScrollbackText(lineCount)
+  }
+
   function getCursor(): CursorState {
     return backend.getCursor()
   }
@@ -261,6 +273,9 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     getCell,
     getLine,
     getLines,
+    getRowText,
+    getViewportText,
+    getScrollbackText,
     getCursor,
     getMode,
     getTitle,

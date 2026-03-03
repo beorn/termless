@@ -340,6 +340,41 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
+  function getRowText(row: number): string {
+    const t = ensureTerm()
+    const buf = t.buffer.active
+    const absRow = buf.viewportY + row
+    const line = buf.getLine(absRow)
+    return line ? line.translateToString(true) : ""
+  }
+
+  function getViewportText(): string {
+    const t = ensureTerm()
+    const buf = t.buffer.active
+    const lines: string[] = []
+    for (let i = 0; i < t.rows; i++) {
+      const line = buf.getLine(buf.viewportY + i)
+      lines.push(line ? line.translateToString(true) : "")
+    }
+    return lines.join("\n")
+  }
+
+  function getScrollbackText(lineCount?: number): string {
+    const t = ensureTerm()
+    const buf = t.buffer.active
+    // Scrollback lines are those above the viewport base position
+    const scrollbackLines = buf.baseY
+    if (scrollbackLines <= 0) return ""
+
+    const start = lineCount != null ? Math.max(0, scrollbackLines - lineCount) : 0
+    const lines: string[] = []
+    for (let i = start; i < scrollbackLines; i++) {
+      const line = buf.getLine(i)
+      lines.push(line ? line.translateToString(true) : "")
+    }
+    return lines.join("\n")
+  }
+
   function getCell(row: number, col: number): Cell {
     const t = ensureTerm()
     const line = t.buffer.active.getLine(row)
@@ -463,6 +498,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCell,
     getLine,
     getLines,
+    getRowText,
+    getViewportText,
+    getScrollbackText,
     getCursor,
     getMode,
     getTitle,
