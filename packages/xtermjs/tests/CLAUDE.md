@@ -1,6 +1,6 @@
 # termless-xtermjs Tests
 
-**Layer 0 — Platform**: xterm.js headless backend correctness — ANSI parsing, cell attributes, cursor tracking, terminal modes, and key encoding.
+**Layer 0 -- Platform**: xterm.js headless backend correctness -- ANSI parsing, cell attributes, cursor tracking, terminal modes, and key encoding.
 
 ## What to Test Here
 
@@ -16,9 +16,10 @@
 
 ## What NOT to Test Here
 
-- Terminal API (`createTerminal`) — that's the root `tests/` directory
-- Viterm matchers/serializer — that's the viterm package
-- Ghostty backend — that's the ghostty package
+- Terminal API (`createTerminal`) and region views -- that's the root `tests/` directory
+- Cross-backend comparison -- that's `tests/cross-backend.test.ts`
+- Viterm matchers/serializer -- that's the viterm package
+- Ghostty backend -- that's the ghostty package
 
 ## Patterns
 
@@ -46,3 +47,4 @@ Tests use xterm.js headless WASM backend (~50ms setup). Each test creates and de
 ## See Also
 
 - [Test layering philosophy](../../.claude/skills/tests/test-layers.md)
+- [Cross-backend conformance tests](../../tests/cross-backend.test.ts)
