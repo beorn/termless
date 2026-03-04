@@ -31,7 +31,7 @@ const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
 const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
 
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
-term.feed(BOLD("Hello") + ", termless!")
+term.feed(`${BOLD("Hello")}, termless!`)
 console.log(term.screen.getText()) // "Hello, termless!"
 await term.close()
 ```
@@ -73,9 +73,9 @@ test("inspect what string matching can't see", () => {
   // Simulate a TUI app
   term.feed(ALT_SCREEN_ON)
   term.feed(SET_TITLE("my-app — dashboard"))
-  term.feed(BOLD("Server Status") + "\r\n")
-  term.feed("  API:  " + GREEN("● online") + "\r\n")
-  term.feed("  DB:   " + RED("● down") + "\r\n")
+  term.feed(`${BOLD("Server Status")}\r\n`)
+  term.feed(`  API:  ${GREEN("● online")}\r\n`)
+  term.feed(`  DB:   ${RED("● down")}\r\n`)
   term.feed(MOVE_TO(4, 1))
 
   // Terminal modes, title, cursor — invisible to string assertions
