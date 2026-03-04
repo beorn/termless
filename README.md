@@ -25,7 +25,6 @@ import { createXtermBackend } from "@termless/xtermjs"
 // or chalk/chalkx (string styling) instead of hand-writing escape codes.
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
-const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
 const ALT_SCREEN_ON = "\x1b[?1049h"
 const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
 const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
@@ -62,7 +61,6 @@ import { createTerminalFixture } from "@termless/test"
 // ANSI helpers — real apps use inkx or chalk, these are for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
-const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
 const ALT_SCREEN_ON = "\x1b[?1049h"
 const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
 const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
@@ -75,13 +73,12 @@ test("inspect what string matching can't see", () => {
   term.feed(SET_TITLE("my-app — dashboard"))
   term.feed(`${BOLD("Server Status")}\r\n`)
   term.feed(`  API:  ${GREEN("● online")}\r\n`)
-  term.feed(`  DB:   ${RED("● down")}\r\n`)
-  term.feed(MOVE_TO(4, 1))
+  term.feed(MOVE_TO(3, 1))
 
   // Terminal modes, title, cursor — invisible to string assertions
   expect(term).toBeInMode("altScreen")
   expect(term).toHaveTitle("my-app — dashboard")
-  expect(term).toHaveCursorAt(0, 3)
+  expect(term).toHaveCursorAt(0, 2)
 
   // Region selectors — WHERE to look + WHAT to assert
   expect(term.screen).toContainText("Server Status")
@@ -90,13 +87,11 @@ test("inspect what string matching can't see", () => {
 
   // Cell-level style inspection — colors that getText() can't see
   expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green dot = healthy
-  expect(term.cell(2, 8)).toHaveFg("#ff0000") // red dot = down
+  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green dot
 
   // Resize — verify content survives terminal resize
   term.resize(30, 10)
   expect(term.screen).toContainText("● online")
-  expect(term.screen).toContainText("● down")
 })
 ```
 
