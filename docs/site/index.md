@@ -44,32 +44,40 @@ bun add -d @termless/test
 import { test, expect } from "vitest"
 import { createTerminalFixture } from "@termless/test"
 
+// ANSI helpers — real apps use inkx or chalk, these are just for test data
+const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
+const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
+const ALT_SCREEN_ON = "\x1b[?1049h"
+const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
+const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
+
 test("inspect what string matching can't see", () => {
   const term = createTerminalFixture({ cols: 60, rows: 10 })
 
-  // Simulate a TUI app: alt screen, window title, styled output
-  term.feed("\x1b[?1049h") // enter alt screen
-  term.feed("\x1b]2;my-app — dashboard\x07") // set window title
-  term.feed("\x1b[1mServer Status\x1b[0m\r\n")
-  term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
-  term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
-  term.feed("\x1b[4;1H") // position cursor
+  // Simulate a TUI app
+  term.feed(ALT_SCREEN_ON)
+  term.feed(SET_TITLE("my-app — dashboard"))
+  term.feed(`${BOLD("Server Status")}\r\n`)
+  term.feed(`  ${GREEN("● online")}\r\n`)
+  term.feed(MOVE_TO(4, 1))
 
-  // Terminal modes, title, cursor — invisible to string assertions
+  // Region selectors — WHERE to look
+  expect(term.screen).toContainText("Server Status")
+  expect(term.row(0)).toHaveText("Server Status")
+  expect(term.scrollback).not.toContainText("Server Status") // alt screen
+
+  // Cell styles — colors that getText() can't see
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(1, 2)).toHaveFg("#00ff00")
+
+  // Terminal state — modes, cursor, title
   expect(term).toBeInMode("altScreen")
   expect(term).toHaveTitle("my-app — dashboard")
   expect(term).toHaveCursorAt(0, 3)
 
-  // Region selectors + cell-level styles — colors getText() can't see
-  expect(term.row(0)).toHaveText("Server Status")
-  expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green = healthy
-  expect(term.cell(2, 8)).toHaveFg("#ff0000") // red = down
-
   // Resize — verify content survives terminal resize
   term.resize(30, 10)
   expect(term.screen).toContainText("● online")
-  expect(term.screen).toContainText("● down")
 })
 ```
 

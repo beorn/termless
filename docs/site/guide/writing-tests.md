@@ -51,7 +51,7 @@ expect(term.screen).toMatchLines(["Line 1", "Line 2", "Line 3"])
 ### Cell Style Matchers (on CellView)
 
 ```typescript
-// Colors -- accepts "#rrggbb" string or { r, g, b } object
+// Colors — accepts "#rrggbb" string or { r, g, b } object
 expect(term.cell(0, 0)).toHaveFg("#ff0000")
 expect(term.cell(0, 0)).toHaveBg({ r: 0, g: 255, b: 0 })
 
@@ -139,8 +139,9 @@ import { terminalSerializer, terminalSnapshot } from "@termless/test"
 expect.addSnapshotSerializer(terminalSerializer)
 
 test("renders correctly", () => {
+  const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
   const term = createTerminalFixture({ cols: 40, rows: 5 })
-  term.feed("\x1b[1mTitle\x1b[0m\r\nContent")
+  term.feed(`${BOLD("Title")}\r\nContent`)
 
   expect(terminalSnapshot(term)).toMatchSnapshot()
 })
@@ -169,14 +170,16 @@ With style annotations when cells have non-default attributes:
 ### Testing ANSI output
 
 ```typescript
+const BOLD_RED = (s: string) => `\x1b[1;31m${s}\x1b[0m`
+
 test("error message is red and bold", () => {
   const term = createTerminalFixture()
-  term.feed("\x1b[1;31mError:\x1b[0m file not found")
+  term.feed(`${BOLD_RED("Error:")} file not found`)
 
   expect(term.screen).toContainText("Error: file not found")
   expect(term.cell(0, 0)).toBeBold()
   expect(term.cell(0, 0)).toHaveFg("#800000") // ANSI red (palette index 1)
-  expect(term.cell(0, 7)).not.toBeBold() // Space after "Error:" is not bold
+  expect(term.cell(0, 7)).not.toBeBold()      // space after "Error:" is not bold
 })
 ```
 

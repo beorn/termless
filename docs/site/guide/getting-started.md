@@ -17,34 +17,25 @@ Create a test file:
 import { describe, test, expect } from "vitest"
 import { createTerminalFixture } from "@termless/test"
 
+// ANSI helpers — real apps use inkx or chalk, these are just for test data
+const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
+const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
+
 describe("my TUI app", () => {
   test("displays welcome message", () => {
-    const term = createTerminalFixture({
-      cols: 80,
-      rows: 24,
-    })
+    const term = createTerminalFixture({ cols: 80, rows: 24 })
 
-    // Feed ANSI data (as if a terminal app wrote it)
-    term.feed("Welcome to \x1b[1mMyApp\x1b[0m v1.0")
+    term.feed(`Welcome to ${BOLD("MyApp")} v1.0`)
 
-    // Assert text content
     expect(term.screen).toContainText("Welcome to MyApp v1.0")
-
-    // Assert styling
-    expect(term.cell(0, 11)).toBeBold() // "M" in "MyApp" is bold
-    expect(term.cell(0, 0)).not.toBeBold() // "W" in "Welcome" is not
-
-    // No manual cleanup needed -- createTerminalFixture handles it
+    expect(term.cell(0, 11)).toBeBold()      // "M" in "MyApp" is bold
+    expect(term.cell(0, 0)).not.toBeBold()   // "W" in "Welcome" is not
   })
 
-  test("renders colored status bar", () => {
-    const term = createTerminalFixture({
-      cols: 40,
-      rows: 10,
-    })
+  test("renders colored status", () => {
+    const term = createTerminalFixture({ cols: 40, rows: 10 })
 
-    // Red foreground with truecolor
-    term.feed("\x1b[38;2;255;0;0mERROR\x1b[0m: something went wrong")
+    term.feed(`${RED("ERROR")}: something went wrong`)
 
     expect(term.screen).toContainText("ERROR: something went wrong")
     expect(term.cell(0, 0)).toHaveFg("#ff0000")
