@@ -20,9 +20,18 @@ Built alongside [inkx](https://github.com/beorn/inkx), a React TUI framework, bu
 import { createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
-// Feed data directly
+// ANSI escape helpers for feeding raw terminal data.
+// Real apps generate these automatically — use inkx (React TUI framework)
+// or chalk/chalkx (string styling) instead of hand-writing escape codes.
+const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
+const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
+const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
+const ALT_SCREEN_ON = "\x1b[?1049h"
+const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
+const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
+
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
-term.feed("\x1b[1mHello\x1b[0m, termless!")
+term.feed(BOLD("Hello") + ", termless!")
 console.log(term.screen.getText()) // "Hello, termless!"
 await term.close()
 ```
@@ -34,9 +43,13 @@ const term = createTerminal({ backend: createXtermBackend(), cols: 120, rows: 40
 await term.spawn(["ls", "-la"])
 await term.waitFor("total")
 
-console.log(term.screen.getText())
-const svg = term.screenshotSvg()
+// Region selectors — inspect specific parts of the terminal
+console.log(term.screen.getText())     // visible area
+console.log(term.scrollback.getText()) // history above screen
+console.log(term.row(0).getText())     // first row
+console.log(term.lastRow().getText())  // last row
 
+const svg = term.screenshotSvg()
 await term.close()
 ```
 
@@ -46,25 +59,34 @@ await term.close()
 import { test, expect } from "vitest"
 import { createTerminalFixture } from "@termless/test"
 
+// ANSI helpers — real apps use inkx or chalk, these are for test data
+const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
+const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
+const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
+const ALT_SCREEN_ON = "\x1b[?1049h"
+const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
+const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
+
 test("inspect what string matching can't see", () => {
   const term = createTerminalFixture({ cols: 60, rows: 10 })
 
-  // Simulate a TUI app: alt screen, window title, styled output
-  term.feed("\x1b[?1049h") // enter alt screen
-  term.feed("\x1b]2;my-app — dashboard\x07") // set window title
-  term.feed("\x1b[1mServer Status\x1b[0m\r\n")
-  term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
-  term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
-  term.feed("\x1b[4;1H") // position cursor
+  // Simulate a TUI app
+  term.feed(ALT_SCREEN_ON)
+  term.feed(SET_TITLE("my-app — dashboard"))
+  term.feed(BOLD("Server Status") + "\r\n")
+  term.feed("  API:  " + GREEN("● online") + "\r\n")
+  term.feed("  DB:   " + RED("● down") + "\r\n")
+  term.feed(MOVE_TO(4, 1))
 
   // Terminal modes, title, cursor — invisible to string assertions
   expect(term).toBeInMode("altScreen")
   expect(term).toHaveTitle("my-app — dashboard")
   expect(term).toHaveCursorAt(0, 3)
 
-  // Composable region selectors — WHERE to look + WHAT to assert
+  // Region selectors — WHERE to look + WHAT to assert
   expect(term.screen).toContainText("Server Status")
   expect(term.row(0)).toHaveText("Server Status")
+  expect(term.scrollback).not.toContainText("Server Status") // alt screen has no scrollback
 
   // Cell-level style inspection — colors that getText() can't see
   expect(term.cell(0, 0)).toBeBold()
@@ -83,8 +105,15 @@ test("inspect what string matching can't see", () => {
 termless gives you structured access to terminal internals that are invisible to string matching or screenshot diffing:
 
 ```typescript
+// Region selectors — composable views into the terminal buffer
+expect(term.screen).toContainText("Server Status")    // visible area only
+expect(term.scrollback).toContainText("build complete") // history above screen
+expect(term.buffer).toContainText("earlier output")     // scrollback + screen
+expect(term.row(0)).toHaveText("Title Bar")             // specific row
+expect(term.lastRow()).toContainText("Status: ready")    // last row
+expect(term.range(0, 0, 2, 40)).toContainText("header") // rectangular region
+
 // Scrollback history — did output scroll correctly?
-expect(term.scrollback).toContainText("build complete")
 expect(term).toHaveScrollbackLines(150)
 expect(term).toBeAtBottomOfScrollback()
 
