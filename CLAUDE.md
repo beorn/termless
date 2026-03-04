@@ -60,3 +60,37 @@ term (TerminalReadable)        toHaveCursorAt(x, y)
 ```
 
 Region selectors: `term.screen`, `term.scrollback`, `term.buffer`, `term.viewport`, `term.row(n)`, `term.cell(r, c)`, `term.range(r1, c1, r2, c2)`, `term.firstRow()`, `term.lastRow()`.
+
+## Buffer Diff
+
+```typescript
+import { diffBuffers } from "@termless/core"
+
+const changes = diffBuffers(oldBuffer, newBuffer)
+// Array of { row, col, oldCell, newCell } — only changed cells
+```
+
+## Mock Timer
+
+```typescript
+import { createMockTimer } from "@termless/core"
+
+const timer = createMockTimer()
+timer.setTimeout(fn, 1000)
+timer.advanceTime(1000) // Fires the callback synchronously
+timer.advanceTime(500)  // Partial advance
+```
+
+## Recording & Replay
+
+```typescript
+import { startRecording, replayRecording } from "@termless/core"
+
+// Record a terminal session
+const recording = startRecording(terminal)
+// ... interact with terminal ...
+const data = recording.stop() // JSON-serializable
+
+// Replay
+await replayRecording(terminal, data)
+```
