@@ -78,6 +78,11 @@ test("inspect what string matching can't see", () => {
   expect(term.cell(0, 8)).toHaveFg("#00ff00") // "build ok" is green
   expect(term.cell(1, 8)).toBeBold()          // "test" is bold
 
+  // Scroll — navigate through history
+  term.backend.scrollViewport(1)                 // scroll up one line
+  expect(term.viewport).toContainText("install") // now visible
+  expect(term).not.toBeAtBottomOfScrollback()
+
   // Resize — verify content survives
   term.resize(20, 3)
   expect(term.screen).toContainText("deploy")
