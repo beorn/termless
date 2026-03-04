@@ -31,3 +31,15 @@ export { encodeKeyToAnsi } from "./key-encoding.ts"
 export { createCellView, createRegionView, createRowView } from "./views.ts"
 export { termlessMatchers } from "./jest-matchers.ts"
 export type { AssertionResult } from "./assertions.ts"
+
+// Visual diff
+export { diffBuffers } from "./diff.ts"
+export type { CellDiff, CellSummary, DiffResult } from "./diff.ts"
+
+// Recording and replay
+export { startRecording, replayRecording } from "./recording.ts"
+export type { RecordedEvent, Recording, RecordingHandle } from "./recording.ts"
+
+// Mock timer for animation testing
+export { createMockTimer } from "./timer.ts"
+export type { MockTimerController } from "./timer.ts"
