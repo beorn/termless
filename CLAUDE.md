@@ -4,17 +4,17 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 
 ## Packages
 
-| Package | Description | Status |
-|---------|-------------|--------|
-| `@termless/core` | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active |
-| `@termless/xtermjs` | xterm.js backend (@xterm/headless) | Active |
-| `@termless/ghostty` | Ghostty backend (ghostty-web WASM) | Active |
-| `@termless/vt100` | Pure TypeScript VT100 emulator (zero native deps) | Active |
-| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs) | Needs Rust build |
-| `@termless/wezterm` | WezTerm backend (wezterm-term via napi-rs) | Needs Rust build |
-| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) | Active |
-| `@termless/test` | Vitest integration: matchers, fixtures, snapshots | Active |
-| `@termless/cli` | CLI + MCP server | Active |
+| Package               | Description                                                            | Status           |
+| --------------------- | ---------------------------------------------------------------------- | ---------------- |
+| `@termless/core`      | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active           |
+| `@termless/xtermjs`   | xterm.js backend (@xterm/headless)                                     | Active           |
+| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                                     | Active           |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)                      | Active           |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)                     | Needs Rust build |
+| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                             | Needs Rust build |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                     | Active           |
+| `@termless/test`      | Vitest integration: matchers, fixtures, snapshots                      | Active           |
+| `@termless/cli`       | CLI + MCP server                                                       | Active           |
 
 ## Architecture
 

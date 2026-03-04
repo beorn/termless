@@ -2,19 +2,16 @@
   "name": "@termless/xtermjs",
   "version": "0.1.0",
   "description": "xterm.js backend for termless",
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
   "repository": {
     "type": "git",
     "url": "https://github.com/beorn/termless",
     "directory": "packages/xtermjs"
-  },
-  "homepage": "https://github.com/beorn/termless",
-  "bugs": {
-    "url": "https://github.com/beorn/termless/issues"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
   },
   "files": [
     "src"
@@ -29,5 +26,8 @@
   },
   "peerDependencies": {
     "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

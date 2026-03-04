@@ -60,10 +60,7 @@ export function generateHtmlSlideshow(frames: RecordedFrame[], intervalMs: numbe
 
   // Build inline SVG divs — one per frame, hidden by default except the first
   const frameDivs = escapedFrames
-    .map(
-      (f, i) =>
-        `<div class="frame" id="frame-${i}" style="display:${i === 0 ? "block" : "none"}">${f.svg}</div>`,
-    )
+    .map((f, i) => `<div class="frame" id="frame-${i}" style="display:${i === 0 ? "block" : "none"}">${f.svg}</div>`)
     .join("\n")
 
   const timestamps = JSON.stringify(escapedFrames.map((f) => f.timestamp))

@@ -42,22 +42,22 @@ const svg = term.screenshotSvg({
 })
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `fontFamily` | `string` | `"'Menlo', 'Monaco', 'Courier New', monospace"` | CSS font-family for text |
-| `fontSize` | `number` | `14` | Font size in px |
-| `cellWidth` | `number` | `8.4` | Character cell width in px |
-| `cellHeight` | `number` | `18` | Character cell height in px |
-| `theme` | `SvgTheme` | *(dark theme)* | Color theme |
+| Option       | Type       | Default                                         | Description                 |
+| ------------ | ---------- | ----------------------------------------------- | --------------------------- |
+| `fontFamily` | `string`   | `"'Menlo', 'Monaco', 'Courier New', monospace"` | CSS font-family for text    |
+| `fontSize`   | `number`   | `14`                                            | Font size in px             |
+| `cellWidth`  | `number`   | `8.4`                                           | Character cell width in px  |
+| `cellHeight` | `number`   | `18`                                            | Character cell height in px |
+| `theme`      | `SvgTheme` | _(dark theme)_                                  | Color theme                 |
 
 ## SvgTheme
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `foreground` | `string` | `"#d4d4d4"` | Default text color |
-| `background` | `string` | `"#1e1e1e"` | Background color |
-| `cursor` | `string` | `"#aeafad"` | Cursor color |
-| `palette` | `Record<number, string>` | -- | Override ANSI palette colors (0-255) |
+| Field        | Type                     | Default     | Description                          |
+| ------------ | ------------------------ | ----------- | ------------------------------------ |
+| `foreground` | `string`                 | `"#d4d4d4"` | Default text color                   |
+| `background` | `string`                 | `"#1e1e1e"` | Background color                     |
+| `cursor`     | `string`                 | `"#aeafad"` | Cursor color                         |
+| `palette`    | `Record<number, string>` | --          | Override ANSI palette colors (0-255) |
 
 ## Standalone Function
 

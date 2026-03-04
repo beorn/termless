@@ -5,6 +5,7 @@ Peekaboo backend for termless -- OS-level terminal control via real terminal app
 ## What is this?
 
 A termless backend that combines:
+
 1. **Data layer**: xterm.js headless backend for fast, accurate cell/text data
 2. **Visual layer**: Real terminal app (Ghostty, iTerm2, etc.) for screenshot-based visual verification
 
@@ -34,13 +35,13 @@ const png = await visualBackend.takeScreenshot()
 
 ## Supported terminal apps (macOS)
 
-| App | ID | Notes |
-|-----|------|-------|
-| Ghostty | `ghostty` | Default. Uses `--command` flag |
-| iTerm2 | `iterm2` | Uses AppleScript |
-| Terminal.app | `terminal` | Uses AppleScript |
-| WezTerm | `wezterm` | Uses `wezterm start` |
-| kitty | `kitty` | Uses `open -a` |
+| App          | ID         | Notes                          |
+| ------------ | ---------- | ------------------------------ |
+| Ghostty      | `ghostty`  | Default. Uses `--command` flag |
+| iTerm2       | `iterm2`   | Uses AppleScript               |
+| Terminal.app | `terminal` | Uses AppleScript               |
+| WezTerm      | `wezterm`  | Uses `wezterm start`           |
+| kitty        | `kitty`    | Uses `open -a`                 |
 
 ## Architecture
 

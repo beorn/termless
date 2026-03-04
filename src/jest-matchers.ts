@@ -17,38 +17,38 @@
 
 import type { CursorStyle, RGB, TerminalMode, UnderlineStyle } from "./types.ts"
 import {
-	assertRegionView,
-	assertCellView,
-	assertTerminalReadable,
-	assertContainsText,
-	assertHasText,
-	assertMatchesLines,
-	assertIsBold,
-	assertIsItalic,
-	assertIsFaint,
-	assertIsStrikethrough,
-	assertIsInverse,
-	assertIsWide,
-	assertHasUnderline,
-	assertHasFg,
-	assertHasBg,
-	assertCursorAt,
-	assertCursorStyle,
-	assertCursorVisible,
-	assertCursorHidden,
-	assertInMode,
-	assertTitle,
-	assertScrollbackLines,
-	assertAtBottomOfScrollback,
-	type AssertionResult,
+  assertRegionView,
+  assertCellView,
+  assertTerminalReadable,
+  assertContainsText,
+  assertHasText,
+  assertMatchesLines,
+  assertIsBold,
+  assertIsItalic,
+  assertIsFaint,
+  assertIsStrikethrough,
+  assertIsInverse,
+  assertIsWide,
+  assertHasUnderline,
+  assertHasFg,
+  assertHasBg,
+  assertCursorAt,
+  assertCursorStyle,
+  assertCursorVisible,
+  assertCursorHidden,
+  assertInMode,
+  assertTitle,
+  assertScrollbackLines,
+  assertAtBottomOfScrollback,
+  type AssertionResult,
 } from "./assertions.ts"
 
 /** Convert an AssertionResult to the { pass, message() } format Jest/vitest expect. */
 function toMatcherResult(result: AssertionResult) {
-	return {
-		pass: result.pass,
-		message: () => result.message,
-	}
+  return {
+    pass: result.pass,
+    message: () => result.message,
+  }
 }
 
 /**
@@ -62,109 +62,109 @@ function toMatcherResult(result: AssertionResult) {
  * ```
  */
 export const termlessMatchers = {
-	// ── Text Matchers (RegionView) ──
+  // ── Text Matchers (RegionView) ──
 
-	toContainText(received: unknown, text: string) {
-		assertRegionView(received, "toContainText")
-		return toMatcherResult(assertContainsText(received, text))
-	},
+  toContainText(received: unknown, text: string) {
+    assertRegionView(received, "toContainText")
+    return toMatcherResult(assertContainsText(received, text))
+  },
 
-	toHaveText(received: unknown, text: string) {
-		assertRegionView(received, "toHaveText")
-		return toMatcherResult(assertHasText(received, text))
-	},
+  toHaveText(received: unknown, text: string) {
+    assertRegionView(received, "toHaveText")
+    return toMatcherResult(assertHasText(received, text))
+  },
 
-	toMatchLines(received: unknown, lines: string[]) {
-		assertRegionView(received, "toMatchLines")
-		return toMatcherResult(assertMatchesLines(received, lines))
-	},
+  toMatchLines(received: unknown, lines: string[]) {
+    assertRegionView(received, "toMatchLines")
+    return toMatcherResult(assertMatchesLines(received, lines))
+  },
 
-	// ── Cell Style Matchers (CellView) ──
+  // ── Cell Style Matchers (CellView) ──
 
-	toBeBold(received: unknown) {
-		assertCellView(received, "toBeBold")
-		return toMatcherResult(assertIsBold(received))
-	},
+  toBeBold(received: unknown) {
+    assertCellView(received, "toBeBold")
+    return toMatcherResult(assertIsBold(received))
+  },
 
-	toBeItalic(received: unknown) {
-		assertCellView(received, "toBeItalic")
-		return toMatcherResult(assertIsItalic(received))
-	},
+  toBeItalic(received: unknown) {
+    assertCellView(received, "toBeItalic")
+    return toMatcherResult(assertIsItalic(received))
+  },
 
-	toBeFaint(received: unknown) {
-		assertCellView(received, "toBeFaint")
-		return toMatcherResult(assertIsFaint(received))
-	},
+  toBeFaint(received: unknown) {
+    assertCellView(received, "toBeFaint")
+    return toMatcherResult(assertIsFaint(received))
+  },
 
-	toBeStrikethrough(received: unknown) {
-		assertCellView(received, "toBeStrikethrough")
-		return toMatcherResult(assertIsStrikethrough(received))
-	},
+  toBeStrikethrough(received: unknown) {
+    assertCellView(received, "toBeStrikethrough")
+    return toMatcherResult(assertIsStrikethrough(received))
+  },
 
-	toBeInverse(received: unknown) {
-		assertCellView(received, "toBeInverse")
-		return toMatcherResult(assertIsInverse(received))
-	},
+  toBeInverse(received: unknown) {
+    assertCellView(received, "toBeInverse")
+    return toMatcherResult(assertIsInverse(received))
+  },
 
-	toBeWide(received: unknown) {
-		assertCellView(received, "toBeWide")
-		return toMatcherResult(assertIsWide(received))
-	},
+  toBeWide(received: unknown) {
+    assertCellView(received, "toBeWide")
+    return toMatcherResult(assertIsWide(received))
+  },
 
-	toHaveUnderline(received: unknown, style?: UnderlineStyle) {
-		assertCellView(received, "toHaveUnderline")
-		return toMatcherResult(assertHasUnderline(received, style))
-	},
+  toHaveUnderline(received: unknown, style?: UnderlineStyle) {
+    assertCellView(received, "toHaveUnderline")
+    return toMatcherResult(assertHasUnderline(received, style))
+  },
 
-	toHaveFg(received: unknown, color: string | RGB) {
-		assertCellView(received, "toHaveFg")
-		return toMatcherResult(assertHasFg(received, color))
-	},
+  toHaveFg(received: unknown, color: string | RGB) {
+    assertCellView(received, "toHaveFg")
+    return toMatcherResult(assertHasFg(received, color))
+  },
 
-	toHaveBg(received: unknown, color: string | RGB) {
-		assertCellView(received, "toHaveBg")
-		return toMatcherResult(assertHasBg(received, color))
-	},
+  toHaveBg(received: unknown, color: string | RGB) {
+    assertCellView(received, "toHaveBg")
+    return toMatcherResult(assertHasBg(received, color))
+  },
 
-	// ── Terminal Matchers (TerminalReadable) ──
+  // ── Terminal Matchers (TerminalReadable) ──
 
-	toHaveCursorAt(received: unknown, x: number, y: number) {
-		assertTerminalReadable(received, "toHaveCursorAt")
-		return toMatcherResult(assertCursorAt(received, x, y))
-	},
+  toHaveCursorAt(received: unknown, x: number, y: number) {
+    assertTerminalReadable(received, "toHaveCursorAt")
+    return toMatcherResult(assertCursorAt(received, x, y))
+  },
 
-	toHaveCursorStyle(received: unknown, style: CursorStyle) {
-		assertTerminalReadable(received, "toHaveCursorStyle")
-		return toMatcherResult(assertCursorStyle(received, style))
-	},
+  toHaveCursorStyle(received: unknown, style: CursorStyle) {
+    assertTerminalReadable(received, "toHaveCursorStyle")
+    return toMatcherResult(assertCursorStyle(received, style))
+  },
 
-	toHaveCursorVisible(received: unknown) {
-		assertTerminalReadable(received, "toHaveCursorVisible")
-		return toMatcherResult(assertCursorVisible(received))
-	},
+  toHaveCursorVisible(received: unknown) {
+    assertTerminalReadable(received, "toHaveCursorVisible")
+    return toMatcherResult(assertCursorVisible(received))
+  },
 
-	toHaveCursorHidden(received: unknown) {
-		assertTerminalReadable(received, "toHaveCursorHidden")
-		return toMatcherResult(assertCursorHidden(received))
-	},
+  toHaveCursorHidden(received: unknown) {
+    assertTerminalReadable(received, "toHaveCursorHidden")
+    return toMatcherResult(assertCursorHidden(received))
+  },
 
-	toBeInMode(received: unknown, mode: TerminalMode) {
-		assertTerminalReadable(received, "toBeInMode")
-		return toMatcherResult(assertInMode(received, mode))
-	},
+  toBeInMode(received: unknown, mode: TerminalMode) {
+    assertTerminalReadable(received, "toBeInMode")
+    return toMatcherResult(assertInMode(received, mode))
+  },
 
-	toHaveTitle(received: unknown, title: string) {
-		assertTerminalReadable(received, "toHaveTitle")
-		return toMatcherResult(assertTitle(received, title))
-	},
+  toHaveTitle(received: unknown, title: string) {
+    assertTerminalReadable(received, "toHaveTitle")
+    return toMatcherResult(assertTitle(received, title))
+  },
 
-	toHaveScrollbackLines(received: unknown, n: number) {
-		assertTerminalReadable(received, "toHaveScrollbackLines")
-		return toMatcherResult(assertScrollbackLines(received, n))
-	},
+  toHaveScrollbackLines(received: unknown, n: number) {
+    assertTerminalReadable(received, "toHaveScrollbackLines")
+    return toMatcherResult(assertScrollbackLines(received, n))
+  },
 
-	toBeAtBottomOfScrollback(received: unknown) {
-		assertTerminalReadable(received, "toBeAtBottomOfScrollback")
-		return toMatcherResult(assertAtBottomOfScrollback(received))
-	},
+  toBeAtBottomOfScrollback(received: unknown) {
+    assertTerminalReadable(received, "toBeAtBottomOfScrollback")
+    return toMatcherResult(assertAtBottomOfScrollback(received))
+  },
 }

@@ -3,26 +3,26 @@
   "version": "0.1.0",
   "description": "Headless terminal library for cross-terminal TUI testing",
   "keywords": [
-    "terminal",
+    "ghostty",
     "headless",
-    "tui",
+    "terminal",
     "testing",
-    "xterm",
-    "ghostty"
+    "tui",
+    "xterm"
   ],
+  "homepage": "https://beorn.github.io/termless/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
   "repository": {
     "type": "git",
     "url": "https://github.com/beorn/termless"
   },
-  "homepage": "https://beorn.github.io/termless/",
-  "bugs": {
-    "url": "https://github.com/beorn/termless/issues"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "files": [
     "src",
     "README.md",
@@ -35,9 +35,6 @@
     ".": "./src/index.ts",
     "./svg": "./src/svg.ts"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -56,5 +53,8 @@
     "vitepress": "^1.5.0",
     "vitepress-plugin-llms": "^1.0.0",
     "vitest": "^4.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

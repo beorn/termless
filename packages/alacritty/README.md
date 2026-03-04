@@ -27,15 +27,15 @@ TypeScript layer wraps this to implement the `TerminalBackend` interface.
 
 Compared to the xterm.js and Ghostty backends:
 
-| Feature | alacritty | xterm.js | ghostty |
-|---------|-----------|----------|---------|
-| Truecolor | Yes | Yes | Yes |
-| Kitty keyboard | Yes | No | Yes |
-| Kitty graphics | No | No | No |
-| Sixel | No | No | No |
-| Underline styles | All 5 | Single only | Single only |
-| Reflow | Yes | Yes | Yes |
-| Cursor styles | Block/Underline/Beam | Block only | Block only |
+| Feature          | alacritty            | xterm.js    | ghostty     |
+| ---------------- | -------------------- | ----------- | ----------- |
+| Truecolor        | Yes                  | Yes         | Yes         |
+| Kitty keyboard   | Yes                  | No          | Yes         |
+| Kitty graphics   | No                   | No          | No          |
+| Sixel            | No                   | No          | No          |
+| Underline styles | All 5                | Single only | Single only |
+| Reflow           | Yes                  | Yes         | Yes         |
+| Cursor styles    | Block/Underline/Beam | Block only  | Block only  |
 
 ## Building
 

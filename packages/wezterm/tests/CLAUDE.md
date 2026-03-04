@@ -27,7 +27,9 @@
 import { createWeztermBackend, loadWeztermNative } from "../src/backend.ts"
 
 // Native module must be loaded first
-beforeAll(() => { loadWeztermNative() })
+beforeAll(() => {
+  loadWeztermNative()
+})
 
 const backend = createWeztermBackend()
 backend.init({ cols: 80, rows: 24 })

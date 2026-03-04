@@ -19,24 +19,24 @@ import { screenshotSvg } from "../../../src/svg.ts"
 
 /** Marker interface for objects that should be serialized as SVG terminal snapshots. */
 export interface SvgTerminalSnapshotMarker {
-	__svgTerminalSnapshot: true
-	terminal: TerminalReadable
-	name?: string
-	options?: SvgScreenshotOptions
+  __svgTerminalSnapshot: true
+  terminal: TerminalReadable
+  name?: string
+  options?: SvgScreenshotOptions
 }
 
 /** Wrap a TerminalReadable for SVG snapshot serialization. */
 export function svgTerminalSnapshot(
-	terminal: TerminalReadable,
-	options?: SvgScreenshotOptions & { name?: string },
+  terminal: TerminalReadable,
+  options?: SvgScreenshotOptions & { name?: string },
 ): SvgTerminalSnapshotMarker {
-	const { name, ...svgOptions } = options ?? {}
-	return {
-		__svgTerminalSnapshot: true,
-		terminal,
-		name,
-		options: Object.keys(svgOptions).length > 0 ? svgOptions : undefined,
-	}
+  const { name, ...svgOptions } = options ?? {}
+  return {
+    __svgTerminalSnapshot: true,
+    terminal,
+    name,
+    options: Object.keys(svgOptions).length > 0 ? svgOptions : undefined,
+  }
 }
 
 // =============================================================================
@@ -44,22 +44,22 @@ export function svgTerminalSnapshot(
 // =============================================================================
 
 export const svgTerminalSerializer = {
-	/** Returns true if the value is an SVG terminal snapshot marker. */
-	test(val: unknown): boolean {
-		return (
-			val !== null &&
-			typeof val === "object" &&
-			"__svgTerminalSnapshot" in (val as Record<string, unknown>) &&
-			(val as Record<string, unknown>).__svgTerminalSnapshot === true
-		)
-	},
+  /** Returns true if the value is an SVG terminal snapshot marker. */
+  test(val: unknown): boolean {
+    return (
+      val !== null &&
+      typeof val === "object" &&
+      "__svgTerminalSnapshot" in (val as Record<string, unknown>) &&
+      (val as Record<string, unknown>).__svgTerminalSnapshot === true
+    )
+  },
 
-	/** Serialize a terminal state as an SVG screenshot. */
-	serialize(val: SvgTerminalSnapshotMarker): string {
-		const svg = screenshotSvg(val.terminal, val.options)
-		if (val.name) {
-			return `<!-- ${val.name} -->\n${svg}`
-		}
-		return svg
-	},
+  /** Serialize a terminal state as an SVG screenshot. */
+  serialize(val: SvgTerminalSnapshotMarker): string {
+    const svg = screenshotSvg(val.terminal, val.options)
+    if (val.name) {
+      return `<!-- ${val.name} -->\n${svg}`
+    }
+    return svg
+  },
 }

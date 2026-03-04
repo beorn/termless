@@ -11,8 +11,8 @@ import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({
   backend: createXtermBackend(),
-  cols: 80,    // default: 80
-  rows: 24,    // default: 24
+  cols: 80, // default: 80
+  rows: 24, // default: 24
   scrollbackLimit: 1000,
 })
 ```
@@ -21,19 +21,19 @@ const term = createTerminal({
 
 ```typescript
 interface TerminalCreateOptions {
-  backend: TerminalBackend  // Required
-  cols?: number             // Default: 80
-  rows?: number             // Default: 24
+  backend: TerminalBackend // Required
+  cols?: number // Default: 80
+  rows?: number // Default: 24
   scrollbackLimit?: number
 }
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | `TerminalBackend` | *required* | Backend instance (e.g., from `createXtermBackend()`) |
-| `cols` | `number` | `80` | Terminal width in columns |
-| `rows` | `number` | `24` | Terminal height in rows |
-| `scrollbackLimit` | `number` | -- | Maximum scrollback lines (backend-dependent) |
+| Option            | Type              | Default    | Description                                          |
+| ----------------- | ----------------- | ---------- | ---------------------------------------------------- |
+| `backend`         | `TerminalBackend` | _required_ | Backend instance (e.g., from `createXtermBackend()`) |
+| `cols`            | `number`          | `80`       | Terminal width in columns                            |
+| `rows`            | `number`          | `24`       | Terminal height in rows                              |
+| `scrollbackLimit` | `number`          | --         | Maximum scrollback lines (backend-dependent)         |
 
 ## Terminal Interface
 
@@ -43,21 +43,21 @@ interface Terminal extends TerminalReadable {
   readonly cols: number
   readonly rows: number
   readonly backend: TerminalBackend
-  readonly alive: boolean         // PTY process running?
+  readonly alive: boolean // PTY process running?
   readonly exitInfo: string | null // e.g. "exit=0"
 
   // Region selectors (WHERE) -- getter properties
-  readonly screen: RegionView      // visible rows x cols area
-  readonly scrollback: RegionView  // history above screen
-  readonly buffer: RegionView      // everything (scrollback + screen)
-  readonly viewport: RegionView    // current scroll position view
+  readonly screen: RegionView // visible rows x cols area
+  readonly scrollback: RegionView // history above screen
+  readonly buffer: RegionView // everything (scrollback + screen)
+  readonly viewport: RegionView // current scroll position view
 
   // Region selectors (WHERE) -- methods
-  row(n: number): RowView                               // screen row (negative from bottom)
-  cell(row: number, col: number): CellView              // single cell
+  row(n: number): RowView // screen row (negative from bottom)
+  cell(row: number, col: number): CellView // single cell
   range(r1: number, c1: number, r2: number, c2: number): RegionView // rectangular region
-  firstRow(): RowView                                    // convenience: first screen row
-  lastRow(): RowView                                     // convenience: last screen row
+  firstRow(): RowView // convenience: first screen row
+  lastRow(): RowView // convenience: last screen row
 
   // Data feed (no PTY)
   feed(data: Uint8Array | string): void
@@ -92,10 +92,10 @@ interface Terminal extends TerminalReadable {
 ## Properties
 
 ```typescript
-term.cols     // number -- current column count
-term.rows     // number -- current row count
-term.backend  // TerminalBackend -- the underlying backend
-term.alive    // boolean -- true if a spawned process is still running
+term.cols // number -- current column count
+term.rows // number -- current row count
+term.backend // TerminalBackend -- the underlying backend
+term.alive // boolean -- true if a spawned process is still running
 term.exitInfo // string | null -- e.g. "exit=0" after process exits
 ```
 
@@ -106,21 +106,21 @@ Region selectors separate **where** to look from **what** to assert.
 ### Properties (no parentheses)
 
 ```typescript
-term.screen      // RegionView -- the rows x cols visible area
-term.scrollback  // RegionView -- history above screen (empty in alt screen)
-term.buffer      // RegionView -- everything (scrollback + screen)
-term.viewport    // RegionView -- current scroll position view
+term.screen // RegionView -- the rows x cols visible area
+term.scrollback // RegionView -- history above screen (empty in alt screen)
+term.buffer // RegionView -- everything (scrollback + screen)
+term.viewport // RegionView -- current scroll position view
 ```
 
 ### Methods
 
 ```typescript
-term.row(0)              // RowView -- first screen row
-term.row(-1)             // RowView -- last screen row (negative from bottom)
-term.cell(0, 0)          // CellView -- single cell at row 0, col 0
-term.range(0, 0, 5, 40)  // RegionView -- rectangular region
-term.firstRow()          // RowView -- convenience for first screen row
-term.lastRow()           // RowView -- convenience for last screen row
+term.row(0) // RowView -- first screen row
+term.row(-1) // RowView -- last screen row (negative from bottom)
+term.cell(0, 0) // CellView -- single cell at row 0, col 0
+term.range(0, 0, 5, 40) // RegionView -- rectangular region
+term.firstRow() // RowView -- convenience for first screen row
+term.lastRow() // RowView -- convenience for last screen row
 ```
 
 ### View Types
@@ -164,7 +164,7 @@ interface CellView {
 Write data directly to the terminal (no PTY). Useful for testing rendering of ANSI output.
 
 ```typescript
-term.feed("Hello, world!")              // string
+term.feed("Hello, world!") // string
 term.feed("\x1b[1;31mRed bold\x1b[0m") // ANSI escape sequences
 term.feed(new Uint8Array([0x48, 0x69])) // raw bytes
 ```
@@ -202,14 +202,14 @@ interface SpawnOptions {
 Send a keypress to the spawned process. Parses human-readable key descriptions into ANSI escape sequences.
 
 ```typescript
-term.press("a")            // Single character
-term.press("Enter")        // Named keys
-term.press("ArrowUp")      // Arrow keys
-term.press("Ctrl+c")       // Modifier + key
+term.press("a") // Single character
+term.press("Enter") // Named keys
+term.press("ArrowUp") // Arrow keys
+term.press("Ctrl+c") // Modifier + key
 term.press("Ctrl+Shift+a") // Multiple modifiers
-term.press("Alt+x")        // Alt modifier
-term.press("F5")           // Function keys F1-F12
-term.press("Shift+Tab")    // Reverse tab
+term.press("Alt+x") // Alt modifier
+term.press("F5") // Function keys F1-F12
+term.press("Shift+Tab") // Reverse tab
 ```
 
 Supported modifiers: `Ctrl`, `Control`, `Alt`, `Option`, `Shift`, `Meta`, `Cmd`, `Super`.
@@ -232,7 +232,7 @@ term.type("search query\r") // \r for Enter
 Wait for specific text to appear in the terminal buffer. Polls every 50ms.
 
 ```typescript
-await term.waitFor("ready>")           // Default timeout: 5000ms
+await term.waitFor("ready>") // Default timeout: 5000ms
 await term.waitFor("Loading...", 10000) // Custom timeout
 ```
 
@@ -243,7 +243,7 @@ Throws `Error` if the text doesn't appear within the timeout.
 Wait for terminal content to stop changing. Useful after keypresses or when waiting for rendering to complete.
 
 ```typescript
-await term.waitForStable()         // Default: stable for 200ms, timeout 5000ms
+await term.waitForStable() // Default: stable for 200ms, timeout 5000ms
 await term.waitForStable(100, 3000) // Stable for 100ms, timeout 3000ms
 ```
 
@@ -293,16 +293,16 @@ Get a single cell with all attributes. Returns a `Cell` object:
 
 ```typescript
 const cell = term.getCell(0, 0)
-cell.text          // string -- character
-cell.fg            // RGB | null -- foreground color
-cell.bg            // RGB | null -- background color
-cell.bold          // boolean
-cell.faint         // boolean
-cell.italic        // boolean
-cell.underline     // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+cell.text // string -- character
+cell.fg // RGB | null -- foreground color
+cell.bg // RGB | null -- background color
+cell.bold // boolean
+cell.faint // boolean
+cell.italic // boolean
+cell.underline // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
 cell.strikethrough // boolean
-cell.inverse       // boolean
-cell.wide          // boolean -- double-width character
+cell.inverse // boolean
+cell.wide // boolean -- double-width character
 ```
 
 ### `getLine(row)`

@@ -2,19 +2,16 @@
   "name": "@termless/vt100",
   "version": "0.1.0",
   "description": "Pure TypeScript VT100 backend for termless — lightweight terminal emulator inspired by the Rust vt100 crate",
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
   "repository": {
     "type": "git",
     "url": "https://github.com/beorn/termless",
     "directory": "packages/vt100"
-  },
-  "homepage": "https://github.com/beorn/termless",
-  "bugs": {
-    "url": "https://github.com/beorn/termless/issues"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
   },
   "files": [
     "src"
@@ -26,5 +23,8 @@
   },
   "peerDependencies": {
     "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

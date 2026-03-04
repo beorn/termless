@@ -180,10 +180,7 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
     const underline = cell.underline !== "none"
 
     const current = spans.length > 0 ? spans[spans.length - 1] : null
-    if (
-      current &&
-      spansMatch(current, fg, cell.bold, cell.italic, cell.faint, underline, cell.strikethrough)
-    ) {
+    if (current && spansMatch(current, fg, cell.bold, cell.italic, cell.faint, underline, cell.strikethrough)) {
       current.text += char
     } else {
       spans.push({
@@ -258,9 +255,7 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
 
     // Baseline: top of cell + font size (approximate ascent for monospace)
     const y = row * cellHeight + fontSize
-    parts.push(
-      `<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
-    )
+    parts.push(`<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`)
 
     for (const span of spans) {
       parts.push(spanToTspan(span, cellWidth, themeFg))
@@ -305,16 +300,12 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   const parts: string[] = []
 
   // SVG header + full background
-  parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`,
-  )
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
   parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
 
   // Background rects for cells with non-default bg (merged adjacent)
   for (const rect of buildBgRects(lines, cellWidth, cellHeight, themeFg, themeBg)) {
-    parts.push(
-      `<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" fill="${rect.fill}"/>`,
-    )
+    parts.push(`<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" fill="${rect.fill}"/>`)
   }
 
   // Text rows

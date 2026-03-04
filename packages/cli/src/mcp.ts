@@ -16,10 +16,7 @@ process.on("uncaughtException", (err) => {
   console.error("[termless-mcp] uncaughtException:", err.stack ?? err.message)
 })
 process.on("unhandledRejection", (err) => {
-  console.error(
-    "[termless-mcp] unhandledRejection:",
-    err instanceof Error ? (err.stack ?? err.message) : err,
-  )
+  console.error("[termless-mcp] unhandledRejection:", err instanceof Error ? (err.stack ?? err.message) : err)
 })
 
 /** Wrap a tool handler so errors become MCP error responses, not process crashes */

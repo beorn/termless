@@ -48,16 +48,16 @@ Describes what features a backend supports:
 
 ```typescript
 interface TerminalCapabilities {
-  name: string            // e.g. "xterm"
-  version: string         // e.g. "5.5.0"
-  truecolor: boolean      // 24-bit RGB colors
-  kittyKeyboard: boolean  // Kitty keyboard protocol
-  kittyGraphics: boolean  // Kitty graphics protocol
-  sixel: boolean          // Sixel image support
+  name: string // e.g. "xterm"
+  version: string // e.g. "5.5.0"
+  truecolor: boolean // 24-bit RGB colors
+  kittyKeyboard: boolean // Kitty keyboard protocol
+  kittyGraphics: boolean // Kitty graphics protocol
+  sixel: boolean // Sixel image support
   osc8Hyperlinks: boolean // OSC 8 clickable links
   semanticPrompts: boolean
-  unicode: string         // e.g. "15.1"
-  reflow: boolean         // Text reflow on resize
+  unicode: string // e.g. "15.1"
+  reflow: boolean // Text reflow on resize
   extensions: Set<string> // Optional extension identifiers
 }
 ```
@@ -92,31 +92,63 @@ backend.init({ cols: 80, rows: 24 })
 To create a new backend, implement the full `TerminalBackend` interface:
 
 ```typescript
-import type { TerminalBackend, TerminalOptions, Cell, /* ... */ } from "@termless/core"
+import type { TerminalBackend, TerminalOptions, Cell /* ... */ } from "@termless/core"
 
 export function createMyBackend(): TerminalBackend {
   return {
     name: "my-backend",
 
-    init(opts: TerminalOptions) { /* initialize with cols/rows */ },
-    destroy() { /* cleanup */ },
+    init(opts: TerminalOptions) {
+      /* initialize with cols/rows */
+    },
+    destroy() {
+      /* cleanup */
+    },
 
-    feed(data: Uint8Array) { /* process terminal data */ },
-    resize(cols, rows) { /* resize terminal */ },
-    reset() { /* reset to initial state */ },
+    feed(data: Uint8Array) {
+      /* process terminal data */
+    },
+    resize(cols, rows) {
+      /* resize terminal */
+    },
+    reset() {
+      /* reset to initial state */
+    },
 
-    getText() { /* return all text */ },
-    getTextRange(sr, sc, er, ec) { /* return text range */ },
-    getCell(row, col) { /* return Cell */ },
-    getLine(row) { /* return Cell[] */ },
-    getLines() { /* return Cell[][] */ },
-    getCursor() { /* return CursorState */ },
-    getMode(mode) { /* return boolean */ },
-    getTitle() { /* return string */ },
-    getScrollback() { /* return ScrollbackState */ },
+    getText() {
+      /* return all text */
+    },
+    getTextRange(sr, sc, er, ec) {
+      /* return text range */
+    },
+    getCell(row, col) {
+      /* return Cell */
+    },
+    getLine(row) {
+      /* return Cell[] */
+    },
+    getLines() {
+      /* return Cell[][] */
+    },
+    getCursor() {
+      /* return CursorState */
+    },
+    getMode(mode) {
+      /* return boolean */
+    },
+    getTitle() {
+      /* return string */
+    },
+    getScrollback() {
+      /* return ScrollbackState */
+    },
 
-    encodeKey(key) { /* encode KeyDescriptor to bytes */ },
-    scrollViewport(delta) { /* scroll by delta lines */ },
+    encodeKey(key) {
+      /* encode KeyDescriptor to bytes */
+    },
+    scrollViewport(delta) {
+      /* scroll by delta lines */
+    },
 
     capabilities: {
       name: "my-backend",

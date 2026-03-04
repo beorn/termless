@@ -25,16 +25,16 @@ termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.svg
 
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--command <cmd>` | Command to run (required, split on spaces) | -- |
-| `--keys <keys>` | Comma-separated key names to press after startup | -- |
-| `--wait-for <text>` | Wait for this text before pressing keys | any content |
-| `--screenshot <path>` | Save SVG screenshot to this path | -- |
-| `--text` | Print terminal text to stdout | off |
-| `--cols <n>` | Terminal columns | `120` |
-| `--rows <n>` | Terminal rows | `40` |
-| `--timeout <ms>` | Wait timeout in milliseconds | `5000` |
+| Option                | Description                                      | Default     |
+| --------------------- | ------------------------------------------------ | ----------- |
+| `--command <cmd>`     | Command to run (required, split on spaces)       | --          |
+| `--keys <keys>`       | Comma-separated key names to press after startup | --          |
+| `--wait-for <text>`   | Wait for this text before pressing keys          | any content |
+| `--screenshot <path>` | Save SVG screenshot to this path                 | --          |
+| `--text`              | Print terminal text to stdout                    | off         |
+| `--cols <n>`          | Terminal columns                                 | `120`       |
+| `--rows <n>`          | Terminal rows                                    | `40`        |
+| `--timeout <ms>`      | Wait timeout in milliseconds                     | `5000`      |
 
 ### Examples
 
@@ -76,15 +76,15 @@ termless record --command "bun km view /path" --format html --output-dir ./demo.
 
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--command <cmd>` | Command to run (required, split on spaces) | -- |
-| `--cols <n>` | Terminal columns | `120` |
-| `--rows <n>` | Terminal rows | `40` |
-| `--interval <ms>` | Capture interval in milliseconds | `100` |
-| `--duration <seconds>` | Stop after N seconds | -- |
-| `--output-dir <path>` | Output directory or file path | `./termless-recording/` |
-| `--format <type>` | Output format: `frames` or `html` | `frames` |
+| Option                 | Description                                | Default                 |
+| ---------------------- | ------------------------------------------ | ----------------------- |
+| `--command <cmd>`      | Command to run (required, split on spaces) | --                      |
+| `--cols <n>`           | Terminal columns                           | `120`                   |
+| `--rows <n>`           | Terminal rows                              | `40`                    |
+| `--interval <ms>`      | Capture interval in milliseconds           | `100`                   |
+| `--duration <seconds>` | Stop after N seconds                       | --                      |
+| `--output-dir <path>`  | Output directory or file path              | `./termless-recording/` |
+| `--format <type>`      | Output format: `frames` or `html`          | `frames`                |
 
 ## `termless mcp`
 
@@ -95,6 +95,7 @@ termless mcp
 ```
 
 The MCP server exposes tools for:
+
 - Creating terminal sessions with spawned processes
 - Sending keypresses and typed text
 - Reading terminal text
@@ -143,15 +144,15 @@ await manager.stopSession(id)
 
 ### `createSession(options?)`
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `command` | `string[]` | -- | Command to spawn |
-| `env` | `Record<string, string>` | -- | Additional env vars |
-| `cwd` | `string` | -- | Working directory |
-| `cols` | `number` | `120` | Terminal columns |
-| `rows` | `number` | `40` | Terminal rows |
+| Option    | Type                              | Default     | Description                  |
+| --------- | --------------------------------- | ----------- | ---------------------------- |
+| `command` | `string[]`                        | --          | Command to spawn             |
+| `env`     | `Record<string, string>`          | --          | Additional env vars          |
+| `cwd`     | `string`                          | --          | Working directory            |
+| `cols`    | `number`                          | `120`       | Terminal columns             |
+| `rows`    | `number`                          | `40`        | Terminal rows                |
 | `waitFor` | `string \| "content" \| "stable"` | `"content"` | What to wait for after spawn |
-| `timeout` | `number` | `5000` | Wait timeout in ms |
+| `timeout` | `number`                          | `5000`      | Wait timeout in ms           |
 
 ### `getSession(id)`
 

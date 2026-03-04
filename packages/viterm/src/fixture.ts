@@ -23,10 +23,10 @@ import { createXtermBackend } from "../../xtermjs/src/backend.ts"
 
 /** Options for createTerminalFixture. Backend defaults to xterm.js. */
 export interface TerminalFixtureOptions {
-	backend?: TerminalCreateOptions["backend"]
-	cols?: number
-	rows?: number
-	scrollbackLimit?: number
+  backend?: TerminalCreateOptions["backend"]
+  cols?: number
+  rows?: number
+  scrollbackLimit?: number
 }
 
 // Track active fixtures for cleanup
@@ -34,10 +34,10 @@ const activeFixtures: Terminal[] = []
 
 // Register cleanup hook — runs after each test to close all terminal fixtures
 afterEach(async () => {
-	for (const t of activeFixtures) {
-		await t.close()
-	}
-	activeFixtures.length = 0
+  for (const t of activeFixtures) {
+    await t.close()
+  }
+  activeFixtures.length = 0
 })
 
 /**
@@ -49,8 +49,8 @@ afterEach(async () => {
  * Uses xterm.js backend by default. Pass `backend` to override.
  */
 export function createTerminalFixture(options?: TerminalFixtureOptions): Terminal {
-	const backend = options?.backend ?? createXtermBackend()
-	const terminal = createTerminal({ ...options, backend })
-	activeFixtures.push(terminal)
-	return terminal
+  const backend = options?.backend ?? createXtermBackend()
+  const terminal = createTerminal({ ...options, backend })
+  activeFixtures.push(terminal)
+  return terminal
 }

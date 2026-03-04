@@ -1,7 +1,7 @@
 # API: Vitest Matchers
 
 ```typescript
-import { createTerminalFixture } from "@termless/test"  // Matchers auto-registered on import
+import { createTerminalFixture } from "@termless/test" // Matchers auto-registered on import
 // or manually:
 import { terminalMatchers } from "@termless/test/matchers"
 expect.extend(terminalMatchers)
@@ -35,12 +35,7 @@ expect(term.row(2)).toHaveText("status: ok")
 Assert region lines match expected array. Trailing whitespace is trimmed per line.
 
 ```typescript
-expect(term.screen).toMatchLines([
-  "Line 1",
-  "Line 2",
-  "",
-  "Line 4",
-])
+expect(term.screen).toMatchLines(["Line 1", "Line 2", "", "Line 4"])
 ```
 
 ## Cell Style Matchers (on CellView)
@@ -91,9 +86,9 @@ expect(term.cell(0, 0)).toBeFaint()
 Assert cell has underline. Optionally check specific style.
 
 ```typescript
-expect(term.cell(0, 0)).toHaveUnderline()            // Any underline
-expect(term.cell(0, 0)).toHaveUnderline("single")    // Specific style
-expect(term.cell(0, 0)).toHaveUnderline("curly")     // Curly underline (e.g., spell check)
+expect(term.cell(0, 0)).toHaveUnderline() // Any underline
+expect(term.cell(0, 0)).toHaveUnderline("single") // Specific style
+expect(term.cell(0, 0)).toHaveUnderline("curly") // Curly underline (e.g., spell check)
 ```
 
 Styles: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"`.
@@ -129,8 +124,8 @@ expect(term.cell(0, 0)).toBeWide() // First cell of a wide char
 Assert cursor is at the given position (column, row).
 
 ```typescript
-expect(term).toHaveCursorAt(0, 0)  // Top-left
-expect(term).toHaveCursorAt(5, 2)  // Column 5, row 2
+expect(term).toHaveCursorAt(0, 0) // Top-left
+expect(term).toHaveCursorAt(5, 2) // Column 5, row 2
 ```
 
 ### `toHaveCursorVisible()`

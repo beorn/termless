@@ -2,19 +2,16 @@
   "name": "@termless/alacritty",
   "version": "0.1.0",
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs",
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
   "repository": {
     "type": "git",
     "url": "https://github.com/beorn/termless",
     "directory": "packages/alacritty"
-  },
-  "homepage": "https://github.com/beorn/termless",
-  "bugs": {
-    "url": "https://github.com/beorn/termless/issues"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
   },
   "files": [
     "src"
@@ -23,6 +20,9 @@
   "module": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0"
   },
   "peerDependencies": {
     "@termless/core": "*"
@@ -36,7 +36,7 @@
       "aarch64-unknown-linux-gnu"
     ]
   },
-  "devDependencies": {
-    "@napi-rs/cli": "^3.0.0"
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

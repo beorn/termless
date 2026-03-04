@@ -48,12 +48,12 @@ test("inspect what string matching can't see", () => {
   const term = createTerminalFixture({ cols: 60, rows: 10 })
 
   // Simulate a TUI app: alt screen, window title, styled output
-  term.feed("\x1b[?1049h")                              // enter alt screen
-  term.feed("\x1b]2;my-app — dashboard\x07")            // set window title
+  term.feed("\x1b[?1049h") // enter alt screen
+  term.feed("\x1b]2;my-app — dashboard\x07") // set window title
   term.feed("\x1b[1mServer Status\x1b[0m\r\n")
   term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
   term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
-  term.feed("\x1b[4;1H")                                // position cursor
+  term.feed("\x1b[4;1H") // position cursor
 
   // Terminal modes, title, cursor — invisible to string assertions
   expect(term).toBeInMode("altScreen")
@@ -63,8 +63,8 @@ test("inspect what string matching can't see", () => {
   // Region selectors + cell-level styles — colors getText() can't see
   expect(term.row(0)).toHaveText("Server Status")
   expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 8)).toHaveFg("#00ff00")           // green = healthy
-  expect(term.cell(2, 8)).toHaveFg("#ff0000")           // red = down
+  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green = healthy
+  expect(term.cell(2, 8)).toHaveFg("#ff0000") // red = down
 
   // Resize — verify content survives terminal resize
   term.resize(30, 10)
@@ -98,31 +98,31 @@ expect(term).toHaveTitle("my-app")
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| `termless` | Core: Terminal API, PTY, SVG screenshots, key mapping, region views |
-| `@termless/xtermjs` | xterm.js backend via `@xterm/headless` |
-| `@termless/ghostty` | Ghostty backend via `ghostty-web` WASM |
-| `@termless/vt100` | Pure TypeScript VT100 emulator, zero native deps |
-| `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs) |
-| `@termless/wezterm` | WezTerm backend via `wezterm-term` (napi-rs) |
-| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) |
-| `@termless/test` | Vitest integration: 25+ matchers, fixtures, snapshot serializer |
-| `@termless/cli` | CLI tools + MCP server for AI agents |
+| Package               | Description                                                         |
+| --------------------- | ------------------------------------------------------------------- |
+| `termless`            | Core: Terminal API, PTY, SVG screenshots, key mapping, region views |
+| `@termless/xtermjs`   | xterm.js backend via `@xterm/headless`                              |
+| `@termless/ghostty`   | Ghostty backend via `ghostty-web` WASM                              |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator, zero native deps                    |
+| `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs)                |
+| `@termless/wezterm`   | WezTerm backend via `wezterm-term` (napi-rs)                        |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                  |
+| `@termless/test`      | Vitest integration: 25+ matchers, fixtures, snapshot serializer     |
+| `@termless/cli`       | CLI tools + MCP server for AI agents                                |
 
 ## How It Compares
 
-| Feature | termless | Manual string testing | Playwright |
-|---------|----------|-----------------------|------------|
-| Speed | ~1ms/test | ~1ms/test | ~100ms+/test |
-| Terminal internals | Scrollback, cursor, modes, cell attrs | None | N/A |
-| ANSI awareness | Full (colors, bold, cursor) | None | N/A |
-| Multi-backend | 6 terminal emulators | N/A | 3 browsers |
-| Protocol capabilities | Kitty, sixel, OSC 8, reflow | None | N/A |
-| Wide char support | Cell-level width tracking | Broken | N/A |
-| Screenshots | SVG (no deps) | None | PNG (Chromium) |
-| PTY support | Spawn real processes | Manual | N/A |
-| AI integration | MCP server | None | None |
+| Feature               | termless                              | Manual string testing | Playwright     |
+| --------------------- | ------------------------------------- | --------------------- | -------------- |
+| Speed                 | ~1ms/test                             | ~1ms/test             | ~100ms+/test   |
+| Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |
+| ANSI awareness        | Full (colors, bold, cursor)           | None                  | N/A            |
+| Multi-backend         | 6 terminal emulators                  | N/A                   | 3 browsers     |
+| Protocol capabilities | Kitty, sixel, OSC 8, reflow           | None                  | N/A            |
+| Wide char support     | Cell-level width tracking             | Broken                | N/A            |
+| Screenshots           | SVG (no deps)                         | None                  | PNG (Chromium) |
+| PTY support           | Spawn real processes                  | Manual                | N/A            |
+| AI integration        | MCP server                            | None                  | None           |
 
 <style>
 :root {

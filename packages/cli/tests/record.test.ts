@@ -168,6 +168,6 @@ describe("generateHtmlSlideshow", () => {
     ]
     const html = generateHtmlSlideshow(frames, 100)
 
-    expect(html).toContain('Hello &amp; World')
+    expect(html).toContain("Hello &amp; World")
   })
 })

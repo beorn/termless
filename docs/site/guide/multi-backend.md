@@ -110,6 +110,7 @@ bun vitest run --project xterm   # Run xterm only
 The key insight: all backends implement the same `TerminalBackend` interface, so `Terminal` behavior is identical. Differences between backends surface as test failures, revealing compatibility issues.
 
 Example of what multi-backend testing catches:
+
 - Different color palette handling
 - Reflow behavior on resize
 - Unicode/wide character edge cases
@@ -119,13 +120,13 @@ Example of what multi-backend testing catches:
 
 Matrix testing — running the same tests across multiple implementations — is a well-established pattern. Here's how termless fits in:
 
-| System | What it matrices | How it works | Output |
-|--------|-----------------|--------------|--------|
-| **GitHub Actions `strategy.matrix`** | OS, runtime version, config variants | CI runs same workflow N times with different env vars | Per-combination pass/fail |
-| **Playwright `projects`** | Browsers (Chromium, Firefox, WebKit) | Same tests injected with different browser launcher | Per-browser test results |
-| **Vitest `workspace`** | Any axis (backends, configs, environments) | Named projects with different setup files | Per-project test results |
-| **BrowserStack / Sauce Labs** | Browsers + devices + OS combinations | Cloud farms running tests across hundreds of targets | Compatibility matrix reports |
-| **termless cross-backend** | Terminal emulator VT parsers | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Vitest assertions that fail on disagreement |
+| System                               | What it matrices                           | How it works                                                                    | Output                                      |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------- |
+| **GitHub Actions `strategy.matrix`** | OS, runtime version, config variants       | CI runs same workflow N times with different env vars                           | Per-combination pass/fail                   |
+| **Playwright `projects`**            | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             | Per-browser test results                    |
+| **Vitest `workspace`**               | Any axis (backends, configs, environments) | Named projects with different setup files                                       | Per-project test results                    |
+| **BrowserStack / Sauce Labs**        | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            | Compatibility matrix reports                |
+| **termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Vitest assertions that fail on disagreement |
 
 ### Key differences
 

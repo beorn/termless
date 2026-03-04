@@ -144,9 +144,7 @@ function createMockBackend(): TerminalBackend {
     },
 
     getLines(): Cell[][] {
-      return Array.from({ length: rows }, (_, row) =>
-        Array.from({ length: cols }, (_, col) => cellAt(row, col)),
-      )
+      return Array.from({ length: rows }, (_, row) => Array.from({ length: cols }, (_, col) => cellAt(row, col)))
     },
 
     getCursor(): CursorState {
@@ -599,7 +597,6 @@ describe("createTerminal", () => {
 
     term.close()
   })
-
 })
 
 // ═══════════════════════════════════════════════════════

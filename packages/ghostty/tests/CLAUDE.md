@@ -27,7 +27,9 @@ import { Ghostty } from "ghostty-web"
 import { createGhosttyBackend, initGhostty } from "../src/backend.ts"
 
 let ghostty: Ghostty
-beforeAll(async () => { ghostty = await initGhostty() })
+beforeAll(async () => {
+  ghostty = await initGhostty()
+})
 
 const backend = createGhosttyBackend(undefined, ghostty)
 backend.init({ cols: 80, rows: 24 })

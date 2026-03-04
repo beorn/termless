@@ -33,17 +33,17 @@ bun run typecheck
 
 ## Packages
 
-| Package | What it does |
-|---------|-------------|
-| `termless` (root) | Core types, Terminal API, PTY, SVG screenshots, key mapping |
-| `@termless/xtermjs` | xterm.js backend using @xterm/headless |
-| `@termless/ghostty` | Ghostty backend (ghostty-web WASM) |
-| `@termless/vt100` | Pure TypeScript VT100 emulator (zero native deps) |
-| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs) |
-| `@termless/wezterm` | WezTerm backend (wezterm-term via napi-rs) |
-| `@termless/peekaboo` | OS-level terminal automation (xterm.js + real app) |
-| `@termless/test` | Vitest matchers, fixtures, and snapshot serializer |
-| `@termless/cli` | CLI tool and MCP server |
+| Package               | What it does                                                |
+| --------------------- | ----------------------------------------------------------- |
+| `termless` (root)     | Core types, Terminal API, PTY, SVG screenshots, key mapping |
+| `@termless/xtermjs`   | xterm.js backend using @xterm/headless                      |
+| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                          |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)           |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)          |
+| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                  |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)          |
+| `@termless/test`      | Vitest matchers, fixtures, and snapshot serializer          |
+| `@termless/cli`       | CLI tool and MCP server                                     |
 
 ## Submitting Changes
 
@@ -140,7 +140,10 @@ Backends requiring native builds (e.g., napi-rs Rust modules) should NOT be adde
 
 ```typescript
 let nativeAvailable = false
-try { loadNative(); nativeAvailable = true } catch {}
+try {
+  loadNative()
+  nativeAvailable = true
+} catch {}
 const describeNative = nativeAvailable ? describe : describe.skip
 ```
 
@@ -153,7 +156,7 @@ const backends: [string, BackendFactory][] = [
   ["xterm", () => createXtermBackend()],
   ["ghostty", () => createGhosttyBackend(undefined, ghostty)],
   ["vt100", () => createVt100Backend()],
-  ["<name>", () => create<Name>Backend()],  // <-- add this
+  ["<name>", () => create < Name > Backend()], // <-- add this
 ]
 ```
 
@@ -171,52 +174,52 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 
 #### Lifecycle (3 methods)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `init` | `(opts: TerminalOptions) => void` | Initialize (or re-initialize) the terminal with given dimensions. If already initialized, dispose the old instance first. |
-| `destroy` | `() => void` | Free all resources. Safe to call multiple times. |
-| `name` | `readonly string` | Backend identifier (e.g., `"xterm"`, `"ghostty"`). |
+| Method    | Signature                         | Description                                                                                                               |
+| --------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `init`    | `(opts: TerminalOptions) => void` | Initialize (or re-initialize) the terminal with given dimensions. If already initialized, dispose the old instance first. |
+| `destroy` | `() => void`                      | Free all resources. Safe to call multiple times.                                                                          |
+| `name`    | `readonly string`                 | Backend identifier (e.g., `"xterm"`, `"ghostty"`).                                                                        |
 
 `TerminalOptions` has `cols: number`, `rows: number`, and optional `scrollbackLimit?: number` (default 1000).
 
 #### Data Flow (3 methods)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `feed` | `(data: Uint8Array) => void` | Feed raw terminal data (escape sequences, text). Must be synchronous -- callers expect state to be updated immediately after `feed()` returns. If your native module expects Node.js `Buffer` instead of `Uint8Array`, wrap: `nativeTerm.feed(Buffer.from(data))`. |
-| `resize` | `(cols: number, rows: number) => void` | Resize the terminal. Content should be preserved. |
-| `reset` | `() => void` | Reset to initial state (equivalent to RIS `\x1bc`). Clear screen, reset modes, clear title. Also reset any closure state (like `title`) that the backend tracks outside the native terminal instance. |
+| Method   | Signature                              | Description                                                                                                                                                                                                                                                        |
+| -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `feed`   | `(data: Uint8Array) => void`           | Feed raw terminal data (escape sequences, text). Must be synchronous -- callers expect state to be updated immediately after `feed()` returns. If your native module expects Node.js `Buffer` instead of `Uint8Array`, wrap: `nativeTerm.feed(Buffer.from(data))`. |
+| `resize` | `(cols: number, rows: number) => void` | Resize the terminal. Content should be preserved.                                                                                                                                                                                                                  |
+| `reset`  | `() => void`                           | Reset to initial state (equivalent to RIS `\x1bc`). Clear screen, reset modes, clear title. Also reset any closure state (like `title`) that the backend tracks outside the native terminal instance.                                                              |
 
 #### Reading (9 methods from TerminalReadable)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `getText` | `() => string` | Full buffer text (scrollback + screen), lines joined with `\n`. Trailing whitespace per line should be trimmed. |
-| `getTextRange` | `(startRow, startCol, endRow, endCol) => string` | Text from a rectangular region. |
-| `getCell` | `(row: number, col: number) => Cell` | Single cell at screen position. Return empty cell for out-of-bounds. |
-| `getLine` | `(row: number) => Cell[]` | All cells in a screen row (length = cols). |
-| `getLines` | `() => Cell[][]` | All screen rows (length = rows). |
-| `getCursor` | `() => CursorState` | Cursor position (`x`, `y`), `visible`, and `style`. |
-| `getMode` | `(mode: TerminalMode) => boolean` | Query a terminal mode. Must support all 11 modes in the `TerminalMode` union. |
-| `getTitle` | `() => string` | Current OSC 2 title. Your backend must capture OSC 2 title changes. Common approaches: (1) callback from native terminal (xterm.js `onTitleChange`), (2) built-in getter on native object (alacritty/wezterm `getTitle()`), (3) manual tracking in the parser (vt100). |
-| `getScrollback` | `() => ScrollbackState` | Scrollback state: `viewportOffset`, `totalLines`, `screenLines`. |
+| Method          | Signature                                        | Description                                                                                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getText`       | `() => string`                                   | Full buffer text (scrollback + screen), lines joined with `\n`. Trailing whitespace per line should be trimmed.                                                                                                                                                        |
+| `getTextRange`  | `(startRow, startCol, endRow, endCol) => string` | Text from a rectangular region.                                                                                                                                                                                                                                        |
+| `getCell`       | `(row: number, col: number) => Cell`             | Single cell at screen position. Return empty cell for out-of-bounds.                                                                                                                                                                                                   |
+| `getLine`       | `(row: number) => Cell[]`                        | All cells in a screen row (length = cols).                                                                                                                                                                                                                             |
+| `getLines`      | `() => Cell[][]`                                 | All screen rows (length = rows).                                                                                                                                                                                                                                       |
+| `getCursor`     | `() => CursorState`                              | Cursor position (`x`, `y`), `visible`, and `style`.                                                                                                                                                                                                                    |
+| `getMode`       | `(mode: TerminalMode) => boolean`                | Query a terminal mode. Must support all 11 modes in the `TerminalMode` union.                                                                                                                                                                                          |
+| `getTitle`      | `() => string`                                   | Current OSC 2 title. Your backend must capture OSC 2 title changes. Common approaches: (1) callback from native terminal (xterm.js `onTitleChange`), (2) built-in getter on native object (alacritty/wezterm `getTitle()`), (3) manual tracking in the parser (vt100). |
+| `getScrollback` | `() => ScrollbackState`                          | Scrollback state: `viewportOffset`, `totalLines`, `screenLines`.                                                                                                                                                                                                       |
 
 #### Key Encoding (1 method)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
+| Method      | Signature                            | Description                                                                                                                                                                                                             |
+| ----------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `encodeKey` | `(key: KeyDescriptor) => Uint8Array` | Encode a key descriptor to ANSI byte sequence. Handle special keys (arrows, function keys, Enter, Escape, etc.), Ctrl+letter (ASCII 1-26), Alt+letter (ESC prefix), and modifier combinations (CSI parameter encoding). |
 
 #### Scrollback (1 method)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
+| Method           | Signature                 | Description                                                                                  |
+| ---------------- | ------------------------- | -------------------------------------------------------------------------------------------- |
 | `scrollViewport` | `(delta: number) => void` | Scroll the viewport by delta lines (positive = down). No-op if not supported by the backend. |
 
 #### Capabilities (1 property)
 
-| Property | Type | Description |
-|----------|------|-------------|
+| Property       | Type                            | Description                                                                                                                                                                                                                                          |
+| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `capabilities` | `readonly TerminalCapabilities` | Static capabilities: `name`, `version`, `truecolor`, `kittyKeyboard`, `kittyGraphics`, `sixel`, `osc8Hyperlinks`, `semanticPrompts`, `unicode` version, `reflow`, and `extensions` (a `Set<string>` for optional interfaces like `"dirtyTracking"`). |
 
 ### Cell Format
@@ -225,16 +228,16 @@ The `Cell` type returned by `getCell`/`getLine`/`getLines`:
 
 ```typescript
 interface Cell {
-  text: string           // Character(s) at this position ("" for empty)
-  fg: RGB | null         // Foreground color (null = terminal default)
-  bg: RGB | null         // Background color (null = terminal default)
+  text: string // Character(s) at this position ("" for empty)
+  fg: RGB | null // Foreground color (null = terminal default)
+  bg: RGB | null // Background color (null = terminal default)
   bold: boolean
   faint: boolean
   italic: boolean
-  underline: UnderlineStyle  // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+  underline: UnderlineStyle // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
   strikethrough: boolean
   inverse: boolean
-  wide: boolean          // true for double-width characters (CJK, emoji)
+  wide: boolean // true for double-width characters (CJK, emoji)
 }
 ```
 
@@ -341,7 +344,7 @@ If the native library requires an explicit update/flush step (like Ghostty), cal
 function feed(data: Uint8Array): void {
   const t = ensureTerm()
   t.write(data)
-  t.update()  // Sync render state
+  t.update() // Sync render state
 }
 ```
 
@@ -385,19 +388,19 @@ How you detect default colors depends on the native API:
 
 The `getMode()` method must handle all 11 `TerminalMode` values. Map each to the native library's mode query API:
 
-| Mode | Typical DEC/ANSI code | What it means |
-|------|----------------------|---------------|
-| `altScreen` | DECSET 1049 | Alternate screen buffer |
-| `cursorVisible` | DECTCEM (mode 25) | Cursor visibility |
-| `bracketedPaste` | DECSET 2004 | Bracketed paste mode |
-| `applicationCursor` | DECCKM (mode 1) | Application cursor keys |
-| `applicationKeypad` | DECNKM (mode 66) | Application keypad |
-| `autoWrap` | DECAWM (mode 7) | Auto-wrap at right margin |
-| `mouseTracking` | DECSET 1000+ | Any mouse tracking mode |
-| `focusTracking` | DECSET 1004 | Focus in/out events |
-| `originMode` | DECOM (mode 6) | Origin mode |
-| `insertMode` | IRM (ANSI mode 4) | Insert mode |
-| `reverseVideo` | DECSCNM (mode 5) | Reverse video |
+| Mode                | Typical DEC/ANSI code | What it means             |
+| ------------------- | --------------------- | ------------------------- |
+| `altScreen`         | DECSET 1049           | Alternate screen buffer   |
+| `cursorVisible`     | DECTCEM (mode 25)     | Cursor visibility         |
+| `bracketedPaste`    | DECSET 2004           | Bracketed paste mode      |
+| `applicationCursor` | DECCKM (mode 1)       | Application cursor keys   |
+| `applicationKeypad` | DECNKM (mode 66)      | Application keypad        |
+| `autoWrap`          | DECAWM (mode 7)       | Auto-wrap at right margin |
+| `mouseTracking`     | DECSET 1000+          | Any mouse tracking mode   |
+| `focusTracking`     | DECSET 1004           | Focus in/out events       |
+| `originMode`        | DECOM (mode 6)        | Origin mode               |
+| `insertMode`        | IRM (ANSI mode 4)     | Insert mode               |
+| `reverseVideo`      | DECSCNM (mode 5)      | Reverse video             |
 
 Some backends may not expose all modes. Return `false` for modes you can't detect and document the limitation in `capabilities.extensions`.
 
@@ -405,13 +408,13 @@ Some backends may not expose all modes. Return `false` for modes you can't detec
 
 Beyond the core `TerminalBackend`, termless defines optional extension interfaces in `src/types.ts`. If your backend supports any of these, add the extension name to `capabilities.extensions`:
 
-| Extension | Interface | Capability string |
-|-----------|-----------|-------------------|
-| Mouse encoding | `MouseEncodingExtension` | `"mouseEncoding"` |
-| Color palette mutation | `ColorPaletteExtension` | `"colorPalette"` |
-| Dirty row tracking | `DirtyTrackingExtension` | `"dirtyTracking"` |
-| OSC 8 hyperlinks | `HyperlinkExtension` | `"hyperlinks"` |
-| Bell detection | `BellExtension` | `"bell"` |
+| Extension              | Interface                | Capability string |
+| ---------------------- | ------------------------ | ----------------- |
+| Mouse encoding         | `MouseEncodingExtension` | `"mouseEncoding"` |
+| Color palette mutation | `ColorPaletteExtension`  | `"colorPalette"`  |
+| Dirty row tracking     | `DirtyTrackingExtension` | `"dirtyTracking"` |
+| OSC 8 hyperlinks       | `HyperlinkExtension`     | `"hyperlinks"`    |
+| Bell detection         | `BellExtension`          | `"bell"`          |
 
 Use `hasExtension<T>(backend, "extensionName")` to type-narrow at runtime.
 
@@ -441,6 +444,7 @@ bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendo
 ## Reporting Issues
 
 Open an issue at https://github.com/beorn/termless/issues with:
+
 - What you expected
 - What happened instead
 - Minimal reproduction steps

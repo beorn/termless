@@ -159,10 +159,7 @@ const DEFAULT_ROWS = 24
  * @param opts - Optional terminal dimensions for eager initialization
  * @param native - Optional pre-loaded native module (for test isolation)
  */
-export function createWeztermBackend(
-  opts?: Partial<TerminalOptions>,
-  native?: NativeModule,
-): TerminalBackend {
+export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: NativeModule): TerminalBackend {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS

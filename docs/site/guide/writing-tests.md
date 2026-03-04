@@ -17,20 +17,20 @@ The key design principle: separate **where** to look from **what** to assert.
 
 ```typescript
 // WHERE: region selectors
-term.screen      // visible rows x cols area
-term.scrollback  // history above screen
-term.buffer      // everything (scrollback + screen)
-term.viewport    // current scroll position view
-term.row(n)      // screen row (negative from bottom)
-term.cell(r, c)  // single cell
+term.screen // visible rows x cols area
+term.scrollback // history above screen
+term.buffer // everything (scrollback + screen)
+term.viewport // current scroll position view
+term.row(n) // screen row (negative from bottom)
+term.cell(r, c) // single cell
 term.range(r1, c1, r2, c2) // rectangular region
-term.firstRow()  // convenience: first screen row
-term.lastRow()   // convenience: last screen row
+term.firstRow() // convenience: first screen row
+term.lastRow() // convenience: last screen row
 
 // WHAT: matchers
-expect(term.screen).toContainText("Hello")    // text matcher on region
-expect(term.cell(0, 0)).toBeBold()            // style matcher on cell
-expect(term).toHaveCursorAt(5, 0)             // terminal matcher
+expect(term.screen).toContainText("Hello") // text matcher on region
+expect(term.cell(0, 0)).toBeBold() // style matcher on cell
+expect(term).toHaveCursorAt(5, 0) // terminal matcher
 ```
 
 ## Matchers Reference
@@ -64,8 +64,8 @@ expect(term.cell(0, 0)).toBeInverse()
 expect(term.cell(0, 0)).toBeWide() // Double-width character
 
 // Underline -- optional style: "single" | "double" | "curly" | "dotted" | "dashed"
-expect(term.cell(0, 0)).toHaveUnderline()          // Any underline
-expect(term.cell(0, 0)).toHaveUnderline("curly")   // Specific style
+expect(term.cell(0, 0)).toHaveUnderline() // Any underline
+expect(term.cell(0, 0)).toHaveUnderline("curly") // Specific style
 ```
 
 ### Cursor Matchers
@@ -176,7 +176,7 @@ test("error message is red and bold", () => {
   expect(term.screen).toContainText("Error: file not found")
   expect(term.cell(0, 0)).toBeBold()
   expect(term.cell(0, 0)).toHaveFg("#800000") // ANSI red (palette index 1)
-  expect(term.cell(0, 7)).not.toBeBold()       // Space after "Error:" is not bold
+  expect(term.cell(0, 7)).not.toBeBold() // Space after "Error:" is not bold
 })
 ```
 
@@ -255,13 +255,13 @@ test("read text from different regions", () => {
 
 ## Migration from Old API
 
-| Old | New |
-|-----|-----|
-| `expect(term).toContainText("x")` | `expect(term.screen).toContainText("x")` |
-| `expect(term).toBeBoldAt(r, c)` | `expect(term.cell(r, c)).toBeBold()` |
+| Old                                       | New                                       |
+| ----------------------------------------- | ----------------------------------------- |
+| `expect(term).toContainText("x")`         | `expect(term.screen).toContainText("x")`  |
+| `expect(term).toBeBoldAt(r, c)`           | `expect(term.cell(r, c)).toBeBold()`      |
 | `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)` |
-| `expect(term).toBeInAltScreen()` | `expect(term).toBeInMode("altScreen")` |
-| `expect(term).toMatchViewport(lines)` | `expect(term.screen).toMatchLines(lines)` |
-| `term.getViewportText()` | `term.screen.getText()` |
-| `term.getScrollbackText()` | `term.scrollback.getText()` |
-| `term.getRowText(n)` | `term.row(n).getText()` |
+| `expect(term).toBeInAltScreen()`          | `expect(term).toBeInMode("altScreen")`    |
+| `expect(term).toMatchViewport(lines)`     | `expect(term.screen).toMatchLines(lines)` |
+| `term.getViewportText()`                  | `term.screen.getText()`                   |
+| `term.getScrollbackText()`                | `term.scrollback.getText()`               |
+| `term.getRowText(n)`                      | `term.row(n).getText()`                   |

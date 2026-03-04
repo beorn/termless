@@ -26,12 +26,29 @@
 
 ```typescript
 // Text matcher tests use mock RegionView
-const region = { getText: () => "Hello World", getLines: () => ["Hello World"], containsText: (t) => "Hello World".includes(t) }
+const region = {
+  getText: () => "Hello World",
+  getLines: () => ["Hello World"],
+  containsText: (t) => "Hello World".includes(t),
+}
 expect(region).toContainText("Hello")
 expect(region).toHaveText("Hello World")
 
 // Cell style matcher tests use mock CellView
-const cell = { text: "H", row: 0, col: 0, bold: true, faint: false, italic: false, underline: "none", strikethrough: false, inverse: false, wide: false, fg: { r: 255, g: 0, b: 0 }, bg: null }
+const cell = {
+  text: "H",
+  row: 0,
+  col: 0,
+  bold: true,
+  faint: false,
+  italic: false,
+  underline: "none",
+  strikethrough: false,
+  inverse: false,
+  wide: false,
+  fg: { r: 255, g: 0, b: 0 },
+  bg: null,
+}
 expect(cell).toBeBold()
 expect(cell).toHaveFg("#ff0000")
 

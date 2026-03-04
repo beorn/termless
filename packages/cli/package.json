@@ -2,6 +2,10 @@
   "name": "@termless/cli",
   "version": "0.1.0",
   "description": "CLI and MCP server for termless headless terminal library",
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
   "repository": {
@@ -9,31 +13,27 @@
     "url": "https://github.com/beorn/termless",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/beorn/termless",
-  "bugs": {
-    "url": "https://github.com/beorn/termless/issues"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
+  "bin": {
+    "termless": "./src/cli.ts"
   },
   "files": [
     "src"
   ],
   "type": "module",
   "module": "./src/index.ts",
-  "bin": {
-    "termless": "./src/cli.ts"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "commander": "^13.0.0",
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "commander": "^13.0.0",
     "zod": "^3.24.0"
   },
   "peerDependencies": {
     "@termless/core": "*",
     "@termless/xtermjs": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

@@ -7,6 +7,7 @@ Assessment of where termless can augment or replace inkx's virtual buffer tests.
 inkx has ~170 test files in `vendor/beorn-inkx/tests/`. The primary testing approach is virtual buffer testing via `createRenderer` from `inkx/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
 
 5 files already use termless:
+
 - `inline-termless.test.ts` -- inline mode output phase verified through real terminal
 - `output-termless.test.ts` -- fullscreen diff/style output verified through real terminal
 - `scrollback-termless.test.ts` -- scrollback promotion, cursor tracking, content shrink
@@ -23,9 +24,10 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Current approach:** Most tests inspect raw ANSI strings (checking for specific escape sequences) or use `replayAnsiWithStyles` (inkx's own ANSI replay function). The fuzz tests compare incremental vs fresh render via `replayAnsiWithStyles`.
 
-**termless value: VERY HIGH.** These tests are the #1 leverage opportunity. The existing virtual buffer tests verify that inkx *thinks* it produced correct output, but the replay is inkx's own code. A termless terminal is independent verification -- if inkx's ANSI is wrong in a way that `replayAnsiWithStyles` also gets wrong (same bug in both), the virtual test passes but the real terminal is garbled. This is exactly the class of bug that `output-termless.test.ts` already catches.
+**termless value: VERY HIGH.** These tests are the #1 leverage opportunity. The existing virtual buffer tests verify that inkx _thinks_ it produced correct output, but the replay is inkx's own code. A termless terminal is independent verification -- if inkx's ANSI is wrong in a way that `replayAnsiWithStyles` also gets wrong (same bug in both), the virtual test passes but the real terminal is garbled. This is exactly the class of bug that `output-termless.test.ts` already catches.
 
 **Approach: AUGMENT.** Keep the fast virtual buffer tests for regression speed. Add termless companion tests for high-risk paths:
+
 - Style transition output (SGR diff minimization)
 - True-color round-trip (RGB values survive ANSI encoding/decoding)
 - Wide char + emoji cursor advancement
@@ -44,6 +46,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **termless value: HIGH.** Wide character handling is one of the most terminal-dependent behaviors. Different terminals handle continuation cells, cursor advancement after wide chars, and wide-to-narrow transitions differently. xterm.js (termless's backend) provides ground truth for how a real terminal interprets the ANSI output. Bugs like cursor drift after emoji, orphaned continuation cells, and boundary splitting are invisible to buffer inspection but visible in a real terminal.
 
 **Approach: AUGMENT.** Keep buffer-level tests for fast regression. Add termless tests that:
+
 - Feed emoji/CJK ANSI output to termless and verify `cell().toBeWide()`
 - Verify cursor position after wide char sequences: `term.toHaveCursorAt(x, y)`
 - Verify incremental diff of wide chars (change emoji A to emoji B) produces correct terminal state
@@ -62,6 +65,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **termless value: HIGH.** The core question is: does the incremental ANSI diff, when applied to a real terminal that already has the previous frame, produce the same result as a fresh render? Currently these tests use inkx's own `VirtualTerminal.applyAnsi()` as the verifier. termless provides independent verification. The `ghost-chars.test.tsx` file specifically notes that "the buffer is correct but the terminal doesn't receive all the necessary updates" -- this is precisely what termless catches.
 
 **Approach: AUGMENT.** The virtual buffer tests are fast (~50ms each) and good for CI. Add termless companion tests for the known-problematic scenarios:
+
 - Content shrink leaving stale text (the ghost char bug)
 - Border toggle (add/remove `borderStyle`) leaving stale border characters
 - Truncate rerender leaving stale characters at end of line
@@ -77,9 +81,10 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Current approach:** ANSI string inspection (`app.ansi.toContain("38;5;1")`) and buffer cell inspection (`app.term.cell(x, y).fg`).
 
-**termless value: MEDIUM.** Current tests verify that the correct SGR codes appear in the ANSI output and that buffer cells have the right color values. termless adds the ability to verify that a real terminal *interprets* those SGR codes correctly -- e.g., that a style transition from `bold red` to `dim blue` actually results in dim blue (not dim red, due to a missing reset). The `output-termless.test.ts` already tests basic color round-tripping.
+**termless value: MEDIUM.** Current tests verify that the correct SGR codes appear in the ANSI output and that buffer cells have the right color values. termless adds the ability to verify that a real terminal _interprets_ those SGR codes correctly -- e.g., that a style transition from `bold red` to `dim blue` actually results in dim blue (not dim red, due to a missing reset). The `output-termless.test.ts` already tests basic color round-tripping.
 
 **Approach: AUGMENT.** Add termless tests for the riskiest color scenarios:
+
 - Style transitions on the same row (SGR minimization producing wrong results)
 - Background color inheritance through nested components (the `bg-bleed` bug)
 - True-color vs 256-color vs 16-color fallback
@@ -98,6 +103,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **termless value: MEDIUM.** Scroll regions (`DECSTBM`) are terminal-dependent. The `scroll-region.test.ts` only checks that correct escape sequences are emitted (mock stdout). termless can verify that scroll region operations (scroll up/down within a region) actually produce the expected terminal state. The garble tests (`strict-scroll-garble`, `strict-virtuallist-garble`) verify buffer consistency but not terminal output.
 
 **Approach: AUGMENT.** Specific opportunities:
+
 - Scroll region (DECSTBM) operations: set region, scroll up/down, verify terminal content
 - Overflow clipping: verify clipped content is truly invisible in terminal
 - VirtualList scroll: verify that scrolling a virtual list produces correct output in terminal
@@ -113,6 +119,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **Current state:** `inline-termless.test.ts` already provides excellent termless coverage for inline mode. `inline-mode.test.ts` inspects ANSI escape sequences directly (cursor-up counts, erase-to-EOL counts, cursor positioning suffix).
 
 **termless value: ALREADY LEVERAGED.** The existing termless test covers content shrink, scrollback offset handling, height capping, and multi-frame incremental consistency. Could add a few more tests for edge cases:
+
 - Cursor visibility in inline mode (show/hide at correct positions)
 - Inline mode with styled content (bold, colors preserved across frames)
 
@@ -127,6 +134,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **Current state:** Three termless test files already provide thorough coverage for scrollback promotion, ScrollbackList border integrity, and compaction. The virtual buffer tests cover width handling, resize behavior, and view scrolling.
 
 **termless value: ALREADY LEVERAGED.** The existing coverage is excellent. Minor gaps:
+
 - Scrollback resize (verify terminal handles width change during scrollback)
 - ScrollbackView scroll navigation (verify viewport position after scroll operations)
 
@@ -181,6 +189,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 **termless value: LOW for most. MEDIUM for terminal mode verification.** Most tests verify escape sequence generation/parsing, which is pure logic. However, termless could verify that mode-setting sequences (alt screen, cursor visibility, mouse tracking, bracketed paste) actually have the expected effect on the terminal state. The `toBeInMode()` matcher is purpose-built for this.
 
 **Approach: AUGMENT SELECTIVELY.** Add termless tests for mode verification:
+
 - `enterAlternateScreen()` -> `expect(term).toBeInMode("altScreen")`
 - `enableMouse()` -> `expect(term).toBeInMode("mouseTracking")`
 - `enableBracketedPaste()` -> `expect(term).toBeInMode("bracketedPaste")`
@@ -212,18 +221,18 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 ## Top 10 Highest-Value Opportunities (Ranked)
 
-| # | Opportunity | Category | Impact | Approach | Effort |
-|---|------------|----------|--------|----------|--------|
-| 1 | **Incremental diff correctness via termless** -- feed prev frame + diff ANSI to same terminal, compare against fresh render fed to a second terminal | Output Phase | Catches ANSI diff bugs invisible to `replayAnsiWithStyles` | Augment | 3h |
-| 2 | **Ghost char / stale pixel verification** -- content shrink, border toggle, truncate rerender through real terminal | Incremental | Verifies the exact bug class that motivated the ghost-char tests | Augment | 2h |
-| 3 | **Wide char + emoji cursor drift** -- verify cursor position and cell widths after emoji/CJK sequences in real terminal | Wide Chars | Terminal-dependent behavior; xterm.js is ground truth | Augment | 2h |
-| 4 | **Style transition round-trip** -- SGR minimization (bold->dim, red->blue, etc.) verified through `toHaveFg()`, `toBeBold()` | Style/Color | Catches missing resets that `replayAnsiWithStyles` may also miss | Augment | 1.5h |
-| 5 | **True-color RGB round-trip** -- verify specific RGB values survive buffer -> ANSI -> terminal | Style/Color | Catches palette mapping bugs, truncation | Augment | 1h |
-| 6 | **Background color inheritance across wrapped lines** -- the bg-bleed bug through real terminal | Style/Color | Caught a real bug; termless adds independent verification | Augment | 1h |
-| 7 | **Scroll region (DECSTBM) terminal verification** -- set region, scroll, verify content | Scroll | Currently only tests escape sequence strings, not terminal effect | Augment | 2h |
-| 8 | **Terminal mode verification** -- alt screen, mouse, paste, cursor via `toBeInMode()` | Terminal | Very cheap to add, verifies protocol sequences work | Augment | 1h |
-| 9 | **Wide char at container boundary** -- CJK char split by adjacent container border | Wide Chars | Terminal-specific; the Asana import scenario | Augment | 1h |
-| 10 | **Inline mode cursor positioning** -- verify cursor show/hide/position across frames | Inline | Extends existing `inline-termless.test.ts` | Augment | 1h |
+| #   | Opportunity                                                                                                                                          | Category     | Impact                                                            | Approach | Effort |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------- | -------- | ------ |
+| 1   | **Incremental diff correctness via termless** -- feed prev frame + diff ANSI to same terminal, compare against fresh render fed to a second terminal | Output Phase | Catches ANSI diff bugs invisible to `replayAnsiWithStyles`        | Augment  | 3h     |
+| 2   | **Ghost char / stale pixel verification** -- content shrink, border toggle, truncate rerender through real terminal                                  | Incremental  | Verifies the exact bug class that motivated the ghost-char tests  | Augment  | 2h     |
+| 3   | **Wide char + emoji cursor drift** -- verify cursor position and cell widths after emoji/CJK sequences in real terminal                              | Wide Chars   | Terminal-dependent behavior; xterm.js is ground truth             | Augment  | 2h     |
+| 4   | **Style transition round-trip** -- SGR minimization (bold->dim, red->blue, etc.) verified through `toHaveFg()`, `toBeBold()`                         | Style/Color  | Catches missing resets that `replayAnsiWithStyles` may also miss  | Augment  | 1.5h   |
+| 5   | **True-color RGB round-trip** -- verify specific RGB values survive buffer -> ANSI -> terminal                                                       | Style/Color  | Catches palette mapping bugs, truncation                          | Augment  | 1h     |
+| 6   | **Background color inheritance across wrapped lines** -- the bg-bleed bug through real terminal                                                      | Style/Color  | Caught a real bug; termless adds independent verification         | Augment  | 1h     |
+| 7   | **Scroll region (DECSTBM) terminal verification** -- set region, scroll, verify content                                                              | Scroll       | Currently only tests escape sequence strings, not terminal effect | Augment  | 2h     |
+| 8   | **Terminal mode verification** -- alt screen, mouse, paste, cursor via `toBeInMode()`                                                                | Terminal     | Very cheap to add, verifies protocol sequences work               | Augment  | 1h     |
+| 9   | **Wide char at container boundary** -- CJK char split by adjacent container border                                                                   | Wide Chars   | Terminal-specific; the Asana import scenario                      | Augment  | 1h     |
+| 10  | **Inline mode cursor positioning** -- verify cursor show/hide/position across frames                                                                 | Inline       | Extends existing `inline-termless.test.ts`                        | Augment  | 1h     |
 
 **Total estimated effort: ~16 hours for all 10 opportunities.**
 
@@ -255,7 +264,8 @@ import "@termless/test/matchers"
 function createTestTerminal(cols: number, rows: number) {
   return createTerminal({
     backend: createXtermBackend({ cols, rows }),
-    cols, rows,
+    cols,
+    rows,
     scrollbackLimit: 1000,
   })
 }

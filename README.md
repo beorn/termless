@@ -50,12 +50,12 @@ test("inspect what string matching can't see", () => {
   const term = createTerminalFixture({ cols: 60, rows: 10 })
 
   // Simulate a TUI app: alt screen, window title, styled output
-  term.feed("\x1b[?1049h")                              // enter alt screen
-  term.feed("\x1b]2;my-app — dashboard\x07")            // set window title
+  term.feed("\x1b[?1049h") // enter alt screen
+  term.feed("\x1b]2;my-app — dashboard\x07") // set window title
   term.feed("\x1b[1mServer Status\x1b[0m\r\n")
   term.feed("  API:  \x1b[38;2;0;255;0m● online\x1b[0m\r\n")
   term.feed("  DB:   \x1b[38;2;255;0;0m● down\x1b[0m\r\n")
-  term.feed("\x1b[4;1H")                                // position cursor
+  term.feed("\x1b[4;1H") // position cursor
 
   // Terminal modes, title, cursor — invisible to string assertions
   expect(term).toBeInMode("altScreen")
@@ -68,8 +68,8 @@ test("inspect what string matching can't see", () => {
 
   // Cell-level style inspection — colors that getText() can't see
   expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 8)).toHaveFg("#00ff00")           // green dot = healthy
-  expect(term.cell(2, 8)).toHaveFg("#ff0000")           // red dot = down
+  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green dot = healthy
+  expect(term.cell(2, 8)).toHaveFg("#ff0000") // red dot = down
 
   // Resize — verify content survives terminal resize
   term.resize(30, 10)
@@ -101,7 +101,7 @@ expect(term).toHaveCursorStyle("beam")
 // Cell-level inspection — colors, attributes, width
 expect(term.cell(0, 0)).toHaveFg("#ff0000")
 expect(term.cell(0, 0)).toBeBold()
-expect(term.cell(0, 0)).toBeWide()  // CJK/emoji
+expect(term.cell(0, 0)).toBeWide() // CJK/emoji
 
 // Resize behavior — does content reflow correctly?
 term.resize(40, 10)
@@ -112,12 +112,12 @@ expect(term).toHaveTitle("my-app — /home/user")
 
 // Backend capabilities — does this terminal support Kitty graphics? Sixel? Hyperlinks?
 const caps = term.backend.capabilities
-caps.truecolor        // true
-caps.kittyKeyboard    // Ghostty: true, xterm.js: false
-caps.kittyGraphics    // image protocol support
-caps.sixel            // sixel image support
-caps.osc8Hyperlinks   // clickable hyperlinks
-caps.reflow           // content reflow on resize
+caps.truecolor // true
+caps.kittyKeyboard // Ghostty: true, xterm.js: false
+caps.kittyGraphics // image protocol support
+caps.sixel // sixel image support
+caps.osc8Hyperlinks // clickable hyperlinks
+caps.reflow // content reflow on resize
 
 // Backend extensions — hyperlinks, color palettes, dirty tracking
 if (term.backend.hasExtension("hyperlinks")) {
@@ -135,17 +135,17 @@ The composable API separates **where** to look from **what** to assert:
 
 ```typescript
 // Region selectors (getter properties — no parens)
-term.screen      // the rows x cols visible area
-term.scrollback  // history above screen
-term.buffer      // everything (scrollback + screen)
-term.viewport    // current scroll position view
+term.screen // the rows x cols visible area
+term.scrollback // history above screen
+term.buffer // everything (scrollback + screen)
+term.viewport // current scroll position view
 
 // Region selectors (methods with args)
-term.row(n)                      // screen row (negative from bottom)
-term.cell(row, col)              // single cell
-term.range(r1, c1, r2, c2)      // rectangular region
-term.firstRow()                  // first screen row
-term.lastRow()                   // last screen row
+term.row(n) // screen row (negative from bottom)
+term.cell(row, col) // single cell
+term.range(r1, c1, r2, c2) // rectangular region
+term.firstRow() // first screen row
+term.lastRow() // last screen row
 ```
 
 Then assert using the appropriate matchers for each view type:
@@ -171,39 +171,39 @@ expect(term).toHaveTitle("My App")
 
 ### Text Matchers (on RegionView / RowView)
 
-| Matcher | Description |
-|---------|-------------|
-| `toContainText(text)` | Region contains text as substring |
-| `toHaveText(text)` | Region text matches exactly (trimmed) |
+| Matcher                 | Description                                              |
+| ----------------------- | -------------------------------------------------------- |
+| `toContainText(text)`   | Region contains text as substring                        |
+| `toHaveText(text)`      | Region text matches exactly (trimmed)                    |
 | `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) |
 
 ### Cell Style Matchers (on CellView)
 
-| Matcher | Description |
-|---------|-------------|
-| `toBeBold()` | Cell is bold |
-| `toBeItalic()` | Cell is italic |
-| `toBeFaint()` | Cell is faint/dim |
-| `toBeStrikethrough()` | Cell has strikethrough |
-| `toBeInverse()` | Cell has inverse video |
-| `toBeWide()` | Cell is double-width (CJK, emoji) |
+| Matcher                   | Description                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `toBeBold()`              | Cell is bold                                                                                  |
+| `toBeItalic()`            | Cell is italic                                                                                |
+| `toBeFaint()`             | Cell is faint/dim                                                                             |
+| `toBeStrikethrough()`     | Cell has strikethrough                                                                        |
+| `toBeInverse()`           | Cell has inverse video                                                                        |
+| `toBeWide()`              | Cell is double-width (CJK, emoji)                                                             |
 | `toHaveUnderline(style?)` | Cell has underline; optional style: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"` |
-| `toHaveFg(color)` | Foreground color (`"#rrggbb"` or `{ r, g, b }`) |
-| `toHaveBg(color)` | Background color (`"#rrggbb"` or `{ r, g, b }`) |
+| `toHaveFg(color)`         | Foreground color (`"#rrggbb"` or `{ r, g, b }`)                                               |
+| `toHaveBg(color)`         | Background color (`"#rrggbb"` or `{ r, g, b }`)                                               |
 
 ### Terminal Matchers (on TerminalReadable)
 
-| Matcher | Description |
-|---------|-------------|
-| `toHaveCursorAt(x, y)` | Cursor at position |
-| `toHaveCursorVisible()` | Cursor is visible |
-| `toHaveCursorHidden()` | Cursor is hidden |
-| `toHaveCursorStyle(style)` | Cursor style: `"block"`, `"underline"`, `"beam"` |
-| `toBeInMode(mode)` | Terminal mode is enabled |
-| `toHaveTitle(title)` | OSC 2 title matches |
-| `toHaveScrollbackLines(n)` | Scrollback has N total lines |
-| `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset) |
-| `toMatchTerminalSnapshot()` | Vitest snapshot of terminal state |
+| Matcher                      | Description                                      |
+| ---------------------------- | ------------------------------------------------ |
+| `toHaveCursorAt(x, y)`       | Cursor at position                               |
+| `toHaveCursorVisible()`      | Cursor is visible                                |
+| `toHaveCursorHidden()`       | Cursor is hidden                                 |
+| `toHaveCursorStyle(style)`   | Cursor style: `"block"`, `"underline"`, `"beam"` |
+| `toBeInMode(mode)`           | Terminal mode is enabled                         |
+| `toHaveTitle(title)`         | OSC 2 title matches                              |
+| `toHaveScrollbackLines(n)`   | Scrollback has N total lines                     |
+| `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset)            |
+| `toMatchTerminalSnapshot()`  | Vitest snapshot of terminal state                |
 
 ## Installation
 
@@ -218,9 +218,9 @@ Test your TUI against multiple terminal emulators with a single test suite. Writ
 ```typescript
 // vitest.workspace.ts — add as many backends as you want
 export default [
-  { test: { name: "xterm",     setupFiles: ["./test/setup-xterm.ts"] } },
-  { test: { name: "ghostty",   setupFiles: ["./test/setup-ghostty.ts"] } },
-  { test: { name: "vt100",     setupFiles: ["./test/setup-vt100.ts"] } },
+  { test: { name: "xterm", setupFiles: ["./test/setup-xterm.ts"] } },
+  { test: { name: "ghostty", setupFiles: ["./test/setup-ghostty.ts"] } },
+  { test: { name: "vt100", setupFiles: ["./test/setup-vt100.ts"] } },
   // Also available: alacritty, wezterm (require Rust build), peekaboo (OS-level)
 ]
 ```
@@ -276,33 +276,33 @@ termless mcp
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [termless](.) | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
-| [@termless/xtermjs](packages/xtermjs) | xterm.js backend (`@xterm/headless`) |
-| [@termless/ghostty](packages/ghostty) | Ghostty backend (`ghostty-web` WASM) |
-| [@termless/vt100](packages/vt100) | Pure TypeScript VT100 emulator (zero native deps) |
-| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs) |
-| [@termless/wezterm](packages/wezterm) | WezTerm backend (`wezterm-term` via napi-rs) |
-| [@termless/peekaboo](packages/peekaboo) | OS-level terminal automation (xterm.js + real app) |
-| [@termless/test](packages/viterm) | Vitest matchers, fixtures, and snapshot serializer |
-| [@termless/cli](packages/cli) | CLI (`termless capture`) + MCP server (`termless mcp`) |
+| Package                                   | Description                                                     |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| [termless](.)                             | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
+| [@termless/xtermjs](packages/xtermjs)     | xterm.js backend (`@xterm/headless`)                            |
+| [@termless/ghostty](packages/ghostty)     | Ghostty backend (`ghostty-web` WASM)                            |
+| [@termless/vt100](packages/vt100)         | Pure TypeScript VT100 emulator (zero native deps)               |
+| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs)            |
+| [@termless/wezterm](packages/wezterm)     | WezTerm backend (`wezterm-term` via napi-rs)                    |
+| [@termless/peekaboo](packages/peekaboo)   | OS-level terminal automation (xterm.js + real app)              |
+| [@termless/test](packages/viterm)         | Vitest matchers, fixtures, and snapshot serializer              |
+| [@termless/cli](packages/cli)             | CLI (`termless capture`) + MCP server (`termless mcp`)          |
 
 ## How termless Compares
 
 termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
 
-| Feature | termless | Playwright + xterm.js | TUI Test | ttytest2 | pexpect | Textual | Ink |
-|---------|----------|-----------------------|----------|----------|---------|---------|-----|
-| **Terminal internals** | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Multi-backend** | ✅ 6 backends | ❌ xterm.js only | ❌ xterm.js only | ❌ tmux only | ❌ | ❌ | ❌ |
-| **Composable selectors** | ✅ 8 types | ❌ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Visual matchers** | ✅ 21+ | ❌ DIY | ⚠️ | ❌ | ❌ | ⚠️ | ❌ |
-| **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow | ❌ xterm.js subset | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **SVG screenshots** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **No browser/Chromium** | ✅ | ❌ needs Chromium | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Framework-agnostic** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **TypeScript** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Feature                   | termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
+| ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
+| **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
+| **Multi-backend**         | ✅ 6 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
+| **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
+| **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
+| **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |
+| **SVG screenshots**       | ✅                                       | ❌                      | ❌               | ❌           | ❌      | ❌      | ❌  |
+| **No browser/Chromium**   | ✅                                       | ❌ needs Chromium       | ✅               | ✅           | ✅      | ✅      | ✅  |
+| **Framework-agnostic**    | ✅                                       | ✅                      | ✅               | ✅           | ✅      | ❌      | ❌  |
+| **TypeScript**            | ✅                                       | ✅                      | ✅               | ❌           | ❌      | ❌      | ✅  |
 
 ## Documentation
 
@@ -318,7 +318,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## See Also
 
-**[inkx](https://github.com/beorn/inkx)** -- if termless is for *testing* terminal apps, inkx is for *building* them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — inkx handles the terminal complexity. Use `@termless/test` to verify your inkx app renders correctly across terminals.
+**[inkx](https://github.com/beorn/inkx)** -- if termless is for _testing_ terminal apps, inkx is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — inkx handles the terminal complexity. Use `@termless/test` to verify your inkx app renders correctly across terminals.
 
 ## License
 

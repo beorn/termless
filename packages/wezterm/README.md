@@ -69,16 +69,16 @@ but can be called ahead of time to fail fast if the native module is missing.
 
 ## Capabilities
 
-| Capability | Supported |
-|------------|-----------|
-| True color (24-bit) | Yes |
-| Kitty keyboard protocol | Yes |
-| Kitty graphics | No (headless) |
-| Sixel | Yes |
-| OSC 8 hyperlinks | Yes |
-| Semantic prompts | Yes |
-| Unicode 15.1 | Yes |
-| Line reflow | Yes |
+| Capability              | Supported     |
+| ----------------------- | ------------- |
+| True color (24-bit)     | Yes           |
+| Kitty keyboard protocol | Yes           |
+| Kitty graphics          | No (headless) |
+| Sixel                   | Yes           |
+| OSC 8 hyperlinks        | Yes           |
+| Semantic prompts        | Yes           |
+| Unicode 15.1            | Yes           |
+| Line reflow             | Yes           |
 
 ## Architecture
 

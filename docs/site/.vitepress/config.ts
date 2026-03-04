@@ -109,9 +109,7 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/beorn/termless" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/beorn/termless" }],
 
     outline: { level: [2, 3] },
 

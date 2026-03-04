@@ -8,28 +8,28 @@ Creates a Terminal instance wrapping a backend with optional PTY support.
 import { createTerminal } from "@termless/core"
 
 const term = createTerminal({
-  cols: 80,    // default: 80
-  rows: 24,    // default: 24
+  cols: 80, // default: 80
+  rows: 24, // default: 24
   scrollbackLimit: 1000,
 })
 ```
 
 ### Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | `TerminalBackend` | xterm.js | Backend instance (defaults to xterm.js) |
-| `cols` | `number` | `80` | Terminal width in columns |
-| `rows` | `number` | `24` | Terminal height in rows |
-| `scrollbackLimit` | `number` | -- | Maximum scrollback lines (backend-dependent) |
+| Option            | Type              | Default  | Description                                  |
+| ----------------- | ----------------- | -------- | -------------------------------------------- |
+| `backend`         | `TerminalBackend` | xterm.js | Backend instance (defaults to xterm.js)      |
+| `cols`            | `number`          | `80`     | Terminal width in columns                    |
+| `rows`            | `number`          | `24`     | Terminal height in rows                      |
+| `scrollbackLimit` | `number`          | --       | Maximum scrollback lines (backend-dependent) |
 
 ## Properties
 
 ```typescript
-term.cols     // number -- current column count
-term.rows     // number -- current row count
-term.backend  // TerminalBackend -- the underlying backend
-term.alive    // boolean -- true if a spawned process is still running
+term.cols // number -- current column count
+term.rows // number -- current row count
+term.backend // TerminalBackend -- the underlying backend
+term.alive // boolean -- true if a spawned process is still running
 term.exitInfo // string | null -- e.g. "exit=0" after process exits
 ```
 
@@ -40,7 +40,7 @@ term.exitInfo // string | null -- e.g. "exit=0" after process exits
 Write data directly to the terminal (no PTY). Useful for testing rendering of ANSI output.
 
 ```typescript
-term.feed("Hello, world!")              // string
+term.feed("Hello, world!") // string
 term.feed("\x1b[1;31mRed bold\x1b[0m") // ANSI escape sequences
 term.feed(new Uint8Array([0x48, 0x69])) // raw bytes
 ```
@@ -68,14 +68,14 @@ Throws if a process is already spawned or if the terminal is closed.
 Send a keypress to the spawned process. Parses human-readable key descriptions into ANSI escape sequences.
 
 ```typescript
-term.press("a")            // Single character
-term.press("Enter")        // Named keys
-term.press("ArrowUp")      // Arrow keys
-term.press("Ctrl+c")       // Modifier + key
+term.press("a") // Single character
+term.press("Enter") // Named keys
+term.press("ArrowUp") // Arrow keys
+term.press("Ctrl+c") // Modifier + key
 term.press("Ctrl+Shift+a") // Multiple modifiers
-term.press("Alt+x")        // Alt modifier
-term.press("F5")           // Function keys F1-F12
-term.press("Shift+Tab")    // Reverse tab
+term.press("Alt+x") // Alt modifier
+term.press("F5") // Function keys F1-F12
+term.press("Shift+Tab") // Reverse tab
 ```
 
 Supported modifiers: `Ctrl`, `Control`, `Alt`, `Option`, `Shift`, `Meta`, `Cmd`, `Super`.
@@ -98,7 +98,7 @@ term.type("search query\r") // \r for Enter
 Wait for specific text to appear in the terminal buffer. Polls every 50ms.
 
 ```typescript
-await term.waitFor("ready>")           // Default timeout: 5000ms
+await term.waitFor("ready>") // Default timeout: 5000ms
 await term.waitFor("Loading...", 10000) // Custom timeout
 ```
 
@@ -109,7 +109,7 @@ Throws `Error` if the text doesn't appear within the timeout.
 Wait for terminal content to stop changing. Useful after keypresses or when waiting for rendering to complete.
 
 ```typescript
-await term.waitForStable()         // Default: stable for 200ms, timeout 5000ms
+await term.waitForStable() // Default: stable for 200ms, timeout 5000ms
 await term.waitForStable(100, 3000) // Stable for 100ms, timeout 3000ms
 ```
 
@@ -159,16 +159,16 @@ Get a single cell with all attributes. Returns a `Cell` object:
 
 ```typescript
 const cell = term.getCell(0, 0)
-cell.text          // string -- character
-cell.fg            // RGB | null -- foreground color
-cell.bg            // RGB | null -- background color
-cell.bold          // boolean
-cell.faint         // boolean
-cell.italic        // boolean
-cell.underline     // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+cell.text // string -- character
+cell.fg // RGB | null -- foreground color
+cell.bg // RGB | null -- background color
+cell.bold // boolean
+cell.faint // boolean
+cell.italic // boolean
+cell.underline // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
 cell.strikethrough // boolean
-cell.inverse       // boolean
-cell.wide          // boolean -- double-width character
+cell.inverse // boolean
+cell.wide // boolean -- double-width character
 ```
 
 ### `getLine(row)`

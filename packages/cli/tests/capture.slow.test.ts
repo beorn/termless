@@ -70,7 +70,7 @@ describe("CLI capture integration", () => {
           command: ["sleep", "60"],
           waitFor: "this will never appear",
           timeout: 500,
-        })
+        }),
       ).rejects.toThrow(/[Tt]imeout/)
     } finally {
       await manager.stopAll()

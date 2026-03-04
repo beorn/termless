@@ -32,8 +32,8 @@ try {
 }
 
 // Frame recording
-expect(hasFrameChanged("hello", null)).toBe(true)   // First frame always changed
-expect(hasFrameChanged("same", "same")).toBe(false)  // Identical = no change
+expect(hasFrameChanged("hello", null)).toBe(true) // First frame always changed
+expect(hasFrameChanged("same", "same")).toBe(false) // Identical = no change
 
 // HTML slideshow
 const html = generateHtmlSlideshow(frames, 250)

@@ -116,10 +116,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   // ── PTY lifecycle ──
 
-  async function spawn(
-    command: string[],
-    spawnOpts?: { env?: Record<string, string>; cwd?: string },
-  ): Promise<void> {
+  async function spawn(command: string[], spawnOpts?: { env?: Record<string, string>; cwd?: string }): Promise<void> {
     if (closed) throw new Error("Terminal is closed")
     if (ptyHandle) throw new Error("Terminal already has a spawned process")
 

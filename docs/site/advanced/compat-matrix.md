@@ -6,18 +6,18 @@ termless verifies that all backends (xterm.js, Ghostty, vt100) produce identical
 
 The `cross-backend.test.ts` suite runs 120+ tests across all backends, covering:
 
-| Category | What's tested |
-|----------|--------------|
-| **Text rendering** | Plain text, multiline, CUP positioning, line wrap at boundary |
-| **Cell styles (SGR)** | Bold, italic, faint, strikethrough, inverse, underline, truecolor FG/BG, 256-color, combined styles, SGR reset |
-| **Cursor** | Position after text, after CRLF, CUP, CUF forward |
-| **Modes** | Alt screen toggle, bracketed paste, auto wrap, application cursor, mouse tracking, focus tracking |
-| **Wide characters** | Emoji width, CJK characters, column offset after wide chars |
-| **Scrollback** | Screen lines reported, scrollback accumulation |
-| **Reset** | `reset()` method, RIS (`\ec`) escape sequence |
-| **Capabilities** | Truecolor, reflow, Kitty keyboard |
-| **Key encoding** | Enter, Escape, Ctrl+C, ArrowUp |
-| **Cross-backend comparison** | Cell-by-cell text, cursor position, and style attribute comparison between xterm.js and Ghostty |
+| Category                     | What's tested                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Text rendering**           | Plain text, multiline, CUP positioning, line wrap at boundary                                                  |
+| **Cell styles (SGR)**        | Bold, italic, faint, strikethrough, inverse, underline, truecolor FG/BG, 256-color, combined styles, SGR reset |
+| **Cursor**                   | Position after text, after CRLF, CUP, CUF forward                                                              |
+| **Modes**                    | Alt screen toggle, bracketed paste, auto wrap, application cursor, mouse tracking, focus tracking              |
+| **Wide characters**          | Emoji width, CJK characters, column offset after wide chars                                                    |
+| **Scrollback**               | Screen lines reported, scrollback accumulation                                                                 |
+| **Reset**                    | `reset()` method, RIS (`\ec`) escape sequence                                                                  |
+| **Capabilities**             | Truecolor, reflow, Kitty keyboard                                                                              |
+| **Key encoding**             | Enter, Escape, Ctrl+C, ArrowUp                                                                                 |
+| **Cross-backend comparison** | Cell-by-cell text, cursor position, and style attribute comparison between xterm.js and Ghostty                |
 
 ## Running
 
