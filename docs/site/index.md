@@ -64,7 +64,6 @@ test("inspect what string matching can't see", () => {
   // Region selectors — WHERE to look
   expect(term.screen).toContainText("Server Status")
   expect(term.row(0)).toHaveText("Server Status")
-  expect(term.scrollback).not.toContainText("Server Status") // alt screen
 
   // Cell styles — colors that getText() can't see
   expect(term.cell(0, 0)).toBeBold()
