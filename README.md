@@ -20,18 +20,15 @@ Built alongside [inkx](https://github.com/beorn/inkx), a React TUI framework, bu
 import { createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
-// ANSI escape helpers for feeding raw terminal data.
-// Real apps generate these automatically — use inkx (React TUI framework)
-// or chalk/chalkx (string styling) instead of hand-writing escape codes.
-const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
-const ALT_SCREEN_ON = "\x1b[?1049h"
-const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
-const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
 
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
-term.feed(`${BOLD("Hello")}, termless!`)
-console.log(term.screen.getText()) // "Hello, termless!"
+term.feed(GREEN("● API online"))
+
+// String matching sees text. termless sees everything.
+term.screen.getText()  // "● API online"
+term.cell(0, 0).fg     // { r: 0, g: 255, b: 0 } — the color getText() can't see
+
 await term.close()
 ```
 
@@ -43,22 +40,22 @@ await term.spawn(["ls", "-la"])
 await term.waitFor("total")
 
 // Region selectors — inspect specific parts of the terminal
-console.log(term.screen.getText())     // visible area
+console.log(term.screen.getText()) // visible area
 console.log(term.scrollback.getText()) // history above screen
-console.log(term.row(0).getText())     // first row
-console.log(term.lastRow().getText())  // last row
+console.log(term.row(0).getText()) // first row
+console.log(term.lastRow().getText()) // last row
 
 const svg = term.screenshotSvg()
 await term.close()
 ```
 
-### Write tests with Vitest matchers
+### Write tests
 
 ```typescript
 import { test, expect } from "vitest"
 import { createTerminalFixture } from "@termless/test"
 
-// ANSI helpers — real apps use inkx or chalk, these are for test data
+// ANSI helpers — real apps use inkx or chalk, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
 const ALT_SCREEN_ON = "\x1b[?1049h"
@@ -72,22 +69,24 @@ test("inspect what string matching can't see", () => {
   term.feed(ALT_SCREEN_ON)
   term.feed(SET_TITLE("my-app — dashboard"))
   term.feed(`${BOLD("Server Status")}\r\n`)
-  term.feed(`  API:  ${GREEN("● online")}\r\n`)
+  term.feed(`  ${GREEN("● online")}\r\n`)
   term.feed(MOVE_TO(3, 1))
 
-  // Terminal modes, title, cursor — invisible to string assertions
+  // Region selectors — WHERE to look
+  expect(term.screen).toContainText("Server Status")
+  expect(term.row(0)).toHaveText("Server Status")
+  expect(term.scrollback).not.toContainText("Server Status") // alt screen
+  expect(term.buffer).toContainText("Server Status")         // scrollback + screen
+
+  // Cell styles — colors that getText() can't see
+  expect(term.cell(0, 0)).toBeBold()
+  expect(term.cell(1, 2)).toHaveFg("#00ff00")
+
+  // Terminal state — modes, cursor, title
   expect(term).toBeInMode("altScreen")
   expect(term).toHaveTitle("my-app — dashboard")
   expect(term).toHaveCursorAt(0, 2)
-
-  // Region selectors — WHERE to look + WHAT to assert
-  expect(term.screen).toContainText("Server Status")
-  expect(term.row(0)).toHaveText("Server Status")
-  expect(term.scrollback).not.toContainText("Server Status") // alt screen has no scrollback
-
-  // Cell-level style inspection — colors that getText() can't see
-  expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 8)).toHaveFg("#00ff00") // green dot
+  expect(term).toHaveCursorVisible()
 
   // Resize — verify content survives terminal resize
   term.resize(30, 10)
@@ -95,61 +94,7 @@ test("inspect what string matching can't see", () => {
 })
 ```
 
-## What You Can Test
-
-termless gives you structured access to terminal internals that are invisible to string matching or screenshot diffing:
-
-```typescript
-// Region selectors — composable views into the terminal buffer
-expect(term.screen).toContainText("Server Status")    // visible area only
-expect(term.scrollback).toContainText("build complete") // history above screen
-expect(term.buffer).toContainText("earlier output")     // scrollback + screen
-expect(term.row(0)).toHaveText("Title Bar")             // specific row
-expect(term.lastRow()).toContainText("Status: ready")    // last row
-expect(term.range(0, 0, 2, 40)).toContainText("header") // rectangular region
-
-// Scrollback history — did output scroll correctly?
-expect(term).toHaveScrollbackLines(150)
-expect(term).toBeAtBottomOfScrollback()
-
-// Terminal modes — did the app enter/exit alt screen?
-expect(term).toBeInMode("altScreen")
-expect(term).toBeInMode("bracketedPaste")
-expect(term).toBeInMode("mouseTracking")
-
-// Cursor state — position, visibility, style
-expect(term).toHaveCursorAt(5, 0)
-expect(term).toHaveCursorVisible()
-expect(term).toHaveCursorStyle("beam")
-
-// Cell-level inspection — colors, attributes, width
-expect(term.cell(0, 0)).toHaveFg("#ff0000")
-expect(term.cell(0, 0)).toBeBold()
-expect(term.cell(0, 0)).toBeWide() // CJK/emoji
-
-// Resize behavior — does content reflow correctly?
-term.resize(40, 10)
-expect(term.screen).toContainText("still visible")
-
-// Window title (OSC 2)
-expect(term).toHaveTitle("my-app — /home/user")
-
-// Backend capabilities — does this terminal support Kitty graphics? Sixel? Hyperlinks?
-const caps = term.backend.capabilities
-caps.truecolor // true
-caps.kittyKeyboard // Ghostty: true, xterm.js: false
-caps.kittyGraphics // image protocol support
-caps.sixel // sixel image support
-caps.osc8Hyperlinks // clickable hyperlinks
-caps.reflow // content reflow on resize
-
-// Backend extensions — hyperlinks, color palettes, dirty tracking
-if (term.backend.hasExtension("hyperlinks")) {
-  const url = term.backend.getHyperlinkAt(0, 5) // OSC 8 hyperlink at cell
-}
-```
-
-None of this is possible with `expect(output).toContain("text")`. String matching can't see colors, can't inspect scrollback, can't verify cursor position, can't test resize or reflow behavior, and can't query terminal capabilities. termless gives you the full terminal state machine.
+None of this is possible with `expect(output).toContain("text")`. String matching can't see colors, can't inspect scrollback, can't verify cursor position, can't test resize behavior, and can't query terminal capabilities. termless gives you the full terminal state machine.
 
 **Cross-terminal differences are real.** Emoji width, color palette mapping, scroll region behavior, key encoding, Kitty keyboard protocol support, and hyperlink handling all differ between terminals. Run the same test against xterm.js and Ghostty and you'll find them. The `cross-backend.test.ts` suite runs 120+ conformance tests across all backends, catching differences automatically in CI.
 
