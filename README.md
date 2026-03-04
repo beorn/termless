@@ -58,37 +58,29 @@ import { createTerminalFixture } from "@termless/test"
 // ANSI helpers — real apps use inkx or chalk, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
-const ALT_SCREEN_ON = "\x1b[?1049h"
-const SET_TITLE = (t: string) => `\x1b]2;${t}\x07`
-const MOVE_TO = (row: number, col: number) => `\x1b[${row};${col}H`
 
 test("inspect what string matching can't see", () => {
-  const term = createTerminalFixture({ cols: 60, rows: 10 })
+  const term = createTerminalFixture({ cols: 40, rows: 3 })
 
-  // Simulate a TUI app
-  term.feed(ALT_SCREEN_ON)
-  term.feed(SET_TITLE("my-app — dashboard"))
-  term.feed(`${BOLD("Server Status")}\r\n`)
-  term.feed(`  ${GREEN("● online")}\r\n`)
-  term.feed(MOVE_TO(3, 1))
+  // Simulate a build pipeline — 4 lines overflow a 3-row terminal
+  term.feed("Step 1: install\r\n")
+  term.feed(`Step 2: ${GREEN("build ok")}\r\n`)
+  term.feed(`Step 3: ${BOLD("test")}\r\n`)
+  term.feed("Step 4: deploy")
 
-  // Region selectors — WHERE to look
-  expect(term.screen).toContainText("Server Status")
-  expect(term.row(0)).toHaveText("Server Status")
+  // Region selectors — screen, scrollback, buffer
+  expect(term.scrollback).toContainText("install")  // scrolled off, still in history
+  expect(term.screen).toContainText("deploy")        // visible area
+  expect(term.buffer).toContainText("install")       // everything (scrollback + screen)
+  expect(term.row(0)).toHaveText("Step 2: build ok") // specific row
 
   // Cell styles — colors that getText() can't see
-  expect(term.cell(0, 0)).toBeBold()
-  expect(term.cell(1, 2)).toHaveFg("#00ff00")
+  expect(term.cell(0, 8)).toHaveFg("#00ff00") // "build ok" is green
+  expect(term.cell(1, 8)).toBeBold()          // "test" is bold
 
-  // Terminal state — modes, cursor, title
-  expect(term).toBeInMode("altScreen")
-  expect(term).toHaveTitle("my-app — dashboard")
-  expect(term).toHaveCursorAt(0, 2)
-  expect(term).toHaveCursorVisible()
-
-  // Resize — verify content survives terminal resize
-  term.resize(30, 10)
-  expect(term.screen).toContainText("● online")
+  // Resize — verify content survives
+  term.resize(20, 3)
+  expect(term.screen).toContainText("deploy")
 })
 ```
 
