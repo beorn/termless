@@ -98,7 +98,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Files:** `scroll-dirty.test.tsx`, `scroll-offscreen-render.test.tsx`, `scroll-visible-range-change.test.tsx`, `scroll-region.test.ts`, `scroll-utils.test.ts`, `strict-scroll-garble.test.tsx`, `strict-virtuallist-garble.test.tsx`, `overflow-hidden-horizontal.test.tsx`, `overflow-position.test.tsx`, `overflow-spurious.test.tsx`
 
-**Current approach:** Virtual buffer comparison, `INKX_STRICT` mode for incremental vs fresh verification, buffer text assertions.
+**Current approach:** Virtual buffer comparison, `HIGHTEA_STRICT` mode for incremental vs fresh verification, buffer text assertions.
 
 **termless value: MEDIUM.** Scroll regions (`DECSTBM`) are terminal-dependent. The `scroll-region.test.ts` only checks that correct escape sequences are emitted (mock stdout). termless can verify that scroll region operations (scroll up/down within a region) actually produce the expected terminal state. The garble tests (`strict-scroll-garble`, `strict-virtuallist-garble`) verify buffer consistency but not terminal output.
 
@@ -158,7 +158,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 ### Category 9: Layout (LOW VALUE)
 
-**Files:** `layout-engines.test.ts`, `layout-engine.test.ts`, `layout-equivalence.test.tsx`, `layout-property.test.tsx`, `layout-snapshots.test.tsx`, `single-pass-layout.test.tsx`, `flexbox-grow.test.tsx`, `flexgrow-*.test.tsx` (7 files), `flexx-nested-box-bug.test.tsx`, `bottom-bar-layout.test.tsx`, `console-layout-cascade.test.tsx`, `display-none.test.tsx`, `measureElement.test.tsx`, `onlayout-corruption.test.tsx`
+**Files:** `layout-engines.test.ts`, `layout-engine.test.ts`, `layout-equivalence.test.tsx`, `layout-property.test.tsx`, `layout-snapshots.test.tsx`, `single-pass-layout.test.tsx`, `flexbox-grow.test.tsx`, `flexgrow-*.test.tsx` (7 files), `flexture-nested-box-bug.test.tsx`, `bottom-bar-layout.test.tsx`, `console-layout-cascade.test.tsx`, `display-none.test.tsx`, `measureElement.test.tsx`, `onlayout-corruption.test.tsx`
 
 **Current approach:** Virtual buffer, layout property assertions, snapshot comparisons.
 

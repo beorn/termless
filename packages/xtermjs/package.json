@@ -1,6 +1,6 @@
 {
   "name": "@termless/xtermjs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "xterm.js backend for termless",
   "homepage": "https://github.com/beorn/termless",
   "bugs": {
