@@ -179,7 +179,7 @@ test("error message is red and bold", () => {
   expect(term.screen).toContainText("Error: file not found")
   expect(term.cell(0, 0)).toBeBold()
   expect(term.cell(0, 0)).toHaveFg("#800000") // ANSI red (palette index 1)
-  expect(term.cell(0, 7)).not.toBeBold()      // space after "Error:" is not bold
+  expect(term.cell(0, 7)).not.toBeBold() // space after "Error:" is not bold
 })
 ```
 

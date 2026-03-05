@@ -88,7 +88,7 @@ test("interactive app responds to keypresses", async () => {
 Terminal implements `Symbol.asyncDispose`, so you can use `using` instead of fixtures:
 
 ```typescript
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 import { createXtermBackend } from "@termless/xtermjs"
 
 test("with explicit cleanup", async () => {

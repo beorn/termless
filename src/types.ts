@@ -224,6 +224,7 @@ export interface Terminal extends TerminalReadable {
 
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
+  screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
@@ -243,6 +244,11 @@ export interface SvgScreenshotOptions {
   cellWidth?: number
   cellHeight?: number
   theme?: SvgTheme
+}
+
+export interface PngScreenshotOptions extends SvgScreenshotOptions {
+  /** Render scale factor (default: 2 for retina-quality output). */
+  scale?: number
 }
 
 export interface SvgTheme {

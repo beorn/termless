@@ -10,7 +10,7 @@
   "author": "Beorn",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beorn/termless",
+    "url": "https://github.com/beorn/termless.git",
     "directory": "packages/alacritty"
   },
   "files": [
@@ -20,6 +20,9 @@
   "module": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0"

@@ -5,8 +5,8 @@
 Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
-import { createTerminal } from "@termless/core"
-import type { Terminal, TerminalCreateOptions } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
+import type { Terminal, TerminalCreateOptions } from "@termless/monorepo"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({
@@ -79,6 +79,7 @@ interface Terminal extends TerminalReadable {
 
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
+  screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
@@ -368,6 +369,15 @@ const svg = term.screenshotSvg()
 const svg = term.screenshotSvg({ theme: { background: "#282a36" } })
 ```
 
+### `screenshotPng(options?)`
+
+Capture the terminal as a PNG buffer. Requires `@resvg/resvg-js` (`bun add -d @resvg/resvg-js`). See [Screenshots](/guide/screenshots) for options.
+
+```typescript
+const png = await term.screenshotPng()
+const png = await term.screenshotPng({ scale: 3, theme: { background: "#282a36" } })
+```
+
 ## Resize
 
 ### `resize(cols, rows)`
@@ -400,7 +410,7 @@ await using term = createTerminal({ backend: createXtermBackend() })
 ## Key Utilities
 
 ```typescript
-import { parseKey, keyToAnsi } from "@termless/core"
+import { parseKey, keyToAnsi } from "@termless/monorepo"
 
 // Parse "Ctrl+a" -> { key: "a", ctrl: true }
 const desc = parseKey("Ctrl+Shift+ArrowUp")
@@ -415,8 +425,8 @@ const ansi = keyToAnsi({ key: "ArrowUp", ctrl: true }) // "\x1b[1;5A"
 Type-safe extension check for backend capabilities:
 
 ```typescript
-import { hasExtension } from "@termless/core"
-import type { MouseEncodingExtension } from "@termless/core"
+import { hasExtension } from "@termless/monorepo"
+import type { MouseEncodingExtension } from "@termless/monorepo"
 
 if (hasExtension<MouseEncodingExtension>(backend, "mouse")) {
   const encoded = backend.encodeMouse({ x: 5, y: 10, button: "left", action: "press" })

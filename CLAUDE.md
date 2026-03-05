@@ -4,23 +4,23 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 
 ## Packages
 
-| Package               | Description                                                            | Status           |
-| --------------------- | ---------------------------------------------------------------------- | ---------------- |
-| `@termless/core`      | Core: types, Terminal, PTY, SVG screenshots, key mapping, region views | Active           |
-| `@termless/xtermjs`   | xterm.js backend (@xterm/headless)                                     | Active           |
-| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                                     | Active           |
-| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)                      | Active           |
-| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)                     | Needs Rust build |
-| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                             | Needs Rust build |
-| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                     | Active           |
-| `@termless/test`      | Vitest integration: matchers, fixtures, snapshots                      | Active           |
-| `@termless/cli`       | CLI + MCP server                                                       | Active           |
+| Package               | Description                                                                | Status           |
+| --------------------- | -------------------------------------------------------------------------- | ---------------- |
+| `@termless/core`      | Core: types, Terminal, PTY, SVG/PNG screenshots, key mapping, region views | Active           |
+| `@termless/xtermjs`   | xterm.js backend (@xterm/headless)                                         | Active           |
+| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                                         | Active           |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)                          | Active           |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)                         | Needs Rust build |
+| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                                 | Needs Rust build |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                         | Active           |
+| `@termless/test`      | Vitest integration: matchers, fixtures, snapshots                          | Active           |
+| `@termless/cli`       | CLI + MCP server                                                           | Active           |
 
 ## Architecture
 
 ```
 @termless/test (Vitest matchers + fixtures)
-  └── @termless/core (TerminalBackend interface + PTY + SVG + region views)
+  └── @termless/core (TerminalBackend interface + PTY + SVG/PNG + region views)
         ├── @termless/xtermjs (@xterm/headless)
         ├── @termless/ghostty (ghostty-web WASM)
         ├── @termless/vt100 (pure TypeScript)
@@ -64,7 +64,7 @@ Region selectors: `term.screen`, `term.scrollback`, `term.buffer`, `term.viewpor
 ## Buffer Diff
 
 ```typescript
-import { diffBuffers } from "@termless/core"
+import { diffBuffers } from "@termless/monorepo"
 
 const changes = diffBuffers(oldBuffer, newBuffer)
 // Array of { row, col, oldCell, newCell } — only changed cells
@@ -73,18 +73,18 @@ const changes = diffBuffers(oldBuffer, newBuffer)
 ## Mock Timer
 
 ```typescript
-import { createMockTimer } from "@termless/core"
+import { createMockTimer } from "@termless/monorepo"
 
 const timer = createMockTimer()
 timer.setTimeout(fn, 1000)
 timer.advanceTime(1000) // Fires the callback synchronously
-timer.advanceTime(500)  // Partial advance
+timer.advanceTime(500) // Partial advance
 ```
 
 ## Recording & Replay
 
 ```typescript
-import { startRecording, replayRecording } from "@termless/core"
+import { startRecording, replayRecording } from "@termless/monorepo"
 
 // Record a terminal session
 const recording = startRecording(terminal)

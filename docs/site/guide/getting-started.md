@@ -28,8 +28,8 @@ describe("my TUI app", () => {
     term.feed(`Welcome to ${BOLD("MyApp")} v1.0`)
 
     expect(term.screen).toContainText("Welcome to MyApp v1.0")
-    expect(term.cell(0, 11)).toBeBold()      // "M" in "MyApp" is bold
-    expect(term.cell(0, 0)).not.toBeBold()   // "W" in "Welcome" is not
+    expect(term.cell(0, 11)).toBeBold() // "M" in "MyApp" is bold
+    expect(term.cell(0, 0)).not.toBeBold() // "W" in "Welcome" is not
   })
 
   test("renders colored status", () => {
@@ -91,7 +91,7 @@ test("interactive app responds to keypresses", async () => {
 Terminal implements `Symbol.asyncDispose`, so you can use `using` instead of fixtures:
 
 ```typescript
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 import { createXtermBackend } from "@termless/xtermjs"
 
 test("with explicit cleanup", async () => {
@@ -111,5 +111,5 @@ test("with explicit cleanup", async () => {
 
 - [Writing Tests](/guide/writing-tests) -- all matchers and assertion patterns
 - [Terminal API](/api/terminal) -- complete Terminal method reference
-- [Screenshots](/guide/screenshots) -- SVG screenshot capture
+- [Screenshots](/guide/screenshots) -- SVG & PNG screenshot capture
 - [Multi-Backend Testing](/guide/multi-backend) -- test against multiple backends

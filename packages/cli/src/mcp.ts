@@ -2,7 +2,7 @@
  * termless MCP Server — terminal session management over MCP stdio.
  *
  * Same 8 tools as the playwright-tty MCP server, but backed by termless
- * (xterm.js headless + Bun PTY). No Chromium dependency — screenshots are SVG.
+ * (xterm.js headless + Bun PTY). No Chromium dependency — screenshots are SVG or PNG.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
@@ -165,27 +165,46 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // screenshot — SVG screenshot
+  // screenshot — SVG or PNG screenshot
   server.registerTool(
     "screenshot",
     {
-      description: "Capture an SVG screenshot of the terminal (no browser needed)",
+      description: "Capture a screenshot of the terminal (SVG or PNG, no browser needed)",
       inputSchema: {
         sessionId: z.string().describe("Session ID"),
-        outputPath: z.string().optional().describe("File path to save SVG (returns inline if omitted)"),
+        outputPath: z
+          .string()
+          .optional()
+          .describe("File path to save screenshot (PNG if .png extension, otherwise SVG)"),
+        format: z
+          .enum(["svg", "png"])
+          .default("svg")
+          .describe("Output format (default: svg). When outputPath is set, format is detected from extension."),
       },
     },
     safeTool(async (args) => {
       const terminal = sessions.getSession(args.sessionId)
-      const svg = terminal.screenshotSvg()
+      const isPng = args.format === "png" || args.outputPath?.endsWith(".png")
 
       if (args.outputPath) {
         const { writeFile } = await import("node:fs/promises")
-        await writeFile(args.outputPath, svg, "utf-8")
-        return textResult({ saved: args.outputPath, size: svg.length })
+        if (isPng) {
+          const png = await terminal.screenshotPng()
+          await writeFile(args.outputPath, png)
+        } else {
+          const svg = terminal.screenshotSvg()
+          await writeFile(args.outputPath, svg, "utf-8")
+        }
+        return textResult({ saved: args.outputPath, format: isPng ? "png" : "svg" })
       }
 
-      return { content: [{ type: "text", text: svg }] }
+      if (isPng) {
+        const png = await terminal.screenshotPng()
+        const base64 = Buffer.from(png).toString("base64")
+        return { content: [{ type: "image", data: base64, mimeType: "image/png" }] }
+      }
+
+      return { content: [{ type: "text", text: terminal.screenshotSvg() }] }
     }),
   )
 

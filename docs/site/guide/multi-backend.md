@@ -75,7 +75,7 @@ export default [
 ```typescript
 // test/my-app.test.ts
 import { test, expect } from "vitest"
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 import "@termless/test/matchers" // Needed when using createTerminal directly (auto-registered with createTerminalFixture)
 
 function createTerm(cols = 80, rows = 24) {

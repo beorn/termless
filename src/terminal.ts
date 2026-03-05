@@ -9,6 +9,7 @@ import type {
   Cell,
   CellView,
   CursorState,
+  PngScreenshotOptions,
   RegionView,
   RowView,
   ScrollbackState,
@@ -22,6 +23,7 @@ import type {
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
 import { screenshotSvg } from "./svg.ts"
+import { screenshotPng } from "./png.ts"
 import {
   createBufferView,
   createCellView,
@@ -55,7 +57,7 @@ const encoder = new TextEncoder()
  * - Sending key presses and typed text to the PTY
  * - Waiting for terminal content to appear or stabilize
  * - Searching terminal text
- * - Taking SVG screenshots
+ * - Taking SVG and PNG screenshots
  */
 export function createTerminal(options: TerminalCreateOptions): Terminal {
   const { backend, scrollbackLimit } = options
@@ -225,6 +227,10 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return screenshotSvg(terminal, svgOptions)
   }
 
+  function screenshotAsPng(pngOptions?: PngScreenshotOptions): Promise<Uint8Array> {
+    return screenshotPng(terminal, pngOptions)
+  }
+
   // ── Resize ──
 
   function resize(newCols: number, newRows: number): void {
@@ -336,6 +342,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
     // Screenshot
     screenshotSvg: screenshot,
+    screenshotPng: screenshotAsPng,
 
     // Resize
     resize,

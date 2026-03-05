@@ -16,25 +16,26 @@ bunx termless capture --command "ls -la" --text
 
 ## `termless capture`
 
-One-shot terminal capture: start a process, optionally send keypresses, capture text and/or SVG screenshot.
+One-shot terminal capture: start a process, optionally send keypresses, capture text and/or screenshot (SVG or PNG).
 
 ```bash
 termless capture --command "ls -la" --text
 termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.svg --text
+termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.png      # PNG
 ```
 
 ### Options
 
-| Option                | Description                                      | Default     |
-| --------------------- | ------------------------------------------------ | ----------- |
-| `--command <cmd>`     | Command to run (required, split on spaces)       | --          |
-| `--keys <keys>`       | Comma-separated key names to press after startup | --          |
-| `--wait-for <text>`   | Wait for this text before pressing keys          | any content |
-| `--screenshot <path>` | Save SVG screenshot to this path                 | --          |
-| `--text`              | Print terminal text to stdout                    | off         |
-| `--cols <n>`          | Terminal columns                                 | `120`       |
-| `--rows <n>`          | Terminal rows                                    | `40`        |
-| `--timeout <ms>`      | Wait timeout in milliseconds                     | `5000`      |
+| Option                | Description                                           | Default     |
+| --------------------- | ----------------------------------------------------- | ----------- |
+| `--command <cmd>`     | Command to run (required, split on spaces)            | --          |
+| `--keys <keys>`       | Comma-separated key names to press after startup      | --          |
+| `--wait-for <text>`   | Wait for this text before pressing keys               | any content |
+| `--screenshot <path>` | Save screenshot (SVG or PNG, detected from extension) | --          |
+| `--text`              | Print terminal text to stdout                         | off         |
+| `--cols <n>`          | Terminal columns                                      | `120`       |
+| `--rows <n>`          | Terminal rows                                         | `40`        |
+| `--timeout <ms>`      | Wait timeout in milliseconds                          | `5000`      |
 
 ### Examples
 
@@ -42,10 +43,15 @@ termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.svg
 # Capture text output of a command
 termless capture --command "ls -la" --wait-for "total" --text
 
-# Screenshot a TUI app after navigation
+# Screenshot a TUI app after navigation (SVG)
 termless capture --command "bun km view /path" \
   --keys "j,j,Enter" \
   --screenshot /tmp/km.svg
+
+# Screenshot as PNG (detected from .png extension)
+termless capture --command "bun km view /path" \
+  --keys "j,j,Enter" \
+  --screenshot /tmp/km.png
 
 # Wide terminal with long timeout
 termless capture --command "htop" \
@@ -99,7 +105,7 @@ The MCP server exposes tools for:
 - Creating terminal sessions with spawned processes
 - Sending keypresses and typed text
 - Reading terminal text
-- Taking SVG screenshots
+- Taking SVG or PNG screenshots
 - Managing multiple concurrent sessions
 
 ### Claude Code Integration

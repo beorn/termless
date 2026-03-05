@@ -10,14 +10,14 @@ Built alongside [inkx](https://github.com/beorn/inkx), a React TUI framework, bu
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
 - **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
-- **SVG screenshots** -- no Chromium, no native deps
+- **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
 
 ## Quick Start
 
 ```typescript
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
@@ -26,8 +26,8 @@ const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 
 term.feed(GREEN("● API online"))
 
 // String matching sees text. termless sees everything.
-term.screen.getText()  // "● API online"
-term.cell(0, 0).fg     // { r: 0, g: 255, b: 0 } — the color getText() can't see
+term.screen.getText() // "● API online"
+term.cell(0, 0).fg // { r: 0, g: 255, b: 0 } — the color getText() can't see
 
 await term.close()
 ```
@@ -46,6 +46,7 @@ console.log(term.row(0).getText()) // first row
 console.log(term.lastRow().getText()) // last row
 
 const svg = term.screenshotSvg()
+const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
 await term.close()
 ```
 
@@ -60,6 +61,8 @@ const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
 
 test("inspect what string matching can't see", () => {
+  // Creates an xterm.js terminal by default. Ghostty, Alacritty, WezTerm, vt100,
+  // and Peekaboo backends are also available — see Multi-Backend Testing below.
   const term = createTerminalFixture({ cols: 40, rows: 3 })
 
   // Simulate a build pipeline — 4 lines overflow a 3-row terminal
@@ -69,14 +72,14 @@ test("inspect what string matching can't see", () => {
   term.feed("Step 4: deploy")
 
   // Region selectors — screen, scrollback, buffer
-  expect(term.scrollback).toContainText("install")  // scrolled off, still in history
-  expect(term.screen).toContainText("deploy")        // visible area
-  expect(term.buffer).toContainText("install")       // everything (scrollback + screen)
+  expect(term.scrollback).toContainText("install") // scrolled off, still in history
+  expect(term.screen).toContainText("deploy") // visible area
+  expect(term.buffer).toContainText("install") // everything (scrollback + screen)
   expect(term.row(0)).toHaveText("Step 2: build ok") // specific row
 
   // Cell styles — colors that getText() can't see
   expect(term.cell(0, 8)).toHaveFg("#00ff00") // "build ok" is green
-  expect(term.cell(1, 8)).toBeBold()          // "test" is bold
+  expect(term.cell(1, 8)).toBeBold() // "test" is bold
 
   // Scroll up, then assert on viewport
   term.backend.scrollViewport(1)
@@ -85,6 +88,13 @@ test("inspect what string matching can't see", () => {
   // Resize — verify content survives
   term.resize(20, 3)
   expect(term.screen).toContainText("deploy")
+
+  // Terminal state — window title, cursor, modes
+  term.feed("\x1b]2;Build Pipeline\x07") // OSC 2 — set window title
+  expect(term).toHaveTitle("Build Pipeline")
+  expect(term).toHaveCursorAt(14, 2) // after "Step 4: deploy"
+  expect(term).toBeInMode("autoWrap") // default mode
+  expect(term).not.toBeInMode("altScreen") // not in alternate screen
 })
 ```
 
@@ -172,6 +182,7 @@ expect(term).toHaveTitle("My App")
 
 ```bash
 bun add -d @termless/test                   # Vitest matchers + fixtures (includes xterm.js backend)
+bun add -d @resvg/resvg-js                  # Optional: PNG screenshot support
 ```
 
 ## Multi-Backend Testing
@@ -208,8 +219,11 @@ Your tests use `globalThis.createBackend()` and run against every configured bac
 # Capture terminal output as text
 termless capture --command "ls -la" --wait-for "total" --text
 
-# Capture with keypresses and SVG screenshot
+# Capture as SVG screenshot
 termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.svg
+
+# Capture as PNG screenshot (detected from .png extension)
+termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.png
 
 # Options
 termless capture --command "my-app" \
@@ -239,17 +253,17 @@ termless mcp
 
 ## Packages
 
-| Package                                   | Description                                                     |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| [termless](.)                             | Core: Terminal, PTY, SVG screenshots, key mapping, region views |
-| [@termless/xtermjs](packages/xtermjs)     | xterm.js backend (`@xterm/headless`)                            |
-| [@termless/ghostty](packages/ghostty)     | Ghostty backend (`ghostty-web` WASM)                            |
-| [@termless/vt100](packages/vt100)         | Pure TypeScript VT100 emulator (zero native deps)               |
-| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs)            |
-| [@termless/wezterm](packages/wezterm)     | WezTerm backend (`wezterm-term` via napi-rs)                    |
-| [@termless/peekaboo](packages/peekaboo)   | OS-level terminal automation (xterm.js + real app)              |
-| [@termless/test](packages/viterm)         | Vitest matchers, fixtures, and snapshot serializer              |
-| [@termless/cli](packages/cli)             | CLI (`termless capture`) + MCP server (`termless mcp`)          |
+| Package                                   | Description                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| [termless](.)                             | Core: Terminal, PTY, SVG/PNG screenshots, key mapping, region views |
+| [@termless/xtermjs](packages/xtermjs)     | xterm.js backend (`@xterm/headless`)                                |
+| [@termless/ghostty](packages/ghostty)     | Ghostty backend (`ghostty-web` WASM)                                |
+| [@termless/vt100](packages/vt100)         | Pure TypeScript VT100 emulator (zero native deps)                   |
+| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs)                |
+| [@termless/wezterm](packages/wezterm)     | WezTerm backend (`wezterm-term` via napi-rs)                        |
+| [@termless/peekaboo](packages/peekaboo)   | OS-level terminal automation (xterm.js + real app)                  |
+| [@termless/test](packages/viterm)         | Vitest matchers, fixtures, and snapshot serializer                  |
+| [@termless/cli](packages/cli)             | CLI (`termless capture`) + MCP server (`termless mcp`)              |
 
 ## How termless Compares
 
@@ -262,7 +276,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 | **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |
-| **SVG screenshots**       | ✅                                       | ❌                      | ❌               | ❌           | ❌      | ❌      | ❌  |
+| **SVG & PNG screenshots** | ✅                                       | ❌                      | ❌               | ❌           | ❌      | ❌      | ❌  |
 | **No browser/Chromium**   | ✅                                       | ❌ needs Chromium       | ✅               | ✅           | ✅      | ✅      | ✅  |
 | **Framework-agnostic**    | ✅                                       | ✅                      | ✅               | ✅           | ✅      | ❌      | ❌  |
 | **TypeScript**            | ✅                                       | ✅                      | ✅               | ❌           | ❌      | ❌      | ✅  |
@@ -274,7 +288,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 - [Getting Started](https://beorn.github.io/termless/guide/getting-started) -- install, first test, run it
 - [Writing Tests](https://beorn.github.io/termless/guide/writing-tests) -- matchers, fixtures, assertion patterns
 - [Terminal API](https://beorn.github.io/termless/api/terminal) -- `createTerminal()` and all Terminal methods
-- [Screenshots](https://beorn.github.io/termless/guide/screenshots) -- SVG screenshots, themes, custom fonts
+- [Screenshots](https://beorn.github.io/termless/guide/screenshots) -- SVG & PNG screenshots, themes, custom fonts
 - [Multi-Backend Testing](https://beorn.github.io/termless/guide/multi-backend) -- test against any backend
 - [CLI & MCP](https://beorn.github.io/termless/guide/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://beorn.github.io/termless/api/terminal) | [Backend](https://beorn.github.io/termless/api/backend) | [Cell & Types](https://beorn.github.io/termless/api/cell) | [Matchers](https://beorn.github.io/termless/api/matchers)

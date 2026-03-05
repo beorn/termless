@@ -4,8 +4,11 @@
  *
  * @example
  * ```bash
- * # Capture text + SVG screenshot
+ * # Capture SVG screenshot
  * termless capture --command "bun km view /path" --keys "j,j,Enter" --screenshot /tmp/out.svg --text
+ *
+ * # Capture PNG screenshot (detected from .png extension)
+ * termless capture --command "bun km view /path" --keys "j,j,Enter" --screenshot /tmp/out.png
  *
  * # Text-only
  * termless capture --command "ls -la" --wait-for "total" --text
@@ -37,7 +40,7 @@ program
   .requiredOption("--command <cmd>", "Command to run (split on spaces)")
   .option("--keys <keys>", "Comma-separated key names to press")
   .option("--wait-for <text>", "Wait for text before pressing keys (default: any content)")
-  .option("--screenshot <path>", "Save SVG screenshot to path")
+  .option("--screenshot <path>", "Save screenshot to path (SVG or PNG, detected from extension)")
   .option("--text", "Print terminal text to stdout")
   .option("--cols <n>", "Terminal columns", "120")
   .option("--rows <n>", "Terminal rows", "40")
@@ -70,11 +73,16 @@ program
         await terminal.waitForStable(200, timeout)
       }
 
-      // Save SVG screenshot if requested
+      // Save screenshot if requested (PNG if .png extension, otherwise SVG)
       if (opts.screenshot) {
-        const svg = terminal.screenshotSvg()
         const { writeFile } = await import("node:fs/promises")
-        await writeFile(opts.screenshot, svg, "utf-8")
+        if (opts.screenshot.endsWith(".png")) {
+          const png = await terminal.screenshotPng()
+          await writeFile(opts.screenshot, png)
+        } else {
+          const svg = terminal.screenshotSvg()
+          await writeFile(opts.screenshot, svg, "utf-8")
+        }
         console.error(`Screenshot saved: ${opts.screenshot}`)
       }
 

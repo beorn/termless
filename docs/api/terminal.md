@@ -1,8 +1,8 @@
 # API: Terminal
 
 ```typescript
-import { createTerminal } from "@termless/core"
-import type { Terminal, TerminalCreateOptions } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
+import type { Terminal, TerminalCreateOptions } from "@termless/monorepo"
 ```
 
 ## `createTerminal(options: TerminalCreateOptions): Terminal`
@@ -64,6 +64,7 @@ interface Terminal extends TerminalReadable {
 
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
+  screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
@@ -173,7 +174,7 @@ interface SpawnOptions {
 ## Key Utilities
 
 ```typescript
-import { parseKey, keyToAnsi } from "@termless/core"
+import { parseKey, keyToAnsi } from "@termless/monorepo"
 
 // Parse "Ctrl+a" -> { key: "a", ctrl: true }
 const desc = parseKey("Ctrl+Shift+ArrowUp")
@@ -188,8 +189,8 @@ const ansi = keyToAnsi({ key: "ArrowUp", ctrl: true }) // "\x1b[1;5A"
 Type-safe extension check for backend capabilities:
 
 ```typescript
-import { hasExtension } from "@termless/core"
-import type { MouseEncodingExtension } from "@termless/core"
+import { hasExtension } from "@termless/monorepo"
+import type { MouseEncodingExtension } from "@termless/monorepo"
 
 if (hasExtension<MouseEncodingExtension>(backend, "mouse")) {
   const encoded = backend.encodeMouse({ x: 5, y: 10, button: "left", action: "press" })

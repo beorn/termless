@@ -10,7 +10,7 @@
   "author": "Beorn",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beorn/termless",
+    "url": "https://github.com/beorn/termless.git",
     "directory": "packages/cli"
   },
   "bin": {
@@ -24,8 +24,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "@resvg/resvg-js": "^2.6.0",
     "commander": "^13.0.0",
     "zod": "^3.24.0"
   },

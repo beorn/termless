@@ -18,7 +18,7 @@
   "author": "Beorn",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beorn/termless"
+    "url": "https://github.com/beorn/termless.git"
   },
   "workspaces": [
     "packages/*"
@@ -33,7 +33,11 @@
   "module": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./svg": "./src/svg.ts"
+    "./svg": "./src/svg.ts",
+    "./png": "./src/png.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "vitest run",
@@ -44,7 +48,10 @@
     "docs:build": "vitepress build docs/site",
     "docs:preview": "vitepress preview docs/site",
     "cli": "bun packages/cli/src/cli.ts",
-    "matrix": "bun packages/cli/src/cli.ts matrix"
+    "matrix": "bun packages/cli/src/cli.ts matrix",
+    "publish:all": "bun run publish:core && bun run publish:packages",
+    "publish:core": "npm publish",
+    "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
@@ -53,6 +60,9 @@
     "vitepress": "^1.5.0",
     "vitepress-plugin-llms": "^1.0.0",
     "vitest": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
     "bun": ">=1.0.0"

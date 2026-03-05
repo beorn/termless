@@ -1,0 +1,21 @@
+# Tests
+tests/
+packages/*/tests/
+
+# Documentation site
+docs/
+
+# Development config
+.github/
+.githooks/
+.claude/
+vitest.config.ts
+tsconfig.json
+bun.lock
+
+# Build artifacts
+node_modules/
+dist/
+
+# Packages (published separately)
+packages/

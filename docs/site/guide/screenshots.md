@@ -1,17 +1,18 @@
-# SVG Screenshots
+# Screenshots
 
-termless generates SVG screenshots from terminal state -- no Chromium, no native dependencies. SVGs render text, colors, bold/italic/underline/strikethrough, cursor, and background colors.
+termless generates screenshots from terminal state -- no Chromium needed. SVG is built-in with zero dependencies. PNG is available via optional `@resvg/resvg-js`.
 
 ## Basic Usage
 
 ```typescript
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
 term.feed("\x1b[1;38;2;255;85;85mError:\x1b[0m file not found")
 
 const svg = term.screenshotSvg()
+const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
 ```
 
 ## Saving to File
@@ -19,8 +20,13 @@ const svg = term.screenshotSvg()
 ```typescript
 import { writeFile } from "node:fs/promises"
 
+// SVG
 const svg = term.screenshotSvg()
 await writeFile("/tmp/terminal.svg", svg, "utf-8")
+
+// PNG (requires @resvg/resvg-js)
+const png = await term.screenshotPng()
+await writeFile("/tmp/terminal.png", png)
 ```
 
 ## Options
@@ -59,14 +65,33 @@ const svg = term.screenshotSvg({
 | `cursor`     | `string`                 | `"#aeafad"` | Cursor color                         |
 | `palette`    | `Record<number, string>` | --          | Override ANSI palette colors (0-255) |
 
-## Standalone Function
+## PNG Options
 
-You can also use `screenshotSvg()` directly on any `TerminalReadable`:
+`screenshotPng()` accepts a `PngScreenshotOptions` object (extends `SvgScreenshotOptions` with an additional `scale` option):
+
+```typescript
+const png = await term.screenshotPng({
+  scale: 2, // default: 2 (retina-quality)
+  theme: { background: "#282a36" },
+})
+```
+
+| Option  | Type     | Default | Description                           |
+| ------- | -------- | ------- | ------------------------------------- |
+| `scale` | `number` | `2`     | Render scale factor (1 = actual size) |
+
+All `SvgScreenshotOptions` (`fontFamily`, `fontSize`, `cellWidth`, `cellHeight`, `theme`) are also accepted.
+
+## Standalone Functions
+
+You can also use the screenshot functions directly on any `TerminalReadable`:
 
 ```typescript
 import { screenshotSvg } from "termless/svg"
+import { screenshotPng } from "termless/png"
 
 const svg = screenshotSvg(term, { theme: { background: "#000" } })
+const png = await screenshotPng(term, { scale: 3 })
 ```
 
 ## What Gets Rendered

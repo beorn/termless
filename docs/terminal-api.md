@@ -5,7 +5,7 @@
 Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
-import { createTerminal } from "@termless/core"
+import { createTerminal } from "@termless/monorepo"
 
 const term = createTerminal({
   cols: 80, // default: 80
@@ -204,6 +204,15 @@ Capture the terminal as an SVG string. See [Screenshots](screenshots.md) for opt
 ```typescript
 const svg = term.screenshotSvg()
 const svg = term.screenshotSvg({ theme: { background: "#282a36" } })
+```
+
+### `screenshotPng(options?)`
+
+Capture the terminal as a PNG buffer. Requires `@resvg/resvg-js` (`bun add -d @resvg/resvg-js`). See [Screenshots](screenshots.md) for options.
+
+```typescript
+const png = await term.screenshotPng()
+const png = await term.screenshotPng({ scale: 3, theme: { background: "#282a36" } })
 ```
 
 ## Resize

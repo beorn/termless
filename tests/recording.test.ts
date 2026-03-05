@@ -67,6 +67,7 @@ function createMockTerminal(): Terminal & { fedData: string[] } {
     find: () => null,
     findAll: () => [],
     screenshotSvg: () => "",
+    screenshotPng: async () => new Uint8Array(),
     resize: () => {},
     close: async () => {},
     [Symbol.asyncDispose]: async () => {},

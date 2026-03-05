@@ -5,6 +5,7 @@ export type {
   CursorStyle,
   KeyDescriptor,
   MouseEvent,
+  PngScreenshotOptions,
   RegionView,
   RGB,
   RowView,
@@ -26,6 +27,7 @@ export type {
 export { hasExtension } from "./types.ts"
 export { createTerminal } from "./terminal.ts"
 export { screenshotSvg } from "./svg.ts"
+export { screenshotPng } from "./png.ts"
 export { parseKey, keyToAnsi } from "./key-mapping.ts"
 export { encodeKeyToAnsi } from "./key-encoding.ts"
 export { createCellView, createRegionView, createRowView } from "./views.ts"

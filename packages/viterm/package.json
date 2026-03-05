@@ -1,7 +1,7 @@
 {
   "name": "@termless/test",
   "version": "0.1.0",
-  "description": "Vitest integration for termless (@termless/test) — terminal matchers, fixtures, and snapshots",
+  "description": "Vitest integration for termless — terminal matchers, fixtures, and snapshots",
   "homepage": "https://github.com/beorn/termless",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
@@ -10,7 +10,7 @@
   "author": "Beorn",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beorn/termless",
+    "url": "https://github.com/beorn/termless.git",
     "directory": "packages/viterm"
   },
   "files": [
@@ -22,6 +22,9 @@
     ".": "./src/index.ts",
     "./matchers": "./src/matchers.ts",
     "./fixture": "./src/fixture.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "@termless/core": "*",

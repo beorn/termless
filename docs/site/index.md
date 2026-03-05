@@ -27,8 +27,8 @@ features:
     title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - icon: "\U0001F5BC\uFE0F"
-    title: SVG Screenshots
-    details: "Generate terminal screenshots as SVG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered."
+    title: SVG & PNG Screenshots
+    details: "Generate terminal screenshots as SVG or PNG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered. PNG via optional @resvg/resvg-js."
   - icon: "\U0001F527"
     title: CLI + MCP
     details: "termless capture for scripts, termless mcp for AI agents. Automate terminal interaction from the command line."
@@ -49,6 +49,8 @@ const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
 
 test("inspect what string matching can't see", () => {
+  // Creates an xterm.js terminal by default. Ghostty, Alacritty, WezTerm, vt100,
+  // and Peekaboo backends are also available — see Multi-Backend Testing below.
   const term = createTerminalFixture({ cols: 40, rows: 3 })
 
   // Simulate a build pipeline — 4 lines overflow a 3-row terminal
@@ -58,14 +60,14 @@ test("inspect what string matching can't see", () => {
   term.feed("Step 4: deploy")
 
   // Region selectors — screen, scrollback, buffer
-  expect(term.scrollback).toContainText("install")  // scrolled off, still in history
-  expect(term.screen).toContainText("deploy")        // visible area
-  expect(term.buffer).toContainText("install")       // everything (scrollback + screen)
+  expect(term.scrollback).toContainText("install") // scrolled off, still in history
+  expect(term.screen).toContainText("deploy") // visible area
+  expect(term.buffer).toContainText("install") // everything (scrollback + screen)
   expect(term.row(0)).toHaveText("Step 2: build ok") // specific row
 
   // Cell styles — colors that getText() can't see
   expect(term.cell(0, 8)).toHaveFg("#00ff00") // "build ok" is green
-  expect(term.cell(1, 8)).toBeBold()          // "test" is bold
+  expect(term.cell(1, 8)).toBeBold() // "test" is bold
 
   // Scroll up, then assert on viewport
   term.backend.scrollViewport(1)
@@ -74,6 +76,13 @@ test("inspect what string matching can't see", () => {
   // Resize — verify content survives
   term.resize(20, 3)
   expect(term.screen).toContainText("deploy")
+
+  // Terminal state — window title, cursor, modes
+  term.feed("\x1b]2;Build Pipeline\x07") // OSC 2 — set window title
+  expect(term).toHaveTitle("Build Pipeline")
+  expect(term).toHaveCursorAt(14, 2) // after "Step 4: deploy"
+  expect(term).toBeInMode("autoWrap") // default mode
+  expect(term).not.toBeInMode("altScreen") // not in alternate screen
 })
 ```
 
@@ -102,17 +111,17 @@ expect(term).toHaveTitle("my-app")
 
 ## Packages
 
-| Package               | Description                                                         |
-| --------------------- | ------------------------------------------------------------------- |
-| `termless`            | Core: Terminal API, PTY, SVG screenshots, key mapping, region views |
-| `@termless/xtermjs`   | xterm.js backend via `@xterm/headless`                              |
-| `@termless/ghostty`   | Ghostty backend via `ghostty-web` WASM                              |
-| `@termless/vt100`     | Pure TypeScript VT100 emulator, zero native deps                    |
-| `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs)                |
-| `@termless/wezterm`   | WezTerm backend via `wezterm-term` (napi-rs)                        |
-| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                  |
-| `@termless/test`      | Vitest integration: 25+ matchers, fixtures, snapshot serializer     |
-| `@termless/cli`       | CLI tools + MCP server for AI agents                                |
+| Package               | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| `termless`            | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
+| `@termless/xtermjs`   | xterm.js backend via `@xterm/headless`                                  |
+| `@termless/ghostty`   | Ghostty backend via `ghostty-web` WASM                                  |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator, zero native deps                        |
+| `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs)                    |
+| `@termless/wezterm`   | WezTerm backend via `wezterm-term` (napi-rs)                            |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                      |
+| `@termless/test`      | Vitest integration: 25+ matchers, fixtures, snapshot serializer         |
+| `@termless/cli`       | CLI tools + MCP server for AI agents                                    |
 
 ## How It Compares
 
@@ -124,7 +133,7 @@ expect(term).toHaveTitle("my-app")
 | Multi-backend         | 6 terminal emulators                  | N/A                   | 3 browsers     |
 | Protocol capabilities | Kitty, sixel, OSC 8, reflow           | None                  | N/A            |
 | Wide char support     | Cell-level width tracking             | Broken                | N/A            |
-| Screenshots           | SVG (no deps)                         | None                  | PNG (Chromium) |
+| Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |
 | PTY support           | Spawn real processes                  | Manual                | N/A            |
 | AI integration        | MCP server                            | None                  | None           |
 

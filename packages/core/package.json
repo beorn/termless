@@ -1,14 +1,32 @@
 {
   "name": "@termless/core",
   "version": "0.1.0",
-  "description": "Headless terminal library for cross-terminal TUI testing",
+  "description": "Headless terminal library for cross-terminal TUI testing — core types and API",
+  "homepage": "https://github.com/beorn/termless",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
   "license": "MIT",
   "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/core"
+  },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "module": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./svg": "./src/svg.ts",
     "./key-encoding": "./src/key-encoding.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }
