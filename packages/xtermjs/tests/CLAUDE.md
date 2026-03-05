@@ -35,9 +35,9 @@ backend.destroy()
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/beorn-termless/packages/xtermjs/tests/              # All xtermjs tests
-bun vitest run vendor/beorn-termless/packages/xtermjs/tests/ -t "color"   # Color-related tests
-bun vitest run vendor/beorn-termless/packages/xtermjs/tests/ -t "encode"  # Key encoding tests
+bun vitest run vendor/termless/packages/xtermjs/tests/              # All xtermjs tests
+bun vitest run vendor/termless/packages/xtermjs/tests/ -t "color"   # Color-related tests
+bun vitest run vendor/termless/packages/xtermjs/tests/ -t "encode"  # Key encoding tests
 ```
 
 ## Efficiency

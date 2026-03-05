@@ -61,7 +61,7 @@ cargo build --release
 ### Test
 
 ```bash
-bun vitest run vendor/beorn-termless/packages/alacritty/tests/ --project vendor
+bun vitest run vendor/termless/packages/alacritty/tests/ --project vendor
 ```
 
 ## Usage

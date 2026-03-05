@@ -4,7 +4,7 @@ Headless terminal testing library. Like Playwright, but for terminal apps.
 
 Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
 
-Built alongside [inkx](https://github.com/beorn/inkx), a React TUI framework, but works with any terminal app.
+Built alongside [inkx](https://github.com/beorn/hightea), a React TUI framework, but works with any terminal app.
 
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
@@ -240,7 +240,7 @@ termless capture --command "my-app" \
 All backends are tested for conformance via `cross-backend.test.ts` — text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison. Run with:
 
 ```bash
-bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
+bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor
 ```
 
 ## MCP Server
@@ -295,7 +295,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## See Also
 
-**[inkx](https://github.com/beorn/inkx)** -- if termless is for _testing_ terminal apps, inkx is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — inkx handles the terminal complexity. Use `@termless/test` to verify your inkx app renders correctly across terminals.
+**[inkx](https://github.com/beorn/hightea)** -- if termless is for _testing_ terminal apps, inkx is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — inkx handles the terminal complexity. Use `@termless/test` to verify your inkx app renders correctly across terminals.
 
 ## License
 

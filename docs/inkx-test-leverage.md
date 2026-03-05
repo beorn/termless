@@ -4,7 +4,7 @@ Assessment of where termless can augment or replace inkx's virtual buffer tests.
 
 ## Current State
 
-inkx has ~170 test files in `vendor/beorn-inkx/tests/`. The primary testing approach is virtual buffer testing via `createRenderer` from `inkx/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
+inkx has ~170 test files in `vendor/hightea/tests/`. The primary testing approach is virtual buffer testing via `createRenderer` from `inkx/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
 
 5 files already use termless:
 

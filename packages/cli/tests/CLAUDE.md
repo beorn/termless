@@ -44,9 +44,9 @@ expect(html).toContain("const interval = 250")
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/beorn-termless/packages/cli/tests/              # All CLI tests
-bun vitest run vendor/beorn-termless/packages/cli/tests/cli.test.ts   # Session manager
-bun vitest run vendor/beorn-termless/packages/cli/tests/record.test.ts # Frame recording + slideshow
+bun vitest run vendor/termless/packages/cli/tests/              # All CLI tests
+bun vitest run vendor/termless/packages/cli/tests/cli.test.ts   # Session manager
+bun vitest run vendor/termless/packages/cli/tests/record.test.ts # Frame recording + slideshow
 ```
 
 ## Efficiency

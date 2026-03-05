@@ -95,7 +95,7 @@ inkx operates at a higher level (React component tree → rendered cells), not t
 | [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                          | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
 | [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)                 | Clickable hyperlinks in terminal output.                                               |
 
-See also `vendor/beorn-inkx/docs/reference/terminal-matrix.md` for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
+See also `vendor/hightea/docs/reference/terminal-matrix.md` for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
 
 ## Coordinate Systems
 

@@ -32,7 +32,7 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 ## Commands
 
 ```bash
-bun vitest run vendor/beorn-termless/   # Run all tests
+bun vitest run vendor/termless/   # Run all tests
 ```
 
 ## Code Style

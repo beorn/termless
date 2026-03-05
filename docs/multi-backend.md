@@ -116,7 +116,7 @@ Example of what multi-backend testing catches:
 Cross-backend conformance is verified via `cross-backend.test.ts`, which runs as part of the standard vitest suite. It covers text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison.
 
 ```bash
-bun vitest run vendor/beorn-termless/tests/cross-backend.test.ts --project vendor
+bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor
 ```
 
 ## How termless Compares to Other Matrix Testing
