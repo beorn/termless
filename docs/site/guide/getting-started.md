@@ -17,7 +17,7 @@ Create a test file:
 import { describe, test, expect } from "vitest"
 import { createTerminalFixture } from "@termless/test"
 
-// ANSI helpers — real apps use inkx or chalk, these are just for test data
+// ANSI helpers — real apps use @hightea/term or @hightea/ansi, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
 

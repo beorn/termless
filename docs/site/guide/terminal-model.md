@@ -72,11 +72,11 @@ All modern terminals implement the same underlying buffer model (normal + altern
 | **Contour**          | viewport       | scrollback               | alternate        | Modern terminal with DEC 2026 sync support.                         |
 | **Windows Terminal** | viewport       | scrollback               | alternate screen | Uses ConPTY + its own VT parser.                                    |
 
-### inkx (km) — UI framework layer
+### Hightea (km) — UI framework layer
 
-inkx operates at a higher level (React component tree → rendered cells), not terminal emulation:
+Hightea operates at a higher level (React component tree → rendered cells), not terminal emulation:
 
-| Concept           | inkx term             | Notes                                                     |
+| Concept           | hightea term             | Notes                                                     |
 | ----------------- | --------------------- | --------------------------------------------------------- |
 | Visible area      | `board.screen`        | The rendered component tree output                        |
 | Scroll position   | viewport offset       | In ScrollbackView, VirtualView, VirtualList               |
@@ -102,9 +102,9 @@ See also `vendor/hightea/docs/reference/terminal-matrix.md` for the full capabil
 - **termless**: `(row, col)` — row-first, 0-based. Matches terminal tradition (ANSI sequences are row-first: `\x1b[row;colH`).
 - **Ghostty**: 4 coordinate systems (viewport, screen, scrollback, absolute), all row-first.
 - **xterm.js**: `(y, x)` — row-first internally (`IBufferLine`).
-- **inkx**: `(x, y)` — column-first, matching CSS/DOM convention (`left`, `top`).
+- **Hightea**: `(x, y)` — column-first, matching CSS/DOM convention (`left`, `top`).
 
-inkx keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
+Hightea keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
 
 ## Cell
 
