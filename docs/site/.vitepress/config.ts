@@ -10,15 +10,15 @@ export default defineConfig({
     ],
   },
 
-  title: "termless",
+  title: "Termless",
   description:
     "Headless terminal testing — like Playwright, but for terminal apps. Write tests once, run against any backend.",
-  base: "/termless/",
+  base: "/",
 
-  head: [["link", { rel: "icon", href: "/termless/favicon.ico" }]],
+  head: [["link", { rel: "icon", href: "/favicon.ico" }]],
 
   themeConfig: {
-    siteTitle: "termless",
+    siteTitle: "Termless",
 
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
@@ -27,7 +27,7 @@ export default defineConfig({
         text: "Advanced",
         items: [
           { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-          { text: "inkx Integration", link: "/advanced/inkx-integration" },
+          { text: "Hightea Integration", link: "/advanced/inkx-integration" },
         ],
       },
       {
@@ -65,7 +65,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-            { text: "inkx Integration", link: "/advanced/inkx-integration" },
+            { text: "Hightea Integration", link: "/advanced/inkx-integration" },
           ],
         },
       ],
@@ -94,7 +94,7 @@ export default defineConfig({
           text: "Advanced",
           items: [
             { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-            { text: "inkx Integration", link: "/advanced/inkx-integration" },
+            { text: "Hightea Integration", link: "/advanced/inkx-integration" },
           ],
         },
         {
