@@ -76,7 +76,7 @@ All modern terminals implement the same underlying buffer model (normal + altern
 
 Hightea operates at a higher level (React component tree → rendered cells), not terminal emulation:
 
-| Concept           | hightea term             | Notes                                                     |
+| Concept           | hightea term          | Notes                                                     |
 | ----------------- | --------------------- | --------------------------------------------------------- |
 | Visible area      | `board.screen`        | The rendered component tree output                        |
 | Scroll position   | viewport offset       | In ScrollbackView, VirtualView, VirtualList               |
