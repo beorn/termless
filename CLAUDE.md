@@ -1,4 +1,4 @@
-# termless - Headless Terminal Library
+# Termless - Headless Terminal Library
 
 Pluggable headless terminal library for cross-terminal TUI testing. Composable region selectors + matchers. Write tests once, run against any backend.
 

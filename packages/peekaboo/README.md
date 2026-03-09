@@ -1,10 +1,10 @@
 # @termless/peekaboo
 
-Peekaboo backend for termless -- OS-level terminal control via real terminal apps.
+Peekaboo backend for Termless -- OS-level terminal control via real terminal apps.
 
 ## What is this?
 
-A termless backend that combines:
+A Termless backend that combines:
 
 1. **Data layer**: xterm.js headless backend for fast, accurate cell/text data
 2. **Visual layer**: Real terminal app (Ghostty, iTerm2, etc.) for screenshot-based visual verification

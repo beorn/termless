@@ -1,7 +1,7 @@
 node_modules/
 dist/
-docs/site/.vitepress/cache/
-docs/site/.vitepress/dist/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 .DS_Store
 bun.lockb
 coverage/

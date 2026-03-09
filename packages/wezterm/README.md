@@ -1,6 +1,6 @@
 # @termless/wezterm
 
-WezTerm backend for [termless](../../README.md) — headless terminal emulation using the [wezterm-term](https://crates.io/crates/tattoy-wezterm-term) Rust crate via [napi-rs](https://napi.rs) native bindings.
+WezTerm backend for [Termless](../../README.md) — headless terminal emulation using the [wezterm-term](https://crates.io/crates/tattoy-wezterm-term) Rust crate via [napi-rs](https://napi.rs) native bindings.
 
 ## Why WezTerm?
 
@@ -89,4 +89,4 @@ TypeScript (backend.ts)
               └── wezterm VT parser
 ```
 
-The native module exposes a `WeztermTerminal` class via napi-rs that wraps the Rust `Terminal` struct. The TypeScript layer converts between napi types and the termless `Cell`/`CursorState`/`ScrollbackState` types.
+The native module exposes a `WeztermTerminal` class via napi-rs that wraps the Rust `Terminal` struct. The TypeScript layer converts between napi types and the Termless `Cell`/`CursorState`/`ScrollbackState` types.

@@ -1,6 +1,6 @@
 # Multi-Backend Testing
 
-termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
+Termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
 
 ::: tip Single-backend testing
 If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "@termless/test"` -- it handles the backend automatically.
@@ -116,9 +116,9 @@ Example of what multi-backend testing catches:
 - Unicode/wide character edge cases
 - Escape sequence support differences
 
-## How termless Compares to Other Matrix Testing
+## How Termless Compares to Other Matrix Testing
 
-Matrix testing — running the same tests across multiple implementations — is a well-established pattern. Here's how termless fits in:
+Matrix testing — running the same tests across multiple implementations — is a well-established pattern. Here's how Termless fits in:
 
 | System                               | What it matrices                           | How it works                                                                    | Output                                      |
 | ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------- |
@@ -126,21 +126,21 @@ Matrix testing — running the same tests across multiple implementations — is
 | **Playwright `projects`**            | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             | Per-browser test results                    |
 | **Vitest `workspace`**               | Any axis (backends, configs, environments) | Named projects with different setup files                                       | Per-project test results                    |
 | **BrowserStack / Sauce Labs**        | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            | Compatibility matrix reports                |
-| **termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Vitest assertions that fail on disagreement |
+| **Termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Vitest assertions that fail on disagreement |
 
 ### Key differences
 
-**Playwright** is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Playwright runs tests independently per browser; termless additionally **compares backends side-by-side** in the same test run and produces a diff report. Playwright has no built-in "cross-browser conformance report" — you'd need a custom reporter.
+**Playwright** is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Playwright runs tests independently per browser; Termless additionally **compares backends side-by-side** in the same test run and produces a diff report. Playwright has no built-in "cross-browser conformance report" — you'd need a custom reporter.
 
-**GitHub CI matrix** is infrastructure-level: "does our code build on Linux and macOS?" It varies the environment, not the system under test. termless varies the terminal emulator implementation itself.
+**GitHub CI matrix** is infrastructure-level: "does our code build on Linux and macOS?" It varies the environment, not the system under test. Termless varies the terminal emulator implementation itself.
 
-**BrowserStack/Sauce Labs** are the commercial-scale version of what termless does for terminals. They run thousands of browser combinations and produce compatibility matrices. termless aims to be the open-source equivalent for terminal emulators — currently xterm.js and Ghostty, with WezTerm and Alacritty planned.
+**BrowserStack/Sauce Labs** are the commercial-scale version of what Termless does for terminals. They run thousands of browser combinations and produce compatibility matrices. Termless aims to be the open-source equivalent for terminal emulators — currently xterm.js and Ghostty, with WezTerm and Alacritty planned.
 
-**Vitest workspace** is the underlying mechanism termless uses. Each backend gets a workspace project with its own setup file. The `cross-backend.test.ts` conformance suite adds cross-backend comparison assertions on top.
+**Vitest workspace** is the underlying mechanism Termless uses. Each backend gets a workspace project with its own setup file. The `cross-backend.test.ts` conformance suite adds cross-backend comparison assertions on top.
 
-### What's unique about termless
+### What's unique about Termless
 
-No existing tool does automated cross-terminal-emulator conformance testing. Individual terminals test their own VT parser (Ghostty has vttest, xterm.js has its own suite), but no one feeds the **same sequences through multiple parsers and compares cell-by-cell**. termless is the first cross-terminal conformance testing framework. The long-term vision:
+No existing tool does automated cross-terminal-emulator conformance testing. Individual terminals test their own VT parser (Ghostty has vttest, xterm.js has its own suite), but no one feeds the **same sequences through multiple parsers and compares cell-by-cell**. Termless is the first cross-terminal conformance testing framework. The long-term vision:
 
 1. **Conformance suite**: Shared VT100/ECMA-48 tests all backends must pass
 2. **Auto-generated reports**: Which features are identical, which differ, which are unsupported

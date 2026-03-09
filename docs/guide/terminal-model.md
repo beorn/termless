@@ -45,7 +45,7 @@ Two separate buffers, not regions within one:
 
 ### Core buffer model (well-documented internals)
 
-| Concept          | termless                      | Ghostty                                | Kitty                              | xterm.js                  |
+| Concept          | Termless                      | Ghostty                                | Kitty                              | xterm.js                  |
 | ---------------- | ----------------------------- | -------------------------------------- | ---------------------------------- | ------------------------- |
 | Visible area     | **screen**                    | screen (screen coordinates)            | screen (`@screen`)                 | viewport (viewportY)      |
 | History above    | **scrollback**                | scrollback buffer                      | scrollback / history buffer        | scrollback                |
@@ -82,7 +82,7 @@ Silvery operates at a higher level (React component tree → rendered cells), no
 | Scroll position   | viewport offset       | In ScrollbackView, VirtualView, VirtualList               |
 | Single character  | cell                  | In the output buffer                                      |
 | Alt screen        | fullscreen mode       | `render(<App />, { fullscreen: true })`                   |
-| Coordinate system | `(x, y)` column-first | CSS/DOM convention — different from termless `(row, col)` |
+| Coordinate system | `(x, y)` column-first | CSS/DOM convention — different from Termless `(row, col)` |
 
 ### Standards
 
@@ -99,12 +99,12 @@ See also `vendor/silvery/docs/reference/terminal-matrix.md` for the full capabil
 
 ## Coordinate Systems
 
-- **termless**: `(row, col)` — row-first, 0-based. Matches terminal tradition (ANSI sequences are row-first: `\x1b[row;colH`).
+- **Termless**: `(row, col)` — row-first, 0-based. Matches terminal tradition (ANSI sequences are row-first: `\x1b[row;colH`).
 - **Ghostty**: 4 coordinate systems (viewport, screen, scrollback, absolute), all row-first.
 - **xterm.js**: `(y, x)` — row-first internally (`IBufferLine`).
 - **Silvery**: `(x, y)` — column-first, matching CSS/DOM convention (`left`, `top`).
 
-Silvery keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
+Silvery keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. Termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
 
 ## Cell
 

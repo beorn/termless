@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/site/.vitepress/dist
+          path: docs/.vitepress/dist
 
   deploy:
     environment:

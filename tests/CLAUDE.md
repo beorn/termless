@@ -1,4 +1,4 @@
-# termless Tests
+# Termless Tests
 
 **Layer 0 -- Platform**: Core terminal API, key mapping, SVG screenshot rendering, region views, and full-stack integration.
 

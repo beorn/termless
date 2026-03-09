@@ -1,4 +1,4 @@
-# Contributing to termless
+# Contributing to Termless
 
 ## Getting Started
 
@@ -90,7 +90,7 @@ Create `packages/<name>/` with these files:
 }
 ```
 
-Native dependencies go in `dependencies`. termless core goes in `peerDependencies` as `workspace:*`.
+Native dependencies go in `dependencies`. Termless core goes in `peerDependencies` as `workspace:*`.
 
 > After creating the package directory and `package.json`, run `bun install` from the repo root to wire up workspace dependencies.
 
@@ -166,7 +166,7 @@ const backends: [string, BackendFactory][] = [
 - **`CLAUDE.md`** -- add row to the Packages table and update the Architecture diagram
 - **`CONTRIBUTING.md`** -- add row to the Packages table (below)
 - **`CHANGELOG.md`** -- add a section under the current version
-- **`docs/multi-backend.md`** -- add a setup file example for the new backend
+- **`docs/guide/multi-backend.md`** -- add a setup file example for the new backend
 
 ### TerminalBackend Interface (16 methods + 2 properties)
 
@@ -370,7 +370,7 @@ If your terminal supports Kitty keyboard protocol or other extended encoding, im
 
 #### Color handling
 
-Map the native library's color representation to termless `RGB | null`:
+Map the native library's color representation to Termless `RGB | null`:
 
 - **Default colors → `null`**: The terminal's default fg/bg must map to `null`, not to an RGB value. Cross-backend matchers depend on this.
 - **True color (24-bit)**: Extract R, G, B from the native format.
@@ -406,7 +406,7 @@ Some backends may not expose all modes. Return `false` for modes you can't detec
 
 ### Extension Interfaces
 
-Beyond the core `TerminalBackend`, termless defines optional extension interfaces in `src/types.ts`. If your backend supports any of these, add the extension name to `capabilities.extensions`:
+Beyond the core `TerminalBackend`, Termless defines optional extension interfaces in `src/types.ts`. If your backend supports any of these, add the extension name to `capabilities.extensions`:
 
 | Extension              | Interface                | Capability string |
 | ---------------------- | ------------------------ | ----------------- |

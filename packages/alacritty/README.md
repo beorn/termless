@@ -1,6 +1,6 @@
 # @termless/alacritty
 
-Alacritty backend for [termless](../../) -- headless terminal emulation using
+Alacritty backend for [Termless](../../) -- headless terminal emulation using
 the [alacritty_terminal](https://crates.io/crates/alacritty_terminal) Rust
 crate via [napi-rs](https://napi.rs).
 

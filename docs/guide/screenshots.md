@@ -1,6 +1,6 @@
 # Screenshots
 
-termless generates screenshots from terminal state -- no Chromium needed. SVG is built-in with zero dependencies. PNG is available via optional `@resvg/resvg-js`.
+Termless generates screenshots from terminal state -- no Chromium needed. SVG is built-in with zero dependencies. PNG is available via optional `@resvg/resvg-js`.
 
 ## Basic Usage
 

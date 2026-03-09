@@ -2,7 +2,11 @@
 
 ```typescript
 import { createTerminalFixture } from "@termless/test" // Matchers auto-registered on import
-// or manually:
+
+// Or register manually (e.g., when using createTerminal directly):
+import "@termless/test/matchers"
+
+// Or cherry-pick:
 import { terminalMatchers } from "@termless/test/matchers"
 expect.extend(terminalMatchers)
 ```
