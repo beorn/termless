@@ -27,7 +27,7 @@ export default defineConfig({
         text: "Advanced",
         items: [
           { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-          { text: "Hightea Integration", link: "/advanced/hightea-integration" },
+          { text: "Silvery Integration", link: "/advanced/silvery-integration" },
         ],
       },
       {
@@ -65,7 +65,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-            { text: "Hightea Integration", link: "/advanced/hightea-integration" },
+            { text: "Silvery Integration", link: "/advanced/silvery-integration" },
           ],
         },
       ],
@@ -94,7 +94,7 @@ export default defineConfig({
           text: "Advanced",
           items: [
             { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-            { text: "Hightea Integration", link: "/advanced/hightea-integration" },
+            { text: "Silvery Integration", link: "/advanced/silvery-integration" },
           ],
         },
         {

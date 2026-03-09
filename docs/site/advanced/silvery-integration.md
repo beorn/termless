@@ -1,10 +1,10 @@
-# Hightea Test Leverage Plan: termless Opportunities
+# Silvery Test Leverage Plan: termless Opportunities
 
-Assessment of where termless can augment or replace hightea's virtual buffer tests.
+Assessment of where termless can augment or replace silvery's virtual buffer tests.
 
 ## Current State
 
-Hightea has ~170 test files in `vendor/hightea/tests/`. The primary testing approach is virtual buffer testing via `createRenderer` from `@hightea/term/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
+Silvery has ~170 test files in `vendor/silvery/tests/`. The primary testing approach is virtual buffer testing via `createRenderer` from `@silvery/term/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
 
 5 files already use termless:
 
@@ -14,7 +14,7 @@ Hightea has ~170 test files in `vendor/hightea/tests/`. The primary testing appr
 - `scrollback-list-termless.test.tsx` -- ScrollbackList border integrity in frozen items
 - `scrollback-promotion-termless.test.tsx` -- promotion path border integrity, compaction
 
-These existing termless tests all share the same pattern: take ANSI output from hightea's output phase (or `renderString`/`stdout.write`), feed it to a termless terminal, and verify the result in the real terminal emulator. This catches bugs that string/buffer inspection misses.
+These existing termless tests all share the same pattern: take ANSI output from silvery's output phase (or `renderString`/`stdout.write`), feed it to a termless terminal, and verify the result in the real terminal emulator. This catches bugs that string/buffer inspection misses.
 
 ## Test Categories and Assessment
 
@@ -22,9 +22,9 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Files:** `output.test.ts`, `output-diff-fuzz.test.tsx`, `output-truecolor-diff.test.tsx`, `output-emoji-incremental.test.tsx`, `output-emoji-replay.test.ts`, `output-wide-char-fuzz.test.tsx`, `pipeline.test.ts`, `pipeline/content-phase-clear.test.tsx`, `pipeline/content-phase-scroll-incremental.test.tsx`, `pipeline/cursor-inverse-clear.test.tsx`, `pipeline/virtual-text-dirty-flags.test.tsx`
 
-**Current approach:** Most tests inspect raw ANSI strings (checking for specific escape sequences) or use `replayAnsiWithStyles` (hightea's own ANSI replay function). The fuzz tests compare incremental vs fresh render via `replayAnsiWithStyles`.
+**Current approach:** Most tests inspect raw ANSI strings (checking for specific escape sequences) or use `replayAnsiWithStyles` (silvery's own ANSI replay function). The fuzz tests compare incremental vs fresh render via `replayAnsiWithStyles`.
 
-**termless value: VERY HIGH.** These tests are the #1 leverage opportunity. The existing virtual buffer tests verify that hightea _thinks_ it produced correct output, but the replay is hightea's own code. A termless terminal is independent verification -- if hightea's ANSI is wrong in a way that `replayAnsiWithStyles` also gets wrong (same bug in both), the virtual test passes but the real terminal is garbled. This is exactly the class of bug that `output-termless.test.ts` already catches.
+**termless value: VERY HIGH.** These tests are the #1 leverage opportunity. The existing virtual buffer tests verify that silvery _thinks_ it produced correct output, but the replay is silvery's own code. A termless terminal is independent verification -- if silvery's ANSI is wrong in a way that `replayAnsiWithStyles` also gets wrong (same bug in both), the virtual test passes but the real terminal is garbled. This is exactly the class of bug that `output-termless.test.ts` already catches.
 
 **Approach: AUGMENT.** Keep the fast virtual buffer tests for regression speed. Add termless companion tests for high-risk paths:
 
@@ -62,7 +62,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Current approach:** Virtual buffer comparison (incremental vs fresh render via `compareBuffers`/`assertBuffersMatch`), plain text assertions, ANSI replay via `VirtualTerminal`.
 
-**termless value: HIGH.** The core question is: does the incremental ANSI diff, when applied to a real terminal that already has the previous frame, produce the same result as a fresh render? Currently these tests use hightea's own `VirtualTerminal.applyAnsi()` as the verifier. termless provides independent verification. The `ghost-chars.test.tsx` file specifically notes that "the buffer is correct but the terminal doesn't receive all the necessary updates" -- this is precisely what termless catches.
+**termless value: HIGH.** The core question is: does the incremental ANSI diff, when applied to a real terminal that already has the previous frame, produce the same result as a fresh render? Currently these tests use silvery's own `VirtualTerminal.applyAnsi()` as the verifier. termless provides independent verification. The `ghost-chars.test.tsx` file specifically notes that "the buffer is correct but the terminal doesn't receive all the necessary updates" -- this is precisely what termless catches.
 
 **Approach: AUGMENT.** The virtual buffer tests are fast (~50ms each) and good for CI. Add termless companion tests for the known-problematic scenarios:
 
@@ -98,7 +98,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 **Files:** `scroll-dirty.test.tsx`, `scroll-offscreen-render.test.tsx`, `scroll-visible-range-change.test.tsx`, `scroll-region.test.ts`, `scroll-utils.test.ts`, `strict-scroll-garble.test.tsx`, `strict-virtuallist-garble.test.tsx`, `overflow-hidden-horizontal.test.tsx`, `overflow-position.test.tsx`, `overflow-spurious.test.tsx`
 
-**Current approach:** Virtual buffer comparison, `HIGHTEA_STRICT` mode for incremental vs fresh verification, buffer text assertions.
+**Current approach:** Virtual buffer comparison, `SILVERY_STRICT` mode for incremental vs fresh verification, buffer text assertions.
 
 **termless value: MEDIUM.** Scroll regions (`DECSTBM`) are terminal-dependent. The `scroll-region.test.ts` only checks that correct escape sequences are emitted (mock stdout). termless can verify that scroll region operations (scroll up/down within a region) actually produce the expected terminal state. The garble tests (`strict-scroll-garble`, `strict-virtuallist-garble`) verify buffer consistency but not terminal output.
 
@@ -273,7 +273,7 @@ function createTestTerminal(cols: number, rows: number) {
 test("description", () => {
   const term = createTestTerminal(80, 24)
 
-  // Feed ANSI from hightea's output phase
+  // Feed ANSI from silvery's output phase
   term.feed(enterAlternateScreen())
   term.feed(outputPhase(null, buffer1))
   term.feed(outputPhase(buffer1, buffer2))
@@ -298,6 +298,6 @@ test("description", () => {
 
 ## Key Insight
 
-The existing 5 termless test files already demonstrate the highest-value pattern: they test the **output pipeline** -- the code that converts hightea's internal buffer to ANSI escape sequences. This is where the virtual buffer and the real terminal can diverge. The buffer is correct, but the ANSI generation has a subtle bug, and hightea's own ANSI replay (`replayAnsiWithStyles`) has the same bug, so virtual tests pass while the real terminal is garbled.
+The existing 5 termless test files already demonstrate the highest-value pattern: they test the **output pipeline** -- the code that converts silvery's internal buffer to ANSI escape sequences. This is where the virtual buffer and the real terminal can diverge. The buffer is correct, but the ANSI generation has a subtle bug, and silvery's own ANSI replay (`replayAnsiWithStyles`) has the same bug, so virtual tests pass while the real terminal is garbled.
 
-Every termless test should target this gap: **does the ANSI output, when interpreted by a real terminal, match what hightea's buffer says should be on screen?**
+Every termless test should target this gap: **does the ANSI output, when interpreted by a real terminal, match what silvery's buffer says should be on screen?**

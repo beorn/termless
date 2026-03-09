@@ -72,11 +72,11 @@ All modern terminals implement the same underlying buffer model (normal + altern
 | **Contour**          | viewport       | scrollback               | alternate        | Modern terminal with DEC 2026 sync support.                         |
 | **Windows Terminal** | viewport       | scrollback               | alternate screen | Uses ConPTY + its own VT parser.                                    |
 
-### Hightea (km) — UI framework layer
+### Silvery (km) — UI framework layer
 
-Hightea operates at a higher level (React component tree → rendered cells), not terminal emulation:
+Silvery operates at a higher level (React component tree → rendered cells), not terminal emulation:
 
-| Concept           | hightea term          | Notes                                                     |
+| Concept           | silvery term          | Notes                                                     |
 | ----------------- | --------------------- | --------------------------------------------------------- |
 | Visible area      | `board.screen`        | The rendered component tree output                        |
 | Scroll position   | viewport offset       | In ScrollbackView, VirtualView, VirtualList               |
@@ -95,16 +95,16 @@ Hightea operates at a higher level (React component tree → rendered cells), no
 | [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                          | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
 | [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)                 | Clickable hyperlinks in terminal output.                                               |
 
-See also `vendor/hightea/docs/reference/terminal-matrix.md` for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
+See also `vendor/silvery/docs/reference/terminal-matrix.md` for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
 
 ## Coordinate Systems
 
 - **termless**: `(row, col)` — row-first, 0-based. Matches terminal tradition (ANSI sequences are row-first: `\x1b[row;colH`).
 - **Ghostty**: 4 coordinate systems (viewport, screen, scrollback, absolute), all row-first.
 - **xterm.js**: `(y, x)` — row-first internally (`IBufferLine`).
-- **Hightea**: `(x, y)` — column-first, matching CSS/DOM convention (`left`, `top`).
+- **Silvery**: `(x, y)` — column-first, matching CSS/DOM convention (`left`, `top`).
 
-Hightea keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
+Silvery keeps `(x, y)` because it's a React-like UI framework where CSS conventions are natural. termless keeps `(row, col)` because it's a terminal emulator library. Don't unify — each is correct for its domain.
 
 ## Cell
 
