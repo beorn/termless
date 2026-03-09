@@ -1,8 +1,8 @@
-# termless
+# Termless
 
 Headless terminal testing library. Like Playwright, but for terminal apps.
 
-Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
+Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. Termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
 
 Built alongside [silvery](https://silvery.dev), a React TUI framework, but works with any terminal app.
 
@@ -98,7 +98,7 @@ test("inspect what string matching can't see", () => {
 })
 ```
 
-None of this is possible with `expect(output).toContain("text")`. String matching can't see colors, can't inspect scrollback, can't verify cursor position, can't test resize behavior, and can't query terminal capabilities. termless gives you the full terminal state machine.
+None of this is possible with `expect(output).toContain("text")`. String matching can't see colors, can't inspect scrollback, can't verify cursor position, can't test resize behavior, and can't query terminal capabilities. Termless gives you the full terminal state machine.
 
 **Cross-terminal differences are real.** Emoji width, color palette mapping, scroll region behavior, key encoding, Kitty keyboard protocol support, and hyperlink handling all differ between terminals. Run the same test against xterm.js and Ghostty and you'll find them. The `cross-backend.test.ts` suite runs 120+ conformance tests across all backends, catching differences automatically in CI.
 
@@ -181,8 +181,8 @@ expect(term).toHaveTitle("My App")
 ## Installation
 
 ```bash
-bun add -d @termless/test                   # Vitest matchers + fixtures (includes xterm.js backend)
-bun add -d @resvg/resvg-js                  # Optional: PNG screenshot support
+npm install -D @termless/test               # Vitest matchers + fixtures (includes xterm.js backend)
+npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 ```
 
 ## Multi-Backend Testing
@@ -211,7 +211,7 @@ import { createVt100Backend } from "@termless/vt100"
 globalThis.createBackend = () => createVt100Backend()
 ```
 
-Your tests use `globalThis.createBackend()` and run against every configured backend automatically. `vitest` runs the entire test suite once per workspace entry — same tests, different terminal emulators. See [docs/multi-backend.md](docs/multi-backend.md).
+Your tests use `globalThis.createBackend()` and run against every configured backend automatically. `vitest` runs the entire test suite once per workspace entry — same tests, different terminal emulators. See [docs/guide/multi-backend.md](docs/guide/multi-backend.md).
 
 ## CLI
 
@@ -265,9 +265,9 @@ termless mcp
 | [@termless/test](packages/viterm)         | Vitest matchers, fixtures, and snapshot serializer                  |
 | [@termless/cli](packages/cli)             | CLI (`termless capture`) + MCP server (`termless mcp`)              |
 
-## How termless Compares
+## How Termless Compares
 
-termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
+Termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
 
 | Feature                   | termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
 | ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
@@ -295,7 +295,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## See Also
 
-**[silvery](https://silvery.dev)** -- if termless is for _testing_ terminal apps, silvery is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — silvery handles the terminal complexity. Use `@termless/test` to verify your silvery app renders correctly across terminals.
+**[silvery](https://silvery.dev)** -- if Termless is for _testing_ terminal apps, silvery is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — silvery handles the terminal complexity. Use `@termless/test` to verify your silvery app renders correctly across terminals.
 
 ## License
 
