@@ -41,7 +41,7 @@ backend.destroy()
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/termless/packages/ghostty/tests/ --project vendor
+bun vitest run packages/ghostty/tests/
 ```
 
 ## Efficiency

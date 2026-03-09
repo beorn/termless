@@ -53,11 +53,11 @@ expect(term.cell(0, 0)).toHaveFg("#ff0000")
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/termless/tests/                    # All root tests
-bun vitest run vendor/termless/tests/terminal.test.ts    # Key mapping + Terminal API
-bun vitest run vendor/termless/tests/svg.test.ts         # SVG screenshot renderer
-bun vitest run vendor/termless/tests/integration.test.ts # Full-stack integration
-bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor # Cross-backend conformance
+bun vitest run tests/                    # All root tests
+bun vitest run tests/terminal.test.ts    # Key mapping + Terminal API
+bun vitest run tests/svg.test.ts         # SVG screenshot renderer
+bun vitest run tests/integration.test.ts # Full-stack integration
+bun vitest run tests/cross-backend.test.ts # Cross-backend conformance
 ```
 
 ## Efficiency

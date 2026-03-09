@@ -2,6 +2,19 @@
 
 Pluggable headless terminal library for cross-terminal TUI testing. Composable region selectors + matchers. Write tests once, run against any backend.
 
+## Documentation Site
+
+VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
+
+- **Source**: `docs/` (edit files here)
+- **Config**: `docs/.vitepress/config.ts`
+- **Build**: `bun run docs:build` (runs `vitepress build docs`)
+- **Build output**: `docs/.vitepress/dist/` (gitignored)
+- **Logo**: `docs/public/logo.svg`
+- **CI**: `.github/workflows/docs.yml` — auto-deploys on push to main
+
+**Do NOT create or edit `docs/site/`** — docs live directly in `docs/`.
+
 ## Packages
 
 | Package               | Description                                                                | Status           |
@@ -32,7 +45,7 @@ Pluggable headless terminal library for cross-terminal TUI testing. Composable r
 ## Commands
 
 ```bash
-bun vitest run vendor/termless/   # Run all tests
+bun test   # Run all tests
 ```
 
 ## Code Style

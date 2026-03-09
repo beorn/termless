@@ -5,7 +5,7 @@ Tests for the peekaboo backend require a real terminal environment and are SLOW.
 ## Running
 
 ```bash
-bun vitest run vendor/termless/packages/peekaboo/tests/
+bun vitest run packages/peekaboo/tests/
 ```
 
 ## Test categories

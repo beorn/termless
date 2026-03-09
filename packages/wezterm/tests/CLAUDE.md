@@ -50,7 +50,7 @@ cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node
 ## Ad-Hoc Testing
 
 ```bash
-bun vitest run vendor/termless/packages/wezterm/tests/ --project vendor
+bun vitest run packages/wezterm/tests/
 ```
 
 ## See Also
