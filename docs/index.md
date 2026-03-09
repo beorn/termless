@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "termless"
+  name: "Termless"
   text: "Headless terminal testing"
   tagline: "Like Playwright, but for terminal apps. Write tests once, run against any backend. ~1ms per test."
   actions:
@@ -146,6 +146,14 @@ expect(term).toHaveTitle("my-app")
 | Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |
 | PTY support           | Spawn real processes                  | Manual                | N/A            |
 | AI integration        | MCP server                            | None                  | None           |
+
+## See Also
+
+Termless is part of the [Silvery](https://silvery.dev) ecosystem — libraries for building and testing modern terminal UIs:
+
+- **[Silvery](https://silvery.dev)** -- React framework for terminal UIs (layout feedback, incremental rendering, 23+ components)
+- **[Flexily](https://beorn.github.io/flexily)** -- Pure JS flexbox layout engine (Yoga-compatible, 2.5x faster, zero WASM)
+- **[Loggily](https://beorn.github.io/loggily)** -- Debug + structured logging + tracing in one library
 
 <style>
 :root {
