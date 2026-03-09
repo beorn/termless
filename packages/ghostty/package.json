@@ -2,7 +2,7 @@
   "name": "@termless/ghostty",
   "version": "0.2.0",
   "description": "Ghostty backend for termless — Ghostty's VT parser via WASM",
-  "homepage": "https://github.com/beorn/termless",
+  "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
   },

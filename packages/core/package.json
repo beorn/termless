@@ -2,7 +2,7 @@
   "name": "@termless/core",
   "version": "0.2.0",
   "description": "Headless terminal library for cross-terminal TUI testing — core types and API",
-  "homepage": "https://github.com/beorn/termless",
+  "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
   },

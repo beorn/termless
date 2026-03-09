@@ -2,7 +2,7 @@
   "name": "@termless/peekaboo",
   "version": "0.2.0",
   "description": "Peekaboo backend for termless — OS-level terminal control via real terminal apps",
-  "homepage": "https://github.com/beorn/termless",
+  "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
   },

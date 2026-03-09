@@ -2,7 +2,7 @@
   "name": "@termless/alacritty",
   "version": "0.2.0",
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs",
-  "homepage": "https://github.com/beorn/termless",
+  "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
   },

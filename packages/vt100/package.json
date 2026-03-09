@@ -2,7 +2,7 @@
   "name": "@termless/vt100",
   "version": "0.2.0",
   "description": "Pure TypeScript VT100 backend for termless — lightweight terminal emulator inspired by the Rust vt100 crate",
-  "homepage": "https://github.com/beorn/termless",
+  "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"
   },

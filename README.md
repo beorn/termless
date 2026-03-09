@@ -283,15 +283,15 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## Documentation
 
-**[Full documentation site](https://beorn.github.io/termless/)**
+**[Full documentation site](https://termless.dev/)**
 
-- [Getting Started](https://beorn.github.io/termless/guide/getting-started) -- install, first test, run it
-- [Writing Tests](https://beorn.github.io/termless/guide/writing-tests) -- matchers, fixtures, assertion patterns
-- [Terminal API](https://beorn.github.io/termless/api/terminal) -- `createTerminal()` and all Terminal methods
-- [Screenshots](https://beorn.github.io/termless/guide/screenshots) -- SVG & PNG screenshots, themes, custom fonts
-- [Multi-Backend Testing](https://beorn.github.io/termless/guide/multi-backend) -- test against any backend
-- [CLI & MCP](https://beorn.github.io/termless/guide/cli) -- CLI usage and MCP server
-- **API Reference**: [Terminal](https://beorn.github.io/termless/api/terminal) | [Backend](https://beorn.github.io/termless/api/backend) | [Cell & Types](https://beorn.github.io/termless/api/cell) | [Matchers](https://beorn.github.io/termless/api/matchers)
+- [Getting Started](https://termless.dev/guide/getting-started) -- install, first test, run it
+- [Writing Tests](https://termless.dev/guide/writing-tests) -- matchers, fixtures, assertion patterns
+- [Terminal API](https://termless.dev/api/terminal) -- `createTerminal()` and all Terminal methods
+- [Screenshots](https://termless.dev/guide/screenshots) -- SVG & PNG screenshots, themes, custom fonts
+- [Multi-Backend Testing](https://termless.dev/guide/multi-backend) -- test against any backend
+- [CLI & MCP](https://termless.dev/guide/cli) -- CLI usage and MCP server
+- **API Reference**: [Terminal](https://termless.dev/api/terminal) | [Backend](https://termless.dev/api/backend) | [Cell & Types](https://termless.dev/api/cell) | [Matchers](https://termless.dev/api/matchers)
 
 ## See Also
 
