@@ -64,7 +64,7 @@ Region selectors: `term.screen`, `term.scrollback`, `term.buffer`, `term.viewpor
 ## Buffer Diff
 
 ```typescript
-import { diffBuffers } from "@termless/monorepo"
+import { diffBuffers } from "@termless/core"
 
 const changes = diffBuffers(oldBuffer, newBuffer)
 // Array of { row, col, oldCell, newCell } — only changed cells
@@ -73,7 +73,7 @@ const changes = diffBuffers(oldBuffer, newBuffer)
 ## Mock Timer
 
 ```typescript
-import { createMockTimer } from "@termless/monorepo"
+import { createMockTimer } from "@termless/core"
 
 const timer = createMockTimer()
 timer.setTimeout(fn, 1000)
@@ -84,7 +84,7 @@ timer.advanceTime(500) // Partial advance
 ## Recording & Replay
 
 ```typescript
-import { startRecording, replayRecording } from "@termless/monorepo"
+import { startRecording, replayRecording } from "@termless/core"
 
 // Record a terminal session
 const recording = startRecording(terminal)

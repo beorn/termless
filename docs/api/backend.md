@@ -1,7 +1,7 @@
 # API: TerminalBackend
 
 ```typescript
-import type { TerminalBackend, TerminalOptions, TerminalCapabilities } from "@termless/monorepo"
+import type { TerminalBackend, TerminalOptions, TerminalCapabilities } from "@termless/core"
 ```
 
 ## TerminalBackend Interface
@@ -92,7 +92,7 @@ backend.init({ cols: 80, rows: 24 })
 To create a new backend, implement the full `TerminalBackend` interface:
 
 ```typescript
-import type { TerminalBackend, TerminalOptions, Cell /* ... */ } from "@termless/monorepo"
+import type { TerminalBackend, TerminalOptions, Cell /* ... */ } from "@termless/core"
 
 export function createMyBackend(): TerminalBackend {
   return {
@@ -172,7 +172,7 @@ export function createMyBackend(): TerminalBackend {
 Backends can optionally implement extension interfaces. Use `hasExtension()` to check:
 
 ```typescript
-import { hasExtension } from "@termless/monorepo"
+import { hasExtension } from "@termless/core"
 
 // Mouse encoding
 interface MouseEncodingExtension {

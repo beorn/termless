@@ -1,7 +1,7 @@
 {
   "name": "@termless/monorepo",
   "version": "0.2.0",
-  "description": "Headless terminal library for cross-terminal TUI testing",
+  "description": "Workspace root for termless — headless terminal library for cross-terminal TUI testing (see @termless/core for the published package)",
   "keywords": [
     "ghostty",
     "headless",

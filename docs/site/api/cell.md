@@ -9,7 +9,7 @@ import type {
   UnderlineStyle,
   TerminalMode,
   ScrollbackState,
-} from "@termless/monorepo"
+} from "@termless/core"
 ```
 
 ## Cell

@@ -5,7 +5,7 @@ termless generates screenshots from terminal state -- no Chromium needed. SVG is
 ## Basic Usage
 
 ```typescript
-import { createTerminal } from "@termless/monorepo"
+import { createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })

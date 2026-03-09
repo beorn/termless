@@ -5,7 +5,7 @@
 Creates a Terminal instance wrapping a backend with optional PTY support.
 
 ```typescript
-import { createTerminal } from "@termless/monorepo"
+import { createTerminal } from "@termless/core"
 
 const term = createTerminal({
   cols: 80, // default: 80

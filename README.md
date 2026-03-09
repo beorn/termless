@@ -17,7 +17,7 @@ Built alongside [silvery](https://github.com/beorn/silvery), a React TUI framewo
 ## Quick Start
 
 ```typescript
-import { createTerminal } from "@termless/monorepo"
+import { createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`

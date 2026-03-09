@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- Renamed all packages to `@termless/*` scoped names
+- Added `@termless/core` as the published core package (types, Terminal, PTY, SVG/PNG, key mapping, region views)
+- Added PNG screenshot support via optional `@resvg/resvg-js`
+- Added VitePress documentation site at termless.dev
+- Added visual diff, mock timer, and recording/replay APIs
+- Improved docs: composable region selectors, Quick Start examples, multi-backend setup
+- Renamed internal references from inkx to hightea to silvery
+
 ## 0.1.0
 
 Initial release.

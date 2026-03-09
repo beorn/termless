@@ -71,7 +71,7 @@ export default [
 ```typescript
 // test/my-app.test.ts
 import { test, expect } from "vitest"
-import { createTerminal } from "@termless/monorepo"
+import { createTerminal } from "@termless/core"
 
 function createTerm(cols = 80, rows = 24) {
   return createTerminal({ backend: globalThis.createBackend(), cols, rows })
