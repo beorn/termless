@@ -4,7 +4,7 @@ Headless terminal testing library. Like Playwright, but for terminal apps.
 
 Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
 
-Built alongside [silvery](https://github.com/beorn/silvery), a React TUI framework, but works with any terminal app.
+Built alongside [silvery](https://silvery.dev), a React TUI framework, but works with any terminal app.
 
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
@@ -295,7 +295,7 @@ termless is the **only** headless terminal testing library that supports multi-b
 
 ## See Also
 
-**[silvery](https://github.com/beorn/silvery)** -- if termless is for _testing_ terminal apps, silvery is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — silvery handles the terminal complexity. Use `@termless/test` to verify your silvery app renders correctly across terminals.
+**[silvery](https://silvery.dev)** -- if termless is for _testing_ terminal apps, silvery is for _building_ them. A React TUI framework that fully leverages modern terminal features (truecolor, Kitty keyboard protocol, mouse events, images, scroll regions) and generates all the ANSI codes automatically. Write terminal UIs in familiar React/JSX — silvery handles the terminal complexity. Use `@termless/test` to verify your silvery app renders correctly across terminals.
 
 ## License
 
