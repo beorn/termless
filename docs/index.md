@@ -14,23 +14,17 @@ hero:
       link: https://github.com/beorn/termless
 
 features:
-  - icon: "\U0001F50D"
-    title: Terminal Internals
+  - title: Terminal Internals
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
-  - icon: "\U0001F310"
-    title: Cross-Terminal Conformance
+  - title: Cross-Terminal Conformance
     details: "Run the same tests against 6 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
-  - icon: "\u26A1"
-    title: Fast
+  - title: Fast
     details: "Pure in-process terminal emulation. ~1ms per test, not ~100ms. No Chromium, no subprocesses, no flakiness."
-  - icon: "\U0001F50D"
-    title: Composable Selectors
+  - title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
-  - icon: "\U0001F5BC\uFE0F"
-    title: SVG & PNG Screenshots
+  - title: SVG & PNG Screenshots
     details: "Generate terminal screenshots as SVG or PNG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered. PNG via optional @resvg/resvg-js."
-  - icon: "\U0001F527"
-    title: CLI + MCP
+  - title: CLI + MCP
     details: "termless capture for scripts, termless mcp for AI agents. Automate terminal interaction from the command line."
 ---
 
