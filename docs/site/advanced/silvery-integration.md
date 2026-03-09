@@ -158,7 +158,7 @@ These existing termless tests all share the same pattern: take ANSI output from 
 
 ### Category 9: Layout (LOW VALUE)
 
-**Files:** `layout-engines.test.ts`, `layout-engine.test.ts`, `layout-equivalence.test.tsx`, `layout-property.test.tsx`, `layout-snapshots.test.tsx`, `single-pass-layout.test.tsx`, `flexbox-grow.test.tsx`, `flexgrow-*.test.tsx` (7 files), `flexture-nested-box-bug.test.tsx`, `bottom-bar-layout.test.tsx`, `console-layout-cascade.test.tsx`, `display-none.test.tsx`, `measureElement.test.tsx`, `onlayout-corruption.test.tsx`
+**Files:** `layout-engines.test.ts`, `layout-engine.test.ts`, `layout-equivalence.test.tsx`, `layout-property.test.tsx`, `layout-snapshots.test.tsx`, `single-pass-layout.test.tsx`, `flexbox-grow.test.tsx`, `flexgrow-*.test.tsx` (7 files), `flexily-nested-box-bug.test.tsx`, `bottom-bar-layout.test.tsx`, `console-layout-cascade.test.tsx`, `display-none.test.tsx`, `measureElement.test.tsx`, `onlayout-corruption.test.tsx`
 
 **Current approach:** Virtual buffer, layout property assertions, snapshot comparisons.
 
