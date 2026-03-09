@@ -135,7 +135,7 @@ expect(term).toHaveTitle("my-app")
 
 ## How It Compares
 
-| Feature               | termless                              | Manual string testing | Playwright     |
+| Feature               | Termless                              | Manual string testing | Playwright     |
 | --------------------- | ------------------------------------- | --------------------- | -------------- |
 | Speed                 | ~1ms/test                             | ~1ms/test             | ~100ms+/test   |
 | Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |

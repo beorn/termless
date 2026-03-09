@@ -22,7 +22,7 @@ The `cross-backend.test.ts` suite runs 120+ tests across all backends, covering:
 ## Running
 
 ```bash
-bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor
+bun vitest run tests/cross-backend.test.ts
 ```
 
 ## Known Differences

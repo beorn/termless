@@ -438,7 +438,7 @@ Write at minimum these test categories in `packages/<name>/tests/backend.test.ts
 After your backend-specific tests pass, run the cross-backend conformance suite to verify agreement with existing backends:
 
 ```bash
-bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor
+bun vitest run tests/cross-backend.test.ts
 ```
 
 ## Reporting Issues

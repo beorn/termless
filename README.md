@@ -240,7 +240,7 @@ termless capture --command "my-app" \
 All backends are tested for conformance via `cross-backend.test.ts` — text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison. Run with:
 
 ```bash
-bun vitest run vendor/termless/tests/cross-backend.test.ts --project vendor
+bun vitest run tests/cross-backend.test.ts
 ```
 
 ## MCP Server
@@ -269,7 +269,7 @@ termless mcp
 
 Termless is the **only** headless terminal testing library that supports multi-backend testing with composable matchers:
 
-| Feature                   | termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
+| Feature                   | Termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
 | ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
 | **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Multi-backend**         | ✅ 6 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
