@@ -4,11 +4,11 @@ Termless backends wrap different terminal emulators, each with its own VT parser
 
 ## Backends
 
-| Backend | Emulator | Implementation | Reflow | Kitty Keyboard | OSC 8 |
-| ------- | -------- | -------------- | ------ | -------------- | ----- |
-| `@termless/xtermjs` | xterm.js 5.5.0 | `@xterm/headless` (WASM) | Yes | No | Yes |
-| `@termless/ghostty` | Ghostty 0.4.0 | `ghostty-web` (WASM) | Yes | Yes | Yes |
-| `@termless/vt100` | Pure TypeScript | Zero native deps | No | No | No |
+| Backend             | Emulator        | Implementation           | Reflow | Kitty Keyboard | OSC 8 |
+| ------------------- | --------------- | ------------------------ | ------ | -------------- | ----- |
+| `@termless/xtermjs` | xterm.js 5.5.0  | `@xterm/headless` (WASM) | Yes    | No             | Yes   |
+| `@termless/ghostty` | Ghostty 0.4.0   | `ghostty-web` (WASM)     | Yes    | Yes            | Yes   |
+| `@termless/vt100`   | Pure TypeScript | Zero native deps         | No     | No             | No    |
 
 xterm.js is the **reference backend** -- it has the widest adoption, passes the most conformance tests, and is what Silvery's test infrastructure (`createTermless()`) uses by default. Divergences from xterm.js are considered bugs in the other backend or in our ANSI output.
 
@@ -22,22 +22,22 @@ xterm.js headless does not report emoji characters as wide (`cell.wide === false
 
 ### OSC 2 title
 
-| Backend | Behavior |
-| ------- | -------- |
-| xterm.js | Correctly sets and returns title |
-| Ghostty | Always returns `""` (WASM build has no title change callback) |
-| vt100 | Limited OSC support; returns a string but does not parse OSC 2 |
+| Backend  | Behavior                                                       |
+| -------- | -------------------------------------------------------------- |
+| xterm.js | Correctly sets and returns title                               |
+| Ghostty  | Always returns `""` (WASM build has no title change callback)  |
+| vt100    | Limited OSC support; returns a string but does not parse OSC 2 |
 
 ### Scrollback promotion (vt100 and Ghostty)
 
 The most impactful divergence. When a TUI app running in inline mode uses cursor-up (`ESC[A`) to reposition and rewrite screen content (the mechanism behind scrollback promotion), vt100 and Ghostty diverge from xterm.js:
 
-| Symptom | Description |
-| ------- | ----------- |
-| Items lost from scrollback | Cursor-up + content rewrite doesn't preserve previously-written items |
-| Screen goes blank | On small terminals (e.g. 60x10), the screen becomes entirely empty |
-| Footer pushed off screen | After multiple promotions, the footer (input area) scrolls out of view |
-| Cursor-up overshoot | After promotion, `prevCursorRow` includes frozen line count, causing the next render's cursor-up to overshoot into pre-existing terminal content (shell prompt area) |
+| Symptom                    | Description                                                                                                                                                          |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Items lost from scrollback | Cursor-up + content rewrite doesn't preserve previously-written items                                                                                                |
+| Screen goes blank          | On small terminals (e.g. 60x10), the screen becomes entirely empty                                                                                                   |
+| Footer pushed off screen   | After multiple promotions, the footer (input area) scrolls out of view                                                                                               |
+| Cursor-up overshoot        | After promotion, `prevCursorRow` includes frozen line count, causing the next render's cursor-up to overshoot into pre-existing terminal content (shell prompt area) |
 
 These were discovered via `scrollback-cross-backend.fuzz.tsx`, which tees the same ANSI output from a real Silvery app to both xterm.js and vt100 simultaneously. The vt100 divergences match real-world bugs observed in Ghostty.
 
@@ -45,13 +45,13 @@ These were discovered via `scrollback-cross-backend.fuzz.tsx`, which tees the sa
 
 ### Capabilities
 
-| Capability | xterm.js | Ghostty | vt100 |
-| ---------- | -------- | ------- | ----- |
-| Truecolor | Yes | Yes | Yes |
-| Reflow on resize | Yes | Yes | No |
-| Kitty keyboard | No | Yes | No |
-| OSC 8 hyperlinks | Yes | Yes | No |
-| Dirty tracking | No | Yes (extension) | No |
+| Capability       | xterm.js | Ghostty         | vt100 |
+| ---------------- | -------- | --------------- | ----- |
+| Truecolor        | Yes      | Yes             | Yes   |
+| Reflow on resize | Yes      | Yes             | No    |
+| Kitty keyboard   | No       | Yes             | No    |
+| OSC 8 hyperlinks | Yes      | Yes             | No    |
+| Dirty tracking   | No       | Yes (extension) | No    |
 
 ## Impact on TUI Apps
 
@@ -81,6 +81,7 @@ React app (ScrollbackList)
 After each action (key press), the test compares screen text, scrollback text, visible item IDs, and footer presence across all backends. Divergences are counted without failing the test (since vt100 is known to diverge), but xterm.js invariants are hard assertions.
 
 This architecture ensures that:
+
 1. Both backends see exactly the same byte stream (no test-vs-real differences)
 2. Divergences are detected at the action level (not just final state)
 3. The xterm.js reference backend gates CI (must always pass)
