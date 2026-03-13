@@ -104,6 +104,45 @@ export function formatRgb(color: RGB | null): string {
 }
 
 // ═══════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════
+
+/** Prepend a custom message to an assertion result. */
+export function withMessage(result: AssertionResult, message?: string): AssertionResult {
+  if (!message) return result
+  return { ...result, message: `${message}\n\n${result.message}` }
+}
+
+/** Count non-overlapping occurrences of needle in haystack. */
+function countOccurrences(haystack: string, needle: string): number {
+  if (needle.length === 0) return 0
+  let count = 0
+  let pos = 0
+  while ((pos = haystack.indexOf(needle, pos)) !== -1) {
+    count++
+    pos += needle.length
+  }
+  return count
+}
+
+/** Read screen text from a TerminalReadable (rows visible on screen). */
+function getScreenText(term: TerminalReadable): string {
+  const { totalLines, screenLines } = term.getScrollback()
+  const base = totalLines - screenLines
+  const lines: string[] = []
+  for (let i = base; i < base + screenLines; i++) {
+    lines.push(
+      term
+        .getLine(i)
+        .map((c) => c.char || " ")
+        .join("")
+        .trimEnd(),
+    )
+  }
+  return lines.join("\n")
+}
+
+// ═══════════════════════════════════════════════════════
 // Region Assertions (RegionView)
 // ═══════════════════════════════════════════════════════
 
@@ -155,6 +194,21 @@ export function assertMatchesLines(region: RegionView, expectedLines: string[]):
       : `Region line mismatch:\n${mismatches.join("\n")}`,
     expected: expectedLines,
     actual: actualLines,
+  }
+}
+
+/** Assert region contains exactly n occurrences of the given text. */
+export function assertTextCount(region: RegionView, text: string, expected: number): AssertionResult {
+  const content = region.getText()
+  const actual = countOccurrences(content, text)
+  const pass = actual === expected
+  return {
+    pass,
+    message: pass
+      ? `Expected "${text}" not to appear exactly ${expected} time(s)`
+      : `Expected "${text}" to appear ${expected} time(s), found ${actual}\n\nContent:\n${content}`,
+    expected,
+    actual,
   }
 }
 
@@ -366,5 +420,29 @@ export function assertAtBottomOfScrollback(term: TerminalReadable): AssertionRes
     message: pass
       ? `Expected terminal not to be at bottom of scrollback`
       : `Expected terminal to be at bottom of scrollback, got offset ${scrollback.viewportOffset}`,
+  }
+}
+
+/** Assert text is visible on the current screen (not just in scrollback). */
+export function assertTextVisible(term: TerminalReadable, text: string): AssertionResult {
+  const screenText = getScreenText(term)
+  const pass = screenText.includes(text)
+  return {
+    pass,
+    message: pass
+      ? `Expected "${text}" not to be visible on screen\n\nScreen:\n${screenText}`
+      : `Expected "${text}" to be visible on screen\n\nScreen:\n${screenText}`,
+  }
+}
+
+/** Assert text is not visible on screen (may exist in scrollback or not at all). */
+export function assertTextHidden(term: TerminalReadable, text: string): AssertionResult {
+  const screenText = getScreenText(term)
+  const pass = !screenText.includes(text)
+  return {
+    pass,
+    message: pass
+      ? `Expected "${text}" to be visible on screen, but it is hidden`
+      : `Expected "${text}" to be hidden (not on screen)\n\nScreen:\n${screenText}`,
   }
 }

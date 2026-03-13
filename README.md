@@ -9,7 +9,7 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
-- **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
+- **24+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, visibility, and snapshot matchers
 - **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
@@ -144,39 +144,42 @@ expect(term).toHaveTitle("My App")
 
 ### Text Matchers (on RegionView / RowView)
 
-| Matcher                 | Description                                              |
-| ----------------------- | -------------------------------------------------------- |
-| `toContainText(text)`   | Region contains text as substring                        |
-| `toHaveText(text)`      | Region text matches exactly (trimmed)                    |
-| `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) |
+| Matcher                 | Description                                              | Auto-retry |
+| ----------------------- | -------------------------------------------------------- | ---------- |
+| `toContainText(text)`   | Region contains text as substring                        | yes        |
+| `toHaveText(text)`      | Region text matches exactly (trimmed)                    | yes        |
+| `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) | yes        |
+| `toHaveTextCount(text, n)`  | Region contains text exactly N times                     | yes        |
 
 ### Cell Style Matchers (on CellView)
 
-| Matcher                   | Description                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------- |
-| `toBeBold()`              | Cell is bold                                                                                  |
-| `toBeItalic()`            | Cell is italic                                                                                |
-| `toBeDim()`               | Cell is dim                                                                                   |
-| `toBeStrikethrough()`     | Cell has strikethrough                                                                        |
-| `toBeInverse()`           | Cell has inverse video                                                                        |
-| `toBeWide()`              | Cell is double-width (CJK, emoji)                                                             |
-| `toHaveUnderline(style?)` | Cell has underline; optional style: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"` |
-| `toHaveFg(color)`         | Foreground color (`"#rrggbb"` or `{ r, g, b }`)                                               |
-| `toHaveBg(color)`         | Background color (`"#rrggbb"` or `{ r, g, b }`)                                               |
+| Matcher                   | Description                                                                                   | Auto-retry |
+| ------------------------- | --------------------------------------------------------------------------------------------- | ---------- |
+| `toBeBold()`              | Cell is bold                                                                                  | no         |
+| `toBeItalic()`            | Cell is italic                                                                                | no         |
+| `toBeDim()`               | Cell is dim                                                                                   | no         |
+| `toBeStrikethrough()`     | Cell has strikethrough                                                                        | no         |
+| `toBeInverse()`           | Cell has inverse video                                                                        | no         |
+| `toBeWide()`              | Cell is double-width (CJK, emoji)                                                             | no         |
+| `toHaveUnderline(style?)` | Cell has underline; optional style: `"single"`, `"double"`, `"curly"`, `"dotted"`, `"dashed"` | no         |
+| `toHaveFg(color)`         | Foreground color (`"#rrggbb"` or `{ r, g, b }`)                                               | no         |
+| `toHaveBg(color)`         | Background color (`"#rrggbb"` or `{ r, g, b }`)                                               | no         |
 
 ### Terminal Matchers (on TerminalReadable)
 
-| Matcher                      | Description                                      |
-| ---------------------------- | ------------------------------------------------ |
-| `toHaveCursorAt(x, y)`       | Cursor at position                               |
-| `toHaveCursorVisible()`      | Cursor is visible                                |
-| `toHaveCursorHidden()`       | Cursor is hidden                                 |
-| `toHaveCursorStyle(style)`   | Cursor style: `"block"`, `"underline"`, `"beam"` |
-| `toBeInMode(mode)`           | Terminal mode is enabled                         |
-| `toHaveTitle(title)`         | OSC 2 title matches                              |
-| `toHaveScrollbackLines(n)`   | Scrollback has N total lines                     |
-| `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset)            |
-| `toMatchTerminalSnapshot()`  | Vitest snapshot of terminal state                |
+| Matcher                      | Description                                      | Auto-retry |
+| ---------------------------- | ------------------------------------------------ | ---------- |
+| `toHaveCursorAt(x, y)`       | Cursor at position                               | yes        |
+| `toHaveCursorVisible()`      | Cursor is visible                                | yes        |
+| `toHaveCursorHidden()`       | Cursor is hidden                                 | yes        |
+| `toHaveCursorStyle(style)`   | Cursor style: `"block"`, `"underline"`, `"beam"` | yes        |
+| `toBeInMode(mode)`           | Terminal mode is enabled                         | yes        |
+| `toHaveTitle(title)`         | OSC 2 title matches                              | yes        |
+| `toHaveScrollbackLines(n)`   | Scrollback has N total lines                     | yes        |
+| `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset)            | yes        |
+| `toHaveVisibleText(text)`    | Text is on the current screen                    | yes        |
+| `toHaveHiddenText(text)`     | Text is in scrollback but not on screen          | yes        |
+| `toMatchTerminalSnapshot()`  | Vitest snapshot of terminal state                | no         |
 
 ## Auto-Retry Matchers (Playwright-Style)
 
@@ -224,6 +227,80 @@ expect(term.screen.getText()).toContain("ready")
 
 // Write this — retries automatically:
 await expect(term.screen).toContainText("ready")
+```
+
+### Custom Error Messages
+
+Like Playwright's `expect(locator, "context")`, you can add context to assertion errors:
+
+```typescript
+// Add context to assertion errors (like Playwright's second argument)
+await expect(term.screen).toContainText("ready", {
+  timeout: 10_000,
+  message: "App should finish loading",
+})
+// Error: App should finish loading
+//
+// Expected region to contain "ready"
+// Content: Loading...
+//
+// (retried for 10000ms, timed out after 10000ms)
+```
+
+### Visibility Matchers
+
+Screen-level text presence — assert what's visible vs what's scrolled off:
+
+```typescript
+// Assert text is visible on the current screen (not just scrollback)
+await expect(term).toHaveVisibleText("Ready!")
+await expect(term).not.toHaveVisibleText("Loading...")
+
+// Assert text has scrolled off screen
+await expect(term).toHaveHiddenText("old output")
+```
+
+### Occurrence Counting
+
+```typescript
+// Assert exact number of occurrences
+expect(term.screen).toHaveTextCount("error", 0)
+await expect(term.screen).toHaveTextCount("item", 5)
+```
+
+### pollFor — Retry Assertion Blocks
+
+When you need multiple assertions to pass together, use `pollFor` to retry the entire block:
+
+```typescript
+import { pollFor } from "@termless/test"
+
+// Retry a block of assertions until all pass
+await pollFor(() => {
+  expect(term.screen).toContainText("ready")
+  expect(term).toHaveCursorAt(0, 5)
+})
+
+// With timeout and context message
+await pollFor(
+  () => {
+    expect(term.screen).toContainText("loaded")
+  },
+  { timeout: 10_000, message: "Dashboard should load" },
+)
+```
+
+### Vitest Built-ins
+
+Vitest's own async assertion utilities work with termless matchers:
+
+```typescript
+// expect.poll — Vitest built-in, works with termless
+await expect.poll(() => term.screen.containsText("ready")).toBe(true)
+
+// expect.soft — non-fatal assertions, collect all failures
+expect.soft(term.screen).toContainText("header")
+expect.soft(term.screen).toContainText("footer")
 ```
 
 ## Installation
@@ -322,7 +399,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 | **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Multi-backend**         | ✅ 6 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
 | **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
-| **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
+| **Visual matchers**       | ✅ 24+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |
 | **SVG & PNG screenshots** | ✅                                       | ❌                      | ❌               | ❌           | ❌      | ❌      | ❌  |
 | **No browser/Chromium**   | ✅                                       | ❌ needs Chromium       | ✅               | ✅           | ✅      | ✅      | ✅  |

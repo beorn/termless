@@ -96,6 +96,42 @@ All text matchers and terminal matchers support auto-retry. Cell matchers are al
 
 Configure globally: `configureTerminalMatchers({ timeout: 10_000 })`
 
+Additional auto-retry features:
+
+- **Custom `message`** in RetryOptions: `await expect(term.screen).toContainText("x", { timeout: 10_000, message: "context" })` — shown in error output on timeout
+- **`toHaveVisibleText(text)` / `toHaveHiddenText(text)`** — TerminalReadable matchers for screen presence vs scrolled-off text
+- **`toHaveTextCount(text, n)`** — RegionView matcher asserting exact occurrence count
+- **`pollFor(fn, opts?)`** — retry a block of assertions until all pass: `await pollFor(() => { expect(term.screen).toContainText("a"); expect(term).toHaveCursorAt(0, 5) })`
+- **Vitest compat**: `expect.poll(() => term.screen.containsText("x")).toBe(true)` and `expect.soft()` work with termless matchers
+
+## Matcher Reference
+
+| Matcher                      | Subject          | Auto-retry |
+| ---------------------------- | ---------------- | ---------- |
+| `toContainText(text)`        | RegionView       | yes        |
+| `toHaveText(text)`           | RegionView       | yes        |
+| `toMatchLines(lines)`        | RegionView       | yes        |
+| `toHaveTextCount(text, n)`       | RegionView       | yes        |
+| `toBeBold()`                 | CellView         | no         |
+| `toBeItalic()`               | CellView         | no         |
+| `toBeDim()`                  | CellView         | no         |
+| `toBeStrikethrough()`        | CellView         | no         |
+| `toBeInverse()`              | CellView         | no         |
+| `toBeWide()`                 | CellView         | no         |
+| `toHaveUnderline(style?)`    | CellView         | no         |
+| `toHaveFg(color)`            | CellView         | no         |
+| `toHaveBg(color)`            | CellView         | no         |
+| `toHaveCursorAt(x, y)`       | TerminalReadable | yes        |
+| `toHaveCursorStyle(style)`   | TerminalReadable | yes        |
+| `toHaveCursorVisible()`      | TerminalReadable | yes        |
+| `toHaveCursorHidden()`       | TerminalReadable | yes        |
+| `toBeInMode(mode)`           | TerminalReadable | yes        |
+| `toHaveTitle(title)`         | TerminalReadable | yes        |
+| `toHaveScrollbackLines(n)`   | TerminalReadable | yes        |
+| `toBeAtBottomOfScrollback()` | TerminalReadable | yes        |
+| `toHaveVisibleText(text)`    | TerminalReadable | yes        |
+| `toHaveHiddenText(text)`     | TerminalReadable | yes        |
+
 ## Buffer Diff
 
 ```typescript

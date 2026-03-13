@@ -23,6 +23,7 @@ import {
   assertContainsText,
   assertHasText,
   assertMatchesLines,
+  assertTextCount,
   assertIsBold,
   assertIsItalic,
   assertIsDim,
@@ -40,6 +41,8 @@ import {
   assertTitle,
   assertScrollbackLines,
   assertAtBottomOfScrollback,
+  assertTextVisible,
+  assertTextHidden,
   type AssertionResult,
 } from "./assertions.ts"
 
@@ -77,6 +80,11 @@ export const termlessMatchers = {
   toMatchLines(received: unknown, lines: string[]) {
     assertRegionView(received, "toMatchLines")
     return toMatcherResult(assertMatchesLines(received, lines))
+  },
+
+  toHaveTextCount(received: unknown, text: string, count: number) {
+    assertRegionView(received, "toHaveTextCount")
+    return toMatcherResult(assertTextCount(received, text, count))
   },
 
   // ── Cell Style Matchers (CellView) ──
@@ -166,5 +174,15 @@ export const termlessMatchers = {
   toBeAtBottomOfScrollback(received: unknown) {
     assertTerminalReadable(received, "toBeAtBottomOfScrollback")
     return toMatcherResult(assertAtBottomOfScrollback(received))
+  },
+
+  toHaveVisibleText(received: unknown, text: string) {
+    assertTerminalReadable(received, "toHaveVisibleText")
+    return toMatcherResult(assertTextVisible(received, text))
+  },
+
+  toHaveHiddenText(received: unknown, text: string) {
+    assertTerminalReadable(received, "toHaveHiddenText")
+    return toMatcherResult(assertTextHidden(received, text))
   },
 }

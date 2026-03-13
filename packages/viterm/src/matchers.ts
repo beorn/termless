@@ -79,6 +79,10 @@ import {
   assertTitle,
   assertScrollbackLines,
   assertAtBottomOfScrollback,
+  assertTextCount,
+  assertTextVisible,
+  assertTextHidden,
+  withMessage,
   type AssertionResult,
 } from "../../../src/assertions.ts"
 
@@ -92,6 +96,8 @@ export interface RetryOptions {
   timeout?: number
   /** Polling interval in milliseconds. Default: 50. */
   interval?: number
+  /** Custom error context prepended to the failure message. Like Playwright's `expect(loc, "context").` */
+  message?: string
 }
 
 let globalTimeout = 5_000
@@ -139,27 +145,32 @@ async function retryAssertion(
 ): Promise<MatcherResult> {
   const timeout = options.timeout ?? globalTimeout
   const interval = options.interval ?? globalInterval
+  const customMessage = options.message
   const start = Date.now()
 
   const isDesiredOutcome = (r: AssertionResult) => (isNot ? !r.pass : r.pass)
+  const applyMessage = (r: AssertionResult): AssertionResult => (customMessage ? withMessage(r, customMessage) : r)
 
   let lastResult = assertFn()
   if (isDesiredOutcome(lastResult)) {
-    return { pass: lastResult.pass, message: () => lastResult.message }
+    const r = applyMessage(lastResult)
+    return { pass: r.pass, message: () => r.message }
   }
 
   while (Date.now() - start < timeout) {
     await new Promise<void>((r) => setTimeout(r, interval))
     lastResult = assertFn()
     if (isDesiredOutcome(lastResult)) {
-      return { pass: lastResult.pass, message: () => lastResult.message }
+      const r = applyMessage(lastResult)
+      return { pass: r.pass, message: () => r.message }
     }
   }
 
   const elapsed = Date.now() - start
+  const r = applyMessage(lastResult)
   return {
-    pass: lastResult.pass,
-    message: () => `${lastResult.message}\n\n(retried for ${elapsed}ms, timed out after ${timeout}ms)`,
+    pass: r.pass,
+    message: () => `${r.message}\n\n(retried for ${elapsed}ms, timed out after ${timeout}ms)`,
   }
 }
 
@@ -191,10 +202,15 @@ function autoRetryMatcher(
   options?: RetryOptions,
 ): MatcherResult | Promise<MatcherResult> {
   const result = assertFn()
+  const customMessage = options?.message
+
+  // Apply custom message to sync results
+  const applyMessage = (r: AssertionResult): AssertionResult => (customMessage ? withMessage(r, customMessage) : r)
 
   // Not retryable or not a terminal view → always sync
   if (!isRetryable(received)) {
-    return { pass: result.pass, message: () => result.message }
+    const r = applyMessage(result)
+    return { pass: r.pass, message: () => r.message }
   }
 
   // Check if the current result is already the desired outcome:
@@ -202,7 +218,8 @@ function autoRetryMatcher(
   // - Negated (.not=true): pass=false is desired (vitest inverts to true)
   const isDesiredOutcome = isNot ? !result.pass : result.pass
   if (isDesiredOutcome) {
-    return { pass: result.pass, message: () => result.message }
+    const r = applyMessage(result)
+    return { pass: r.pass, message: () => r.message }
   }
 
   // Not the desired outcome on retryable subject → return Promise that retries
@@ -230,6 +247,7 @@ declare module "vitest" {
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
     toMatchLines(lines: string[], options?: RetryOptions): void
+    toHaveTextCount(text: string, count: number, options?: RetryOptions): void
 
     // Cell Style (CellView) — always sync (cells are point-in-time snapshots)
     toBeBold(): void
@@ -251,6 +269,8 @@ declare module "vitest" {
     toHaveTitle(title: string, options?: RetryOptions): void
     toHaveScrollbackLines(n: number, options?: RetryOptions): void
     toBeAtBottomOfScrollback(options?: RetryOptions): void
+    toHaveVisibleText(text: string, options?: RetryOptions): void
+    toHaveHiddenText(text: string, options?: RetryOptions): void
 
     // Snapshot (TerminalReadable)
     toMatchTerminalSnapshot(options?: { name?: string }): void
@@ -281,6 +301,12 @@ export const terminalMatchers = {
   toMatchLines(this: { isNot: boolean }, received: unknown, expectedLines: string[], options?: RetryOptions) {
     assertRegionView(received, "toMatchLines")
     return autoRetryMatcher(received, () => assertMatchesLines(received, expectedLines), this.isNot, options)
+  },
+
+  /** Assert region contains exactly n occurrences of text. Auto-retries when awaited. */
+  toHaveTextCount(this: { isNot: boolean }, received: unknown, text: string, count: number, options?: RetryOptions) {
+    assertRegionView(received, "toHaveTextCount")
+    return autoRetryMatcher(received, () => assertTextCount(received, text, count), this.isNot, options)
   },
 
   // ── Cell Style Matchers (CellView) — always sync ──
@@ -387,6 +413,18 @@ export const terminalMatchers = {
   toBeAtBottomOfScrollback(this: { isNot: boolean }, received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toBeAtBottomOfScrollback")
     return autoRetryMatcher(received, () => assertAtBottomOfScrollback(received), this.isNot, options)
+  },
+
+  /** Assert text is visible on the current screen. Auto-retries when awaited. */
+  toHaveVisibleText(this: { isNot: boolean }, received: unknown, text: string, options?: RetryOptions) {
+    assertTerminalReadable(received, "toHaveVisibleText")
+    return autoRetryMatcher(received, () => assertTextVisible(received, text), this.isNot, options)
+  },
+
+  /** Assert text is not visible on screen (may exist in scrollback). Auto-retries when awaited. */
+  toHaveHiddenText(this: { isNot: boolean }, received: unknown, text: string, options?: RetryOptions) {
+    assertTerminalReadable(received, "toHaveHiddenText")
+    return autoRetryMatcher(received, () => assertTextHidden(received, text), this.isNot, options)
   },
 
   // ── Snapshot Matchers (TerminalReadable, vitest-only) ──
