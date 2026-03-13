@@ -48,9 +48,9 @@ function getLineAnnotations(line: Cell[]): string {
     if (cell.fg) parts.push(`fg:${formatRgb(cell.fg)}`)
     if (cell.bg) parts.push(`bg:${formatRgb(cell.bg)}`)
     if (cell.bold) parts.push("bold")
-    if (cell.faint) parts.push("faint")
+    if (cell.dim) parts.push("dim")
     if (cell.italic) parts.push("italic")
-    if (cell.underline !== "none") parts.push(`underline:${cell.underline}`)
+    if (cell.underline !== false) parts.push(`underline:${cell.underline}`)
     if (cell.strikethrough) parts.push("strike")
     if (cell.inverse) parts.push("inverse")
     if (cell.wide) parts.push("wide")
@@ -95,7 +95,7 @@ export const terminalSerializer = {
     const body = lines
       .map((line, row) => {
         const num = String(row + 1).padStart(2)
-        const text = line.map((c) => c.text || " ").join("")
+        const text = line.map((c) => c.char || " ").join("")
         const annotations = getLineAnnotations(line)
         return `${num}\u2502${text}${annotations ? "  " + annotations : ""}`
       })

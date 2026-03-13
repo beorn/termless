@@ -190,16 +190,21 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function convertCell(bufCell: import("@xterm/headless").IBufferCell | undefined): Cell {
     if (!bufCell) {
       return {
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
+        underline: false,
+        underlineColor: null,
         strikethrough: false,
         inverse: false,
+        blink: false,
+        hidden: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }
     }
 
@@ -220,16 +225,21 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
 
     return {
-      text: bufCell.getChars(),
+      char: bufCell.getChars(),
       fg,
       bg,
       bold: bufCell.isBold() !== 0,
-      faint: bufCell.isDim() !== 0,
+      dim: bufCell.isDim() !== 0,
       italic: bufCell.isItalic() !== 0,
-      underline: bufCell.isUnderline() !== 0 ? "single" : "none",
+      underline: bufCell.isUnderline() !== 0 ? "single" : false,
+      underlineColor: null,
       strikethrough: bufCell.isStrikethrough() !== 0,
       inverse: bufCell.isInverse() !== 0,
+      blink: bufCell.isBlink() !== 0,
+      hidden: bufCell.isInvisible() !== 0,
       wide: bufCell.getWidth() > 1,
+      continuation: false,
+      hyperlink: null,
     }
   }
 
@@ -238,16 +248,21 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     const line = t.buffer.active.getLine(row)
     if (!line) {
       return {
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
+        underline: false,
+        underlineColor: null,
         strikethrough: false,
         inverse: false,
+        blink: false,
+        hidden: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }
     }
     return convertCell(line.getCell(col))

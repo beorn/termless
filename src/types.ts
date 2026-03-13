@@ -11,19 +11,24 @@ export interface TerminalOptions {
 // ── Cell ──
 
 export interface Cell {
-  text: string
+  char: string
   fg: RGB | null
   bg: RGB | null
   bold: boolean
-  faint: boolean
+  dim: boolean
   italic: boolean
   underline: UnderlineStyle
+  underlineColor: RGB | null
   strikethrough: boolean
   inverse: boolean
+  blink: boolean
+  hidden: boolean
   wide: boolean
+  continuation: boolean
+  hyperlink: string | null
 }
 
-export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+export type UnderlineStyle = false | "single" | "double" | "curly" | "dotted" | "dashed"
 
 export type RGB = { r: number; g: number; b: number }
 
@@ -100,18 +105,23 @@ export interface RegionView {
 
 /** A single cell with positional context. Used with style matchers. */
 export interface CellView {
-  readonly text: string
+  readonly char: string
   readonly row: number
   readonly col: number
   readonly fg: RGB | null
   readonly bg: RGB | null
   readonly bold: boolean
-  readonly faint: boolean
+  readonly dim: boolean
   readonly italic: boolean
   readonly underline: UnderlineStyle
+  readonly underlineColor: RGB | null
   readonly strikethrough: boolean
   readonly inverse: boolean
+  readonly blink: boolean
+  readonly hidden: boolean
   readonly wide: boolean
+  readonly continuation: boolean
+  readonly hyperlink: string | null
 }
 
 /** A row is a RegionView with positional context and cell access. */

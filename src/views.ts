@@ -13,7 +13,7 @@ import type { Cell, CellView, RegionView, RowView, TerminalReadable, UnderlineSt
 /** Convert a Cell[] to trimmed text. */
 function cellsToText(cells: Cell[]): string {
   return cells
-    .map((c) => c.text || " ")
+    .map((c) => c.char || " ")
     .join("")
     .trimEnd()
 }
@@ -32,18 +32,23 @@ function getRowTexts(readable: TerminalReadable, startRow: number, endRow: numbe
 /** Create a CellView from a Cell with positional context. */
 export function createCellView(cell: Cell, row: number, col: number): CellView {
   return {
-    text: cell.text,
+    char: cell.char,
     row,
     col,
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
-    faint: cell.faint,
+    dim: cell.dim,
     italic: cell.italic,
     underline: cell.underline,
+    underlineColor: cell.underlineColor,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
+    blink: cell.blink,
+    hidden: cell.hidden,
     wide: cell.wide,
+    continuation: cell.continuation,
+    hyperlink: cell.hyperlink,
   }
 }
 

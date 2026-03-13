@@ -29,7 +29,7 @@ describe("Terminal + XtermBackend integration", () => {
     // Red foreground: ESC[31m
     term.feed("\x1b[31mRed text\x1b[0m")
     const cell = term.getCell(0, 0)
-    expect(cell.text).toBe("R")
+    expect(cell.char).toBe("R")
     expect(cell.fg).not.toBeNull()
     // ANSI color 1 (red) — exact RGB depends on palette
     expect(cell.fg!.r).toBeGreaterThan(100)
@@ -279,7 +279,7 @@ describe("Region selectors with real backend", () => {
     const cell = term.cell(0, 0)
     expect(cell).toBeBold()
     expect(cell).toHaveFg("#ff0000")
-    expect(cell.text).toBe("S")
+    expect(cell.char).toBe("S")
 
     term.close()
   })

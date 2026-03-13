@@ -21,7 +21,7 @@ export interface CellDiff {
 
 /** Compact representation of a cell's visible properties. */
 export interface CellSummary {
-  text: string
+  char: string
   fg: RGB | null
   bg: RGB | null
   bold: boolean
@@ -45,7 +45,7 @@ export interface DiffResult {
 
 function cellToSummary(cell: Cell): CellSummary {
   return {
-    text: cell.text,
+    char: cell.char,
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
@@ -56,16 +56,21 @@ function cellToSummary(cell: Cell): CellSummary {
 
 function cellsEqual(a: Cell, b: Cell): boolean {
   return (
-    a.text === b.text &&
+    a.char === b.char &&
     rgbEqual(a.fg, b.fg) &&
     rgbEqual(a.bg, b.bg) &&
     a.bold === b.bold &&
-    a.faint === b.faint &&
+    a.dim === b.dim &&
     a.italic === b.italic &&
     a.underline === b.underline &&
+    a.underlineColor === b.underlineColor &&
     a.strikethrough === b.strikethrough &&
     a.inverse === b.inverse &&
-    a.wide === b.wide
+    a.blink === b.blink &&
+    a.hidden === b.hidden &&
+    a.wide === b.wide &&
+    a.continuation === b.continuation &&
+    a.hyperlink === b.hyperlink
   )
 }
 
@@ -83,9 +88,9 @@ function formatRgb(color: RGB | null): string {
 function describeCellDiff(diff: CellDiff): string {
   const parts: string[] = []
 
-  if (diff.old.text !== diff.new.text) {
-    const oldChar = diff.old.text || " "
-    const newChar = diff.new.text || " "
+  if (diff.old.char !== diff.new.char) {
+    const oldChar = diff.old.char || " "
+    const newChar = diff.new.char || " "
     parts.push(`text: '${oldChar}' -> '${newChar}'`)
   }
 
@@ -173,15 +178,20 @@ export function diffBuffers(a: TerminalReadable, b: TerminalReadable): DiffResul
 
 function emptyCell(): Cell {
   return {
-    text: " ",
+    char: " ",
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
+    underline: false,
+    underlineColor: null,
     strikethrough: false,
     inverse: false,
+    blink: false,
+    hidden: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 }

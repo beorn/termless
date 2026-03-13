@@ -37,34 +37,44 @@ function mockRegion(lines: string[]): RegionView {
 
 function mockCell(overrides: Partial<CellView> = {}): CellView {
   return {
-    text: " ",
+    char: " ",
     row: 0,
     col: 0,
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
+    underline: false,
+    underlineColor: null,
     strikethrough: false,
     inverse: false,
+    blink: false,
+    hidden: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
     ...overrides,
   }
 }
 
 function mockRow(text: string, row = 0): RowView {
   const cells: Cell[] = [...text].map((ch) => ({
-    text: ch,
+    char: ch,
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none" as UnderlineStyle,
+    underline: false as UnderlineStyle,
+    underlineColor: null,
     strikethrough: false,
     inverse: false,
+    blink: false,
+    hidden: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }))
   return {
     row,
@@ -72,7 +82,7 @@ function mockRow(text: string, row = 0): RowView {
     getText: () => text,
     getLines: () => [text],
     containsText: (t: string) => text.includes(t),
-    cellAt: (col: number): CellView => mockCell({ text: text[col] ?? " ", row, col }),
+    cellAt: (col: number): CellView => mockCell({ char: text[col] ?? " ", row, col }),
   }
 }
 
@@ -92,16 +102,21 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     const row: Cell[] = []
     for (let col = 0; col < maxCols; col++) {
       row.push({
-        text: line[col] ?? " ",
+        char: line[col] ?? " ",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
+        underline: false,
+        underlineColor: null,
         strikethrough: false,
         inverse: false,
+        blink: false,
+        hidden: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       })
     }
     return row
@@ -122,14 +137,14 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 
   return {
     getText(): string {
-      return grid.map((row) => row.map((c) => c.text || " ").join("")).join("\n")
+      return grid.map((row) => row.map((c) => c.char || " ").join("")).join("\n")
     },
     getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
       if (startRow === endRow) {
         return (
           grid[startRow]
             ?.slice(startCol, endCol)
-            .map((c) => c.text || " ")
+            .map((c) => c.char || " ")
             .join("") ?? ""
         )
       }
@@ -142,7 +157,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
         result.push(
           row
             .slice(start, end)
-            .map((c) => c.text || " ")
+            .map((c) => c.char || " ")
             .join(""),
         )
       }
@@ -151,16 +166,21 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     getCell(row: number, col: number): Cell {
       return (
         grid[row]?.[col] ?? {
-          text: " ",
+          char: " ",
           fg: null,
           bg: null,
           bold: false,
-          faint: false,
+          dim: false,
           italic: false,
-          underline: "none",
+          underline: false,
+          underlineColor: null,
           strikethrough: false,
           inverse: false,
+          blink: false,
+          hidden: false,
           wide: false,
+          continuation: false,
+          hyperlink: null,
         }
       )
     },
@@ -290,14 +310,14 @@ describe("style matchers", () => {
     expect(() => expect(cell).toBeItalic()).toThrow()
   })
 
-  test("toBeFaint passes when cell is faint", () => {
-    const cell = mockCell({ faint: true })
-    expect(cell).toBeFaint()
+  test("toBeDim passes when cell is dim", () => {
+    const cell = mockCell({ dim: true })
+    expect(cell).toBeDim()
   })
 
-  test("toBeFaint fails when cell is not faint", () => {
-    const cell = mockCell({ faint: false })
-    expect(() => expect(cell).toBeFaint()).toThrow()
+  test("toBeDim fails when cell is not dim", () => {
+    const cell = mockCell({ dim: false })
+    expect(() => expect(cell).toBeDim()).toThrow()
   })
 
   test("toBeStrikethrough passes when cell is strikethrough", () => {
@@ -346,7 +366,7 @@ describe("style matchers", () => {
   })
 
   test("toHaveUnderline fails when not underlined", () => {
-    const cell = mockCell({ underline: "none" })
+    const cell = mockCell({ underline: false })
     expect(() => expect(cell).toHaveUnderline()).toThrow()
   })
 

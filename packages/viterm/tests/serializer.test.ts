@@ -22,16 +22,21 @@ import type {
 // =============================================================================
 
 const DEFAULT_CELL: Cell = {
-  text: " ",
+  char: " ",
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
+  underline: false,
+  underlineColor: null,
   strikethrough: false,
   inverse: false,
+  blink: false,
+  hidden: false,
   wide: false,
+  continuation: false,
+  hyperlink: null,
 }
 
 function createMockTerminal(
@@ -49,7 +54,7 @@ function createMockTerminal(
   const grid: Cell[][] = lines.map((line) => {
     const row: Cell[] = []
     for (let col = 0; col < maxCols; col++) {
-      row.push({ ...DEFAULT_CELL, text: line[col] ?? " " })
+      row.push({ ...DEFAULT_CELL, char: line[col] ?? " " })
     }
     return row
   })
@@ -69,7 +74,7 @@ function createMockTerminal(
   }
 
   return {
-    getText: () => grid.map((r) => r.map((c) => c.text || " ").join("")).join("\n"),
+    getText: () => grid.map((r) => r.map((c) => c.char || " ").join("")).join("\n"),
     getTextRange: () => "",
     getCell: (row, col) => grid[row]?.[col] ?? { ...DEFAULT_CELL },
     getLine: (row) => grid[row] ?? [],

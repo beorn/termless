@@ -64,21 +64,26 @@ function createMockBackend(): TerminalBackend {
   }
 
   const defaultCell: Cell = {
-    text: " ",
+    char: " ",
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
+    underline: false,
+    underlineColor: null,
     strikethrough: false,
     inverse: false,
+    blink: false,
+    hidden: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 
   function cellAt(row: number, col: number): Cell {
     const ch = grid[row]?.[col] ?? " "
-    return { ...defaultCell, text: ch }
+    return { ...defaultCell, char: ch }
   }
 
   const capabilities: TerminalCapabilities = {
@@ -515,7 +520,7 @@ describe("createTerminal", () => {
     term.feed("X")
 
     const cell = term.getCell(0, 0)
-    expect(cell.text).toBe("X")
+    expect(cell.char).toBe("X")
 
     term.close()
   })
@@ -668,12 +673,12 @@ describe("region selectors", () => {
     term.feed("XY")
 
     const cell = term.cell(0, 0)
-    expect(cell.text).toBe("X")
+    expect(cell.char).toBe("X")
     expect(cell.row).toBe(0)
     expect(cell.col).toBe(0)
 
     const cell2 = term.cell(0, 1)
-    expect(cell2.text).toBe("Y")
+    expect(cell2.char).toBe("Y")
     expect(cell2.col).toBe(1)
 
     term.close()

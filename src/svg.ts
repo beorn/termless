@@ -51,7 +51,7 @@ interface TextSpan {
   fill: string
   bold: boolean
   italic: boolean
-  faint: boolean
+  dim: boolean
   underline: boolean
   strikethrough: boolean
   startCol: number
@@ -71,7 +71,7 @@ function spansMatch(
   fg: string,
   bold: boolean,
   italic: boolean,
-  faint: boolean,
+  dim: boolean,
   underline: boolean,
   strikethrough: boolean,
 ): boolean {
@@ -79,7 +79,7 @@ function spansMatch(
     a.fill === fg &&
     a.bold === bold &&
     a.italic === italic &&
-    a.faint === faint &&
+    a.dim === dim &&
     a.underline === underline &&
     a.strikethrough === strikethrough
   )
@@ -171,16 +171,16 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
     // Skip continuation cell of a wide character (the second cell).
     // A wide char's first cell has wide=true and non-empty text.
     // The second cell typically has empty text — skip it.
-    if (cell.text === "" && col > 0 && cells[col - 1]?.wide) {
+    if (cell.char === "" && col > 0 && cells[col - 1]?.wide) {
       continue
     }
 
     const { fg } = cellFgBg(cell, themeFg, themeBg)
-    const char = cell.text || " "
-    const underline = cell.underline !== "none"
+    const char = cell.char || " "
+    const underline = cell.underline !== false
 
     const current = spans.length > 0 ? spans[spans.length - 1] : null
-    if (current && spansMatch(current, fg, cell.bold, cell.italic, cell.faint, underline, cell.strikethrough)) {
+    if (current && spansMatch(current, fg, cell.bold, cell.italic, cell.dim, underline, cell.strikethrough)) {
       current.text += char
     } else {
       spans.push({
@@ -188,7 +188,7 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
         fill: fg,
         bold: cell.bold,
         italic: cell.italic,
-        faint: cell.faint,
+        dim: cell.dim,
         underline,
         strikethrough: cell.strikethrough,
         startCol: col,
@@ -230,7 +230,7 @@ function spanToTspan(span: TextSpan, cellWidth: number, themeFg: string): string
   if (span.fill !== themeFg) attrs.push(`fill="${span.fill}"`)
   if (span.bold) attrs.push(`font-weight="bold"`)
   if (span.italic) attrs.push(`font-style="italic"`)
-  if (span.faint) attrs.push(`opacity="0.5"`)
+  if (span.dim) attrs.push(`opacity="0.5"`)
 
   const decorations: string[] = []
   if (span.underline) decorations.push("underline")
