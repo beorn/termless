@@ -370,7 +370,28 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
         hyperlink: null,
       }))
     }
-    return ghosttyCells.map((cell, col) => convertGhosttyCell(cell, t, row, col, defaultColors))
+    const result = ghosttyCells.map((cell, col) => convertGhosttyCell(cell, t, row, col, defaultColors))
+    // Pad to full terminal width — ghostty may return fewer cells than cols
+    while (result.length < cols) {
+      result.push({
+        char: "",
+        fg: null,
+        bg: null,
+        bold: false,
+        dim: false,
+        italic: false,
+        underline: false as const,
+        underlineColor: null,
+        blink: false,
+        inverse: false,
+        hidden: false,
+        strikethrough: false,
+        wide: false,
+        continuation: false,
+        hyperlink: null,
+      })
+    }
+    return result
   }
 
   function getLines(): Cell[][] {

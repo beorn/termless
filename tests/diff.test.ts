@@ -87,8 +87,8 @@ describe("diffBuffers", () => {
     expect(result.diffs).toHaveLength(1)
     expect(result.diffs[0]!.row).toBe(0)
     expect(result.diffs[0]!.col).toBe(1)
-    expect(result.diffs[0]!.old.text).toBe("e")
-    expect(result.diffs[0]!.new.text).toBe("x")
+    expect(result.diffs[0]!.old.char).toBe("e")
+    expect(result.diffs[0]!.new.char).toBe("x")
   })
 
   test("detects multiple text differences", () => {
@@ -187,7 +187,7 @@ describe("diffBuffers", () => {
     const result = diffBuffers(a, b)
 
     expect(result.formatted).toContain("(0,0)")
-    expect(result.formatted).toContain("text: 'a' -> 'x'")
+    expect(result.formatted).toContain("char: 'a' -> 'x'")
   })
 
   test("empty buffers are equal", () => {

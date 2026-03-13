@@ -21,7 +21,7 @@ export interface CellDiff {
 
 /** Compact representation of a cell's visible properties. */
 export interface CellSummary {
-  text: string
+  char: string
   fg: Color
   bg: Color
   bold: boolean
@@ -45,7 +45,7 @@ export interface DiffResult {
 
 function cellToSummary(cell: Cell): CellSummary {
   return {
-    text: cell.char,
+    char: cell.char,
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
@@ -85,10 +85,10 @@ function formatColor(color: Color): string {
 function describeCellDiff(diff: CellDiff): string {
   const parts: string[] = []
 
-  if (diff.old.text !== diff.new.text) {
-    const oldChar = diff.old.text || " "
-    const newChar = diff.new.text || " "
-    parts.push(`text: '${oldChar}' -> '${newChar}'`)
+  if (diff.old.char !== diff.new.char) {
+    const oldChar = diff.old.char || " "
+    const newChar = diff.new.char || " "
+    parts.push(`char: '${oldChar}' -> '${newChar}'`)
   }
 
   if (!colorEqual(diff.old.fg, diff.new.fg)) {
