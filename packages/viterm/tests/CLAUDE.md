@@ -5,7 +5,7 @@
 ## What to Test Here
 
 - **Text matchers (RegionView)**: `toContainText`, `toHaveText`, `toMatchLines`
-- **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeFaint`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + RGB)
+- **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeDim`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + RGB)
 - **Terminal matchers (TerminalReadable)**: `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`, `toMatchTerminalSnapshot`
 - **Matcher edge cases**: `.not` negation, wrong-type error handling (passing TerminalReadable to a RegionView matcher, passing string/null/plain object)
 - **Fixtures**: `createTerminalFixture()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach
@@ -36,13 +36,13 @@ expect(region).toHaveText("Hello World")
 
 // Cell style matcher tests use mock CellView
 const cell = {
-  text: "H",
+  char: "H",
   row: 0,
   col: 0,
   bold: true,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
+  underline: false,
   strikethrough: false,
   inverse: false,
   wide: false,

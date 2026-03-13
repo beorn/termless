@@ -77,12 +77,12 @@ Assert cell is italic.
 expect(term.cell(0, 0)).toBeItalic()
 ```
 
-### `toBeFaint()`
+### `toBeDim()`
 
-Assert cell is faint/dim.
+Assert cell is dim.
 
 ```typescript
-expect(term.cell(0, 0)).toBeFaint()
+expect(term.cell(0, 0)).toBeDim()
 ```
 
 ### `toHaveUnderline(style?: UnderlineStyle)`

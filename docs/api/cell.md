@@ -10,13 +10,13 @@ Represents a single terminal cell with text content and style attributes.
 
 ```typescript
 interface Cell {
-  text: string // Character(s) in this cell
+  char: string // Character(s) in this cell
   fg: RGB | null // Foreground color (null = default)
   bg: RGB | null // Background color (null = default)
   bold: boolean
-  faint: boolean // Dim/half-bright
+  dim: boolean // Dim/half-bright
   italic: boolean
-  underline: UnderlineStyle // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+  underline: false | "single" | "double" | "curly" | "dotted" | "dashed"
   strikethrough: boolean
   inverse: boolean // Foreground/background swapped
   wide: boolean // Double-width character (CJK, emoji)
@@ -34,7 +34,7 @@ Values are 0-255 per channel.
 ## UnderlineStyle
 
 ```typescript
-type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+type UnderlineStyle = false | "single" | "double" | "curly" | "dotted" | "dashed"
 ```
 
 ## CursorState

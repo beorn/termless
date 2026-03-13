@@ -228,13 +228,13 @@ The `Cell` type returned by `getCell`/`getLine`/`getLines`:
 
 ```typescript
 interface Cell {
-  text: string // Character(s) at this position ("" for empty)
+  char: string // Character(s) at this position ("" for empty)
   fg: RGB | null // Foreground color (null = terminal default)
   bg: RGB | null // Background color (null = terminal default)
   bold: boolean
-  faint: boolean
+  dim: boolean
   italic: boolean
-  underline: UnderlineStyle // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+  underline: false | "single" | "double" | "curly" | "dotted" | "dashed"
   strikethrough: boolean
   inverse: boolean
   wide: boolean // true for double-width characters (CJK, emoji)
@@ -425,7 +425,7 @@ Write at minimum these test categories in `packages/<name>/tests/backend.test.ts
 1. **Lifecycle**: create, init, destroy, re-init, ensureTerm guard
 2. **Text I/O**: plain text, multiline, cursor positioning (CUP)
 3. **Colors**: ANSI 16, 256-color palette, truecolor 24-bit, fg and bg
-4. **Attributes**: bold, italic, faint, underline, strikethrough, inverse, combined
+4. **Attributes**: bold, italic, dim, underline, strikethrough, inverse, combined
 5. **Wide characters**: CJK, emoji, spacer cells
 6. **Cursor**: position after text, after newline, after CUP
 7. **Modes**: alt screen on/off, bracketed paste, auto wrap

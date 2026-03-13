@@ -7,7 +7,7 @@
 - **Lifecycle**: `createXtermBackend()` creation with default/custom dimensions, eager init via opts, `destroy()`
 - **Text I/O**: `feed()` plain and multiline text, `getText()` read-back, `getTextRange()` substrings
 - **Colors**: ANSI 16-color (SGR 31, 42), 256-color (SGR 38;5;N), truecolor 24-bit (SGR 38;2;R;G;B), foreground and background
-- **Attributes**: bold, italic, underline (single), strikethrough, faint/dim, inverse, combined attributes (bold + color)
+- **Attributes**: bold, italic, underline (single), strikethrough, dim, inverse, combined attributes (bold + color)
 - **Wide characters**: CJK double-width cells, spacer cell after wide char
 - **Cursor**: position tracking after feed, newline movement, default style (block)
 - **Modes**: alt screen (`?1049h/l`), bracketed paste (`?2004h`), mouse tracking (`?1000h`)

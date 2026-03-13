@@ -156,7 +156,7 @@ expect(term).toHaveTitle("My App")
 | ------------------------- | --------------------------------------------------------------------------------------------- |
 | `toBeBold()`              | Cell is bold                                                                                  |
 | `toBeItalic()`            | Cell is italic                                                                                |
-| `toBeFaint()`             | Cell is faint/dim                                                                             |
+| `toBeDim()`               | Cell is dim                                                                                   |
 | `toBeStrikethrough()`     | Cell has strikethrough                                                                        |
 | `toBeInverse()`           | Cell has inverse video                                                                        |
 | `toBeWide()`              | Cell is double-width (CJK, emoji)                                                             |

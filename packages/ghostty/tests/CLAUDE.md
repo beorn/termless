@@ -5,7 +5,7 @@
 ## What to Test Here
 
 - **Text rendering**: plain text, multiline, cursor positioning, line wrapping
-- **Cell attributes**: bold, italic, faint, underline, strikethrough, inverse, truecolor fg/bg, wide characters
+- **Cell attributes**: bold, italic, dim, underline, strikethrough, inverse, truecolor fg/bg, wide characters
 - **Cursor**: position tracking after text, newlines, CUP escape sequences
 - **Modes**: alt screen, bracketed paste, auto wrap
 - **Scrollback**: state reporting, accumulation

@@ -143,15 +143,15 @@ interface RowView extends RegionView {
 
 // CellView -- a single cell with positional context and style
 interface CellView {
-  readonly text: string
+  readonly char: string
   readonly row: number
   readonly col: number
   readonly fg: RGB | null
   readonly bg: RGB | null
   readonly bold: boolean
-  readonly faint: boolean
+  readonly dim: boolean
   readonly italic: boolean
-  readonly underline: UnderlineStyle
+  readonly underline: false | "single" | "double" | "curly" | "dotted" | "dashed"
   readonly strikethrough: boolean
   readonly inverse: boolean
   readonly wide: boolean
@@ -294,13 +294,13 @@ Get a single cell with all attributes. Returns a `Cell` object:
 
 ```typescript
 const cell = term.getCell(0, 0)
-cell.text // string -- character
+cell.char // string -- character
 cell.fg // RGB | null -- foreground color
 cell.bg // RGB | null -- background color
 cell.bold // boolean
-cell.faint // boolean
+cell.dim // boolean
 cell.italic // boolean
-cell.underline // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+cell.underline // false | "single" | "double" | "curly" | "dotted" | "dashed"
 cell.strikethrough // boolean
 cell.inverse // boolean
 cell.wide // boolean -- double-width character

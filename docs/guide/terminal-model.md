@@ -110,5 +110,5 @@ Silvery keeps `(x, y)` because it's a React-like UI framework where CSS conventi
 
 A cell holds one character with attributes:
 
-- text, fg (RGB), bg (RGB)
-- bold, faint, italic, underline, strikethrough, inverse, wide
+- char, fg (RGB), bg (RGB)
+- bold, dim, italic, underline, strikethrough, inverse, wide

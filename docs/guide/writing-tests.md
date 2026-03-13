@@ -58,7 +58,7 @@ expect(term.cell(0, 0)).toHaveBg({ r: 0, g: 255, b: 0 })
 // Text attributes
 expect(term.cell(0, 0)).toBeBold()
 expect(term.cell(0, 0)).toBeItalic()
-expect(term.cell(0, 0)).toBeFaint()
+expect(term.cell(0, 0)).toBeDim()
 expect(term.cell(0, 0)).toBeStrikethrough()
 expect(term.cell(0, 0)).toBeInverse()
 expect(term.cell(0, 0)).toBeWide() // Double-width character
