@@ -74,6 +74,28 @@ term (TerminalReadable)        toHaveCursorAt(x, y)
 
 Region selectors: `term.screen`, `term.scrollback`, `term.buffer`, `term.viewport`, `term.row(n)`, `term.cell(r, c)`, `term.range(r1, c1, r2, c2)`, `term.firstRow()`, `term.lastRow()`.
 
+## Auto-Retry Matchers (Playwright-Style)
+
+Terminal views are **lazy evaluators** like Playwright locators — they re-query the terminal on each access. When awaited, matchers auto-retry:
+
+```typescript
+// Playwright: await expect(page.locator('.status')).toContainText('ready')
+// Termless:   await expect(term.screen).toContainText('ready')
+
+// Sync (no await) — single check
+expect(term.screen).toContainText("Hello")
+
+// Async (await) — retries up to 5s (default)
+await expect(term.screen).toContainText("Hello")
+
+// Per-call timeout
+await expect(term.screen).toContainText("slow", { timeout: 15_000 })
+```
+
+All text matchers and terminal matchers support auto-retry. Cell matchers are always sync (point-in-time snapshots).
+
+Configure globally: `configureTerminalMatchers({ timeout: 10_000 })`
+
 ## Buffer Diff
 
 ```typescript

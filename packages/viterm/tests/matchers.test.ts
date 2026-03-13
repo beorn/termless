@@ -23,6 +23,31 @@ import type {
 } from "../../../src/types.ts"
 
 // =============================================================================
+// Test Helpers
+// =============================================================================
+
+/**
+ * Assert a matcher fails. Works with both sync matchers (throws) and
+ * async auto-retry matchers (returns rejected Promise).
+ *
+ * With auto-retry, matchers on retryable subjects (RegionView, TerminalReadable)
+ * return a Promise on failure instead of throwing. Pass `{ timeout: 0 }` to
+ * the matcher to avoid waiting for retry on static mocks.
+ */
+async function expectToFail(fn: () => unknown): Promise<void> {
+  try {
+    const result = fn()
+    if (result && typeof (result as Record<string, unknown>).then === "function") {
+      await (result as Promise<unknown>)
+    }
+    expect.unreachable("Expected assertion to fail")
+  } catch (e) {
+    if ((e as Error).message?.includes("expected to be unreachable")) throw e
+    // Assertion error — expected
+  }
+}
+
+// =============================================================================
 // Mock Factories
 // =============================================================================
 
@@ -217,9 +242,9 @@ describe("text matchers", () => {
     expect(region).toContainText("Second")
   })
 
-  test("toContainText fails when text is absent", () => {
+  test("toContainText fails when text is absent", async () => {
     const region = mockRegion(["Hello World"])
-    expect(() => expect(region).toContainText("Goodbye")).toThrow()
+    await expectToFail(() => expect(region).toContainText("Goodbye", { timeout: 0 }))
   })
 
   test("toContainText with .not negation", () => {
@@ -227,9 +252,9 @@ describe("text matchers", () => {
     expect(region).not.toContainText("Goodbye")
   })
 
-  test("toContainText .not fails when text IS present", () => {
+  test("toContainText .not fails when text IS present", async () => {
     const region = mockRegion(["Hello World"])
-    expect(() => expect(region).not.toContainText("Hello")).toThrow()
+    await expectToFail(() => expect(region).not.toContainText("Hello", { timeout: 0 }))
   })
 
   test("toContainText works on RowView", () => {
@@ -243,9 +268,9 @@ describe("text matchers", () => {
     expect(region).toHaveText("Hello")
   })
 
-  test("toHaveText fails on substring match", () => {
+  test("toHaveText fails on substring match", async () => {
     const region = mockRegion(["Hello World"])
-    expect(() => expect(region).toHaveText("Hello")).toThrow()
+    await expectToFail(() => expect(region).toHaveText("Hello", { timeout: 0 }))
   })
 
   test("toHaveText with .not negation", () => {
@@ -264,9 +289,9 @@ describe("text matchers", () => {
     expect(region).toMatchLines(["Hello", "World"])
   })
 
-  test("toMatchLines fails when lines differ", () => {
+  test("toMatchLines fails when lines differ", async () => {
     const region = mockRegion(["Hello", "World"])
-    expect(() => expect(region).toMatchLines(["Hello", "Earth"])).toThrow()
+    await expectToFail(() => expect(region).toMatchLines(["Hello", "Earth"], { timeout: 0 }))
   })
 
   test("toMatchLines with .not negation", () => {
@@ -411,9 +436,9 @@ describe("cursor matchers", () => {
     expect(term).toHaveCursorAt(5, 10)
   })
 
-  test("toHaveCursorAt fails with wrong position", () => {
+  test("toHaveCursorAt fails with wrong position", async () => {
     const term = createMockTerminal({ cursor: { x: 5, y: 10 } })
-    expect(() => expect(term).toHaveCursorAt(0, 0)).toThrow()
+    await expectToFail(() => expect(term).toHaveCursorAt(0, 0, { timeout: 0 }))
   })
 
   test("toHaveCursorVisible passes when cursor is visible", () => {
@@ -421,9 +446,9 @@ describe("cursor matchers", () => {
     expect(term).toHaveCursorVisible()
   })
 
-  test("toHaveCursorVisible fails when cursor is hidden", () => {
+  test("toHaveCursorVisible fails when cursor is hidden", async () => {
     const term = createMockTerminal({ cursor: { visible: false } })
-    expect(() => expect(term).toHaveCursorVisible()).toThrow()
+    await expectToFail(() => expect(term).toHaveCursorVisible({ timeout: 0 }))
   })
 
   test("toHaveCursorHidden passes when cursor is hidden", () => {
@@ -431,9 +456,9 @@ describe("cursor matchers", () => {
     expect(term).toHaveCursorHidden()
   })
 
-  test("toHaveCursorHidden fails when cursor is visible", () => {
+  test("toHaveCursorHidden fails when cursor is visible", async () => {
     const term = createMockTerminal({ cursor: { visible: true } })
-    expect(() => expect(term).toHaveCursorHidden()).toThrow()
+    await expectToFail(() => expect(term).toHaveCursorHidden({ timeout: 0 }))
   })
 
   test("toHaveCursorStyle checks block style", () => {
@@ -451,9 +476,9 @@ describe("cursor matchers", () => {
     expect(term).toHaveCursorStyle("beam")
   })
 
-  test("toHaveCursorStyle fails with wrong style", () => {
+  test("toHaveCursorStyle fails with wrong style", async () => {
     const term = createMockTerminal({ cursor: { style: "block" } })
-    expect(() => expect(term).toHaveCursorStyle("beam")).toThrow()
+    await expectToFail(() => expect(term).toHaveCursorStyle("beam", { timeout: 0 }))
   })
 })
 
@@ -467,9 +492,9 @@ describe("terminal mode matchers", () => {
     expect(term).toBeInMode("altScreen")
   })
 
-  test("toBeInMode fails when altScreen is disabled", () => {
+  test("toBeInMode fails when altScreen is disabled", async () => {
     const term = createMockTerminal({ modes: { altScreen: false } })
-    expect(() => expect(term).toBeInMode("altScreen")).toThrow()
+    await expectToFail(() => expect(term).toBeInMode("altScreen", { timeout: 0 }))
   })
 
   test("toBeInMode passes when bracketedPaste is enabled", () => {
@@ -477,9 +502,9 @@ describe("terminal mode matchers", () => {
     expect(term).toBeInMode("bracketedPaste")
   })
 
-  test("toBeInMode fails when bracketedPaste is disabled", () => {
+  test("toBeInMode fails when bracketedPaste is disabled", async () => {
     const term = createMockTerminal({ modes: {} })
-    expect(() => expect(term).toBeInMode("bracketedPaste")).toThrow()
+    await expectToFail(() => expect(term).toBeInMode("bracketedPaste", { timeout: 0 }))
   })
 
   test("toBeInMode passes when applicationCursor is enabled", () => {
@@ -492,9 +517,9 @@ describe("terminal mode matchers", () => {
     expect(term).not.toBeInMode("mouseTracking")
   })
 
-  test("toBeInMode .not fails when mode IS enabled", () => {
+  test("toBeInMode .not fails when mode IS enabled", async () => {
     const term = createMockTerminal({ modes: { altScreen: true } })
-    expect(() => expect(term).not.toBeInMode("altScreen")).toThrow()
+    await expectToFail(() => expect(term).not.toBeInMode("altScreen", { timeout: 0 }))
   })
 })
 
@@ -508,9 +533,9 @@ describe("title matcher", () => {
     expect(term).toHaveTitle("My Terminal")
   })
 
-  test("toHaveTitle fails with wrong title", () => {
+  test("toHaveTitle fails with wrong title", async () => {
     const term = createMockTerminal({ title: "My Terminal" })
-    expect(() => expect(term).toHaveTitle("Other Terminal")).toThrow()
+    await expectToFail(() => expect(term).toHaveTitle("Other Terminal", { timeout: 0 }))
   })
 
   test("toHaveTitle matches empty title", () => {
@@ -532,9 +557,9 @@ describe("scrollback matchers", () => {
     expect(term).toHaveScrollbackLines(100)
   })
 
-  test("toHaveScrollbackLines fails with wrong count", () => {
+  test("toHaveScrollbackLines fails with wrong count", async () => {
     const term = createMockTerminal({ scrollback: { totalLines: 50 } })
-    expect(() => expect(term).toHaveScrollbackLines(100)).toThrow()
+    await expectToFail(() => expect(term).toHaveScrollbackLines(100, { timeout: 0 }))
   })
 
   test("toBeAtBottomOfScrollback passes when offset is 0", () => {
@@ -542,9 +567,9 @@ describe("scrollback matchers", () => {
     expect(term).toBeAtBottomOfScrollback()
   })
 
-  test("toBeAtBottomOfScrollback fails when scrolled up", () => {
+  test("toBeAtBottomOfScrollback fails when scrolled up", async () => {
     const term = createMockTerminal({ scrollback: { viewportOffset: 10 } })
-    expect(() => expect(term).toBeAtBottomOfScrollback()).toThrow()
+    await expectToFail(() => expect(term).toBeAtBottomOfScrollback({ timeout: 0 }))
   })
 })
 

@@ -100,26 +100,64 @@ export function createRowView(readable: TerminalReadable, absRow: number, screen
 /**
  * Screen view: the fixed rows × cols grid at the bottom of the buffer.
  * In alt mode, this is the entire alt buffer.
+ *
+ * Lazy: re-queries screen boundaries on each access, so the view
+ * reflects content changes after creation (Playwright-style locator).
  */
 export function createScreenView(readable: TerminalReadable): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
-  return createRegionView(readable, base, base + screenLines)
+  function getRange(): [number, number] {
+    const { totalLines, screenLines } = readable.getScrollback()
+    const base = totalLines - screenLines
+    return [base, base + screenLines]
+  }
+
+  return {
+    getText(): string {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end).join("\n")
+    },
+    getLines(): string[] {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end)
+    },
+    containsText(text: string): boolean {
+      return this.getText().includes(text)
+    },
+  }
 }
 
 /**
  * Scrollback view: history lines above the screen.
  * Empty in alt screen mode.
+ *
+ * Lazy: re-queries scrollback boundaries on each access, so the view
+ * reflects new content that scrolls off screen after creation.
+ * This makes it work as a Playwright-style locator for auto-retry matchers.
+ *
  * @param n - If provided, only the last N scrollback lines.
  */
 export function createScrollbackView(readable: TerminalReadable, n?: number): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
-  if (base <= 0) {
-    return createRegionView(readable, 0, 0)
+  function getRange(): [number, number] {
+    const { totalLines, screenLines } = readable.getScrollback()
+    const base = totalLines - screenLines
+    if (base <= 0) return [0, 0]
+    const start = n != null ? Math.max(0, base - n) : 0
+    return [start, base]
   }
-  const start = n != null ? Math.max(0, base - n) : 0
-  return createRegionView(readable, start, base)
+
+  return {
+    getText(): string {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end).join("\n")
+    },
+    getLines(): string[] {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end)
+    },
+    containsText(text: string): boolean {
+      return this.getText().includes(text)
+    },
+  }
 }
 
 /**
@@ -143,15 +181,37 @@ export function createBufferView(readable: TerminalReadable): RegionView {
 /**
  * Viewport view: what's visible at the current scroll position.
  * At bottom: same as screen. Scrolled up: shows scrollback lines.
+ *
+ * Lazy: re-queries viewport offset on each access, so the view
+ * reflects scroll changes after creation (Playwright-style locator).
  */
 export function createViewportView(readable: TerminalReadable): RegionView {
-  const { viewportOffset, screenLines } = readable.getScrollback()
-  return createRegionView(readable, viewportOffset, viewportOffset + screenLines)
+  function getRange(): [number, number] {
+    const { viewportOffset, screenLines } = readable.getScrollback()
+    return [viewportOffset, viewportOffset + screenLines]
+  }
+
+  return {
+    getText(): string {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end).join("\n")
+    },
+    getLines(): string[] {
+      const [start, end] = getRange()
+      return getRowTexts(readable, start, end)
+    },
+    containsText(text: string): boolean {
+      return this.getText().includes(text)
+    },
+  }
 }
 
 /**
  * Range view: a rectangular region of the screen.
  * Coordinates are screen-relative.
+ *
+ * Lazy: re-queries screen base on each access, so the view
+ * reflects buffer changes after creation (Playwright-style locator).
  */
 export function createRangeView(
   readable: TerminalReadable,
@@ -160,10 +220,14 @@ export function createRangeView(
   r2: number,
   c2: number,
 ): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
+  function getBase(): number {
+    const { totalLines, screenLines } = readable.getScrollback()
+    return totalLines - screenLines
+  }
+
   return {
     getText(): string {
+      const base = getBase()
       return readable.getTextRange(base + r1, c1, base + r2, c2)
     },
     getLines(): string[] {

@@ -178,6 +178,54 @@ expect(term).toHaveTitle("My App")
 | `toBeAtBottomOfScrollback()` | Viewport at bottom (no scroll offset)            |
 | `toMatchTerminalSnapshot()`  | Vitest snapshot of terminal state                |
 
+## Auto-Retry Matchers (Playwright-Style)
+
+Terminal views (`term.screen`, `term.scrollback`, etc.) are **lazy evaluators** — like Playwright locators, they re-query the terminal on each access. When you `await` a matcher, it auto-retries until the assertion passes or the timeout expires:
+
+```typescript
+// Playwright: locator is lazy, assertion retries until DOM updates
+await expect(page.locator(".status")).toContainText("ready")
+
+// Termless: terminal view is lazy, assertion retries until terminal updates
+await expect(term.screen).toContainText("ready")
+```
+
+**Sync** (no `await`) — runs once, passes or fails immediately:
+
+```typescript
+expect(term.screen).toContainText("Hello") // sync — single check
+```
+
+**Async** (`await`) — retries up to 5 seconds (default):
+
+```typescript
+await expect(term.screen).toContainText("Hello") // async — retries until pass or timeout
+```
+
+Configure timeout globally or per-assertion:
+
+```typescript
+import { configureTerminalMatchers } from "@termless/test/matchers"
+
+configureTerminalMatchers({ timeout: 10_000 }) // global default
+await expect(term.screen).toContainText("slow", { timeout: 15_000 }) // per-call override
+```
+
+All text matchers (`toContainText`, `toHaveText`, `toMatchLines`) and terminal matchers (`toHaveCursorAt`, `toBeInMode`, etc.) support auto-retry. Cell matchers are always sync — cells are point-in-time snapshots, not live views.
+
+### Why This Matters
+
+Terminal apps are asynchronous. Output arrives over time — a shell prompt appears, then a command runs, then results stream in. Testing with `setTimeout` + manual polling is fragile and slow. Auto-retry matchers let you write natural assertions that wait for the right moment:
+
+```typescript
+// Instead of this fragile pattern:
+await new Promise((r) => setTimeout(r, 500))
+expect(term.screen.getText()).toContain("ready")
+
+// Write this — retries automatically:
+await expect(term.screen).toContainText("ready")
+```
+
 ## Installation
 
 ```bash
