@@ -39,7 +39,7 @@ import {
   assertMatchesLines,
   assertIsBold,
   assertIsItalic,
-  assertIsFaint,
+  assertIsDim,
   assertIsStrikethrough,
   assertIsInverse,
   assertIsWide,
@@ -82,7 +82,7 @@ declare module "vitest" {
     // Cell Style (CellView)
     toBeBold(): void
     toBeItalic(): void
-    toBeFaint(): void
+    toBeDim(): void
     toBeStrikethrough(): void
     toBeInverse(): void
     toBeWide(): void
@@ -145,10 +145,10 @@ export const terminalMatchers = {
     return toMatcherResult(assertIsItalic(received))
   },
 
-  /** Assert cell is faint. */
-  toBeFaint(received: unknown) {
-    assertCellView(received, "toBeFaint")
-    return toMatcherResult(assertIsFaint(received))
+  /** Assert cell is dim (faint). */
+  toBeDim(received: unknown) {
+    assertCellView(received, "toBeDim")
+    return toMatcherResult(assertIsDim(received))
   },
 
   /** Assert cell has strikethrough. */

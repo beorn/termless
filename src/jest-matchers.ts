@@ -25,7 +25,7 @@ import {
   assertMatchesLines,
   assertIsBold,
   assertIsItalic,
-  assertIsFaint,
+  assertIsDim,
   assertIsStrikethrough,
   assertIsInverse,
   assertIsWide,
@@ -91,9 +91,9 @@ export const termlessMatchers = {
     return toMatcherResult(assertIsItalic(received))
   },
 
-  toBeFaint(received: unknown) {
-    assertCellView(received, "toBeFaint")
-    return toMatcherResult(assertIsFaint(received))
+  toBeDim(received: unknown) {
+    assertCellView(received, "toBeDim")
+    return toMatcherResult(assertIsDim(received))
   },
 
   toBeStrikethrough(received: unknown) {

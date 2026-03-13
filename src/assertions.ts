@@ -185,11 +185,11 @@ export function assertIsItalic(cell: CellView): AssertionResult {
 }
 
 /** Assert cell is dim (faint). */
-export function assertIsFaint(cell: CellView): AssertionResult {
+export function assertIsDim(cell: CellView): AssertionResult {
   const loc = cellLocation(cell)
   return {
     pass: cell.dim,
-    message: cell.dim ? `Expected ${loc} not to be faint` : `Expected ${loc} to be faint`,
+    message: cell.dim ? `Expected ${loc} not to be dim` : `Expected ${loc} to be dim`,
   }
 }
 

@@ -310,14 +310,14 @@ describe("style matchers", () => {
     expect(() => expect(cell).toBeItalic()).toThrow()
   })
 
-  test("toBeFaint passes when cell is faint", () => {
+  test("toBeDim passes when cell is dim", () => {
     const cell = mockCell({ dim: true })
-    expect(cell).toBeFaint()
+    expect(cell).toBeDim()
   })
 
-  test("toBeFaint fails when cell is not faint", () => {
+  test("toBeDim fails when cell is not dim", () => {
     const cell = mockCell({ dim: false })
-    expect(() => expect(cell).toBeFaint()).toThrow()
+    expect(() => expect(cell).toBeDim()).toThrow()
   })
 
   test("toBeStrikethrough passes when cell is strikethrough", () => {

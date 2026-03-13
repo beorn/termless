@@ -22,7 +22,7 @@ import {
   assertMatchesLines,
   assertIsBold,
   assertIsItalic,
-  assertIsFaint,
+  assertIsDim,
   assertIsStrikethrough,
   assertIsInverse,
   assertIsWide,
@@ -366,14 +366,14 @@ describe("assertIsItalic", () => {
   })
 })
 
-describe("assertIsFaint", () => {
-  test("passes for faint cell", () => {
-    const result = assertIsFaint(mockCell({ dim: true }))
+describe("assertIsDim", () => {
+  test("passes for dim cell", () => {
+    const result = assertIsDim(mockCell({ dim: true }))
     expect(result.pass).toBe(true)
   })
 
-  test("fails for non-faint cell", () => {
-    const result = assertIsFaint(mockCell({ dim: false }))
+  test("fails for non-dim cell", () => {
+    const result = assertIsDim(mockCell({ dim: false }))
     expect(result.pass).toBe(false)
   })
 })
