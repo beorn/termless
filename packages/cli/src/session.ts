@@ -69,22 +69,29 @@ export function createSessionManager(): SessionManager {
     counter++
     const id = `session-${counter}`
 
-    // Spawn command if provided
-    if (opts.command && opts.command.length > 0) {
-      await terminal.spawn(opts.command, {
-        env: opts.env,
-        cwd: opts.cwd,
-      })
+    try {
+      // Spawn command if provided
+      if (opts.command && opts.command.length > 0) {
+        await terminal.spawn(opts.command, {
+          env: opts.env,
+          cwd: opts.cwd,
+        })
 
-      // Wait for content based on waitFor option
-      if (opts.waitFor === "stable") {
-        await terminal.waitForStable(DEFAULT_STABLE_MS, timeout)
-      } else if (opts.waitFor && opts.waitFor !== "content") {
-        await terminal.waitFor(opts.waitFor, timeout)
-      } else {
-        // Default: wait for any content
-        await waitForContent(terminal, timeout)
+        // Wait for content based on waitFor option
+        if (opts.waitFor === "stable") {
+          await terminal.waitForStable(DEFAULT_STABLE_MS, timeout)
+        } else if (opts.waitFor && opts.waitFor !== "content") {
+          await terminal.waitFor(opts.waitFor, timeout)
+        } else {
+          // Default: wait for any content
+          await waitForContent(terminal, timeout)
+        }
       }
+    } catch (error) {
+      // Clean up the PTY/backend if setup fails — without this,
+      // the terminal is never tracked in sessions and stopAll() won't close it.
+      await terminal.close()
+      throw error
     }
 
     sessions.set(id, { terminal, command: opts.command })

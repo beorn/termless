@@ -37,8 +37,10 @@ export type RGB = { r: number; g: number; b: number }
 export interface CursorState {
   x: number
   y: number
-  visible: boolean
-  style: CursorStyle
+  /** Whether the cursor is visible. `null` if the backend doesn't know. */
+  visible: boolean | null
+  /** Cursor shape. `null` if the backend doesn't know. */
+  style: CursorStyle | null
 }
 
 export type CursorStyle = "block" | "underline" | "beam"
@@ -61,8 +63,25 @@ export type TerminalMode =
 // ── Scrollback ──
 
 export interface ScrollbackState {
+  /**
+   * Absolute row index of the viewport's top line in the buffer.
+   * When at the bottom (no scrollback visible): `totalLines - screenLines`.
+   * When scrolled to the very top: `0`.
+   *
+   * Used by region views as the start row for viewport rendering:
+   * `createRegionView(readable, viewportOffset, viewportOffset + screenLines)`.
+   */
   viewportOffset: number
+  /**
+   * Total number of lines in the buffer (scrollback history + screen).
+   * Row 0 is the first line in scrollback; row `totalLines - 1` is the last screen line.
+   */
   totalLines: number
+  /**
+   * Number of visible screen rows (the terminal's row dimension).
+   * The screen occupies the last `screenLines` rows of the buffer
+   * (rows `totalLines - screenLines` through `totalLines - 1`).
+   */
   screenLines: number
 }
 
@@ -135,11 +154,27 @@ export interface RowView extends RegionView {
 // TerminalReadable — shared protocol for backends
 // ═══════════════════════════════════════════════════════
 
+/**
+ * Shared read protocol for terminal backends.
+ *
+ * **Coordinate system**: All row parameters use **absolute buffer rows**.
+ * Row 0 is the first line in scrollback history. The screen occupies the
+ * last `screenLines` rows (from `totalLines - screenLines` to `totalLines - 1`).
+ */
 export interface TerminalReadable {
+  /** Get all buffer text (scrollback + screen) as a newline-joined string. */
   getText(): string
+  /**
+   * Get text in a rectangular range using absolute buffer rows.
+   * startCol/endCol apply to the first/last rows respectively;
+   * intermediate rows return full width.
+   */
   getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string
+  /** Get a single cell at an absolute buffer row and column. */
   getCell(row: number, col: number): Cell
+  /** Get all cells in an absolute buffer row. */
   getLine(row: number): Cell[]
+  /** Get all lines as cell arrays (entire buffer: scrollback + screen). */
   getLines(): Cell[][]
   getCursor(): CursorState
   getMode(mode: TerminalMode): boolean
@@ -165,6 +200,14 @@ export interface TerminalBackend extends TerminalReadable {
 
   // Key encoding
   encodeKey(key: KeyDescriptor): Uint8Array
+
+  /**
+   * Callback invoked when the emulator generates a response that must be
+   * written back to the PTY (e.g., cursor position reports, device attribute
+   * responses, kitty keyboard negotiation). Set by the Terminal layer when
+   * a PTY is spawned.
+   */
+  onResponse?: (data: Uint8Array) => void
 
   // Scrollback
   scrollViewport(delta: number): void

@@ -107,6 +107,33 @@ declare module "vitest" {
 }
 
 // =============================================================================
+// Snapshot Helpers
+// =============================================================================
+
+/** Format terminal state as a human-readable snapshot string. */
+function formatTerminalSnapshot(term: TerminalReadable): string {
+  const lines = term.getLines()
+  const cursor = term.getCursor()
+  const altScreen = term.getMode("altScreen")
+
+  const cols = lines[0]?.length ?? 0
+  let header = `# terminal ${cols}x${lines.length}`
+  header += ` | cursor (${cursor.x},${cursor.y}) ${cursor.visible ? "visible" : "hidden"} ${cursor.style}`
+  if (altScreen) header += " | altScreen"
+
+  const sep = "\u2500".repeat(50)
+  const body = lines
+    .map((line, row) => {
+      const num = String(row + 1).padStart(2)
+      const text = line.map((c) => c.char || " ").join("")
+      return `${num}\u2502${text}`
+    })
+    .join("\n")
+
+  return `${header}\n${sep}\n${body}`
+}
+
+// =============================================================================
 // Matcher Implementations
 // =============================================================================
 
@@ -242,31 +269,20 @@ export const terminalMatchers = {
   /** Match terminal content against a snapshot. */
   toMatchTerminalSnapshot(received: unknown, options?: { name?: string }) {
     assertTerminalReadable(received, "toMatchTerminalSnapshot")
-    const lines = received.getLines()
-    const cursor = received.getCursor()
-    const altScreen = received.getMode("altScreen")
+    const snapshot = formatTerminalSnapshot(received)
 
-    const cols = lines[0]?.length ?? 0
-    let header = `# terminal ${cols}x${lines.length}`
-    header += ` | cursor (${cursor.x},${cursor.y}) ${cursor.visible ? "visible" : "hidden"} ${cursor.style}`
-    if (altScreen) header += " | altScreen"
-
-    const sep = "\u2500".repeat(50)
-    const body = lines
-      .map((line, row) => {
-        const num = String(row + 1).padStart(2)
-        const text = line.map((c) => c.char || " ").join("")
-        return `${num}\u2502${text}`
-      })
-      .join("\n")
-
-    const snapshot = `${header}\n${sep}\n${body}`
-
-    return {
-      pass: (expect as unknown as { getState(): { snapshotState: unknown } }).getState?.()?.snapshotState !== undefined,
-      message: () => `Terminal snapshot comparison`,
-      actual: snapshot,
-      expected: options?.name ?? "terminal snapshot",
+    // Delegate to Vitest's built-in snapshot machinery
+    try {
+      expect(snapshot).toMatchSnapshot(options?.name)
+      return {
+        pass: true,
+        message: () => `Expected terminal snapshot not to match`,
+      }
+    } catch (error) {
+      return {
+        pass: false,
+        message: () => (error instanceof Error ? error.message : String(error)),
+      }
     }
   },
 
@@ -276,11 +292,18 @@ export const terminalMatchers = {
     const svgOptions: SvgScreenshotOptions | undefined = options?.theme ? { theme: options.theme } : undefined
     const svg = screenshotSvg(received, svgOptions)
 
-    return {
-      pass: (expect as unknown as { getState(): { snapshotState: unknown } }).getState?.()?.snapshotState !== undefined,
-      message: () => `SVG terminal snapshot comparison`,
-      actual: svg,
-      expected: options?.name ?? "svg terminal snapshot",
+    // Delegate to Vitest's built-in snapshot machinery
+    try {
+      expect(svg).toMatchSnapshot(options?.name)
+      return {
+        pass: true,
+        message: () => `Expected SVG terminal snapshot not to match`,
+      }
+    } catch (error) {
+      return {
+        pass: false,
+        message: () => (error instanceof Error ? error.message : String(error)),
+      }
     }
   },
 }

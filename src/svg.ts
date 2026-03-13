@@ -275,7 +275,10 @@ function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null
   const cx = cursor.x * opts.cellWidth
   const cy = cursor.y * opts.cellHeight
 
-  switch (cursor.style) {
+  // Default to block if backend doesn't report cursor style
+  const style = cursor.style ?? "block"
+
+  switch (style) {
     case "block":
       return `<rect x="${cx}" y="${cy}" width="${opts.cellWidth}" height="${opts.cellHeight}" fill="${opts.themeCursor}" opacity="0.5"/>`
     case "underline":

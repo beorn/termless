@@ -524,26 +524,40 @@ describe("title matcher", () => {
 // =============================================================================
 
 describe("scrollback matchers", () => {
-  test("toHaveScrollbackLines checks total line count", () => {
+  test("toHaveScrollbackLines counts only scrollback lines, excluding screen", () => {
     const term = createMockTerminal({
       lines: ["a", "b", "c"],
-      scrollback: { totalLines: 100 },
+      scrollback: { totalLines: 100, screenLines: 3 },
     })
-    expect(term).toHaveScrollbackLines(100)
+    // 100 total - 3 screen = 97 scrollback lines
+    expect(term).toHaveScrollbackLines(97)
   })
 
   test("toHaveScrollbackLines fails with wrong count", () => {
-    const term = createMockTerminal({ scrollback: { totalLines: 50 } })
+    const term = createMockTerminal({ scrollback: { totalLines: 50, screenLines: 10 } })
+    // 50 total - 10 screen = 40 scrollback lines, not 100
     expect(() => expect(term).toHaveScrollbackLines(100)).toThrow()
   })
 
-  test("toBeAtBottomOfScrollback passes when offset is 0", () => {
+  test("toBeAtBottomOfScrollback passes when viewport at bottom", () => {
+    // No scrollback: totalLines = screenLines, bottom = 0
     const term = createMockTerminal({ scrollback: { viewportOffset: 0 } })
     expect(term).toBeAtBottomOfScrollback()
   })
 
+  test("toBeAtBottomOfScrollback passes with scrollback at bottom", () => {
+    // totalLines=30, screenLines=10, bottom = 20
+    const term = createMockTerminal({
+      scrollback: { viewportOffset: 20, totalLines: 30, screenLines: 10 },
+    })
+    expect(term).toBeAtBottomOfScrollback()
+  })
+
   test("toBeAtBottomOfScrollback fails when scrolled up", () => {
-    const term = createMockTerminal({ scrollback: { viewportOffset: 10 } })
+    // totalLines=30, screenLines=10, bottom = 20, but viewport at 10 (scrolled up)
+    const term = createMockTerminal({
+      scrollback: { viewportOffset: 10, totalLines: 30, screenLines: 10 },
+    })
     expect(() => expect(term).toBeAtBottomOfScrollback()).toThrow()
   })
 })
@@ -553,12 +567,12 @@ describe("scrollback matchers", () => {
 // =============================================================================
 
 describe("snapshot matchers", () => {
-  test("toMatchTerminalSnapshot creates and matches snapshot", () => {
+  test("toMatchTerminalSnapshot creates a snapshot file", () => {
     const term = createMockTerminal({
       lines: ["Hello World", "Line 2"],
       cursor: { x: 5, y: 0, visible: true, style: "block" },
     })
-    // Should not throw — matcher constructs snapshot from terminal state
+    // Should create a snapshot entry and match on subsequent runs
     expect(term).toMatchTerminalSnapshot()
   })
 
@@ -568,6 +582,14 @@ describe("snapshot matchers", () => {
       cursor: { x: 5, y: 0, visible: true, style: "block" },
     })
     expect(term).toMatchTerminalSnapshot({ name: "my-snapshot" })
+  })
+
+  test("toMatchSvgSnapshot creates a snapshot file", () => {
+    const term = createMockTerminal({
+      lines: ["SVG Test"],
+      cursor: { x: 0, y: 0, visible: true, style: "block" },
+    })
+    expect(term).toMatchSvgSnapshot()
   })
 })
 

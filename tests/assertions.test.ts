@@ -582,30 +582,58 @@ describe("assertTitle", () => {
 })
 
 describe("assertScrollbackLines", () => {
-  test("passes with correct count", () => {
-    const term = createMockTerminal({ scrollback: { totalLines: 100 } })
-    const result = assertScrollbackLines(term, 100)
+  test("counts only scrollback lines, not screen lines", () => {
+    // 100 total lines, 24 screen lines → 76 scrollback lines
+    const term = createMockTerminal({ scrollback: { totalLines: 100, screenLines: 24 } })
+    const result = assertScrollbackLines(term, 76)
     expect(result.pass).toBe(true)
   })
 
-  test("fails with wrong count", () => {
-    const term = createMockTerminal({ scrollback: { totalLines: 50 } })
+  test("fails when expected count does not match scrollback-only lines", () => {
+    // 100 total lines, 24 screen lines → 76 scrollback lines, not 100
+    const term = createMockTerminal({ scrollback: { totalLines: 100, screenLines: 24 } })
     const result = assertScrollbackLines(term, 100)
     expect(result.pass).toBe(false)
     expect(result.message).toContain("100")
-    expect(result.message).toContain("50")
+    expect(result.message).toContain("76")
+  })
+
+  test("returns 0 scrollback lines when totalLines equals screenLines", () => {
+    const term = createMockTerminal({ scrollback: { totalLines: 24, screenLines: 24 } })
+    const result = assertScrollbackLines(term, 0)
+    expect(result.pass).toBe(true)
+  })
+
+  test("returns 0 scrollback lines when totalLines < screenLines", () => {
+    // Edge case: fewer total lines than screen (e.g., terminal just started)
+    const term = createMockTerminal({ scrollback: { totalLines: 10, screenLines: 24 } })
+    const result = assertScrollbackLines(term, 0)
+    expect(result.pass).toBe(true)
   })
 })
 
 describe("assertAtBottomOfScrollback", () => {
-  test("passes when offset is 0", () => {
+  test("passes when viewport is at bottom", () => {
+    // With no scrollback, totalLines = screenLines, so bottom = 0
     const term = createMockTerminal({ scrollback: { viewportOffset: 0 } })
     const result = assertAtBottomOfScrollback(term)
     expect(result.pass).toBe(true)
   })
 
-  test("fails when scrolled up", () => {
-    const term = createMockTerminal({ scrollback: { viewportOffset: 10 } })
+  test("passes when viewport is at bottom with scrollback", () => {
+    // totalLines=30, screenLines=10, bottom = 20
+    const term = createMockTerminal({
+      scrollback: { viewportOffset: 20, totalLines: 30, screenLines: 10 },
+    })
+    const result = assertAtBottomOfScrollback(term)
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails when scrolled up from bottom", () => {
+    // totalLines=30, screenLines=10, bottom = 20, but viewport is at 10 (scrolled up)
+    const term = createMockTerminal({
+      scrollback: { viewportOffset: 10, totalLines: 30, screenLines: 10 },
+    })
     const result = assertAtBottomOfScrollback(term)
     expect(result.pass).toBe(false)
     expect(result.message).toContain("10")

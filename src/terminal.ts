@@ -132,6 +132,13 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
         backend.feed(data)
       },
     })
+
+    // Wire emulator→PTY response path (e.g., cursor position reports, DA responses)
+    backend.onResponse = (data) => {
+      if (ptyHandle?.alive) {
+        ptyHandle.write(new TextDecoder().decode(data))
+      }
+    }
   }
 
   // ── Input ──
@@ -248,6 +255,9 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   async function close(): Promise<void> {
     if (closed) return
     closed = true
+
+    // Disconnect emulator→PTY response path
+    backend.onResponse = undefined
 
     if (ptyHandle) {
       await ptyHandle.close()

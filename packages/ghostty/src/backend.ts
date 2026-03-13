@@ -403,9 +403,12 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     t.update()
+    const scrollbackLength = t.getScrollbackLength()
     return {
-      viewportOffset: 0, // Ghostty WASM doesn't expose viewport scroll position in headless
-      totalLines: t.getScrollbackLength() + rows,
+      // Ghostty WASM doesn't expose viewport scroll position in headless mode,
+      // so assume viewport is at the bottom (absolute top row = scrollbackLength).
+      viewportOffset: scrollbackLength,
+      totalLines: scrollbackLength + rows,
       screenLines: rows,
     }
   }

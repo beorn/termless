@@ -291,6 +291,14 @@ export function assertCursorAt(term: TerminalReadable, x: number, y: number): As
 /** Assert cursor has a specific style (block, underline, beam). */
 export function assertCursorStyle(term: TerminalReadable, style: CursorStyle): AssertionResult {
   const cursor = term.getCursor()
+  if (cursor.style === null) {
+    return {
+      pass: false,
+      message: `Expected cursor style to be "${style}", but backend does not report cursor style (null)`,
+      expected: style,
+      actual: null,
+    }
+  }
   const pass = cursor.style === style
   return {
     pass,
@@ -305,6 +313,12 @@ export function assertCursorStyle(term: TerminalReadable, style: CursorStyle): A
 /** Assert cursor is visible. */
 export function assertCursorVisible(term: TerminalReadable): AssertionResult {
   const cursor = term.getCursor()
+  if (cursor.visible === null) {
+    return {
+      pass: false,
+      message: `Expected cursor to be visible, but backend does not report cursor visibility (null)`,
+    }
+  }
   return {
     pass: cursor.visible,
     message: cursor.visible ? `Expected cursor not to be visible` : `Expected cursor to be visible`,
@@ -314,6 +328,12 @@ export function assertCursorVisible(term: TerminalReadable): AssertionResult {
 /** Assert cursor is hidden. */
 export function assertCursorHidden(term: TerminalReadable): AssertionResult {
   const cursor = term.getCursor()
+  if (cursor.visible === null) {
+    return {
+      pass: false,
+      message: `Expected cursor to be hidden, but backend does not report cursor visibility (null)`,
+    }
+  }
   return {
     pass: !cursor.visible,
     message: !cursor.visible ? `Expected cursor not to be hidden` : `Expected cursor to be hidden`,
@@ -343,28 +363,30 @@ export function assertTitle(term: TerminalReadable, title: string): AssertionRes
   }
 }
 
-/** Assert scrollback has a specific number of lines. */
+/** Assert scrollback has a specific number of lines (excluding visible screen lines). */
 export function assertScrollbackLines(term: TerminalReadable, n: number): AssertionResult {
   const scrollback = term.getScrollback()
-  const pass = scrollback.totalLines === n
+  const scrollbackLines = Math.max(0, scrollback.totalLines - scrollback.screenLines)
+  const pass = scrollbackLines === n
   return {
     pass,
     message: pass
       ? `Expected scrollback not to have ${n} lines`
-      : `Expected scrollback to have ${n} lines, got ${scrollback.totalLines}`,
+      : `Expected scrollback to have ${n} lines, got ${scrollbackLines}`,
     expected: n,
-    actual: scrollback.totalLines,
+    actual: scrollbackLines,
   }
 }
 
-/** Assert viewport is at the bottom of scrollback (no scroll offset). */
+/** Assert viewport is at the bottom of scrollback (viewing the latest output). */
 export function assertAtBottomOfScrollback(term: TerminalReadable): AssertionResult {
   const scrollback = term.getScrollback()
-  const pass = scrollback.viewportOffset === 0
+  const bottomOffset = scrollback.totalLines - scrollback.screenLines
+  const pass = scrollback.viewportOffset === bottomOffset
   return {
     pass,
     message: pass
       ? `Expected terminal not to be at bottom of scrollback`
-      : `Expected terminal to be at bottom of scrollback, got offset ${scrollback.viewportOffset}`,
+      : `Expected terminal to be at bottom of scrollback (viewportOffset=${bottomOffset}), got ${scrollback.viewportOffset}`,
   }
 }

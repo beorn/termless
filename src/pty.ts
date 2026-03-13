@@ -21,8 +21,23 @@ export interface PtyHandle {
 }
 
 export interface PtySpawnOptions {
-  /** Command to execute as [program, ...args]. Joined and run via bash -c. */
+  /** Command to execute as [program, ...args]. Spawned directly without a shell. */
   command: string[]
+  /** Additional environment variables (merged with process.env). */
+  env?: Record<string, string>
+  /** Working directory for the child process. */
+  cwd?: string
+  /** Terminal columns. */
+  cols: number
+  /** Terminal rows. */
+  rows: number
+  /** Callback invoked when the child process writes output data. */
+  onData: (data: Uint8Array) => void
+}
+
+export interface PtyShellOptions {
+  /** Shell command string to execute via `bash -c`. Use when you need shell features (pipes, globbing, etc.). */
+  shellCommand: string
   /** Additional environment variables (merged with process.env). */
   env?: Record<string, string>
   /** Working directory for the child process. */
@@ -41,13 +56,19 @@ export interface PtySpawnOptions {
  * Spawn a child process with a PTY and return a handle for interacting with it.
  *
  * Uses Bun.spawn with the `terminal` option for native PTY support.
- * The command is wrapped in `bash -c` to support shell features (pipes, env vars, etc.).
+ * The command is spawned directly (no shell wrapper) to avoid shell injection.
  * Sets FORCE_COLOR=1 and TERM=xterm-256color to ensure proper color output.
  */
-export function spawnPty(options: PtySpawnOptions): PtyHandle {
-  const { command, env, cwd, cols, rows, onData } = options
+export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle {
+  const { env, cwd, cols, rows, onData } = options
 
-  const proc = Bun.spawn(["bash", "-c", command.join(" ")], {
+  // Determine the argv: direct command or shell-wrapped
+  const argv =
+    "shellCommand" in options
+      ? ["bash", "-c", options.shellCommand]
+      : options.command
+
+  const proc = Bun.spawn(argv, {
     cwd,
     env: {
       ...process.env,

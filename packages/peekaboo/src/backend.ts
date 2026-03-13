@@ -6,9 +6,13 @@
  * Visual methods launch a terminal app and take screenshots via screencapture.
  *
  * Architecture:
- * 1. PTY spawns a process, piping output to the xterm.js backend for cell data
- * 2. The same PTY output is rendered in a real terminal app window
+ * 1. A real terminal app is launched running the command (for screenshots)
+ * 2. A separate PTY process runs the same command, piping output to xterm.js (for data)
  * 3. takeScreenshot() captures the real terminal app for visual comparison
+ *
+ * IMPORTANT: Steps 1 and 2 are separate OS processes. The visual screenshot and
+ * the xterm.js data come from different process instances and may diverge. See
+ * the createPeekabooBackend() JSDoc for details and implications.
  *
  * The "data path" (getText, getCell, etc.) uses xterm.js for speed/accuracy.
  * The "visual path" (takeScreenshot) uses the real terminal for fidelity.
@@ -250,13 +254,35 @@ const DEFAULT_ROWS = 24
  *   PTY → xterm.js backend (headless, for getText/getCell/etc.)
  *   PTY → real terminal app (visual, for takeScreenshot)
  *
+ * **Known limitation — dual-process divergence:**
+ *
+ * In visual mode, `spawnCommand()` starts TWO independent processes:
+ * 1. `launchTerminalApp()` — opens a real terminal app running the command (for screenshots)
+ * 2. `spawnPty()` — spawns a separate PTY feeding xterm.js (for data: getText, getCell, etc.)
+ *
+ * These are separate OS processes with independent state. The screenshot
+ * (`takeScreenshot()`) captures the real terminal app, while data methods
+ * (`getText()`, `getCell()`, etc.) read from the xterm.js backend. Because the
+ * two processes run the same command independently, their output can diverge at
+ * any moment — different timing, different random values, different interleaving.
+ *
+ * Implications for test authors:
+ * - Do NOT assume that `getText()` content matches the screenshot pixel-perfectly.
+ * - For deterministic comparisons, use either data methods OR screenshots, not both.
+ * - Visual mode is best for human-in-the-loop verification, not automated assertions
+ *   that cross-reference data and screenshots.
+ * - Data-only mode (visual=false) uses a single process and is fully consistent.
+ *
+ * A future fix would pipe a single PTY's output to both xterm.js and the terminal
+ * app, eliminating the dual-process issue.
+ *
  * Usage:
  *   const backend = createPeekabooBackend({ visual: true, app: "ghostty" })
  *   backend.init({ cols: 80, rows: 24 })
  *   const pty = await backend.spawnCommand(["bun", "km"])
  *   await new Promise(r => setTimeout(r, 2000))
- *   const text = backend.getText()        // from xterm.js
- *   const png = await backend.takeScreenshot()  // from real terminal
+ *   const text = backend.getText()        // from xterm.js (PTY #2)
+ *   const png = await backend.takeScreenshot()  // from real terminal (PTY #1, may differ!)
  */
 export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   const app = opts?.app ?? "ghostty"
@@ -358,12 +384,16 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   ): Promise<PtyHandle> {
     if (!initialized) throw new Error("Backend not initialized — call init() first")
 
-    // Launch real terminal app if visual mode is enabled
+    // Launch real terminal app if visual mode is enabled.
+    // NOTE: This starts a SEPARATE process from the PTY below. The terminal app
+    // runs the command independently, so its state may diverge from xterm.js.
+    // See the createPeekabooBackend JSDoc for the full explanation.
     if (visual && !appHandle) {
       appHandle = await launchTerminalApp(app, command, spawnOpts)
     }
 
-    // Spawn PTY that feeds data to the xterm.js backend
+    // Spawn a SECOND process via PTY that feeds data to the xterm.js backend.
+    // This is independent from the terminal app process above.
     const pty = spawnPty({
       command,
       env: spawnOpts?.env,

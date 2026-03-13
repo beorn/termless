@@ -142,7 +142,10 @@ export function createBufferView(readable: TerminalReadable): RegionView {
 
 /**
  * Viewport view: what's visible at the current scroll position.
- * At bottom: same as screen. Scrolled up: shows scrollback lines.
+ * At bottom (viewportOffset = totalLines - screenLines): same as screen.
+ * Scrolled up: shows older scrollback lines.
+ *
+ * viewportOffset is the absolute buffer row of the viewport's top line.
  */
 export function createViewportView(readable: TerminalReadable): RegionView {
   const { viewportOffset, screenLines } = readable.getScrollback()

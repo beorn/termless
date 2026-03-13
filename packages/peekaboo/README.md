@@ -53,6 +53,20 @@ PTY (Bun.spawn with terminal)
   +--> Real terminal app (optional) --> takeScreenshot() --> PNG buffer
 ```
 
+## Known limitation: dual-process divergence
+
+In visual mode, `spawnCommand()` starts **two independent processes** running the same command:
+
+1. A real terminal app process (for `takeScreenshot()`)
+2. A separate PTY feeding xterm.js (for `getText()`, `getCell()`, etc.)
+
+Because these are independent OS processes, their output can diverge at any time due to timing, randomness, or interleaving differences. This means:
+
+- `getText()` content may not match what appears in the screenshot
+- Use **either** data methods or screenshots for assertions, not both together
+- Visual mode is best for human-in-the-loop verification, not automated cross-referencing
+- Data-only mode (`visual: false`) uses a single PTY and is fully consistent
+
 ## Requirements
 
 - macOS (uses `screencapture` and AppleScript for window management)

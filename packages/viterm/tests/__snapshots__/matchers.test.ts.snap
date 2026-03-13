@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshot matchers > toMatchSvgSnapshot creates a snapshot file 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="67.2" height="18">
+<rect width="100%" height="100%" fill="#1e1e1e"/>
+<text x="0" y="14" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="14" fill="#d4d4d4">
+<tspan x="0">SVG Test</tspan>
+</text>
+<rect x="0" y="0" width="8.4" height="18" fill="#aeafad" opacity="0.5"/>
+</svg>"
+`;
+
+exports[`snapshot matchers > toMatchTerminalSnapshot creates a snapshot file 1`] = `
+"# terminal 11x2 | cursor (5,0) visible block
+──────────────────────────────────────────────────
+ 1│Hello World
+ 2│Line 2     "
+`;
+
+exports[`snapshot matchers > toMatchTerminalSnapshot with custom name > my-snapshot 1`] = `
+"# terminal 11x2 | cursor (5,0) visible block
+──────────────────────────────────────────────────
+ 1│Hello World
+ 2│Line 2     "
+`;

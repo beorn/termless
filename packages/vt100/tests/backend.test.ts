@@ -1153,20 +1153,22 @@ describe("createVt100Backend", () => {
         backend.feed(new TextEncoder().encode(`line${i}\r\n`))
       }
 
+      // At bottom: viewportOffset = totalLines - screenLines (absolute top row of viewport)
       const initial = backend.getScrollback()
-      expect(initial.viewportOffset).toBe(0)
+      const bottomOffset = initial.totalLines - initial.screenLines
+      expect(initial.viewportOffset).toBe(bottomOffset)
 
-      // Scroll up (positive delta)
+      // Scroll up by 3: viewport moves 3 rows earlier in the buffer
       backend.scrollViewport(3)
-      expect(backend.getScrollback().viewportOffset).toBe(3)
+      expect(backend.getScrollback().viewportOffset).toBe(bottomOffset - 3)
 
-      // Scroll down (negative delta)
+      // Scroll down by 1: viewport moves 1 row later
       backend.scrollViewport(-1)
-      expect(backend.getScrollback().viewportOffset).toBe(2)
+      expect(backend.getScrollback().viewportOffset).toBe(bottomOffset - 2)
       backend.destroy()
     })
 
-    test("scrollViewport clamps at 0 (bottom)", () => {
+    test("scrollViewport clamps at bottom (totalLines - screenLines)", () => {
       const backend = createVt100Backend({ cols: 10, rows: 3 })
 
       // Generate some scrollback
@@ -1174,13 +1176,16 @@ describe("createVt100Backend", () => {
         backend.feed(new TextEncoder().encode(`line${i}\r\n`))
       }
 
+      const sb = backend.getScrollback()
+      const bottomOffset = sb.totalLines - sb.screenLines
+
       // Try to scroll past bottom
       backend.scrollViewport(-100)
-      expect(backend.getScrollback().viewportOffset).toBe(0)
+      expect(backend.getScrollback().viewportOffset).toBe(bottomOffset)
       backend.destroy()
     })
 
-    test("scrollViewport clamps at max scrollback length", () => {
+    test("scrollViewport clamps at top (row 0)", () => {
       const backend = createVt100Backend({ cols: 10, rows: 3, scrollbackLimit: 5 })
 
       // Generate scrollback
@@ -1191,18 +1196,18 @@ describe("createVt100Backend", () => {
       // Try to scroll way past top
       backend.scrollViewport(1000)
       const sb = backend.getScrollback()
-      // viewportOffset should be clamped at scrollback length
-      expect(sb.viewportOffset).toBeLessThanOrEqual(sb.totalLines - sb.screenLines)
-      expect(sb.viewportOffset).toBeGreaterThan(0)
+      // viewportOffset should be clamped at 0 (absolute top of buffer)
+      expect(sb.viewportOffset).toBe(0)
       backend.destroy()
     })
 
-    test("scrollViewport with no scrollback stays at 0", () => {
+    test("scrollViewport with no scrollback stays at bottom", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
       backend.feed(new TextEncoder().encode("hello"))
       backend.scrollViewport(5)
-      // No scrollback means 0 is max
-      expect(backend.getScrollback().viewportOffset).toBe(0)
+      // No scrollback: totalLines = screenLines, so bottom = 0
+      const sb = backend.getScrollback()
+      expect(sb.viewportOffset).toBe(sb.totalLines - sb.screenLines)
       backend.destroy()
     })
   })

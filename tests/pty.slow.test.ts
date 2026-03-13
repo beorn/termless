@@ -57,8 +57,8 @@ describe("PTY integration", () => {
   test("press sends key to PTY", async () => {
     const term = createXterm()
     try {
-      // Single-element command: spawnPty already wraps in bash -c
-      await term.spawn(["read line && echo got:$line"])
+      // Use bash -c explicitly for shell features (&&, $variable)
+      await term.spawn(["bash", "-c", "read line && echo got:$line"])
       term.type("hello")
       term.press("Enter")
       await term.waitFor("got:hello", 5000)
@@ -70,10 +70,36 @@ describe("PTY integration", () => {
   test("type sends text to PTY", async () => {
     const term = createXterm()
     try {
-      // Single-element command: spawnPty already wraps in bash -c
-      await term.spawn(["read line && echo got:$line"])
+      // Use bash -c explicitly for shell features (&&, $variable)
+      await term.spawn(["bash", "-c", "read line && echo got:$line"])
       term.type("typed text\n")
       await term.waitFor("got:typed text", 5000)
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("spawn preserves arguments with spaces (no shell injection)", async () => {
+    const term = createXterm()
+    try {
+      // Arguments with spaces should be passed as-is, not split by shell
+      await term.spawn(["echo", "hello world", "foo bar"])
+      await term.waitFor("hello world foo bar", 5000)
+      expect(term.getText()).toContain("hello world foo bar")
+    } finally {
+      await term.close()
+    }
+  })
+
+  test("spawn preserves shell metacharacters in arguments", async () => {
+    const term = createXterm()
+    try {
+      // Shell metacharacters in arguments should be passed literally
+      await term.spawn(["echo", "$(whoami)", ";echo injected"])
+      // Should see the literal strings, not their shell-expanded values
+      await term.waitFor("$(whoami)", 5000)
+      expect(term.getText()).toContain("$(whoami)")
+      expect(term.getText()).not.toContain("injected")
     } finally {
       await term.close()
     }

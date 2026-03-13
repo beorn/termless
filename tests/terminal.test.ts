@@ -7,6 +7,7 @@
 
 import { describe, test, expect } from "vitest"
 import { parseKey, keyToAnsi } from "../src/key-mapping.ts"
+import { encodeKeyToAnsi } from "../src/key-encoding.ts"
 import { createTerminal } from "../src/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import type {
@@ -365,6 +366,78 @@ describe("keyToAnsi", () => {
     expect(keyToAnsi("Shift")).toBe("")
     expect(keyToAnsi("Alt")).toBe("")
     expect(keyToAnsi("Meta")).toBe("")
+  })
+
+  describe("modifier combinations", () => {
+    test("Ctrl+ArrowUp returns CSI 1;5 A", () => {
+      expect(keyToAnsi("Ctrl+ArrowUp")).toBe("\x1b[1;5A")
+    })
+
+    test("Shift+ArrowRight returns CSI 1;2 C", () => {
+      expect(keyToAnsi("Shift+ArrowRight")).toBe("\x1b[1;2C")
+    })
+
+    test("Ctrl+Shift+ArrowDown returns CSI 1;6 B", () => {
+      expect(keyToAnsi("Ctrl+Shift+ArrowDown")).toBe("\x1b[1;6B")
+    })
+
+    test("Alt+ArrowLeft returns CSI 1;3 D", () => {
+      expect(keyToAnsi("Alt+ArrowLeft")).toBe("\x1b[1;3D")
+    })
+
+    test("Ctrl+Delete returns CSI 3;5 ~", () => {
+      expect(keyToAnsi("Ctrl+Delete")).toBe("\x1b[3;5~")
+    })
+
+    test("Shift+F5 returns CSI 15;2 ~", () => {
+      expect(keyToAnsi("Shift+F5")).toBe("\x1b[15;2~")
+    })
+
+    test("Shift+letter produces uppercase", () => {
+      expect(keyToAnsi("Shift+a")).toBe("A")
+    })
+  })
+})
+
+// ═══════════════════════════════════════════════════════
+// encodeKeyToAnsi — consistency with keyToAnsi
+// ═══════════════════════════════════════════════════════
+
+describe("encodeKeyToAnsi", () => {
+  test("Shift+Tab produces reverse-tab (CSI Z)", () => {
+    const desc = parseKey("Shift+Tab")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(new TextDecoder().decode(bytes)).toBe("\x1b[Z")
+  })
+
+  test("Ctrl+Enter produces newline", () => {
+    const desc = parseKey("Ctrl+Enter")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(new TextDecoder().decode(bytes)).toBe("\n")
+  })
+
+  test("Ctrl+a produces control code", () => {
+    const desc = parseKey("Ctrl+a")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(bytes).toEqual(new Uint8Array([1]))
+  })
+
+  test("Alt+x produces ESC prefix", () => {
+    const desc = parseKey("Alt+x")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(new TextDecoder().decode(bytes)).toBe("\x1bx")
+  })
+
+  test("Ctrl+ArrowUp produces CSI with modifier", () => {
+    const desc = parseKey("Ctrl+ArrowUp")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(new TextDecoder().decode(bytes)).toBe("\x1b[1;5A")
+  })
+
+  test("Meta+k produces ESC prefix", () => {
+    const desc = parseKey("Meta+k")
+    const bytes = encodeKeyToAnsi(desc)
+    expect(new TextDecoder().decode(bytes)).toBe("\x1bk")
   })
 })
 

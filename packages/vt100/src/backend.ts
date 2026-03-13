@@ -148,9 +148,14 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function getScrollback(): ScrollbackState {
     const s = ensureScreen()
+    const scrollbackLength = s.getScrollbackLength()
+    // Convert relative offset (lines from bottom) to absolute viewport top row.
+    // At bottom (relativeOffset=0): absolute = scrollbackLength (= totalLines - screenLines)
+    // Scrolled up by N: absolute = scrollbackLength - N
+    const relativeOffset = s.getViewportOffset()
     return {
-      viewportOffset: s.getViewportOffset(),
-      totalLines: s.getScrollbackLength() + s.rows,
+      viewportOffset: scrollbackLength - relativeOffset,
+      totalLines: scrollbackLength + s.rows,
       screenLines: s.rows,
     }
   }
