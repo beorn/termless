@@ -21,6 +21,7 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
+  UnderlineStyle,
 } from "../../../src/types.ts"
 import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
 
@@ -116,30 +117,40 @@ function convertNapiCell(cell: NapiCell): Cell {
   const bg: RGB | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
 
   return {
-    text: cell.text,
+    char: cell.text,
     fg,
     bg,
     bold: cell.bold,
-    faint: cell.faint,
+    dim: cell.faint,
     italic: cell.italic,
-    underline: cell.underline as Cell["underline"],
-    strikethrough: cell.strikethrough,
+    underline: cell.underline === "none" ? false : (cell.underline as UnderlineStyle),
+    underlineColor: null,
+    blink: false,
     inverse: cell.inverse,
+    hidden: false,
+    strikethrough: cell.strikethrough,
     wide: cell.wide,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
 const EMPTY_CELL: Cell = {
-  text: "",
+  char: "",
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
-  strikethrough: false,
+  underline: false,
+  underlineColor: null,
+  blink: false,
   inverse: false,
+  hidden: false,
+  strikethrough: false,
   wide: false,
+  continuation: false,
+  hyperlink: null,
 }
 
 // ═══════════════════════════════════════════════════════

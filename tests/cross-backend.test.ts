@@ -39,7 +39,7 @@ function feedText(backend: TerminalBackend, text: string): void {
 
 /** Compare cells ignoring differences in empty cell representation */
 function cellText(cell: Cell): string {
-  return cell.text || " "
+  return cell.char || " "
 }
 
 describe("cross-backend conformance", () => {
@@ -78,7 +78,7 @@ describe("cross-backend conformance", () => {
         const b = init(create, 40, 10)
         feedText(b, "\x1b[3;10HX")
         const cell = b.getCell(2, 9) // 0-based row 2, col 9
-        expect(cell.text).toBe("X")
+        expect(cell.char).toBe("X")
       })
 
       test("line wrap at boundary", () => {
@@ -107,7 +107,7 @@ describe("cross-backend conformance", () => {
       test("faint", () => {
         const b = init(create)
         feedText(b, "\x1b[2mF\x1b[0m")
-        expect(b.getCell(0, 0).faint).toBe(true)
+        expect(b.getCell(0, 0).dim).toBe(true)
       })
 
       test("strikethrough", () => {
@@ -152,7 +152,7 @@ describe("cross-backend conformance", () => {
         expect(plain.bold).toBe(false)
         expect(plain.italic).toBe(false)
         expect(plain.strikethrough).toBe(false)
-        expect(plain.underline).toBe("none")
+        expect(plain.underline).toBe(false)
       })
 
       test("256-color FG (SGR 38;5)", () => {

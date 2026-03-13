@@ -24,16 +24,21 @@ import type {
 // =============================================================================
 
 const DEFAULT_CELL: Cell = {
-  text: " ",
+  char: " ",
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
-  strikethrough: false,
+  underline: false,
+  underlineColor: null,
+  blink: false,
   inverse: false,
+  hidden: false,
+  strikethrough: false,
   wide: false,
+  continuation: false,
+  hyperlink: null,
 }
 
 /** Create a minimal mock backend that satisfies the TerminalBackend interface. */

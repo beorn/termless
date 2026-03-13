@@ -88,16 +88,21 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
   function getCell(row: number, col: number): Cell {
     const sc = ensureScreen().getCell(row, col)
     return {
-      text: sc.char,
+      char: sc.char,
       fg: sc.fg,
       bg: sc.bg,
       bold: sc.bold,
-      faint: sc.faint,
+      dim: sc.dim,
       italic: sc.italic,
       underline: sc.underline,
-      strikethrough: sc.strikethrough,
+      underlineColor: null,
+      blink: false,
       inverse: sc.inverse,
+      hidden: sc.hidden,
+      strikethrough: sc.strikethrough,
       wide: sc.wide,
+      continuation: false,
+      hyperlink: null,
     }
   }
 
@@ -105,16 +110,21 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     return ensureScreen()
       .getLine(row)
       .map((sc) => ({
-        text: sc.char,
+        char: sc.char,
         fg: sc.fg,
         bg: sc.bg,
         bold: sc.bold,
-        faint: sc.faint,
+        dim: sc.dim,
         italic: sc.italic,
         underline: sc.underline,
-        strikethrough: sc.strikethrough,
+        underlineColor: null,
+        blink: false,
         inverse: sc.inverse,
+        hidden: sc.hidden,
+        strikethrough: sc.strikethrough,
         wide: sc.wide,
+        continuation: false,
+        hyperlink: null,
       }))
   }
 

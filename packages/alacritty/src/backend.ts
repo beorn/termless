@@ -19,6 +19,7 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
+  UnderlineStyle,
 } from "../../../src/types.ts"
 import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
 
@@ -112,31 +113,41 @@ export function loadAlacrittyNative(): NativeModule {
 
 function convertNativeCell(nc: NativeCell): Cell {
   return {
-    text: nc.text,
+    char: nc.text,
     fg: nc.fg ? ({ r: nc.fg[0]!, g: nc.fg[1]!, b: nc.fg[2]! } as RGB) : null,
     bg: nc.bg ? ({ r: nc.bg[0]!, g: nc.bg[1]!, b: nc.bg[2]! } as RGB) : null,
     bold: nc.bold,
-    faint: nc.faint,
+    dim: nc.faint,
     italic: nc.italic,
-    underline: nc.underline as Cell["underline"],
-    strikethrough: nc.strikethrough,
+    underline: nc.underline === "none" ? false : (nc.underline as UnderlineStyle),
+    underlineColor: null,
+    blink: false,
     inverse: nc.inverse,
+    hidden: false,
+    strikethrough: nc.strikethrough,
     wide: nc.wide,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
 function emptyCell(): Cell {
   return {
-    text: "",
+    char: "",
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
-    strikethrough: false,
+    underline: false,
+    underlineColor: null,
+    blink: false,
     inverse: false,
+    hidden: false,
+    strikethrough: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 }
 

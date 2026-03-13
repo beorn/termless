@@ -88,7 +88,7 @@ describe("ghostty backend", () => {
       feedText(backend, "\x1b[1mBold\x1b[0m Normal")
       const boldCell = backend.getCell(0, 0)
       expect(boldCell.bold).toBe(true)
-      expect(boldCell.text).toBe("B")
+      expect(boldCell.char).toBe("B")
 
       const normalCell = backend.getCell(0, 5)
       expect(normalCell.bold).toBe(false)
@@ -100,10 +100,10 @@ describe("ghostty backend", () => {
       expect(backend.getCell(0, 0).italic).toBe(true)
     })
 
-    test("detects faint/dim", () => {
+    test("detects dim", () => {
       backend = createBackend()
       feedText(backend, "\x1b[2mFaint\x1b[0m")
-      expect(backend.getCell(0, 0).faint).toBe(true)
+      expect(backend.getCell(0, 0).dim).toBe(true)
     })
 
     test("detects underline", () => {
@@ -151,9 +151,9 @@ describe("ghostty backend", () => {
       backend = createBackend(20, 5)
       feedText(backend, "ABCDE")
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("A")
-      expect(line[1]!.text).toBe("B")
-      expect(line[4]!.text).toBe("E")
+      expect(line[0]!.char).toBe("A")
+      expect(line[1]!.char).toBe("B")
+      expect(line[4]!.char).toBe("E")
     })
 
     test("returns all rows", () => {

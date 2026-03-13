@@ -60,10 +60,10 @@ describe("peekaboo backend", () => {
       backend.feed(encoder.encode("AB"))
 
       const cellA = backend.getCell(0, 0)
-      expect(cellA.text).toBe("A")
+      expect(cellA.char).toBe("A")
 
       const cellB = backend.getCell(0, 1)
-      expect(cellB.text).toBe("B")
+      expect(cellB.char).toBe("B")
 
       backend.destroy()
     })

@@ -60,18 +60,23 @@ function mockRegion(lines: string[]): RegionView {
 
 function mockCell(overrides: Partial<CellView> = {}): CellView {
   return {
-    text: " ",
+    char: " ",
     row: 0,
     col: 0,
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
-    strikethrough: false,
+    underline: false,
+    underlineColor: null,
+    blink: false,
     inverse: false,
+    hidden: false,
+    strikethrough: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
     ...overrides,
   }
 }
@@ -92,16 +97,21 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     const row: Cell[] = []
     for (let col = 0; col < maxCols; col++) {
       row.push({
-        text: line[col] ?? " ",
+        char: line[col] ?? " ",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
-        strikethrough: false,
+        underline: false,
+        underlineColor: null,
+        blink: false,
         inverse: false,
+        hidden: false,
+        strikethrough: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       })
     }
     return row
@@ -122,14 +132,14 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 
   return {
     getText(): string {
-      return grid.map((row) => row.map((c) => c.text || " ").join("")).join("\n")
+      return grid.map((row) => row.map((c) => c.char || " ").join("")).join("\n")
     },
     getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
       if (startRow === endRow) {
         return (
           grid[startRow]
             ?.slice(startCol, endCol)
-            .map((c) => c.text || " ")
+            .map((c) => c.char || " ")
             .join("") ?? ""
         )
       }
@@ -142,7 +152,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
         result.push(
           row
             .slice(start, end)
-            .map((c) => c.text || " ")
+            .map((c) => c.char || " ")
             .join(""),
         )
       }
@@ -151,16 +161,21 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     getCell(row: number, col: number): Cell {
       return (
         grid[row]?.[col] ?? {
-          text: " ",
+          char: " ",
           fg: null,
           bg: null,
           bold: false,
-          faint: false,
+          dim: false,
           italic: false,
-          underline: "none" as UnderlineStyle,
-          strikethrough: false,
+          underline: false as UnderlineStyle,
+          underlineColor: null,
+          blink: false,
           inverse: false,
+          hidden: false,
+          strikethrough: false,
           wide: false,
+          continuation: false,
+          hyperlink: null,
         }
       )
     },
@@ -327,7 +342,7 @@ describe("assertMatchesLines", () => {
 
 describe("assertIsBold", () => {
   test("passes for bold cell", () => {
-    const result = assertIsBold(mockCell({ bold: true, text: "B", row: 1, col: 2 }))
+    const result = assertIsBold(mockCell({ bold: true, char: "B", row: 1, col: 2 }))
     expect(result.pass).toBe(true)
     expect(result.message).toContain("not to be bold")
   })
@@ -353,12 +368,12 @@ describe("assertIsItalic", () => {
 
 describe("assertIsFaint", () => {
   test("passes for faint cell", () => {
-    const result = assertIsFaint(mockCell({ faint: true }))
+    const result = assertIsFaint(mockCell({ dim: true }))
     expect(result.pass).toBe(true)
   })
 
   test("fails for non-faint cell", () => {
-    const result = assertIsFaint(mockCell({ faint: false }))
+    const result = assertIsFaint(mockCell({ dim: false }))
     expect(result.pass).toBe(false)
   })
 })
@@ -406,7 +421,7 @@ describe("assertHasUnderline", () => {
   })
 
   test("fails when cell has no underline", () => {
-    const result = assertHasUnderline(mockCell({ underline: "none" }))
+    const result = assertHasUnderline(mockCell({ underline: false }))
     expect(result.pass).toBe(false)
   })
 

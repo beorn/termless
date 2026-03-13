@@ -63,13 +63,13 @@ function convertGhosttyCell(
   defaults: { fg: RGB; bg: RGB },
 ): Cell {
   // Get proper text — use grapheme API for multi-codepoint characters
-  let text: string
+  let char: string
   if (cell.grapheme_len > 0) {
-    text = ghosttyTerm.getGraphemeString(row, col)
+    char = ghosttyTerm.getGraphemeString(row, col)
   } else if (cell.codepoint === 0) {
-    text = ""
+    char = ""
   } else {
-    text = String.fromCodePoint(cell.codepoint)
+    char = String.fromCodePoint(cell.codepoint)
   }
 
   // Map default terminal colors to null (meaning "use default")
@@ -81,17 +81,25 @@ function convertGhosttyCell(
     ? null
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
+  // Resolve hyperlink URL from ID (0 = no link)
+  const hyperlink = cell.hyperlink_id !== 0 ? (ghosttyTerm.getHyperlinkUri(cell.hyperlink_id) ?? null) : null
+
   return {
-    text,
+    char,
     fg,
     bg,
     bold: (cell.flags & CellFlags.BOLD) !== 0,
-    faint: (cell.flags & CellFlags.FAINT) !== 0,
+    dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : "none",
-    strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
+    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underlineColor: null, // Ghostty WASM doesn't expose underline color
+    blink: (cell.flags & CellFlags.BLINK) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
+    hidden: false, // Ghostty WASM doesn't expose hidden flag
+    strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     wide: cell.width > 1,
+    continuation: false, // Ghostty WASM doesn't expose continuation
+    hyperlink,
   }
 }
 
@@ -102,13 +110,13 @@ function convertScrollbackCell(
   col: number,
   defaults: { fg: RGB; bg: RGB },
 ): Cell {
-  let text: string
+  let char: string
   if (cell.grapheme_len > 0) {
-    text = ghosttyTerm.getScrollbackGraphemeString(offset, col)
+    char = ghosttyTerm.getScrollbackGraphemeString(offset, col)
   } else if (cell.codepoint === 0) {
-    text = ""
+    char = ""
   } else {
-    text = String.fromCodePoint(cell.codepoint)
+    char = String.fromCodePoint(cell.codepoint)
   }
 
   const fg: RGB | null = isDefaultColor(cell.fg_r, cell.fg_g, cell.fg_b, defaults, true)
@@ -119,17 +127,25 @@ function convertScrollbackCell(
     ? null
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
+  // Resolve hyperlink URL from ID (0 = no link)
+  const hyperlink = cell.hyperlink_id !== 0 ? (ghosttyTerm.getHyperlinkUri(cell.hyperlink_id) ?? null) : null
+
   return {
-    text,
+    char,
     fg,
     bg,
     bold: (cell.flags & CellFlags.BOLD) !== 0,
-    faint: (cell.flags & CellFlags.FAINT) !== 0,
+    dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : "none",
-    strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
+    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underlineColor: null, // Ghostty WASM doesn't expose underline color
+    blink: (cell.flags & CellFlags.BLINK) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
+    hidden: false, // Ghostty WASM doesn't expose hidden flag
+    strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     wide: cell.width > 1,
+    continuation: false, // Ghostty WASM doesn't expose continuation
+    hyperlink,
   }
 }
 
@@ -311,16 +327,21 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     const cells = t.getLine(row)
     if (!cells || col >= cells.length) {
       return {
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
-        strikethrough: false,
+        underline: false,
+        underlineColor: null,
+        blink: false,
         inverse: false,
+        hidden: false,
+        strikethrough: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }
     }
     return convertGhosttyCell(cells[col]!, t, row, col, defaultColors)
@@ -332,16 +353,21 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     const ghosttyCells = t.getLine(row)
     if (!ghosttyCells) {
       return Array.from({ length: cols }, () => ({
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none" as const,
-        strikethrough: false,
+        underline: false as const,
+        underlineColor: null,
+        blink: false,
         inverse: false,
+        hidden: false,
+        strikethrough: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }))
     }
     return ghosttyCells.map((cell, col) => convertGhosttyCell(cell, t, row, col, defaultColors))

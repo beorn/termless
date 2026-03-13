@@ -12,18 +12,23 @@ import type {
 
 // ── Helpers ──
 
-function defaultCell(text = " "): Cell {
+function defaultCell(char = " "): Cell {
   return {
-    text,
+    char,
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none" as UnderlineStyle,
-    strikethrough: false,
+    underline: false as UnderlineStyle,
+    underlineColor: null,
+    blink: false,
     inverse: false,
+    hidden: false,
+    strikethrough: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
@@ -223,7 +228,7 @@ describe("screenshotSvg", () => {
 
   test("faint cell gets opacity 0.5", () => {
     const term = createMockReadable(["ab"], {
-      cellOverrides: { "0,0": { faint: true } },
+      cellOverrides: { "0,0": { dim: true } },
     })
     const svg = screenshotSvg(term)
     expect(svg).toContain(`opacity="0.5"`)
@@ -305,7 +310,7 @@ describe("screenshotSvg", () => {
     // Wide char occupies two columns; the second cell is a continuation (empty text)
     // Use a CJK character that is a single JS char (U+4E16 = 世)
     const term = createMockReadable(["世x"], {
-      cellOverrides: { "0,0": { wide: true }, "0,1": { text: "" } },
+      cellOverrides: { "0,0": { wide: true }, "0,1": { char: "" } },
     })
     const svg = screenshotSvg(term)
     // The wide char should appear; the continuation cell (col 1) should be skipped

@@ -255,7 +255,7 @@ export const terminalMatchers = {
     const body = lines
       .map((line, row) => {
         const num = String(row + 1).padStart(2)
-        const text = line.map((c) => c.text || " ").join("")
+        const text = line.map((c) => c.char || " ").join("")
         return `${num}\u2502${text}`
       })
       .join("\n")

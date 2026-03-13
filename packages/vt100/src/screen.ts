@@ -19,14 +19,14 @@ export interface CellColor {
   b: number
 }
 
-export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+export type UnderlineStyle = false | "single" | "double" | "curly" | "dotted" | "dashed"
 
 export interface ScreenCell {
   char: string
   fg: CellColor | null
   bg: CellColor | null
   bold: boolean
-  faint: boolean
+  dim: boolean
   italic: boolean
   underline: UnderlineStyle
   strikethrough: boolean
@@ -41,9 +41,9 @@ const EMPTY_CELL: ScreenCell = Object.freeze({
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none" as UnderlineStyle,
+  underline: false as UnderlineStyle,
   strikethrough: false,
   inverse: false,
   hidden: false,
@@ -136,7 +136,7 @@ interface Attrs {
   fg: CellColor | null
   bg: CellColor | null
   bold: boolean
-  faint: boolean
+  dim: boolean
   italic: boolean
   underline: UnderlineStyle
   strikethrough: boolean
@@ -249,9 +249,9 @@ export function createScreen(opts: ScreenOptions): Screen {
       fg: null,
       bg: null,
       bold: false,
-      faint: false,
+      dim: false,
       italic: false,
-      underline: "none",
+      underline: false,
       strikethrough: false,
       inverse: false,
       hidden: false,
@@ -331,7 +331,7 @@ export function createScreen(opts: ScreenOptions): Screen {
     cell.fg = attrs.fg ? { ...attrs.fg } : null
     cell.bg = attrs.bg ? { ...attrs.bg } : null
     cell.bold = attrs.bold
-    cell.faint = attrs.faint
+    cell.dim = attrs.dim
     cell.italic = attrs.italic
     cell.underline = attrs.underline
     cell.strikethrough = attrs.strikethrough
@@ -350,9 +350,9 @@ export function createScreen(opts: ScreenOptions): Screen {
       spacer.fg = null
       spacer.bg = null
       spacer.bold = false
-      spacer.faint = false
+      spacer.dim = false
       spacer.italic = false
-      spacer.underline = "none"
+      spacer.underline = false
       spacer.strikethrough = false
       spacer.inverse = false
       spacer.hidden = false
@@ -666,7 +666,7 @@ export function createScreen(opts: ScreenOptions): Screen {
           attrs.bold = true
           break
         case 2:
-          attrs.faint = true
+          attrs.dim = true
           break
         case 3:
           attrs.italic = true
@@ -678,7 +678,7 @@ export function createScreen(opts: ScreenOptions): Screen {
             const sub = subs[1]!
             switch (sub) {
               case 0:
-                attrs.underline = "none"
+                attrs.underline = false
                 break
               case 1:
                 attrs.underline = "single"
@@ -716,15 +716,15 @@ export function createScreen(opts: ScreenOptions): Screen {
         case 21: // Double underline
           attrs.underline = "double"
           break
-        case 22: // Normal intensity (neither bold nor faint)
+        case 22: // Normal intensity (neither bold nor dim)
           attrs.bold = false
-          attrs.faint = false
+          attrs.dim = false
           break
         case 23:
           attrs.italic = false
           break
         case 24:
-          attrs.underline = "none"
+          attrs.underline = false
           break
         case 27:
           attrs.inverse = false

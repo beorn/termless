@@ -163,7 +163,7 @@ export function assertMatchesLines(region: RegionView, expectedLines: string[]):
 // ═══════════════════════════════════════════════════════
 
 function cellLocation(cell: CellView): string {
-  return `cell (${cell.row},${cell.col}) containing '${cell.text}'`
+  return `cell (${cell.row},${cell.col}) containing '${cell.char}'`
 }
 
 /** Assert cell is bold. */
@@ -184,12 +184,12 @@ export function assertIsItalic(cell: CellView): AssertionResult {
   }
 }
 
-/** Assert cell is faint. */
+/** Assert cell is dim (faint). */
 export function assertIsFaint(cell: CellView): AssertionResult {
   const loc = cellLocation(cell)
   return {
-    pass: cell.faint,
-    message: cell.faint ? `Expected ${loc} not to be faint` : `Expected ${loc} to be faint`,
+    pass: cell.dim,
+    message: cell.dim ? `Expected ${loc} not to be faint` : `Expected ${loc} to be faint`,
   }
 }
 
@@ -223,7 +223,7 @@ export function assertIsWide(cell: CellView): AssertionResult {
 /** Assert cell has underline. Optionally check specific style. */
 export function assertHasUnderline(cell: CellView, style?: UnderlineStyle): AssertionResult {
   const loc = cellLocation(cell)
-  const hasUnderline = cell.underline !== "none"
+  const hasUnderline = cell.underline !== false
   const pass = style ? cell.underline === style : hasUnderline
 
   let message: string

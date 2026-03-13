@@ -14,16 +14,21 @@ import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable
 // =============================================================================
 
 const DEFAULT_CELL: Cell = {
-  text: " ",
+  char: " ",
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
-  strikethrough: false,
+  underline: false,
+  underlineColor: null,
+  blink: false,
   inverse: false,
+  hidden: false,
+  strikethrough: false,
   wide: false,
+  continuation: false,
+  hyperlink: null,
 }
 
 interface MockOptions {
@@ -40,13 +45,13 @@ function createMockTerminal(options: MockOptions = {}): TerminalReadable {
     for (let col = 0; col < maxCols; col++) {
       const key = `${row},${col}`
       const overrides = cells.get(key) ?? {}
-      rowCells.push({ ...DEFAULT_CELL, text: line[col] ?? " ", ...overrides })
+      rowCells.push({ ...DEFAULT_CELL, char: line[col] ?? " ", ...overrides })
     }
     return rowCells
   })
 
   return {
-    getText: () => grid.map((r) => r.map((c) => c.text || " ").join("")).join("\n"),
+    getText: () => grid.map((r) => r.map((c) => c.char || " ").join("")).join("\n"),
     getTextRange: () => "",
     getCell: (row, col) => grid[row]?.[col] ?? { ...DEFAULT_CELL },
     getLine: (row) => grid[row] ?? [],
@@ -146,14 +151,14 @@ describe("diffBuffers", () => {
   })
 
   test("detects underline style differences", () => {
-    const cellsA = new Map<string, Partial<Cell>>([["0,0", { underline: "none" }]])
+    const cellsA = new Map<string, Partial<Cell>>([["0,0", { underline: false }]])
     const cellsB = new Map<string, Partial<Cell>>([["0,0", { underline: "single" }]])
     const a = createMockTerminal({ lines: ["X"], cells: cellsA })
     const b = createMockTerminal({ lines: ["X"], cells: cellsB })
     const result = diffBuffers(a, b)
 
     expect(result.equal).toBe(false)
-    expect(result.formatted).toContain("underline: none -> single")
+    expect(result.formatted).toContain("underline: false -> single")
   })
 
   test("handles buffers with different row counts", () => {

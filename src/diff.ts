@@ -5,7 +5,7 @@
  * structured diff result plus a human-readable formatted string.
  */
 
-import type { Cell, RGB, TerminalReadable, UnderlineStyle } from "./types.ts"
+import type { Cell, Color, TerminalReadable, UnderlineStyle } from "./types.ts"
 
 // =============================================================================
 // Types
@@ -22,8 +22,8 @@ export interface CellDiff {
 /** Compact representation of a cell's visible properties. */
 export interface CellSummary {
   text: string
-  fg: RGB | null
-  bg: RGB | null
+  fg: Color
+  bg: Color
   bold: boolean
   italic: boolean
   underline: UnderlineStyle
@@ -45,7 +45,7 @@ export interface DiffResult {
 
 function cellToSummary(cell: Cell): CellSummary {
   return {
-    text: cell.text,
+    text: cell.char,
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
@@ -56,11 +56,11 @@ function cellToSummary(cell: Cell): CellSummary {
 
 function cellsEqual(a: Cell, b: Cell): boolean {
   return (
-    a.text === b.text &&
-    rgbEqual(a.fg, b.fg) &&
-    rgbEqual(a.bg, b.bg) &&
+    a.char === b.char &&
+    colorEqual(a.fg, b.fg) &&
+    colorEqual(a.bg, b.bg) &&
     a.bold === b.bold &&
-    a.faint === b.faint &&
+    a.dim === b.dim &&
     a.italic === b.italic &&
     a.underline === b.underline &&
     a.strikethrough === b.strikethrough &&
@@ -69,14 +69,16 @@ function cellsEqual(a: Cell, b: Cell): boolean {
   )
 }
 
-function rgbEqual(a: RGB | null, b: RGB | null): boolean {
+function colorEqual(a: Color, b: Color): boolean {
   if (a === b) return true
   if (a === null || b === null) return false
+  if (typeof a === "number" || typeof b === "number") return a === b
   return a.r === b.r && a.g === b.g && a.b === b.b
 }
 
-function formatRgb(color: RGB | null): string {
-  if (!color) return "default"
+function formatColor(color: Color): string {
+  if (color === null) return "default"
+  if (typeof color === "number") return `idx:${color}`
   return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
 }
 
@@ -89,12 +91,12 @@ function describeCellDiff(diff: CellDiff): string {
     parts.push(`text: '${oldChar}' -> '${newChar}'`)
   }
 
-  if (!rgbEqual(diff.old.fg, diff.new.fg)) {
-    parts.push(`fg: ${formatRgb(diff.old.fg)} -> ${formatRgb(diff.new.fg)}`)
+  if (!colorEqual(diff.old.fg, diff.new.fg)) {
+    parts.push(`fg: ${formatColor(diff.old.fg)} -> ${formatColor(diff.new.fg)}`)
   }
 
-  if (!rgbEqual(diff.old.bg, diff.new.bg)) {
-    parts.push(`bg: ${formatRgb(diff.old.bg)} -> ${formatRgb(diff.new.bg)}`)
+  if (!colorEqual(diff.old.bg, diff.new.bg)) {
+    parts.push(`bg: ${formatColor(diff.old.bg)} -> ${formatColor(diff.new.bg)}`)
   }
 
   if (diff.old.bold !== diff.new.bold) {
@@ -173,15 +175,20 @@ export function diffBuffers(a: TerminalReadable, b: TerminalReadable): DiffResul
 
 function emptyCell(): Cell {
   return {
-    text: " ",
+    char: " ",
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
-    strikethrough: false,
+    underline: false,
+    underlineColor: null,
+    blink: false,
     inverse: false,
+    hidden: false,
+    strikethrough: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 }

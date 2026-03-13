@@ -10,22 +10,47 @@ export interface TerminalOptions {
 
 // ── Cell ──
 
-export interface Cell {
-  text: string
-  fg: RGB | null
-  bg: RGB | null
-  bold: boolean
-  faint: boolean
-  italic: boolean
-  underline: UnderlineStyle
-  strikethrough: boolean
-  inverse: boolean
-  wide: boolean
-}
-
-export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+export type Color = number | { r: number; g: number; b: number } | null
 
 export type RGB = { r: number; g: number; b: number }
+
+export interface Cell {
+  char: string
+  fg: Color
+  bg: Color
+  bold: boolean
+  dim: boolean
+  italic: boolean
+  underline: false | "single" | "double" | "curly" | "dotted" | "dashed"
+  underlineColor: Color
+  blink: boolean
+  inverse: boolean
+  hidden: boolean
+  strikethrough: boolean
+  wide: boolean
+  continuation: boolean
+  hyperlink: string | null
+}
+
+export type UnderlineStyle = Cell["underline"]
+
+export const EMPTY_CELL: Readonly<Cell> = Object.freeze({
+  char: " ",
+  fg: null,
+  bg: null,
+  bold: false,
+  dim: false,
+  italic: false,
+  underline: false,
+  underlineColor: null,
+  blink: false,
+  inverse: false,
+  hidden: false,
+  strikethrough: false,
+  wide: false,
+  continuation: false,
+  hyperlink: null,
+})
 
 // ── Cursor ──
 
@@ -100,18 +125,23 @@ export interface RegionView {
 
 /** A single cell with positional context. Used with style matchers. */
 export interface CellView {
-  readonly text: string
+  readonly char: string
   readonly row: number
   readonly col: number
-  readonly fg: RGB | null
-  readonly bg: RGB | null
+  readonly fg: Color
+  readonly bg: Color
   readonly bold: boolean
-  readonly faint: boolean
+  readonly dim: boolean
   readonly italic: boolean
-  readonly underline: UnderlineStyle
-  readonly strikethrough: boolean
+  readonly underline: false | "single" | "double" | "curly" | "dotted" | "dashed"
+  readonly underlineColor: Color
+  readonly blink: boolean
   readonly inverse: boolean
+  readonly hidden: boolean
+  readonly strikethrough: boolean
   readonly wide: boolean
+  readonly continuation: boolean
+  readonly hyperlink: string | null
 }
 
 /** A row is a RegionView with positional context and cell access. */

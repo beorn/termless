@@ -62,7 +62,7 @@ describe("createVt100Backend", () => {
     // SGR 31 = red foreground (ANSI color 1)
     backend.feed(new TextEncoder().encode("\x1b[31mR\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("R")
+    expect(cell.char).toBe("R")
     expect(cell.fg).not.toBeNull()
     // ANSI color 1 = { r: 0x80, g: 0, b: 0 }
     expect(cell.fg!.r).toBe(0x80)
@@ -76,7 +76,7 @@ describe("createVt100Backend", () => {
     // SGR 42 = green background (ANSI color 2)
     backend.feed(new TextEncoder().encode("\x1b[42mG\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("G")
+    expect(cell.char).toBe("G")
     expect(cell.bg).not.toBeNull()
     // ANSI color 2 = { r: 0, g: 0x80, b: 0 }
     expect(cell.bg!.r).toBe(0)
@@ -90,7 +90,7 @@ describe("createVt100Backend", () => {
     // SGR 38;5;208 = 256-color orange foreground (index 208)
     backend.feed(new TextEncoder().encode("\x1b[38;5;208mX\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("X")
+    expect(cell.char).toBe("X")
     expect(cell.fg).not.toBeNull()
     // Index 208 = 6x6x6 cube: r=5, g=3, b=0 -> (0xff, 0x87, 0x00)
     expect(cell.fg!.r).toBe(0xff)
@@ -104,7 +104,7 @@ describe("createVt100Backend", () => {
     // SGR 38;2;171;205;239 = true color foreground
     backend.feed(new TextEncoder().encode("\x1b[38;2;171;205;239mT\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("T")
+    expect(cell.char).toBe("T")
     expect(cell.fg).not.toBeNull()
     expect(cell.fg!.r).toBe(171)
     expect(cell.fg!.g).toBe(205)
@@ -154,7 +154,7 @@ describe("createVt100Backend", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[1mhello\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("h")
+    expect(cell.char).toBe("h")
     expect(cell.bold).toBe(true)
     // After reset, next cells should not be bold
     backend.feed(new TextEncoder().encode("x"))
@@ -191,7 +191,7 @@ describe("createVt100Backend", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[2mdim\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.faint).toBe(true)
+    expect(cell.dim).toBe(true)
     backend.destroy()
   })
 
@@ -343,11 +343,11 @@ describe("createVt100Backend", () => {
     // CJK character (Chinese "big")
     backend.feed(new TextEncoder().encode("\u5927"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("\u5927")
+    expect(cell.char).toBe("\u5927")
     expect(cell.wide).toBe(true)
     // Spacer cell after wide character
     const spacer = backend.getCell(0, 1)
-    expect(spacer.text).toBe("")
+    expect(spacer.char).toBe("")
     expect(spacer.wide).toBe(false)
     backend.destroy()
   })
@@ -359,9 +359,9 @@ describe("createVt100Backend", () => {
     backend.feed(new TextEncoder().encode("abc"))
     const line = backend.getLine(0)
     expect(line).toHaveLength(10)
-    expect(line[0]!.text).toBe("a")
-    expect(line[1]!.text).toBe("b")
-    expect(line[2]!.text).toBe("c")
+    expect(line[0]!.char).toBe("a")
+    expect(line[1]!.char).toBe("b")
+    expect(line[2]!.char).toBe("c")
     backend.destroy()
   })
 
@@ -512,7 +512,7 @@ describe("createVt100Backend", () => {
     expect(cell.bg).toBeNull()
     expect(cell.bold).toBe(false)
     expect(cell.italic).toBe(false)
-    expect(cell.underline).toBe("none")
+    expect(cell.underline).toBe(false)
     expect(cell.strikethrough).toBe(false)
     expect(cell.inverse).toBe(false)
     expect(cell.wide).toBe(false)
@@ -526,7 +526,7 @@ describe("createVt100Backend", () => {
     // Bold + red foreground
     backend.feed(new TextEncoder().encode("\x1b[1;31mX\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.text).toBe("X")
+    expect(cell.char).toBe("X")
     expect(cell.bold).toBe(true)
     expect(cell.fg).not.toBeNull()
     expect(cell.fg!.r).toBe(0x80)
@@ -674,17 +674,17 @@ describe("createVt100Backend", () => {
 
       // First line should have ABCDE
       const line0 = backend.getLine(0)
-      expect(line0[0]!.text).toBe("A")
-      expect(line0[1]!.text).toBe("B")
-      expect(line0[2]!.text).toBe("C")
-      expect(line0[3]!.text).toBe("D")
-      expect(line0[4]!.text).toBe("E")
+      expect(line0[0]!.char).toBe("A")
+      expect(line0[1]!.char).toBe("B")
+      expect(line0[2]!.char).toBe("C")
+      expect(line0[3]!.char).toBe("D")
+      expect(line0[4]!.char).toBe("E")
 
       // Second line should have FGH
       const line1 = backend.getLine(1)
-      expect(line1[0]!.text).toBe("F")
-      expect(line1[1]!.text).toBe("G")
-      expect(line1[2]!.text).toBe("H")
+      expect(line1[0]!.char).toBe("F")
+      expect(line1[1]!.char).toBe("G")
+      expect(line1[2]!.char).toBe("H")
 
       // Cursor should be on row 1, col 3
       expect(backend.getCursor().x).toBe(3)
@@ -703,7 +703,7 @@ describe("createVt100Backend", () => {
 
       // Second line should be empty (no wrapping)
       const line1 = backend.getLine(1)
-      expect(line1[0]!.text).toBe("")
+      expect(line1[0]!.char).toBe("")
 
       // Cursor stays on row 0
       expect(backend.getCursor().y).toBe(0)
@@ -720,7 +720,7 @@ describe("createVt100Backend", () => {
       // Should wrap normally
       backend.feed(new TextEncoder().encode("ABCDEFGH"))
       const line1 = backend.getLine(1)
-      expect(line1[0]!.text).toBe("F")
+      expect(line1[0]!.char).toBe("F")
       backend.destroy()
     })
   })
@@ -955,12 +955,12 @@ describe("createVt100Backend", () => {
 
       // Row should now be: A D E _ _ ...
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("A")
-      expect(line[1]!.text).toBe("D")
-      expect(line[2]!.text).toBe("E")
+      expect(line[0]!.char).toBe("A")
+      expect(line[1]!.char).toBe("D")
+      expect(line[2]!.char).toBe("E")
       // Remaining should be blank
-      expect(line[3]!.text).toBe("")
-      expect(line[4]!.text).toBe("")
+      expect(line[3]!.char).toBe("")
+      expect(line[4]!.char).toBe("")
       backend.destroy()
     })
 
@@ -975,13 +975,13 @@ describe("createVt100Backend", () => {
 
       // Row should now be: A B _ _ C D E _ _ _
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("A")
-      expect(line[1]!.text).toBe("B")
-      expect(line[2]!.text).toBe("") // inserted blank
-      expect(line[3]!.text).toBe("") // inserted blank
-      expect(line[4]!.text).toBe("C")
-      expect(line[5]!.text).toBe("D")
-      expect(line[6]!.text).toBe("E")
+      expect(line[0]!.char).toBe("A")
+      expect(line[1]!.char).toBe("B")
+      expect(line[2]!.char).toBe("") // inserted blank
+      expect(line[3]!.char).toBe("") // inserted blank
+      expect(line[4]!.char).toBe("C")
+      expect(line[5]!.char).toBe("D")
+      expect(line[6]!.char).toBe("E")
       backend.destroy()
     })
 
@@ -993,11 +993,11 @@ describe("createVt100Backend", () => {
       // Delete 5 chars (more than remaining)
       backend.feed(new TextEncoder().encode("\x1b[5P"))
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("A")
-      expect(line[1]!.text).toBe("B")
-      expect(line[2]!.text).toBe("C")
+      expect(line[0]!.char).toBe("A")
+      expect(line[1]!.char).toBe("B")
+      expect(line[2]!.char).toBe("C")
       // D and E should be gone, replaced by blanks
-      expect(line[3]!.text).toBe("")
+      expect(line[3]!.char).toBe("")
       backend.destroy()
     })
 
@@ -1010,11 +1010,11 @@ describe("createVt100Backend", () => {
       backend.feed(new TextEncoder().encode("\x1b[2@"))
       // Row should be: _ _ A B C (D and E pushed off)
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("")
-      expect(line[1]!.text).toBe("")
-      expect(line[2]!.text).toBe("A")
-      expect(line[3]!.text).toBe("B")
-      expect(line[4]!.text).toBe("C")
+      expect(line[0]!.char).toBe("")
+      expect(line[1]!.char).toBe("")
+      expect(line[2]!.char).toBe("A")
+      expect(line[3]!.char).toBe("B")
+      expect(line[4]!.char).toBe("C")
       backend.destroy()
     })
   })
@@ -1039,23 +1039,23 @@ describe("createVt100Backend", () => {
 
       // Row 0 should still be LINE0
       const line0 = backend.getLine(0)
-      expect(line0[0]!.text).toBe("L")
-      expect(line0[1]!.text).toBe("I")
-      expect(line0[2]!.text).toBe("N")
-      expect(line0[3]!.text).toBe("E")
-      expect(line0[4]!.text).toBe("0")
+      expect(line0[0]!.char).toBe("L")
+      expect(line0[1]!.char).toBe("I")
+      expect(line0[2]!.char).toBe("N")
+      expect(line0[3]!.char).toBe("E")
+      expect(line0[4]!.char).toBe("0")
 
       // Row 1 should be blank (inserted)
       const line1 = backend.getLine(1)
-      expect(line1[0]!.text).toBe("")
+      expect(line1[0]!.char).toBe("")
 
       // Row 2 should now have LINE1 (pushed down from row 1)
       const line2 = backend.getLine(2)
-      expect(line2[0]!.text).toBe("L")
-      expect(line2[1]!.text).toBe("I")
-      expect(line2[2]!.text).toBe("N")
-      expect(line2[3]!.text).toBe("E")
-      expect(line2[4]!.text).toBe("1")
+      expect(line2[0]!.char).toBe("L")
+      expect(line2[1]!.char).toBe("I")
+      expect(line2[2]!.char).toBe("N")
+      expect(line2[3]!.char).toBe("E")
+      expect(line2[4]!.char).toBe("1")
       backend.destroy()
     })
 
@@ -1076,17 +1076,17 @@ describe("createVt100Backend", () => {
 
       // Row 0 should still be LINE0
       const line0 = backend.getLine(0)
-      expect(line0[0]!.text).toBe("L")
-      expect(line0[4]!.text).toBe("0")
+      expect(line0[0]!.char).toBe("L")
+      expect(line0[4]!.char).toBe("0")
 
       // Row 1 should now have LINE2 (pulled up)
       const line1 = backend.getLine(1)
-      expect(line1[0]!.text).toBe("L")
-      expect(line1[4]!.text).toBe("2")
+      expect(line1[0]!.char).toBe("L")
+      expect(line1[4]!.char).toBe("2")
 
       // Last row should be blank (new row pushed in from bottom)
       const lastLine = backend.getLine(4)
-      expect(lastLine[0]!.text).toBe("")
+      expect(lastLine[0]!.char).toBe("")
       backend.destroy()
     })
 
@@ -1105,13 +1105,13 @@ describe("createVt100Backend", () => {
       backend.feed(enc("\x1b[2L"))
 
       // Row 0: LINE0 (unchanged)
-      expect(backend.getLine(0)[4]!.text).toBe("0")
+      expect(backend.getLine(0)[4]!.char).toBe("0")
       // Row 1: blank (inserted)
-      expect(backend.getLine(1)[0]!.text).toBe("")
+      expect(backend.getLine(1)[0]!.char).toBe("")
       // Row 2: blank (inserted)
-      expect(backend.getLine(2)[0]!.text).toBe("")
+      expect(backend.getLine(2)[0]!.char).toBe("")
       // Row 3: LINE1 (pushed down from row 1)
-      expect(backend.getLine(3)[4]!.text).toBe("1")
+      expect(backend.getLine(3)[4]!.char).toBe("1")
       backend.destroy()
     })
 
@@ -1130,14 +1130,14 @@ describe("createVt100Backend", () => {
       backend.feed(enc("\x1b[2M"))
 
       // Row 0: LINE0 (unchanged)
-      expect(backend.getLine(0)[4]!.text).toBe("0")
+      expect(backend.getLine(0)[4]!.char).toBe("0")
       // Row 1: LINE3 (pulled up past deleted LINE1 and LINE2)
-      expect(backend.getLine(1)[4]!.text).toBe("3")
+      expect(backend.getLine(1)[4]!.char).toBe("3")
       // Row 2: LINE4 (pulled up)
-      expect(backend.getLine(2)[4]!.text).toBe("4")
+      expect(backend.getLine(2)[4]!.char).toBe("4")
       // Row 3 and 4: blank
-      expect(backend.getLine(3)[0]!.text).toBe("")
-      expect(backend.getLine(4)[0]!.text).toBe("")
+      expect(backend.getLine(3)[0]!.char).toBe("")
+      expect(backend.getLine(4)[0]!.char).toBe("")
       backend.destroy()
     })
   })
@@ -1232,11 +1232,11 @@ describe("createVt100Backend", () => {
       backend.resize(5, 5)
       // First 5 chars should still be there
       const line = backend.getLine(0)
-      expect(line[0]!.text).toBe("A")
-      expect(line[1]!.text).toBe("B")
-      expect(line[2]!.text).toBe("C")
-      expect(line[3]!.text).toBe("D")
-      expect(line[4]!.text).toBe("E")
+      expect(line[0]!.char).toBe("A")
+      expect(line[1]!.char).toBe("B")
+      expect(line[2]!.char).toBe("C")
+      expect(line[3]!.char).toBe("D")
+      expect(line[4]!.char).toBe("E")
       backend.destroy()
     })
 
@@ -1305,7 +1305,7 @@ describe("createVt100Backend", () => {
       // Now the parser is in CSI state waiting for final byte
       backend.feed(new TextEncoder().encode("mRedText\x1b[0m"))
       const cell = backend.getCell(0, 0)
-      expect(cell.text).toBe("R")
+      expect(cell.char).toBe("R")
       expect(cell.fg).not.toBeNull()
       expect(cell.fg!.r).toBe(0x80)
       backend.destroy()
@@ -1315,11 +1315,11 @@ describe("createVt100Backend", () => {
       const backend = createVt100Backend({ cols: 10, rows: 5 })
       // Column beyond bounds
       const cell = backend.getCell(0, 100)
-      expect(cell.text).toBe("")
+      expect(cell.char).toBe("")
       expect(cell.fg).toBeNull()
       // Row beyond bounds
       const cell2 = backend.getCell(100, 0)
-      expect(cell2.text).toBe("")
+      expect(cell2.char).toBe("")
       backend.destroy()
     })
 
@@ -1362,17 +1362,17 @@ describe("createVt100Backend", () => {
       // 20 chars = 4 full rows
       backend.feed(new TextEncoder().encode("ABCDEFGHIJKLMNOPQRST"))
       // Row 0: ABCDE
-      expect(backend.getLine(0)[0]!.text).toBe("A")
-      expect(backend.getLine(0)[4]!.text).toBe("E")
+      expect(backend.getLine(0)[0]!.char).toBe("A")
+      expect(backend.getLine(0)[4]!.char).toBe("E")
       // Row 1: FGHIJ
-      expect(backend.getLine(1)[0]!.text).toBe("F")
-      expect(backend.getLine(1)[4]!.text).toBe("J")
+      expect(backend.getLine(1)[0]!.char).toBe("F")
+      expect(backend.getLine(1)[4]!.char).toBe("J")
       // Row 2: KLMNO
-      expect(backend.getLine(2)[0]!.text).toBe("K")
-      expect(backend.getLine(2)[4]!.text).toBe("O")
+      expect(backend.getLine(2)[0]!.char).toBe("K")
+      expect(backend.getLine(2)[4]!.char).toBe("O")
       // Row 3: PQRST
-      expect(backend.getLine(3)[0]!.text).toBe("P")
-      expect(backend.getLine(3)[4]!.text).toBe("T")
+      expect(backend.getLine(3)[0]!.char).toBe("P")
+      expect(backend.getLine(3)[4]!.char).toBe("T")
       backend.destroy()
     })
 

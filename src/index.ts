@@ -1,6 +1,7 @@
 export type {
   Cell,
   CellView,
+  Color,
   CursorState,
   CursorStyle,
   KeyDescriptor,
@@ -24,7 +25,7 @@ export type {
   UnderlineStyle,
 } from "./types.ts"
 
-export { hasExtension } from "./types.ts"
+export { EMPTY_CELL, hasExtension } from "./types.ts"
 export { createTerminal } from "./terminal.ts"
 export { screenshotSvg } from "./svg.ts"
 export { screenshotPng } from "./png.ts"
