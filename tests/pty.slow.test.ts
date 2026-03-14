@@ -96,10 +96,13 @@ describe("PTY integration", () => {
     try {
       // Shell metacharacters in arguments should be passed literally
       await term.spawn(["echo", "$(whoami)", ";echo injected"])
-      // Should see the literal strings, not their shell-expanded values
+      // Should see the literal strings, not their shell-expanded values.
+      // The argument ";echo injected" should appear as-is (a single argument
+      // to echo), NOT as a separate shell command that would produce a second
+      // line of output containing just "injected".
       await term.waitFor("$(whoami)", 5000)
       expect(term.getText()).toContain("$(whoami)")
-      expect(term.getText()).not.toContain("injected")
+      expect(term.getText()).toContain(";echo injected")
     } finally {
       await term.close()
     }

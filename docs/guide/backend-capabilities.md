@@ -4,20 +4,20 @@ Each Termless backend wraps a different terminal emulator. They all implement th
 
 ## Capability Matrix
 
-| Capability | xterm.js | Ghostty | vt100 | Alacritty | WezTerm | Peekaboo |
-|---|---|---|---|---|---|---|
-| **Truecolor (24-bit)** | Yes | Yes | Yes | Yes | Yes | Yes |
-| **Kitty keyboard** | No | Yes | No | Yes | Yes | No |
-| **Kitty graphics** | No | No | No | No | No | No |
-| **Sixel** | No | No | No | No | Yes | No |
-| **OSC 8 hyperlinks** | Yes | Yes | No | Yes | Yes | Yes |
-| **Semantic prompts** | No | No | No | No | Yes | No |
-| **Unicode** | 15.1 | 15.1 | 15.1 | 15.1 | 15.1 | 15.1 |
-| **Reflow on resize** | Yes | Yes | No | Yes | Yes | Yes |
-| **Viewport scrolling** | Yes | No | Yes | Yes | Yes | Yes |
-| **OS-level screenshot** | No | No | No | No | No | Yes |
-| **Native deps** | None | WASM | None | Rust (napi-rs) | Rust (napi-rs) | None |
-| **Build requirement** | None | None | None | Rust toolchain | Rust toolchain | None |
+| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo |
+| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- |
+| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      |
+| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       |
+| **Kitty graphics**      | No       | No      | No    | No             | No             | No       |
+| **Sixel**               | No       | No      | No    | No             | Yes            | No       |
+| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      |
+| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       |
+| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     |
+| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      |
+| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      |
+| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      |
+| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     |
+| **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     |
 
 ## Backend Details
 

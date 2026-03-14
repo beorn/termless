@@ -85,19 +85,29 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     return ensureScreen().getTextRange(startRow, startCol, endRow, endCol)
   }
 
+  /** Map vt100 screen underline ("none"|"single"|...) to Cell underline (false|"single"|...) */
+  function mapUnderline(u: import("./screen.ts").UnderlineStyle): Cell["underline"] {
+    return u === "none" ? false : u
+  }
+
   function getCell(row: number, col: number): Cell {
     const sc = ensureScreen().getCell(row, col)
     return {
-      text: sc.char,
+      char: sc.char,
       fg: sc.fg,
       bg: sc.bg,
       bold: sc.bold,
-      faint: sc.faint,
+      dim: sc.faint,
       italic: sc.italic,
-      underline: sc.underline,
+      underline: mapUnderline(sc.underline),
+      underlineColor: null,
       strikethrough: sc.strikethrough,
       inverse: sc.inverse,
+      blink: false,
+      hidden: false,
       wide: sc.wide,
+      continuation: false,
+      hyperlink: null,
     }
   }
 
@@ -105,16 +115,21 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     return ensureScreen()
       .getLine(row)
       .map((sc) => ({
-        text: sc.char,
+        char: sc.char,
         fg: sc.fg,
         bg: sc.bg,
         bold: sc.bold,
-        faint: sc.faint,
+        dim: sc.faint,
         italic: sc.italic,
-        underline: sc.underline,
+        underline: mapUnderline(sc.underline),
+        underlineColor: null,
         strikethrough: sc.strikethrough,
         inverse: sc.inverse,
+        blink: false,
+        hidden: false,
         wide: sc.wide,
+        continuation: false,
+        hyperlink: null,
       }))
   }
 

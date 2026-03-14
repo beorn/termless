@@ -26,15 +26,15 @@ yarn add -D @termless/test
 
 ### Which Package Do I Need?
 
-| You want to...                                 | Install                                                          |
-| ---------------------------------------------- | ---------------------------------------------------------------- |
-| Test a terminal UI in Vitest                   | `@termless/test` (includes xterm.js backend)                     |
-| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)         |
-| Test against Ghostty's VT parser               | `@termless/ghostty`                                              |
-| Test with a zero-dependency emulator           | `@termless/vt100`                                                |
-| Take SVG/PNG screenshots                       | Built into `@termless/core` (PNG needs `@resvg/resvg-js`)       |
-| Automate a real terminal app (OS-level)        | `@termless/peekaboo`                                             |
-| Use the CLI or MCP server                      | `@termless/cli`                                                  |
+| You want to...                                  | Install                                                   |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| Test a terminal UI in Vitest                    | `@termless/test` (includes xterm.js backend)              |
+| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
+| Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
+| Test with a zero-dependency emulator            | `@termless/vt100`                                         |
+| Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
+| Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
+| Use the CLI or MCP server                       | `@termless/cli`                                           |
 
 Most users only need `@termless/test`. See [Backend Capabilities](/guide/backend-capabilities) for a full comparison of all backends.
 

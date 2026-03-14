@@ -82,16 +82,21 @@ function convertGhosttyCell(
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
   return {
-    text,
+    char: text,
     fg,
     bg,
     bold: (cell.flags & CellFlags.BOLD) !== 0,
-    faint: (cell.flags & CellFlags.FAINT) !== 0,
+    dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : "none",
+    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underlineColor: null,
     strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
+    blink: false,
+    hidden: false,
     wide: cell.width > 1,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
@@ -120,16 +125,21 @@ function convertScrollbackCell(
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
   return {
-    text,
+    char: text,
     fg,
     bg,
     bold: (cell.flags & CellFlags.BOLD) !== 0,
-    faint: (cell.flags & CellFlags.FAINT) !== 0,
+    dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : "none",
+    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underlineColor: null,
     strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
+    blink: false,
+    hidden: false,
     wide: cell.width > 1,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
@@ -311,16 +321,21 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     const cells = t.getLine(row)
     if (!cells || col >= cells.length) {
       return {
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none",
+        underline: false,
+        underlineColor: null,
         strikethrough: false,
         inverse: false,
+        blink: false,
+        hidden: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }
     }
     return convertGhosttyCell(cells[col]!, t, row, col, defaultColors)
@@ -332,16 +347,21 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     const ghosttyCells = t.getLine(row)
     if (!ghosttyCells) {
       return Array.from({ length: cols }, () => ({
-        text: "",
+        char: "",
         fg: null,
         bg: null,
         bold: false,
-        faint: false,
+        dim: false,
         italic: false,
-        underline: "none" as const,
+        underline: false as const,
+        underlineColor: null,
         strikethrough: false,
         inverse: false,
+        blink: false,
+        hidden: false,
         wide: false,
+        continuation: false,
+        hyperlink: null,
       }))
     }
     return ghosttyCells.map((cell, col) => convertGhosttyCell(cell, t, row, col, defaultColors))

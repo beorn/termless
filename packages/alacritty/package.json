@@ -4,13 +4,13 @@
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "alacritty",
-    "terminal-emulator",
+    "headless",
     "napi-rs",
     "rust",
+    "terminal",
+    "terminal-emulator",
     "terminal-testing",
-    "headless",
-    "tui",
-    "terminal"
+    "tui"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

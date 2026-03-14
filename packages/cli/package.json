@@ -3,15 +3,15 @@
   "version": "0.2.0",
   "description": "CLI and MCP server for termless — terminal capture, screenshots, and AI agent integration",
   "keywords": [
+    "ai-agent",
+    "automation",
     "cli",
     "mcp",
     "mcp-server",
+    "screenshot",
     "terminal",
     "terminal-capture",
-    "screenshot",
-    "ai-agent",
-    "terminal-testing",
-    "automation"
+    "terminal-testing"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

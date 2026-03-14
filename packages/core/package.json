@@ -3,17 +3,17 @@
   "version": "0.2.0",
   "description": "Headless terminal library — core Terminal API, PTY, SVG/PNG screenshots, key mapping, and composable region views for TUI testing",
   "keywords": [
-    "terminal-emulator",
-    "terminal",
-    "headless",
     "ansi",
     "ansi-parser",
-    "xterm",
-    "tui",
+    "headless",
     "pty",
-    "terminal-testing",
     "svg-screenshot",
-    "vt100"
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "tui",
+    "vt100",
+    "xterm"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

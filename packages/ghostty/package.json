@@ -4,13 +4,13 @@
   "description": "Ghostty backend for termless — Ghostty's VT parser via WASM for cross-terminal TUI testing",
   "keywords": [
     "ghostty",
-    "terminal-emulator",
-    "wasm",
-    "terminal-testing",
-    "vt-parser",
     "headless",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
     "tui",
-    "terminal"
+    "vt-parser",
+    "wasm"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

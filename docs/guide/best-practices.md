@@ -33,7 +33,7 @@ Never use `setTimeout` or `sleep` to wait for terminal output. Use `waitFor()` w
 ```typescript
 // Bad — brittle timing
 await term.spawn(["my-app"])
-await new Promise(r => setTimeout(r, 500))
+await new Promise((r) => setTimeout(r, 500))
 expect(term.screen).toContainText("ready")
 
 // Good — waits for the actual content
@@ -127,12 +127,7 @@ expect(term.screen).toContainText("Status: OK")
 ### Use `toMatchLines()` for multi-line assertions
 
 ```typescript
-expect(term.screen).toMatchLines([
-  "Header",
-  "─────────",
-  "Item 1",
-  "Item 2",
-])
+expect(term.screen).toMatchLines(["Header", "─────────", "Item 1", "Item 2"])
 ```
 
 ## Screenshot Determinism

@@ -67,16 +67,12 @@ export default defineConfig({
         },
         {
           text: "Tools",
-          items: [
-            { text: "CLI & MCP Server", link: "/guide/cli" },
-          ],
+          items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
         },
         {
           text: "Integrations",
           collapsed: false,
-          items: [
-            { text: "Silvery Integration", link: "/advanced/silvery-integration" },
-          ],
+          items: [{ text: "Silvery Integration", link: "/advanced/silvery-integration" }],
         },
       ],
       "/api/": [

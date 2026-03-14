@@ -63,10 +63,7 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
   const { env, cwd, cols, rows, onData } = options
 
   // Determine the argv: direct command or shell-wrapped
-  const argv =
-    "shellCommand" in options
-      ? ["bash", "-c", options.shellCommand]
-      : options.command
+  const argv = "shellCommand" in options ? ["bash", "-c", options.shellCommand] : options.command
 
   const proc = Bun.spawn(argv, {
     cwd,

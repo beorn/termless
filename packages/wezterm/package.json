@@ -3,15 +3,15 @@
   "version": "0.2.0",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
   "keywords": [
-    "wezterm",
-    "terminal-emulator",
+    "headless",
     "napi-rs",
     "rust",
-    "terminal-testing",
     "sixel",
-    "headless",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
     "tui",
-    "terminal"
+    "wezterm"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

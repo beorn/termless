@@ -3,16 +3,16 @@
   "version": "0.2.0",
   "description": "Peekaboo backend for termless — OS-level terminal automation and testing via real terminal apps",
   "keywords": [
-    "peekaboo",
-    "terminal-automation",
-    "os-automation",
     "accessibility",
-    "terminal-testing",
     "e2e-testing",
+    "macos",
+    "os-automation",
+    "peekaboo",
     "screenshot",
-    "tui",
     "terminal",
-    "macos"
+    "terminal-automation",
+    "terminal-testing",
+    "tui"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

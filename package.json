@@ -3,18 +3,18 @@
   "version": "0.2.0",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
-    "terminal",
-    "terminal-testing",
-    "tui-testing",
-    "headless",
-    "tui",
     "ansi",
-    "vitest",
-    "testing",
-    "terminal-emulator",
-    "xterm",
+    "cross-terminal",
     "ghostty",
-    "cross-terminal"
+    "headless",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "testing",
+    "tui",
+    "tui-testing",
+    "vitest",
+    "xterm"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {
