@@ -19,7 +19,10 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
+  EmulatorWarning,
+  WarningExtension,
 } from "../../../src/types.ts"
+import { pushWarning } from "../../../src/warnings.ts"
 import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -159,7 +162,10 @@ const DEFAULT_ROWS = 24
  * @param opts - Optional terminal dimensions for eager initialization
  * @param ghostty - Optional pre-loaded Ghostty instance (for test isolation)
  */
-export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: Ghostty): TerminalBackend {
+export function createGhosttyBackend(
+  opts?: Partial<TerminalOptions>,
+  ghostty?: Ghostty,
+): TerminalBackend & WarningExtension {
   let term: GhosttyTerminal | null = null
   let ghosttyInstance: Ghostty | null = ghostty ?? null
   let cols = DEFAULT_COLS
@@ -168,6 +174,64 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
   let defaultColors: { fg: RGB; bg: RGB } = {
     fg: { r: 0, g: 0, b: 0 },
     bg: { r: 0, g: 0, b: 0 },
+  }
+
+  // ── Warning capture ──
+  const warnings: EmulatorWarning[] = []
+
+  /**
+   * Parse a [ghostty-vt] log message into a structured EmulatorWarning.
+   * Ghostty WASM routes all VT parser messages through console.log("[ghostty-vt]", message).
+   *
+   * Known message formats from Ghostty:
+   * - "warning(osc): invalid OSC command: 66;w=2;X"
+   * - "warning(csi): ..."
+   * - "warning(esc): ..."
+   */
+  function parseGhosttyWarning(message: string): EmulatorWarning {
+    // Classify by Ghostty's warning(category) format
+    const categoryMatch = message.match(/warning\((osc|csi|esc|dcs|pm|apc|sos)\)/i)
+    if (categoryMatch) {
+      const category = categoryMatch[1]!.toUpperCase()
+      return { code: `UNSUPPORTED_${category}`, message, backend: "ghostty" }
+    }
+
+    // Legacy format fallback: "unsupported OSC: 66"
+    if (/unsupported\s+osc/i.test(message)) {
+      return { code: "UNSUPPORTED_OSC", message, backend: "ghostty" }
+    }
+    if (/unsupported\s+csi/i.test(message)) {
+      return { code: "UNSUPPORTED_CSI", message, backend: "ghostty" }
+    }
+    if (/unsupported\s+(esc|escape)/i.test(message)) {
+      return { code: "UNSUPPORTED_ESC", message, backend: "ghostty" }
+    }
+
+    // Fallback: any unclassified ghostty-vt message
+    return { code: "EMULATOR_LOG", message, backend: "ghostty" }
+  }
+
+  /**
+   * Execute a function while intercepting console.log for [ghostty-vt] messages.
+   * Messages are captured as structured warnings instead of going to the console.
+   * Warnings are pushed to both the local backend array and the global registry.
+   */
+  function withWarningCapture<T>(fn: () => T): T {
+    const originalLog = console.log
+    console.log = (...args: unknown[]) => {
+      if (typeof args[0] === "string" && args[0] === "[ghostty-vt]" && typeof args[1] === "string") {
+        const warning = parseGhosttyWarning(args[1])
+        warnings.push(warning)
+        pushWarning(warning)
+        return
+      }
+      originalLog.apply(console, args)
+    }
+    try {
+      return fn()
+    } finally {
+      console.log = originalLog
+    }
   }
 
   function ensureTerm(): GhosttyTerminal {
@@ -217,8 +281,10 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
 
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
-    t.write(data)
-    t.update() // Sync render state
+    withWarningCapture(() => {
+      t.write(data)
+      t.update() // Sync render state
+    })
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -449,7 +515,15 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["dirtyTracking"]),
+    extensions: new Set(["dirtyTracking", "warnings"]),
+  }
+
+  function getWarnings(): EmulatorWarning[] {
+    return [...warnings]
+  }
+
+  function clearWarnings(): void {
+    warnings.length = 0
   }
 
   return {
@@ -471,5 +545,7 @@ export function createGhosttyBackend(opts?: Partial<TerminalOptions>, ghostty?: 
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    getWarnings,
+    clearWarnings,
   }
 }

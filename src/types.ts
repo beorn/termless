@@ -312,6 +312,40 @@ export interface SvgTheme {
 }
 
 // ═══════════════════════════════════════════════════════
+// Emulator Warnings
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Structured warning emitted by a terminal emulator backend.
+ *
+ * Backends capture these instead of (or in addition to) using console.log/warn.
+ * Test infrastructure checks for unexpected warnings after each test to surface
+ * portability issues — e.g., an emulator saying "unsupported OSC: 66" is the
+ * emulator telling you "your portability assumption is false."
+ */
+export interface EmulatorWarning {
+  /** Warning category code, e.g., "UNSUPPORTED_OSC", "UNKNOWN_CSI", "PARSE_ERROR" */
+  code: string
+  /** The raw message from the emulator */
+  message: string
+  /** Which backend produced this warning */
+  backend: string
+}
+
+/**
+ * Extension interface for backends that can capture emulator warnings.
+ *
+ * Backends implementing this collect warnings during feed() calls instead of
+ * logging to console. Test infrastructure drains warnings after each test.
+ */
+export interface WarningExtension {
+  /** Get all accumulated warnings since last drain. */
+  getWarnings(): EmulatorWarning[]
+  /** Clear accumulated warnings (called by test teardown). */
+  clearWarnings(): void
+}
+
+// ═══════════════════════════════════════════════════════
 // Extension Interfaces (optional)
 // ═══════════════════════════════════════════════════════
 

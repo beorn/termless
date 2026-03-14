@@ -3,6 +3,7 @@ export type {
   CellView,
   CursorState,
   CursorStyle,
+  EmulatorWarning,
   KeyDescriptor,
   MouseEvent,
   PngScreenshotOptions,
@@ -22,6 +23,7 @@ export type {
   TerminalReadable,
   TextPosition,
   UnderlineStyle,
+  WarningExtension,
 } from "./types.ts"
 
 export { hasExtension } from "./types.ts"
@@ -45,3 +47,6 @@ export type { RecordedEvent, Recording, RecordingHandle } from "./recording.ts"
 // Mock timer for animation testing
 export { createMockTimer } from "./timer.ts"
 export type { MockTimerController } from "./timer.ts"
+
+// Emulator warning registry
+export { pushWarning, drainWarnings, hasWarnings, clearWarnings } from "./warnings.ts"
