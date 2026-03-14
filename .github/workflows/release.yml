@@ -17,7 +17,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
-      - run: bun test
+      - run: bun run test
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
