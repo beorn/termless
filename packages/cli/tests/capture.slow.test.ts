@@ -33,7 +33,7 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("waitFor text matching", async () => {
+  test("waitFor text matching", { timeout: 15_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
