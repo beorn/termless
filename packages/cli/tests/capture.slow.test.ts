@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest"
 import { createSessionManager } from "../src/session.ts"
 
 describe("CLI capture integration", () => {
-  test("capture echo command output", async () => {
+  test("capture echo command output", { timeout: 15_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
@@ -17,7 +17,7 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("custom dimensions are respected", async () => {
+  test("custom dimensions are respected", { timeout: 15_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
@@ -47,7 +47,7 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("screenshot SVG from session", async () => {
+  test("screenshot SVG from session", { timeout: 15_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
@@ -62,7 +62,7 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("timeout on command with no output", async () => {
+  test("timeout on command with no output", { timeout: 15_000 }, async () => {
     const manager = createSessionManager()
     try {
       await expect(

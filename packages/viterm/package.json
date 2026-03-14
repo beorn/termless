@@ -1,6 +1,6 @@
 {
   "name": "@termless/test",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Vitest integration for termless — 25+ terminal matchers, fixtures, and snapshot serializer for TUI testing",
   "keywords": [
     "ansi",

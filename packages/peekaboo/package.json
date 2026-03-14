@@ -1,6 +1,6 @@
 {
   "name": "@termless/peekaboo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Peekaboo backend for termless — OS-level terminal automation and testing via real terminal apps",
   "keywords": [
     "accessibility",

@@ -1,6 +1,6 @@
 {
   "name": "@termless/xtermjs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "xterm.js backend for termless — headless terminal emulation via @xterm/headless",
   "keywords": [
     "ansi",

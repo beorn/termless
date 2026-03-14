@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Headless terminal library — core Terminal API, PTY, SVG/PNG screenshots, key mapping, and composable region views for TUI testing",
   "keywords": [
     "ansi",
