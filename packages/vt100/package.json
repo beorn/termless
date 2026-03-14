@@ -1,7 +1,19 @@
 {
   "name": "@termless/vt100",
   "version": "0.2.0",
-  "description": "Pure TypeScript VT100 backend for termless — lightweight terminal emulator inspired by the Rust vt100 crate",
+  "description": "Pure TypeScript VT100 backend for termless — zero-dependency terminal emulator for TUI testing",
+  "keywords": [
+    "vt100",
+    "terminal-emulator",
+    "ansi-parser",
+    "typescript",
+    "zero-dependency",
+    "headless",
+    "terminal-testing",
+    "tui",
+    "terminal",
+    "ecma-48"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

@@ -1,14 +1,20 @@
 {
   "name": "@termless/monorepo",
   "version": "0.2.0",
-  "description": "Workspace root for termless — headless terminal library for cross-terminal TUI testing (see @termless/core for the published package)",
+  "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
-    "ghostty",
-    "headless",
     "terminal",
-    "testing",
+    "terminal-testing",
+    "tui-testing",
+    "headless",
     "tui",
-    "xterm"
+    "ansi",
+    "vitest",
+    "testing",
+    "terminal-emulator",
+    "xterm",
+    "ghostty",
+    "cross-terminal"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {

@@ -43,7 +43,7 @@ export default defineConfig({
     sidebar: {
       "/guide/": [
         {
-          text: "Introduction",
+          text: "Get Started",
           items: [
             { text: "Getting Started", link: "/guide/getting-started" },
             { text: "Terminal Model", link: "/guide/terminal-model" },
@@ -54,18 +54,27 @@ export default defineConfig({
           items: [
             { text: "Writing Tests", link: "/guide/writing-tests" },
             { text: "Screenshots", link: "/guide/screenshots" },
+            { text: "Best Practices", link: "/guide/best-practices" },
+          ],
+        },
+        {
+          text: "Backends",
+          items: [
             { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
+            { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
+            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
           ],
         },
         {
           text: "Tools",
-          items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
+          items: [
+            { text: "CLI & MCP Server", link: "/guide/cli" },
+          ],
         },
         {
-          text: "Advanced",
+          text: "Integrations",
           collapsed: false,
           items: [
-            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
             { text: "Silvery Integration", link: "/advanced/silvery-integration" },
           ],
         },
@@ -87,6 +96,7 @@ export default defineConfig({
             { text: "Getting Started", link: "/guide/getting-started" },
             { text: "Writing Tests", link: "/guide/writing-tests" },
             { text: "Screenshots", link: "/guide/screenshots" },
+            { text: "Best Practices", link: "/guide/best-practices" },
           ],
         },
       ],
@@ -105,6 +115,8 @@ export default defineConfig({
             { text: "Getting Started", link: "/guide/getting-started" },
             { text: "Writing Tests", link: "/guide/writing-tests" },
             { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
+            { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
+            { text: "Best Practices", link: "/guide/best-practices" },
           ],
         },
       ],

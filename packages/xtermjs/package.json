@@ -1,7 +1,17 @@
 {
   "name": "@termless/xtermjs",
   "version": "0.2.0",
-  "description": "xterm.js backend for termless",
+  "description": "xterm.js backend for termless — headless terminal emulation via @xterm/headless",
+  "keywords": [
+    "xterm",
+    "xterm-js",
+    "terminal-emulator",
+    "headless",
+    "terminal-testing",
+    "ansi",
+    "tui",
+    "terminal"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

@@ -1,7 +1,17 @@
 {
   "name": "@termless/alacritty",
   "version": "0.2.0",
-  "description": "Alacritty backend for termless — alacritty_terminal via napi-rs",
+  "description": "Alacritty backend for termless — alacritty_terminal via napi-rs for cross-terminal TUI testing",
+  "keywords": [
+    "alacritty",
+    "terminal-emulator",
+    "napi-rs",
+    "rust",
+    "terminal-testing",
+    "headless",
+    "tui",
+    "terminal"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

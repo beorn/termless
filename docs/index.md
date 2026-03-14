@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Termless"
   text: "Headless terminal testing"
-  tagline: "Like Playwright, but for terminal apps. Write tests once, run against any backend. ~1ms per test."
+  tagline: "Like Playwright, but for terminal apps. Write tests once, run against any backend."
   actions:
     - theme: brand
       text: Get Started
@@ -19,13 +19,13 @@ features:
   - title: Cross-Terminal Conformance
     details: "Run the same tests against 6 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
   - title: Fast
-    details: "Pure in-process terminal emulation. ~1ms per test, not ~100ms. No Chromium, no subprocesses, no flakiness."
+    details: "Pure in-process terminal emulation. Typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses, no flakiness."
   - title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - title: SVG & PNG Screenshots
     details: "Generate terminal screenshots as SVG or PNG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered. PNG via optional @resvg/resvg-js."
-  - title: CLI + MCP
-    details: "termless capture for scripts, termless mcp for AI agents. Automate terminal interaction from the command line."
+  - title: PTY Support
+    details: "Spawn real processes, send keypresses, wait for output. Test your actual TUI application end-to-end against any backend."
 ---
 
 ## Quick Start
@@ -119,25 +119,40 @@ expect(term).toBeInMode("altScreen")
 expect(term).toHaveTitle("my-app")
 ```
 
+## Which Package Do I Need?
+
+| You want to...                                 | Install                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| Test a terminal UI in Vitest                   | `@termless/test` (includes xterm.js backend)                     |
+| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)         |
+| Test against Ghostty's VT parser               | `@termless/ghostty`                                              |
+| Test with a zero-dependency emulator           | `@termless/vt100`                                                |
+| Take SVG/PNG screenshots                       | Built into `@termless/core` (PNG needs `@resvg/resvg-js`)       |
+| Spawn and test real processes via PTY          | Built into `@termless/core` (used via any backend)               |
+| Automate a real terminal app (OS-level)        | `@termless/peekaboo`                                             |
+| Use the CLI or MCP server                      | `@termless/cli`                                                  |
+
+Most users only need `@termless/test` -- it includes everything for writing Vitest terminal tests with the xterm.js backend. Add extra backend packages only if you want [multi-backend testing](/guide/multi-backend).
+
 ## Packages
 
 | Package               | Description                                                             |
 | --------------------- | ----------------------------------------------------------------------- |
-| `termless`            | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
+| `@termless/core`      | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
+| `@termless/test`      | Vitest integration: 25+ matchers, fixtures, snapshot serializer         |
 | `@termless/xtermjs`   | xterm.js backend via `@xterm/headless`                                  |
 | `@termless/ghostty`   | Ghostty backend via `ghostty-web` WASM                                  |
 | `@termless/vt100`     | Pure TypeScript VT100 emulator, zero native deps                        |
 | `@termless/alacritty` | Alacritty backend via `alacritty_terminal` (napi-rs)                    |
 | `@termless/wezterm`   | WezTerm backend via `wezterm-term` (napi-rs)                            |
 | `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                      |
-| `@termless/test`      | Vitest integration: 25+ matchers, fixtures, snapshot serializer         |
 | `@termless/cli`       | CLI tools + MCP server for AI agents                                    |
 
 ## How It Compares
 
 | Feature               | Termless                              | Manual string testing | Playwright     |
 | --------------------- | ------------------------------------- | --------------------- | -------------- |
-| Speed                 | ~1ms/test                             | ~1ms/test             | ~100ms+/test   |
+| Speed                 | &lt;1ms/test (in-memory, no PTY)      | &lt;1ms/test          | ~100ms+/test   |
 | Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |
 | ANSI awareness        | Full (colors, bold, cursor)           | None                  | N/A            |
 | Multi-backend         | 6 terminal emulators                  | N/A                   | 3 browsers     |
@@ -145,7 +160,6 @@ expect(term).toHaveTitle("my-app")
 | Wide char support     | Cell-level width tracking             | Broken                | N/A            |
 | Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |
 | PTY support           | Spawn real processes                  | Manual                | N/A            |
-| AI integration        | MCP server                            | None                  | None           |
 
 ## See Also
 

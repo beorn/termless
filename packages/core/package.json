@@ -1,7 +1,20 @@
 {
   "name": "@termless/core",
   "version": "0.2.0",
-  "description": "Headless terminal library for cross-terminal TUI testing — core types and API",
+  "description": "Headless terminal library — core Terminal API, PTY, SVG/PNG screenshots, key mapping, and composable region views for TUI testing",
+  "keywords": [
+    "terminal-emulator",
+    "terminal",
+    "headless",
+    "ansi",
+    "ansi-parser",
+    "xterm",
+    "tui",
+    "pty",
+    "terminal-testing",
+    "svg-screenshot",
+    "vt100"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

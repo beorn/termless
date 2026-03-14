@@ -1,7 +1,18 @@
 {
   "name": "@termless/cli",
   "version": "0.2.0",
-  "description": "CLI and MCP server for termless headless terminal library",
+  "description": "CLI and MCP server for termless — terminal capture, screenshots, and AI agent integration",
+  "keywords": [
+    "cli",
+    "mcp",
+    "mcp-server",
+    "terminal",
+    "terminal-capture",
+    "screenshot",
+    "ai-agent",
+    "terminal-testing",
+    "automation"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

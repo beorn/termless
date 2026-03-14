@@ -22,7 +22,21 @@ yarn add -D @termless/test
 
 :::
 
-- **@termless/test** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `termless` (core) and `@termless/xtermjs` (xterm.js backend) as dependencies.
+- **@termless/test** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `@termless/core` and `@termless/xtermjs` (xterm.js backend) as dependencies.
+
+### Which Package Do I Need?
+
+| You want to...                                 | Install                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| Test a terminal UI in Vitest                   | `@termless/test` (includes xterm.js backend)                     |
+| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)         |
+| Test against Ghostty's VT parser               | `@termless/ghostty`                                              |
+| Test with a zero-dependency emulator           | `@termless/vt100`                                                |
+| Take SVG/PNG screenshots                       | Built into `@termless/core` (PNG needs `@resvg/resvg-js`)       |
+| Automate a real terminal app (OS-level)        | `@termless/peekaboo`                                             |
+| Use the CLI or MCP server                      | `@termless/cli`                                                  |
+
+Most users only need `@termless/test`. See [Backend Capabilities](/guide/backend-capabilities) for a full comparison of all backends.
 
 ## First Test
 
@@ -126,6 +140,8 @@ test("with explicit cleanup", async () => {
 ## Next Steps
 
 - [Writing Tests](/guide/writing-tests) -- all matchers and assertion patterns
-- [Terminal API](/api/terminal) -- complete Terminal method reference
 - [Screenshots](/guide/screenshots) -- SVG & PNG screenshot capture
+- [Best Practices](/guide/best-practices) -- avoiding flaky tests, PTY timing, selector tips
 - [Multi-Backend Testing](/guide/multi-backend) -- test against multiple backends
+- [Backend Capabilities](/guide/backend-capabilities) -- which backends support which features
+- [Terminal API](/api/terminal) -- complete Terminal method reference

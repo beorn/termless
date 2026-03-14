@@ -1,7 +1,17 @@
 {
   "name": "@termless/ghostty",
   "version": "0.2.0",
-  "description": "Ghostty backend for termless — Ghostty's VT parser via WASM",
+  "description": "Ghostty backend for termless — Ghostty's VT parser via WASM for cross-terminal TUI testing",
+  "keywords": [
+    "ghostty",
+    "terminal-emulator",
+    "wasm",
+    "terminal-testing",
+    "vt-parser",
+    "headless",
+    "tui",
+    "terminal"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

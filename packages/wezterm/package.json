@@ -1,7 +1,18 @@
 {
   "name": "@termless/wezterm",
   "version": "0.2.0",
-  "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs",
+  "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
+  "keywords": [
+    "wezterm",
+    "terminal-emulator",
+    "napi-rs",
+    "rust",
+    "terminal-testing",
+    "sixel",
+    "headless",
+    "tui",
+    "terminal"
+  ],
   "homepage": "https://termless.dev/",
   "bugs": {
     "url": "https://github.com/beorn/termless/issues"

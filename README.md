@@ -12,6 +12,7 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 - **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
 - **PTY support** -- spawn real processes, send keypresses, wait for output
+- **Fast** -- typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses
 - **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
 
 ## Quick Start
@@ -185,6 +186,21 @@ npm install -D @termless/test               # Vitest matchers + fixtures (includ
 npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 ```
 
+## Which Package Do I Need?
+
+| You want to...                                 | Install                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| Test a terminal UI in Vitest                   | `@termless/test` (includes xterm.js backend)                     |
+| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)         |
+| Test against Ghostty's VT parser               | `@termless/ghostty`                                              |
+| Test with a zero-dependency emulator           | `@termless/vt100`                                                |
+| Take SVG/PNG screenshots                       | Built into `@termless/core` (PNG needs `@resvg/resvg-js`)       |
+| Spawn and test real processes via PTY          | Built into `@termless/core` (used via any backend)               |
+| Automate a real terminal app (OS-level)        | `@termless/peekaboo`                                             |
+| Use the CLI or MCP server                      | `@termless/cli`                                                  |
+
+Most users only need `@termless/test`.
+
 ## Multi-Backend Testing
 
 Test your TUI against multiple terminal emulators with a single test suite. Write tests once, configure backends via vitest workspace:
@@ -213,42 +229,12 @@ globalThis.createBackend = () => createVt100Backend()
 
 Your tests use `globalThis.createBackend()` and run against every configured backend automatically. `vitest` runs the entire test suite once per workspace entry — same tests, different terminal emulators. See [docs/guide/multi-backend.md](docs/guide/multi-backend.md).
 
-## CLI
-
-```bash
-# Capture terminal output as text
-termless capture --command "ls -la" --wait-for "total" --text
-
-# Capture as SVG screenshot
-termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.svg
-
-# Capture as PNG screenshot (detected from .png extension)
-termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.png
-
-# Options
-termless capture --command "my-app" \
-  --keys "j,j,Enter"        \
-  --wait-for "ready"         \
-  --screenshot /tmp/out.svg  \
-  --text                     \
-  --cols 120 --rows 40       \
-  --timeout 5000
-```
-
 ## Cross-Backend Conformance
 
 All backends are tested for conformance via `cross-backend.test.ts` — text rendering, SGR styles, cursor positioning, modes, scrollback, capabilities, key encoding, unicode, and cross-backend output comparison. Run with:
 
 ```bash
 bun vitest run tests/cross-backend.test.ts
-```
-
-## MCP Server
-
-For AI agents (Claude Code, etc.) -- start a stdio MCP server that exposes terminal session management:
-
-```bash
-termless mcp
 ```
 
 ## Packages
@@ -287,11 +273,27 @@ Termless is the **only** headless terminal testing library that supports multi-b
 
 - [Getting Started](https://termless.dev/guide/getting-started) -- install, first test, run it
 - [Writing Tests](https://termless.dev/guide/writing-tests) -- matchers, fixtures, assertion patterns
-- [Terminal API](https://termless.dev/api/terminal) -- `createTerminal()` and all Terminal methods
 - [Screenshots](https://termless.dev/guide/screenshots) -- SVG & PNG screenshots, themes, custom fonts
+- [Best Practices](https://termless.dev/guide/best-practices) -- avoiding flaky tests, PTY timing, selectors
 - [Multi-Backend Testing](https://termless.dev/guide/multi-backend) -- test against any backend
+- [Backend Capabilities](https://termless.dev/guide/backend-capabilities) -- which backends support what
 - [CLI & MCP](https://termless.dev/guide/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://termless.dev/api/terminal) | [Backend](https://termless.dev/api/backend) | [Cell & Types](https://termless.dev/api/cell) | [Matchers](https://termless.dev/api/matchers)
+
+## CLI & MCP Server
+
+For scripting and AI agents, `@termless/cli` provides terminal capture and an MCP server:
+
+```bash
+# Capture terminal output as text or screenshot
+termless capture --command "ls -la" --wait-for "total" --text
+termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.svg
+
+# MCP server for AI agents (Claude Code, etc.)
+termless mcp
+```
+
+See the [CLI & MCP docs](https://termless.dev/guide/cli) for full options.
 
 ## See Also
 
