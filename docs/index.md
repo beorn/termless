@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Termless"
   text: "Headless terminal testing"
-  tagline: "Like Playwright, but for terminal apps. Write tests once, run against any backend."
+  tagline: "Like Playwright, but for terminal apps. Write tests once, run against xterm.js, Ghostty, Alacritty, WezTerm, VT100, or Peekaboo."
   actions:
     - theme: brand
       text: Get Started
@@ -121,16 +121,16 @@ expect(term).toHaveTitle("my-app")
 
 ## Which Package Do I Need?
 
-| You want to...                                 | Install                                                          |
-| ---------------------------------------------- | ---------------------------------------------------------------- |
-| Test a terminal UI in Vitest                   | `@termless/test` (includes xterm.js backend)                     |
-| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)         |
-| Test against Ghostty's VT parser               | `@termless/ghostty`                                              |
-| Test with a zero-dependency emulator           | `@termless/vt100`                                                |
-| Take SVG/PNG screenshots                       | Built into `@termless/core` (PNG needs `@resvg/resvg-js`)       |
-| Spawn and test real processes via PTY          | Built into `@termless/core` (used via any backend)               |
-| Automate a real terminal app (OS-level)        | `@termless/peekaboo`                                             |
-| Use the CLI or MCP server                      | `@termless/cli`                                                  |
+| You want to...                                  | Install                                                   |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| Test a terminal UI in Vitest                    | `@termless/test` (includes xterm.js backend)              |
+| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
+| Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
+| Test with a zero-dependency emulator            | `@termless/vt100`                                         |
+| Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
+| Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
+| Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
+| Use the CLI or MCP server                       | `@termless/cli`                                           |
 
 Most users only need `@termless/test` -- it includes everything for writing Vitest terminal tests with the xterm.js backend. Add extra backend packages only if you want [multi-backend testing](/guide/multi-backend).
 
