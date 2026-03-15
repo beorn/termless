@@ -17,17 +17,24 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 
 ## Packages
 
-| Package               | Description                                                                | Status           |
-| --------------------- | -------------------------------------------------------------------------- | ---------------- |
-| `@termless/core`      | Core: types, Terminal, PTY, SVG/PNG screenshots, key mapping, region views | Active           |
-| `@termless/xtermjs`   | xterm.js backend (@xterm/headless)                                         | Active           |
-| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                                         | Active           |
-| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)                          | Active           |
-| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)                         | Needs Rust build |
-| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                                 | Needs Rust build |
-| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                         | Active           |
-| `@termless/test`      | Vitest integration: matchers, fixtures, snapshots                          | Active           |
-| `@termless/cli`       | CLI + MCP server                                                           | Active           |
+| Package               | Description                                                                | Runtime       | Status           |
+| --------------------- | -------------------------------------------------------------------------- | ------------- | ---------------- |
+| `@termless/core`      | Core: types, Terminal, PTY, SVG/PNG screenshots, key mapping, region views | Bun + Node.js | Active           |
+| `@termless/xtermjs`   | xterm.js backend (@xterm/headless)                                         | Bun + Node.js | Active           |
+| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                                         | Bun + Node.js | Active           |
+| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)                          | Bun + Node.js | Active           |
+| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)                         | Bun + Node.js | Needs Rust build |
+| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                                 | Bun + Node.js | Needs Rust build |
+| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)                         | Bun + Node.js | Active (macOS)   |
+| `@termless/test`      | Vitest integration: matchers, fixtures, snapshots                          | Bun + Node.js | Active           |
+| `@termless/cli`       | CLI + MCP server                                                           | Bun + Node.js | Active           |
+
+### Runtime Notes
+
+- **PTY support** (`spawnPty` / `terminal.spawn()`) uses Bun's native PTY on Bun, and `node-pty` on Node.js. On Node.js, install `node-pty` as a peer dependency: `npm install node-pty`.
+- **Peekaboo** uses OS automation (osascript, screencapture) — macOS only on both runtimes.
+- **Pure backends** (xtermjs, ghostty, vt100) have zero runtime-specific dependencies and work on both Bun and Node.js.
+- **napi-rs backends** (alacritty, wezterm) load native `.node` binaries — work on any runtime that supports N-API.
 
 ## Architecture
 

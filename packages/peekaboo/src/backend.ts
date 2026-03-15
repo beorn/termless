@@ -20,6 +20,7 @@
 
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
 import { spawnPty, type PtyHandle } from "../../../src/pty.ts"
+import { exec, execDetached, readFileAsBuffer } from "./exec.ts"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -88,15 +89,12 @@ async function launchTerminalApp(
     : ""
   const fullCmd = envExports ? `${envExports}; cd ${JSON.stringify(cwd)}; ${cmd}` : `cd ${JSON.stringify(cwd)}; ${cmd}`
 
-  let proc: ReturnType<typeof Bun.spawn>
+  let handle: { pid: number; exited: Promise<number> }
 
   switch (app) {
     case "ghostty": {
       // Ghostty supports --command flag
-      proc = Bun.spawn(["open", "-a", "Ghostty", "--args", "-e", fullCmd], {
-        stdout: "ignore",
-        stderr: "ignore",
-      })
+      handle = execDetached(["open", "-a", "Ghostty", "--args", "-e", fullCmd])
       break
     }
     case "iterm2": {
@@ -106,10 +104,7 @@ async function launchTerminalApp(
           create window with default profile command "${fullCmd.replace(/"/g, '\\"')}"
         end tell
       `
-      proc = Bun.spawn(["osascript", "-e", script], {
-        stdout: "ignore",
-        stderr: "ignore",
-      })
+      handle = execDetached(["osascript", "-e", script])
       break
     }
     case "terminal": {
@@ -120,24 +115,15 @@ async function launchTerminalApp(
           activate
         end tell
       `
-      proc = Bun.spawn(["osascript", "-e", script], {
-        stdout: "ignore",
-        stderr: "ignore",
-      })
+      handle = execDetached(["osascript", "-e", script])
       break
     }
     case "wezterm": {
-      proc = Bun.spawn(["open", "-a", "WezTerm", "--args", "start", "--", "bash", "-c", fullCmd], {
-        stdout: "ignore",
-        stderr: "ignore",
-      })
+      handle = execDetached(["open", "-a", "WezTerm", "--args", "start", "--", "bash", "-c", fullCmd])
       break
     }
     case "kitty": {
-      proc = Bun.spawn(["open", "-a", "kitty", "--args", "bash", "-c", fullCmd], {
-        stdout: "ignore",
-        stderr: "ignore",
-      })
+      handle = execDetached(["open", "-a", "kitty", "--args", "bash", "-c", fullCmd])
       break
     }
   }
@@ -146,17 +132,13 @@ async function launchTerminalApp(
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
   return {
-    pid: proc.pid,
+    pid: handle.pid,
     async close() {
       // Try graceful close via osascript
       try {
         const bundleName = APP_BUNDLE_NAMES[app]
         const closeScript = `tell application "${bundleName}" to close front window`
-        const closer = Bun.spawn(["osascript", "-e", closeScript], {
-          stdout: "ignore",
-          stderr: "ignore",
-        })
-        await closer.exited
+        await exec(["osascript", "-e", closeScript])
       } catch {
         // Ignore close errors
       }
@@ -179,52 +161,38 @@ async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
     end tell
   `
 
-  const windowIdProc = Bun.spawn(["osascript", "-e", getWindowIdScript], {
+  const windowIdResult = await exec(["osascript", "-e", getWindowIdScript], {
     stdout: "pipe",
     stderr: "pipe",
   })
 
-  const windowIdText = await new Response(windowIdProc.stdout).text()
-  const windowIdExit = await windowIdProc.exited
+  const windowId = windowIdResult.stdout.trim()
 
-  const windowId = windowIdText.trim()
-
-  if (windowId && windowIdExit === 0) {
+  if (windowId && windowIdResult.exitCode === 0) {
     // Capture specific window by ID
-    const captureProc = Bun.spawn(["screencapture", "-l", windowId, "-o", "-x", tmpPath], {
-      stdout: "ignore",
+    const captureResult = await exec(["screencapture", "-l", windowId, "-o", "-x", tmpPath], {
       stderr: "pipe",
     })
-    const captureExit = await captureProc.exited
-    if (captureExit !== 0) {
-      const stderr = await new Response(captureProc.stderr).text()
-      throw new Error(`screencapture failed with exit code ${captureExit}: ${stderr.trim()}`)
+    if (captureResult.exitCode !== 0) {
+      throw new Error(`screencapture failed with exit code ${captureResult.exitCode}: ${captureResult.stderr.trim()}`)
     }
   } else {
     // Fallback: capture the frontmost window
     // Bring the app to front first
     const activateScript = `tell application "${bundleName}" to activate`
-    const activateProc = Bun.spawn(["osascript", "-e", activateScript], {
-      stdout: "ignore",
-      stderr: "ignore",
-    })
-    await activateProc.exited
+    await exec(["osascript", "-e", activateScript])
     await new Promise((resolve) => setTimeout(resolve, 300))
 
-    const captureProc = Bun.spawn(["screencapture", "-w", "-o", "-x", tmpPath], {
-      stdout: "ignore",
+    const captureResult = await exec(["screencapture", "-w", "-o", "-x", tmpPath], {
       stderr: "pipe",
     })
-    const captureExit = await captureProc.exited
-    if (captureExit !== 0) {
-      const stderr = await new Response(captureProc.stderr).text()
-      throw new Error(`screencapture failed with exit code ${captureExit}: ${stderr.trim()}`)
+    if (captureResult.exitCode !== 0) {
+      throw new Error(`screencapture failed with exit code ${captureResult.exitCode}: ${captureResult.stderr.trim()}`)
     }
   }
 
   // Read the screenshot file
-  const file = Bun.file(tmpPath)
-  const buffer = Buffer.from(await file.arrayBuffer())
+  const buffer = await readFileAsBuffer(tmpPath)
 
   // Clean up temp file
   try {

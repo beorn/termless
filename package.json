@@ -67,10 +67,19 @@
     "vitepress-plugin-llms": "^1.0.0",
     "vitest": "^4.0.0"
   },
+  "peerDependencies": {
+    "node-pty": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "node-pty": {
+      "optional": true
+    }
+  },
   "optionalDependencies": {
     "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
-    "bun": ">=1.0.0"
+    "bun": ">=1.0.0",
+    "node": ">=18"
   }
 }

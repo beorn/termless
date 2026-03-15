@@ -1,9 +1,12 @@
 /**
  * PTY module for termless.
  *
- * Spawns a child process with a pseudo-terminal using Bun's native PTY support
- * and bridges its I/O to a TerminalBackend via callbacks.
+ * Spawns a child process with a pseudo-terminal and bridges its I/O to a
+ * TerminalBackend via callbacks. Works on both Bun (native PTY) and Node.js
+ * (via node-pty optional peer dependency).
  */
+
+import { spawnPortablePty, type PortablePtyProcess } from "./spawn.ts"
 
 // ── Types ──
 
@@ -55,9 +58,12 @@ export interface PtyShellOptions {
 /**
  * Spawn a child process with a PTY and return a handle for interacting with it.
  *
- * Uses Bun.spawn with the `terminal` option for native PTY support.
  * The command is spawned directly (no shell wrapper) to avoid shell injection.
  * Sets FORCE_COLOR=1 and TERM=xterm-256color to ensure proper color output.
+ *
+ * Runtime support:
+ * - Bun: uses native `Bun.spawn()` with `terminal` option (built-in PTY)
+ * - Node.js: uses `node-pty` (must be installed as a peer dependency)
  */
 export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle {
   const { env, cwd, cols, rows, onData } = options
@@ -65,35 +71,18 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
   // Determine the argv: direct command or shell-wrapped
   const argv = "shellCommand" in options ? ["bash", "-c", options.shellCommand] : options.command
 
-  const proc = Bun.spawn(argv, {
+  const proc: PortablePtyProcess = spawnPortablePty({
+    argv,
+    cols,
+    rows,
     cwd,
     env: {
-      ...process.env,
       FORCE_COLOR: "1",
       TERM: "xterm-256color",
       ...env,
     },
-    terminal: {
-      cols,
-      rows,
-      data: (_terminal, data) => {
-        try {
-          onData(data)
-        } catch {
-          // Swallow callback errors to prevent crashing the event loop.
-          // The PTY data callback runs synchronously in Bun's event loop --
-          // an unhandled throw here would crash the entire process.
-        }
-      },
-    },
+    onData,
   })
-
-  // Access the PTY write channel (typed by @types/bun when terminal option is used)
-  const pty = proc.terminal as {
-    write: (data: string) => void
-    close: () => void
-    resize: (cols: number, rows: number) => void
-  }
 
   let closed = false
   let exitCode: number | null = null
@@ -112,11 +101,7 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     closed = true
 
     // Close PTY write channel
-    try {
-      pty.close()
-    } catch {
-      // Ignore cleanup errors
-    }
+    proc.closePty()
 
     // SIGTERM, then wait up to 2s, then SIGKILL
     try {
@@ -136,12 +121,12 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
   return {
     write(data: string): void {
       if (closed) throw new Error("PTY is closed")
-      pty.write(data)
+      proc.write(data)
     },
 
     resize(newCols: number, newRows: number): void {
       if (closed) throw new Error("PTY is closed")
-      pty.resize(newCols, newRows)
+      proc.resize(newCols, newRows)
     },
 
     get alive(): boolean {

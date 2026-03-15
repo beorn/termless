@@ -184,7 +184,23 @@ expect(term).toHaveTitle("My App")
 ```bash
 npm install -D @termless/test               # Vitest matchers + fixtures (includes xterm.js backend)
 npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
+npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
+
+## Runtime Compatibility
+
+Termless works on both **Bun** (>=1.0) and **Node.js** (>=18).
+
+| Feature                                 | Bun                   | Node.js             |
+| --------------------------------------- | --------------------- | ------------------- |
+| Pure backends (xtermjs, ghostty, vt100) | Built-in              | Built-in            |
+| PTY spawn (`terminal.spawn()`)          | Built-in (native PTY) | Requires `node-pty` |
+| SVG screenshots                         | Built-in              | Built-in            |
+| PNG screenshots                         | `@resvg/resvg-js`     | `@resvg/resvg-js`   |
+| Peekaboo (OS automation)                | macOS only            | macOS only          |
+| napi-rs backends (alacritty, wezterm)   | Needs Rust build      | Needs Rust build    |
+
+On Node.js, PTY support requires `node-pty` as an optional peer dependency. If not installed, `terminal.spawn()` throws a clear error with installation instructions. All other features (feeding data, backends, screenshots, matchers) work without it.
 
 ## Which Package Do I Need?
 
