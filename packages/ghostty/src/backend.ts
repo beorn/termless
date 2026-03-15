@@ -167,7 +167,7 @@ export function createGhosttyBackend(
   ghostty?: Ghostty,
 ): TerminalBackend & WarningExtension {
   let term: GhosttyTerminal | null = null
-  let ghosttyInstance: Ghostty | null = ghostty ?? null
+  let ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let title = ""

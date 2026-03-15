@@ -43,9 +43,12 @@ describe("ghostty backend", () => {
       expect(() => backend.getText()).toThrow("not initialized")
     })
 
-    test("throws without WASM loaded", () => {
+    test("uses sharedGhostty when no explicit instance passed", () => {
+      // After initGhostty(), createGhosttyBackend() uses the shared instance
       const b = createGhosttyBackend()
-      expect(() => b.init({ cols: 80, rows: 24 })).toThrow("WASM not loaded")
+      b.init({ cols: 80, rows: 24 })
+      expect(b.getText()).toBeDefined()
+      b.destroy()
     })
   })
 
