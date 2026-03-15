@@ -171,8 +171,7 @@ function spawnNodePty(options: PortablePtySpawnOptions): PortablePtyProcess {
 
   const nodePty = loadNodePty()
 
-  const [file, ...args] = argv
-  const ptyProcess = nodePty.spawn(file, args, {
+  const ptyProcess = nodePty.spawn(argv[0]!, argv.slice(1), {
     name: "xterm-256color",
     cols,
     rows,

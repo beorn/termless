@@ -95,9 +95,8 @@ async function execNode(
   const { spawn } = await import("node:child_process")
 
   return new Promise<ExecResult>((resolve, reject) => {
-    const [cmd, ...args] = argv
-    const child = spawn(cmd, args, {
-      stdio: ["ignore", stdoutMode, stderrMode],
+    const child = spawn(argv[0]!, argv.slice(1), {
+      stdio: ["ignore", stdoutMode, stderrMode] as const,
     })
 
     const stdoutChunks: Buffer[] = []
@@ -126,8 +125,7 @@ function execDetachedNode(argv: string[]): { pid: number; exited: Promise<number
   const nodeRequire = createRequire(import.meta.url)
   const { spawn } = nodeRequire("node:child_process") as typeof import("node:child_process")
 
-  const [cmd, ...args] = argv
-  const child = spawn(cmd, args, {
+  const child = spawn(argv[0]!, argv.slice(1), {
     stdio: ["ignore", "ignore", "ignore"],
     detached: false,
   })
