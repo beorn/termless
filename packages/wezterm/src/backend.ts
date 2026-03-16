@@ -116,30 +116,40 @@ function convertNapiCell(cell: NapiCell): Cell {
   const bg: RGB | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
 
   return {
-    text: cell.text,
+    char: cell.text,
     fg,
     bg,
     bold: cell.bold,
-    faint: cell.faint,
+    dim: cell.faint,
     italic: cell.italic,
-    underline: cell.underline as Cell["underline"],
+    underline: cell.underline === "none" ? false : (cell.underline as Cell["underline"]),
+    underlineColor: null,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
+    blink: false,
+    hidden: false,
     wide: cell.wide,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
 const EMPTY_CELL: Cell = {
-  text: "",
+  char: "",
   fg: null,
   bg: null,
   bold: false,
-  faint: false,
+  dim: false,
   italic: false,
-  underline: "none",
+  underline: false,
+  underlineColor: null,
   strikethrough: false,
   inverse: false,
+  blink: false,
+  hidden: false,
   wide: false,
+  continuation: false,
+  hyperlink: null,
 }
 
 // ═══════════════════════════════════════════════════════

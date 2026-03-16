@@ -112,31 +112,41 @@ export function loadAlacrittyNative(): NativeModule {
 
 function convertNativeCell(nc: NativeCell): Cell {
   return {
-    text: nc.text,
+    char: nc.text,
     fg: nc.fg ? ({ r: nc.fg[0]!, g: nc.fg[1]!, b: nc.fg[2]! } as RGB) : null,
     bg: nc.bg ? ({ r: nc.bg[0]!, g: nc.bg[1]!, b: nc.bg[2]! } as RGB) : null,
     bold: nc.bold,
-    faint: nc.faint,
+    dim: nc.faint,
     italic: nc.italic,
-    underline: nc.underline as Cell["underline"],
+    underline: nc.underline === "none" ? false : (nc.underline as Cell["underline"]),
+    underlineColor: null,
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
+    blink: false,
+    hidden: false,
     wide: nc.wide,
+    continuation: false,
+    hyperlink: null,
   }
 }
 
 function emptyCell(): Cell {
   return {
-    text: "",
+    char: "",
     fg: null,
     bg: null,
     bold: false,
-    faint: false,
+    dim: false,
     italic: false,
-    underline: "none",
+    underline: false,
+    underlineColor: null,
     strikethrough: false,
     inverse: false,
+    blink: false,
+    hidden: false,
     wide: false,
+    continuation: false,
+    hyperlink: null,
   }
 }
 

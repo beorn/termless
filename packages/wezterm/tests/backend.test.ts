@@ -80,7 +80,7 @@ describeNative("wezterm backend", () => {
       // CUP: CSI row;col H (1-based)
       backend.feed(encode("\x1b[5;10Htext"))
       const cell = backend.getCell(4, 9) // 0-based
-      expect(cell.text).toBe("t")
+      expect(cell.char).toBe("t")
     })
 
     test("getTextRange extracts region", () => {
@@ -133,7 +133,7 @@ describeNative("wezterm backend", () => {
 
     test("faint", () => {
       backend.feed(encode("\x1b[2mF\x1b[0m"))
-      expect(backend.getCell(0, 0).faint).toBe(true)
+      expect(backend.getCell(0, 0).dim).toBe(true)
     })
 
     test("italic", () => {
@@ -171,7 +171,7 @@ describeNative("wezterm backend", () => {
     test("CJK character is wide", () => {
       backend.feed(encode("你"))
       const cell = backend.getCell(0, 0)
-      expect(cell.text).toBe("你")
+      expect(cell.char).toBe("你")
       expect(cell.wide).toBe(true)
     })
   })
@@ -364,9 +364,9 @@ describeNative("wezterm backend", () => {
       backend.feed(encode("abc"))
       const line = backend.getLine(0)
       expect(line.length).toBe(80)
-      expect(line[0]!.text).toBe("a")
-      expect(line[1]!.text).toBe("b")
-      expect(line[2]!.text).toBe("c")
+      expect(line[0]!.char).toBe("a")
+      expect(line[1]!.char).toBe("b")
+      expect(line[2]!.char).toBe("c")
     })
 
     test("getLines returns correct number of rows", () => {
