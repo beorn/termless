@@ -54,6 +54,7 @@ import {
   assertTitle,
   assertScrollbackLines,
   assertAtBottomOfScrollback,
+  assertClipboardText,
   type AssertionResult,
 } from "../../../src/assertions.ts"
 
@@ -99,6 +100,9 @@ declare module "vitest" {
     toHaveTitle(title: string): void
     toHaveScrollbackLines(n: number): void
     toBeAtBottomOfScrollback(): void
+
+    // Clipboard (Terminal)
+    toHaveClipboardText(text: string): void
 
     // Snapshot (TerminalReadable)
     toMatchTerminalSnapshot(options?: { name?: string }): void
@@ -262,6 +266,17 @@ export const terminalMatchers = {
   toBeAtBottomOfScrollback(received: unknown) {
     assertTerminalReadable(received, "toBeAtBottomOfScrollback")
     return toMatcherResult(assertAtBottomOfScrollback(received))
+  },
+
+  // ── Clipboard Matchers (Terminal) ──
+
+  /** Assert terminal has captured the given text via OSC 52 clipboard write. */
+  toHaveClipboardText(received: unknown, text: string) {
+    if (!received || typeof received !== "object" || !("clipboardWrites" in received)) {
+      throw new TypeError("toHaveClipboardText expects a Terminal with clipboardWrites")
+    }
+    const writes = (received as { clipboardWrites: readonly string[] }).clipboardWrites
+    return toMatcherResult(assertClipboardText(writes, text))
   },
 
   // ── Snapshot Matchers (TerminalReadable, vitest-only) ──

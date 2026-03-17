@@ -239,6 +239,19 @@ export interface TextPosition {
   text: string
 }
 
+/** Modifier keys for mouse events. */
+export interface MouseModifiers {
+  ctrl?: boolean
+  shift?: boolean
+  alt?: boolean
+}
+
+/** Options for mouse click/press/release events. */
+export interface MouseOptions extends MouseModifiers {
+  /** Mouse button: 0=left (default), 1=middle, 2=right. */
+  button?: 0 | 1 | 2
+}
+
 export interface Terminal extends TerminalReadable {
   readonly cols: number
   readonly rows: number
@@ -263,9 +276,17 @@ export interface Terminal extends TerminalReadable {
   readonly alive: boolean
   readonly exitInfo: string | null
 
-  // Input
+  // Input — keyboard
   press(key: string): void
   type(text: string): void
+
+  // Input — mouse (SGR mode 1006)
+  click(x: number, y: number, options?: MouseOptions): void
+  dblclick(x: number, y: number, options?: MouseOptions & { delay?: number }): Promise<void>
+  mouseDown(x: number, y: number, options?: MouseOptions): void
+  mouseUp(x: number, y: number, options?: MouseOptions): void
+  mouseMove(x: number, y: number, options?: MouseOptions): void
+  wheel(deltaX: number, deltaY: number, options?: { x?: number; y?: number } & MouseModifiers): void
 
   // Waiting
   waitFor(text: string, timeout?: number): Promise<void>
@@ -281,6 +302,10 @@ export interface Terminal extends TerminalReadable {
 
   // Resize
   resize(cols: number, rows: number): void
+
+  // Clipboard
+  /** Captured OSC 52 clipboard writes (decoded text). Populated when terminal output contains OSC 52 set-clipboard sequences. */
+  readonly clipboardWrites: string[]
 
   // Cleanup
   close(): Promise<void>

@@ -390,3 +390,22 @@ export function assertAtBottomOfScrollback(term: TerminalReadable): AssertionRes
       : `Expected terminal to be at bottom of scrollback (viewportOffset=${bottomOffset}), got ${scrollback.viewportOffset}`,
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// Clipboard Assertions
+// ═══════════════════════════════════════════════════════
+
+/** Assert that the terminal has captured a specific clipboard text via OSC 52. */
+export function assertClipboardText(clipboardWrites: readonly string[], expected: string): AssertionResult {
+  const pass = clipboardWrites.includes(expected)
+  return {
+    pass,
+    message: pass
+      ? `Expected clipboard not to contain "${expected}"`
+      : clipboardWrites.length === 0
+        ? `Expected clipboard to contain "${expected}", but no OSC 52 writes were captured`
+        : `Expected clipboard to contain "${expected}", but captured: ${JSON.stringify(clipboardWrites)}`,
+    expected,
+    actual: clipboardWrites,
+  }
+}

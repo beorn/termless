@@ -19,6 +19,8 @@ import type {
   TerminalCreateOptions,
   TerminalMode,
   TextPosition,
+  MouseOptions,
+  MouseModifiers,
 } from "./types.ts"
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
@@ -70,6 +72,26 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   let ptyHandle: PtyHandle | null = null
   let closed = false
 
+  // ── OSC 52 clipboard capture ──
+
+  /** OSC 52 regex: \x1b]52;c;<base64>\x07 or \x1b]52;c;<base64>\x1b\\ */
+  const osc52Re = /\x1b\]52;[a-z]*;([A-Za-z0-9+/=]+)(?:\x07|\x1b\\)/g
+
+  const clipboardWrites: string[] = []
+
+  function scanOsc52(data: string): void {
+    osc52Re.lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = osc52Re.exec(data)) !== null) {
+      try {
+        const decoded = atob(match[1]!)
+        clipboardWrites.push(decoded)
+      } catch {
+        // Ignore invalid base64
+      }
+    }
+  }
+
   // ── TerminalReadable delegation ──
 
   function getText(): string {
@@ -112,6 +134,8 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   function feed(data: Uint8Array | string): void {
     if (closed) throw new Error("Terminal is closed")
+    const text = typeof data === "string" ? data : new TextDecoder().decode(data)
+    scanOsc52(text)
     const bytes = typeof data === "string" ? encoder.encode(data) : data
     backend.feed(bytes)
   }
@@ -129,6 +153,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       cols,
       rows,
       onData: (data) => {
+        scanOsc52(new TextDecoder().decode(data))
         backend.feed(data)
       },
     })
@@ -165,8 +190,77 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     ptyHandle.write(text)
   }
 
+  // ── Mouse (SGR mode 1006) ──
+
+  /** Encode SGR button byte: button number + modifier bits. */
+  function sgrButton(options?: MouseOptions): number {
+    let btn = options?.button ?? 0
+    if (options?.shift) btn += 4
+    if (options?.alt) btn += 8
+    if (options?.ctrl) btn += 16
+    return btn
+  }
+
+  function requirePty(): PtyHandle {
+    if (closed) throw new Error("Terminal is closed")
+    if (!ptyHandle) throw new Error("No PTY spawned — call spawn() first")
+    return ptyHandle
+  }
+
+  function click(x: number, y: number, options?: MouseOptions): void {
+    const pty = requirePty()
+    const col = x + 1
+    const row = y + 1
+    const btn = sgrButton(options)
+    pty.write(`\x1b[<${btn};${col};${row}M`) // press
+    pty.write(`\x1b[<${btn};${col};${row}m`) // release
+  }
+
+  async function dblclick(x: number, y: number, options?: MouseOptions & { delay?: number }): Promise<void> {
+    const delay = options?.delay ?? 50
+    click(x, y, options)
+    await new Promise((r) => setTimeout(r, delay))
+    click(x, y, options)
+  }
+
+  function mouseDown(x: number, y: number, options?: MouseOptions): void {
+    const pty = requirePty()
+    const btn = sgrButton(options)
+    pty.write(`\x1b[<${btn};${x + 1};${y + 1}M`)
+  }
+
+  function mouseUp(x: number, y: number, options?: MouseOptions): void {
+    const pty = requirePty()
+    const btn = sgrButton(options)
+    pty.write(`\x1b[<${btn};${x + 1};${y + 1}m`)
+  }
+
+  function mouseMove(x: number, y: number, options?: MouseOptions): void {
+    const pty = requirePty()
+    // SGR motion: button 32 + modifier bits (drag with no button = just move)
+    const btn = 32 + sgrButton(options)
+    pty.write(`\x1b[<${btn};${x + 1};${y + 1}M`)
+  }
+
+  function wheel(deltaX: number, deltaY: number, options?: { x?: number; y?: number } & MouseModifiers): void {
+    const pty = requirePty()
+    const col = (options?.x ?? 0) + 1
+    const row = (options?.y ?? 0) + 1
+    let mods = 0
+    if (options?.shift) mods += 4
+    if (options?.alt) mods += 8
+    if (options?.ctrl) mods += 16
+    // SGR wheel: button 64=up, 65=down. Horizontal: future extension.
+    if (deltaY < 0) {
+      for (let i = 0; i < Math.abs(deltaY); i++) pty.write(`\x1b[<${64 + mods};${col};${row}M`)
+    } else if (deltaY > 0) {
+      for (let i = 0; i < deltaY; i++) pty.write(`\x1b[<${65 + mods};${col};${row}M`)
+    }
+  }
+
   // ── Waiting ──
 
+  /** @deprecated Use `await expect(term.screen).toContainText("text", { timeout })` instead. */
   async function waitFor(text: string, timeout = DEFAULT_WAIT_TIMEOUT): Promise<void> {
     const start = Date.now()
     while (Date.now() - start < timeout) {
@@ -338,9 +432,20 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       return ptyHandle?.exitInfo ?? null
     },
 
-    // Input
+    // Input — keyboard
     press,
     type,
+
+    // Clipboard
+    clipboardWrites,
+
+    // Input — mouse
+    click,
+    dblclick,
+    mouseDown,
+    mouseUp,
+    mouseMove,
+    wheel,
 
     // Waiting
     waitFor,
