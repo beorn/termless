@@ -6,6 +6,8 @@ export type {
   EmulatorWarning,
   KeyDescriptor,
   MouseEvent,
+  MouseModifiers,
+  MouseOptions,
   PngScreenshotOptions,
   RegionView,
   RGB,

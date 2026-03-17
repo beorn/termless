@@ -37,8 +37,17 @@ await term.close()
 
 ```typescript
 const term = createTerminal({ backend: createXtermBackend(), cols: 120, rows: 40 })
-await term.spawn(["ls", "-la"])
-await term.waitFor("total")
+await term.spawn(["my-tui-app"])
+await term.waitFor("ready>")
+
+// Keyboard input
+term.press("ArrowDown")
+term.type("search query")
+
+// Mouse input
+term.click(10, 5) // click at column 10, row 5
+await term.dblclick(10, 5) // double-click (async — two clicks with delay)
+term.click(10, 5, { ctrl: true }) // ctrl+click
 
 // Region selectors — inspect specific parts of the terminal
 console.log(term.screen.getText()) // visible area

@@ -63,8 +63,8 @@ Factory functions, `using` cleanup, no classes, no globals. Same conventions as 
 
 - `TerminalBackend` -- interface all backends implement (~18 methods)
 - `TerminalReadable` -- read protocol for backends (getText, getTextRange, getCell, getLine, getLines, getCursor, getMode, getTitle, getScrollback)
-- `Terminal` -- high-level API: backend + optional PTY + search + screenshots + region selectors
-- `RegionView` -- a region of the terminal with getText(), getLines(), containsText()
+- `Terminal` -- high-level API: backend + optional PTY + search + screenshots + region selectors + mouse input (click/dblclick)
+- `RegionView` -- a lazy region view that recomputes offsets on every access (getText(), getLines(), containsText())
 - `CellView` -- a single cell with positional context (row, col, fg, bg, bold, italic, etc.)
 - `RowView` -- a row (extends RegionView) with row number and cellAt(col) access
 - `Cell` -- single terminal cell with text, colors, and style flags
@@ -78,6 +78,14 @@ term.screen                    toContainText("x")
 term.cell(r, c)                toBeBold()
 term (TerminalReadable)        toHaveCursorAt(x, y)
 ```
+
+All text and terminal matchers accept an optional `{ timeout: number }` as the last argument for auto-retry:
+
+```typescript
+await expect(term.screen).toContainText("ready", { timeout: 15000 })
+```
+
+This replaces `waitFor()` (now deprecated) with a more idiomatic pattern.
 
 Region selectors: `term.screen`, `term.scrollback`, `term.buffer`, `term.viewport`, `term.row(n)`, `term.cell(r, c)`, `term.range(r1, c1, r2, c2)`, `term.firstRow()`, `term.lastRow()`.
 

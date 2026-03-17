@@ -2,8 +2,8 @@
  * View factories for composable terminal regions.
  *
  * Views are lightweight wrappers that read from a TerminalReadable on demand.
- * They compute the correct absolute buffer row positions for each region
- * (screen, scrollback, buffer, viewport) using getScrollback() metadata.
+ * All row-based views are lazy — they recompute buffer offsets on every access
+ * so auto-retry matchers see fresh data when polled across time.
  */
 
 import type { Cell, CellView, RegionView, RowView, TerminalReadable, UnderlineStyle } from "./types.ts"
@@ -25,6 +25,30 @@ function getRowTexts(readable: TerminalReadable, startRow: number, endRow: numbe
     lines.push(cellsToText(readable.getLine(i)))
   }
   return lines
+}
+
+/**
+ * Create a lazy RegionView from a row-range resolver.
+ * The resolver is called on every getText()/getLines() access,
+ * so the view always reflects current terminal state.
+ */
+function createLazyRegionView(
+  readable: TerminalReadable,
+  resolveRange: () => [start: number, end: number],
+): RegionView {
+  return {
+    getText(): string {
+      const [start, end] = resolveRange()
+      return getRowTexts(readable, start, end).join("\n")
+    },
+    getLines(): string[] {
+      const [start, end] = resolveRange()
+      return getRowTexts(readable, start, end)
+    },
+    containsText(text: string): boolean {
+      return this.getText().includes(text)
+    },
+  }
 }
 
 // ── CellView ──
@@ -54,19 +78,9 @@ export function createCellView(cell: Cell, row: number, col: number): CellView {
 
 // ── RegionView ──
 
-/** Create a RegionView for an absolute row range [startRow, endRow). */
+/** Create a RegionView for a fixed absolute row range [startRow, endRow). */
 export function createRegionView(readable: TerminalReadable, startRow: number, endRow: number): RegionView {
-  return {
-    getText(): string {
-      return getRowTexts(readable, startRow, endRow).join("\n")
-    },
-    getLines(): string[] {
-      return getRowTexts(readable, startRow, endRow)
-    },
-    containsText(text: string): boolean {
-      return this.getText().includes(text)
-    },
-  }
+  return createLazyRegionView(readable, () => [startRow, endRow])
 }
 
 // ── RowView ──
@@ -102,9 +116,11 @@ export function createRowView(readable: TerminalReadable, absRow: number, screen
  * In alt mode, this is the entire alt buffer.
  */
 export function createScreenView(readable: TerminalReadable): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
-  return createRegionView(readable, base, base + screenLines)
+  return createLazyRegionView(readable, () => {
+    const { totalLines, screenLines } = readable.getScrollback()
+    const base = totalLines - screenLines
+    return [base, base + screenLines]
+  })
 }
 
 /**
@@ -113,18 +129,18 @@ export function createScreenView(readable: TerminalReadable): RegionView {
  * @param n - If provided, only the last N scrollback lines.
  */
 export function createScrollbackView(readable: TerminalReadable, n?: number): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
-  if (base <= 0) {
-    return createRegionView(readable, 0, 0)
-  }
-  const start = n != null ? Math.max(0, base - n) : 0
-  return createRegionView(readable, start, base)
+  return createLazyRegionView(readable, () => {
+    const { totalLines, screenLines } = readable.getScrollback()
+    const base = totalLines - screenLines
+    if (base <= 0) return [0, 0]
+    const start = n != null ? Math.max(0, base - n) : 0
+    return [start, base]
+  })
 }
 
 /**
  * Buffer view: everything (scrollback + screen).
- * Delegates to getText() for the full buffer content.
+ * Uses readable.getText() directly — not row-based.
  */
 export function createBufferView(readable: TerminalReadable): RegionView {
   return {
@@ -144,17 +160,17 @@ export function createBufferView(readable: TerminalReadable): RegionView {
  * Viewport view: what's visible at the current scroll position.
  * At bottom (viewportOffset = totalLines - screenLines): same as screen.
  * Scrolled up: shows older scrollback lines.
- *
- * viewportOffset is the absolute buffer row of the viewport's top line.
  */
 export function createViewportView(readable: TerminalReadable): RegionView {
-  const { viewportOffset, screenLines } = readable.getScrollback()
-  return createRegionView(readable, viewportOffset, viewportOffset + screenLines)
+  return createLazyRegionView(readable, () => {
+    const { viewportOffset, screenLines } = readable.getScrollback()
+    return [viewportOffset, viewportOffset + screenLines]
+  })
 }
 
 /**
  * Range view: a rectangular region of the screen.
- * Coordinates are screen-relative.
+ * Coordinates are screen-relative. Uses getTextRange() — not row-based.
  */
 export function createRangeView(
   readable: TerminalReadable,
@@ -163,10 +179,10 @@ export function createRangeView(
   r2: number,
   c2: number,
 ): RegionView {
-  const { totalLines, screenLines } = readable.getScrollback()
-  const base = totalLines - screenLines
   return {
     getText(): string {
+      const { totalLines, screenLines } = readable.getScrollback()
+      const base = totalLines - screenLines
       return readable.getTextRange(base + r1, c1, base + r2, c2)
     },
     getLines(): string[] {

@@ -94,9 +94,9 @@ test("ls output contains files", async () => {
   })
 
   await term.spawn(["ls", "-la"])
-  await term.waitFor("total") // Wait for ls output
 
-  expect(term).toContainText("total")
+  // Auto-retry matchers wait for content to appear (default timeout: 5s)
+  await expect(term.screen).toContainText("total")
 })
 
 test("interactive app responds to keypresses", async () => {
@@ -106,13 +106,29 @@ test("interactive app responds to keypresses", async () => {
   })
 
   await term.spawn(["my-tui-app"])
-  await term.waitFor("ready>")
+  await expect(term.screen).toContainText("ready>")
 
   term.press("ArrowDown")
   term.press("Enter")
-  await term.waitForStable()
 
-  expect(term).toContainText("Selected: item 2")
+  // All text and terminal matchers accept { timeout } for slow operations
+  await expect(term.screen).toContainText("Selected: item 2", { timeout: 10000 })
+})
+
+test("mouse interaction", async () => {
+  const term = createTerminalFixture({
+    cols: 120,
+    rows: 40,
+  })
+
+  await term.spawn(["my-tui-app"])
+  await expect(term.screen).toContainText("ready>")
+
+  term.click(10, 5) // Click at column 10, row 5
+  await expect(term.screen).toContainText("clicked")
+
+  await term.dblclick(10, 5) // Double-click (async)
+  await expect(term.screen).toContainText("selected")
 })
 ```
 

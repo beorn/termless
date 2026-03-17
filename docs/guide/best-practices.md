@@ -21,25 +21,38 @@ expect(term.cell(0, 0)).toBeBold()
 // Slower, but tests the real thing
 const term = createTerminalFixture({ cols: 80, rows: 24 })
 await term.spawn(["my-tui-app"])
-await term.waitFor("ready>")
+await expect(term.screen).toContainText("ready>", { timeout: 10000 })
 ```
 
 ## Avoiding Flaky Async Tests
 
-### Use `waitFor()` instead of fixed delays
+### Use auto-retry matchers instead of `waitFor()`
 
-Never use `setTimeout` or `sleep` to wait for terminal output. Use `waitFor()` which polls the terminal state:
+All text and terminal matchers auto-retry when `await`ed (Playwright-style). Views are lazy — they re-read from the terminal on every poll. Use these instead of `waitFor()`:
 
 ```typescript
+// Best — auto-retry with lazy views, great error messages
+await term.spawn(["my-app"])
+await expect(term.screen).toContainText("ready", { timeout: 10000 })
+
+// Avoid — waitFor() is deprecated, no diff on failure
+await term.spawn(["my-app"])
+await term.waitFor("ready", 10000)
+
 // Bad — brittle timing
 await term.spawn(["my-app"])
 await new Promise((r) => setTimeout(r, 500))
 expect(term.screen).toContainText("ready")
+```
 
-// Good — waits for the actual content
-await term.spawn(["my-app"])
-await term.waitFor("ready")
-expect(term.screen).toContainText("ready")
+The `timeout` option (default: 5000ms) controls how long auto-retry polls:
+
+```typescript
+// Wait up to 15s for slow startup
+await expect(term.screen).toContainText("loaded", { timeout: 15000 })
+
+// Quick assertion (sync or 5s default)
+await expect(term.screen).toContainText("prompt>")
 ```
 
 ### Use `waitForStable()` after keypresses
@@ -52,20 +65,41 @@ await term.waitForStable()
 expect(term.screen).toContainText("item 2")
 ```
 
-### Set appropriate timeouts
+## Mouse Interaction
 
-The default timeout is 5000ms. For slow-starting applications, increase it:
+### `click()` and `dblclick()`
+
+Send SGR mouse events to the PTY (requires the app to enable mouse tracking):
 
 ```typescript
-await term.spawn(["heavy-app"], { timeout: 15000 })
-await term.waitFor("loaded", { timeout: 10000 })
+// Single click at (col, row) — 0-based coordinates
+term.click(10, 5)
+
+// Double-click (Playwright-style) — sends two clicks with configurable delay
+await term.dblclick(10, 5)
+await term.dblclick(10, 5, { delay: 100 }) // 100ms between clicks
+
+// Modifier keys
+term.click(10, 5, { ctrl: true })
+await term.dblclick(10, 5, { shift: true })
+```
+
+### Click on found text
+
+Use `find()` to locate text, then click relative to it:
+
+```typescript
+const pos = term.find("Submit")
+if (pos) {
+  term.click(pos.col, pos.row)
+}
 ```
 
 ## PTY Timing Considerations
 
 PTY tests involve real process I/O and are subject to system load, startup time, and buffering. Keep these in mind:
 
-- **Startup time varies.** An app that starts in 100ms on your machine may take 500ms in CI. Always use `waitFor()` rather than assuming timing.
+- **Startup time varies.** An app that starts in 100ms on your machine may take 500ms in CI. Always use auto-retry matchers rather than assuming timing.
 - **Output may arrive in chunks.** Terminal output is buffered by the PTY layer. A single `feed()` in-memory becomes multiple write events over PTY. Don't assert on intermediate states unless you explicitly wait for them.
 - **Process cleanup matters.** Always close terminals after tests. Use `createTerminalFixture()` (auto-cleanup) or `using` declarations to avoid leaked processes.
 - **CI environments are slower.** Consider marking PTY-heavy tests as slow (`.slow.test.ts`) so they can run separately from your fast unit tests.

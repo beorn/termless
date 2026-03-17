@@ -68,8 +68,15 @@ interface Terminal extends TerminalReadable {
   // Input (requires PTY)
   press(key: string): void
   type(text: string): void
+  click(x: number, y: number, options?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void
+  dblclick(
+    x: number,
+    y: number,
+    options?: { ctrl?: boolean; shift?: boolean; alt?: boolean; delay?: number },
+  ): Promise<void>
 
-  // Waiting
+  // Waiting (deprecated — prefer auto-retry matchers)
+  /** @deprecated Use `await expect(term.screen).toContainText(text, { timeout })` instead */
   waitFor(text: string, timeout?: number): Promise<void>
   waitForStable(stableMs?: number, timeout?: number): Promise<void>
 
@@ -103,6 +110,8 @@ term.exitInfo // string | null -- e.g. "exit=0" after process exits
 ## Region Selectors
 
 Region selectors separate **where** to look from **what** to assert.
+
+All region selector properties (`screen`, `scrollback`, `buffer`, `viewport`) and methods (`row()`, `range()`) return **lazy views** that recompute offsets on every access. This means you can hold a reference to `term.screen` and it always reflects the current terminal state -- no need to re-query after feeding data or resizing.
 
 ### Properties (no parentheses)
 
@@ -226,9 +235,51 @@ term.type("Hello, world!")
 term.type("search query\r") // \r for Enter
 ```
 
+### `click(x, y, options?)`
+
+Send a mouse click at terminal coordinates (0-based column, 0-based row). Requires PTY and mouse reporting to be enabled by the application.
+
+```typescript
+term.click(5, 10) // Click at column 5, row 10
+term.click(0, 0, { ctrl: true }) // Ctrl+click at top-left
+term.click(20, 5, { shift: true }) // Shift+click for selection
+term.click(10, 3, { alt: true }) // Alt+click
+```
+
+| Option  | Type      | Default | Description         |
+| ------- | --------- | ------- | ------------------- |
+| `ctrl`  | `boolean` | `false` | Hold Ctrl modifier  |
+| `shift` | `boolean` | `false` | Hold Shift modifier |
+| `alt`   | `boolean` | `false` | Hold Alt modifier   |
+
+### `dblclick(x, y, options?)`
+
+Send a double-click at terminal coordinates. Returns a promise because it sends two clicks with a configurable delay between them.
+
+```typescript
+await term.dblclick(5, 10) // Double-click at column 5, row 10
+await term.dblclick(5, 10, { delay: 50 }) // Custom inter-click delay (default: 100ms)
+await term.dblclick(5, 10, { ctrl: true }) // Ctrl+double-click
+```
+
+| Option  | Type      | Default | Description                         |
+| ------- | --------- | ------- | ----------------------------------- |
+| `ctrl`  | `boolean` | `false` | Hold Ctrl modifier                  |
+| `shift` | `boolean` | `false` | Hold Shift modifier                 |
+| `alt`   | `boolean` | `false` | Hold Alt modifier                   |
+| `delay` | `number`  | `100`   | Milliseconds between the two clicks |
+
 ## Waiting
 
-### `waitFor(text, timeout?)`
+### `waitFor(text, timeout?)` :badge[deprecated]{type="warning"}
+
+> **Deprecated.** Use auto-retry matchers instead:
+>
+> ```typescript
+> await expect(term.screen).toContainText("ready>", { timeout: 5000 })
+> ```
+>
+> Auto-retry matchers integrate with Vitest's expect API and provide better error messages on timeout.
 
 Wait for specific text to appear in the terminal buffer. Polls every 50ms.
 
