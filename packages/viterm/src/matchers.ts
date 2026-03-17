@@ -70,15 +70,61 @@ function toMatcherResult(result: AssertionResult) {
 }
 
 // =============================================================================
+// Auto-Retry (Playwright-style): return Promise when timeout is specified
+// =============================================================================
+
+const RETRY_INTERVAL = 50
+
+/**
+ * If timeout is specified, return a Promise that polls until the assertion
+ * passes or times out. Otherwise return the sync result immediately.
+ *
+ * This enables the Playwright pattern:
+ *   expect(x).toContainText("y")                    // sync, throws immediately
+ *   await expect(x).toContainText("y", { timeout })  // async, polls until pass
+ *
+ * RegionView is a lazy getter that re-reads the backend on every getText() call,
+ * so re-invoking the assertion picks up terminal changes automatically.
+ */
+function maybeRetry(
+  assertFn: () => AssertionResult,
+  timeout?: number,
+): ReturnType<typeof toMatcherResult> | Promise<ReturnType<typeof toMatcherResult>> {
+  const syncResult = assertFn()
+  if (!timeout || syncResult.pass) {
+    return toMatcherResult(syncResult)
+  }
+  // Return a Promise — vitest detects this and awaits it
+  return new Promise<ReturnType<typeof toMatcherResult>>((resolve) => {
+    const start = Date.now()
+    const poll = () => {
+      const result = assertFn()
+      if (result.pass || Date.now() - start >= timeout) {
+        resolve(toMatcherResult(result))
+      } else {
+        setTimeout(poll, RETRY_INTERVAL)
+      }
+    }
+    setTimeout(poll, RETRY_INTERVAL)
+  })
+}
+
+// =============================================================================
 // Matcher Type Declarations
 // =============================================================================
 
+/** Options for auto-retry matchers (Playwright-style). */
+interface RetryOptions {
+  /** Timeout in ms for auto-retry when awaited. Without this, assertion is synchronous. */
+  timeout?: number
+}
+
 declare module "vitest" {
   interface Matchers<T> {
-    // Text (RegionView)
-    toContainText(text: string): void
-    toHaveText(text: string): void
-    toMatchLines(lines: string[]): void
+    // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
+    toContainText(text: string, options?: RetryOptions): void
+    toHaveText(text: string, options?: RetryOptions): void
+    toMatchLines(lines: string[], options?: RetryOptions): void
 
     // Cell Style (CellView)
     toBeBold(): void
@@ -91,15 +137,15 @@ declare module "vitest" {
     toHaveFg(color: string | RGB): void
     toHaveBg(color: string | RGB): void
 
-    // Terminal (TerminalReadable)
-    toHaveCursorAt(x: number, y: number): void
-    toHaveCursorStyle(style: CursorStyle): void
-    toHaveCursorVisible(): void
-    toHaveCursorHidden(): void
-    toBeInMode(mode: TerminalMode): void
-    toHaveTitle(title: string): void
-    toHaveScrollbackLines(n: number): void
-    toBeAtBottomOfScrollback(): void
+    // Terminal (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    toHaveCursorAt(x: number, y: number, options?: RetryOptions): void
+    toHaveCursorStyle(style: CursorStyle, options?: RetryOptions): void
+    toHaveCursorVisible(options?: RetryOptions): void
+    toHaveCursorHidden(options?: RetryOptions): void
+    toBeInMode(mode: TerminalMode, options?: RetryOptions): void
+    toHaveTitle(title: string, options?: RetryOptions): void
+    toHaveScrollbackLines(n: number, options?: RetryOptions): void
+    toBeAtBottomOfScrollback(options?: RetryOptions): void
 
     // Clipboard (Terminal)
     toHaveClipboardText(text: string): void
@@ -144,22 +190,22 @@ function formatTerminalSnapshot(term: TerminalReadable): string {
 export const terminalMatchers = {
   // ── Text Matchers (RegionView) ──
 
-  /** Assert region contains the given text as a substring. */
-  toContainText(received: unknown, text: string) {
+  /** Assert region contains the given text as a substring. Auto-retries when { timeout } is passed. */
+  toContainText(received: unknown, text: string, options?: RetryOptions) {
     assertRegionView(received, "toContainText")
-    return toMatcherResult(assertContainsText(received, text))
+    return maybeRetry(() => assertContainsText(received, text), options?.timeout)
   },
 
-  /** Assert region text matches exactly after trimming. */
-  toHaveText(received: unknown, text: string) {
+  /** Assert region text matches exactly after trimming. Auto-retries when { timeout } is passed. */
+  toHaveText(received: unknown, text: string, options?: RetryOptions) {
     assertRegionView(received, "toHaveText")
-    return toMatcherResult(assertHasText(received, text))
+    return maybeRetry(() => assertHasText(received, text), options?.timeout)
   },
 
-  /** Assert region lines match expected lines (trailing whitespace trimmed per line). */
-  toMatchLines(received: unknown, expectedLines: string[]) {
+  /** Assert region lines match expected lines (trailing whitespace trimmed per line). Auto-retries when { timeout } is passed. */
+  toMatchLines(received: unknown, expectedLines: string[], options?: RetryOptions) {
     assertRegionView(received, "toMatchLines")
-    return toMatcherResult(assertMatchesLines(received, expectedLines))
+    return maybeRetry(() => assertMatchesLines(received, expectedLines), options?.timeout)
   },
 
   // ── Cell Style Matchers (CellView) ──
@@ -220,52 +266,52 @@ export const terminalMatchers = {
 
   // ── Terminal Matchers (TerminalReadable) ──
 
-  /** Assert cursor is at the given position. */
-  toHaveCursorAt(received: unknown, x: number, y: number) {
+  /** Assert cursor is at the given position. Auto-retries when { timeout } is passed. */
+  toHaveCursorAt(received: unknown, x: number, y: number, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorAt")
-    return toMatcherResult(assertCursorAt(received, x, y))
+    return maybeRetry(() => assertCursorAt(received, x, y), options?.timeout)
   },
 
-  /** Assert cursor has a specific style (block, underline, beam). */
-  toHaveCursorStyle(received: unknown, style: CursorStyle) {
+  /** Assert cursor has a specific style (block, underline, beam). Auto-retries when { timeout } is passed. */
+  toHaveCursorStyle(received: unknown, style: CursorStyle, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorStyle")
-    return toMatcherResult(assertCursorStyle(received, style))
+    return maybeRetry(() => assertCursorStyle(received, style), options?.timeout)
   },
 
-  /** Assert cursor is visible. */
-  toHaveCursorVisible(received: unknown) {
+  /** Assert cursor is visible. Auto-retries when { timeout } is passed. */
+  toHaveCursorVisible(received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorVisible")
-    return toMatcherResult(assertCursorVisible(received))
+    return maybeRetry(() => assertCursorVisible(received), options?.timeout)
   },
 
-  /** Assert cursor is hidden. */
-  toHaveCursorHidden(received: unknown) {
+  /** Assert cursor is hidden. Auto-retries when { timeout } is passed. */
+  toHaveCursorHidden(received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorHidden")
-    return toMatcherResult(assertCursorHidden(received))
+    return maybeRetry(() => assertCursorHidden(received), options?.timeout)
   },
 
-  /** Assert a specific terminal mode is enabled. */
-  toBeInMode(received: unknown, mode: TerminalMode) {
+  /** Assert a specific terminal mode is enabled. Auto-retries when { timeout } is passed. */
+  toBeInMode(received: unknown, mode: TerminalMode, options?: RetryOptions) {
     assertTerminalReadable(received, "toBeInMode")
-    return toMatcherResult(assertInMode(received, mode))
+    return maybeRetry(() => assertInMode(received, mode), options?.timeout)
   },
 
-  /** Assert terminal has a specific title (set via OSC escape). */
-  toHaveTitle(received: unknown, title: string) {
+  /** Assert terminal has a specific title (set via OSC escape). Auto-retries when { timeout } is passed. */
+  toHaveTitle(received: unknown, title: string, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveTitle")
-    return toMatcherResult(assertTitle(received, title))
+    return maybeRetry(() => assertTitle(received, title), options?.timeout)
   },
 
-  /** Assert scrollback has a specific number of lines. */
-  toHaveScrollbackLines(received: unknown, n: number) {
+  /** Assert scrollback has a specific number of lines. Auto-retries when { timeout } is passed. */
+  toHaveScrollbackLines(received: unknown, n: number, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveScrollbackLines")
-    return toMatcherResult(assertScrollbackLines(received, n))
+    return maybeRetry(() => assertScrollbackLines(received, n), options?.timeout)
   },
 
-  /** Assert viewport is at the bottom of scrollback (no scroll offset). */
-  toBeAtBottomOfScrollback(received: unknown) {
+  /** Assert viewport is at the bottom of scrollback (no scroll offset). Auto-retries when { timeout } is passed. */
+  toBeAtBottomOfScrollback(received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toBeAtBottomOfScrollback")
-    return toMatcherResult(assertAtBottomOfScrollback(received))
+    return maybeRetry(() => assertAtBottomOfScrollback(received), options?.timeout)
   },
 
   // ── Clipboard Matchers (Terminal) ──
