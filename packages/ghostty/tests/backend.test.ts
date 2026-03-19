@@ -6,7 +6,7 @@
  */
 import { describe, test, expect, beforeAll, afterEach } from "vitest"
 import { Ghostty } from "ghostty-web"
-import { createGhosttyBackend, initGhostty } from "../src/backend.ts"
+import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/types.ts"
 
 let ghostty: Ghostty
@@ -49,6 +49,42 @@ describe("ghostty backend", () => {
       b.init({ cols: 80, rows: 24 })
       expect(b.getText()).toBeDefined()
       b.destroy()
+    })
+
+    test("init throws clear error when WASM not loaded and no instance provided", async () => {
+      // Temporarily clear the shared instance to test the guard
+      _resetSharedForTesting()
+      try {
+        const b = createGhosttyBackend()
+        expect(() => b.init({ cols: 80, rows: 24 })).toThrow(
+          "Ghostty WASM not loaded",
+        )
+      } finally {
+        // Restore shared instance for subsequent tests
+        ghostty = await initGhostty()
+      }
+    })
+
+    test("re-init destroys previous terminal", () => {
+      backend = createGhosttyBackend(undefined, ghostty)
+      backend.init({ cols: 80, rows: 24 })
+      backend.feed(new TextEncoder().encode("First"))
+      expect(backend.getText()).toContain("First")
+
+      // Re-init should work cleanly (no leak from previous terminal)
+      backend.init({ cols: 40, rows: 10 })
+      expect(backend.getText()).not.toContain("First")
+    })
+
+    test("destroy makes backend unusable until next init", () => {
+      backend = createGhosttyBackend(undefined, ghostty)
+      backend.init({ cols: 80, rows: 24 })
+      backend.destroy()
+      expect(() => backend.getText()).toThrow("not initialized")
+
+      // Can re-init after destroy
+      backend.init({ cols: 80, rows: 24 })
+      expect(backend.getText()).toBeDefined()
     })
   })
 

@@ -5,8 +5,23 @@
  * the TerminalBackend interface — same Ghostty terminal emulation logic
  * that runs in the native Ghostty app, but headless via WASM.
  *
- * Requires async initialization: call `await initGhostty()` once before
- * creating backends, or use `createGhosttyBackend()` which handles it.
+ * The WASM module requires async loading before use. Two patterns:
+ *
+ * 1. Pre-load the shared instance (recommended):
+ *    ```ts
+ *    await initGhostty()
+ *    const backend = createGhosttyBackend()
+ *    backend.init({ cols: 80, rows: 24 }) // sync — WASM already loaded
+ *    ```
+ *
+ * 2. Inject a pre-loaded instance (for test isolation):
+ *    ```ts
+ *    const ghostty = await Ghostty.load()
+ *    const backend = createGhosttyBackend(undefined, ghostty)
+ *    backend.init({ cols: 80, rows: 24 })
+ *    ```
+ *
+ * Calling init() without loading WASM first throws a clear error.
  */
 
 import { Ghostty, type GhosttyTerminal, type GhosttyCell, CellFlags } from "ghostty-web"
@@ -33,8 +48,12 @@ let sharedGhostty: Ghostty | null = null
 let initPromise: Promise<Ghostty> | null = null
 
 /**
- * Initialize the Ghostty WASM module. Safe to call multiple times —
+ * Initialize the shared Ghostty WASM module. Safe to call multiple times —
  * returns the same instance after first load.
+ *
+ * Must be called (and awaited) before `createGhosttyBackend().init()`.
+ * The `init()` method on the backend is synchronous — this async step
+ * loads the WASM binary so that `init()` can create terminals without awaiting.
  */
 export async function initGhostty(): Promise<Ghostty> {
   if (sharedGhostty) return sharedGhostty
@@ -46,6 +65,16 @@ export async function initGhostty(): Promise<Ghostty> {
   })
 
   return initPromise
+}
+
+/**
+ * Reset the shared Ghostty instance. For testing only — allows verifying
+ * the "WASM not loaded" error path.
+ * @internal
+ */
+export function _resetSharedForTesting(): void {
+  sharedGhostty = null
+  initPromise = null
 }
 
 // ═══════════════════════════════════════════════════════
@@ -157,10 +186,13 @@ const DEFAULT_ROWS = 24
  * Create a Ghostty backend for termless.
  *
  * Uses ghostty-web (Ghostty's VT parser via WASM) for headless terminal
- * emulation. The WASM module is loaded lazily on first init().
+ * emulation. The WASM module must be loaded before calling init() —
+ * either via `await initGhostty()` (shared) or by passing a pre-loaded
+ * instance directly.
  *
- * @param opts - Optional terminal dimensions for eager initialization
- * @param ghostty - Optional pre-loaded Ghostty instance (for test isolation)
+ * @param opts - Optional terminal dimensions (unused — init() takes dimensions)
+ * @param ghostty - Optional pre-loaded Ghostty instance (for test isolation).
+ *   Falls back to the shared instance from initGhostty().
  */
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
@@ -245,10 +277,9 @@ export function createGhosttyBackend(
     }
 
     if (!ghosttyInstance) {
-      // Ghostty WASM must be loaded before init — use initGhostty() first
       throw new Error(
-        "Ghostty WASM not loaded. Call await initGhostty() before creating backends, " +
-          "or pass a Ghostty instance to createGhosttyBackend().",
+        "Ghostty WASM not loaded — call `await initGhostty()` before init(), " +
+          "or pass a pre-loaded Ghostty instance to createGhosttyBackend().",
       )
     }
 
