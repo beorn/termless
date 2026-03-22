@@ -171,7 +171,7 @@ impl Vt100RustTerminal {
                     if contents.is_empty() {
                         line.push(' ');
                     } else {
-                        line.push_str(contents);
+                        line.push_str(&contents);
                     }
                 } else {
                     line.push(' ');
@@ -189,7 +189,7 @@ impl Vt100RustTerminal {
                     if contents.is_empty() {
                         line.push(' ');
                     } else {
-                        line.push_str(contents);
+                        line.push_str(&contents);
                     }
                 } else {
                     line.push(' ');
@@ -237,7 +237,7 @@ impl Vt100RustTerminal {
                     if contents.is_empty() {
                         text.push(' ');
                     } else {
-                        text.push_str(contents);
+                        text.push_str(&contents);
                     }
                 } else {
                     text.push(' ');
@@ -417,11 +417,11 @@ fn convert_cell(cell: &vt100::Cell) -> NapiCell {
         bg_b,
         bg_is_default,
         bold: cell.bold(),
-        faint: cell.faint(),
+        faint: false, // vt100 crate doesn't expose faint/dim
         italic: cell.italic(),
         underline: underline.to_string(),
         strikethrough: false, // vt100 crate doesn't expose strikethrough
         inverse: cell.inverse(),
-        wide: false, // vt100 crate doesn't expose width directly; would need heuristic
+        wide: cell.is_wide(),
     }
 }

@@ -8,3 +8,4 @@ coverage/
 *.log
 *.tgz
 *.tsbuildinfo
+termless-vt100-rust.node

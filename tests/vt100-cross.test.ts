@@ -175,7 +175,13 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("strikethrough", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[9mS\x1b[0mN")
-      compareCells(ts, rust, 0, 0, "strikethrough S")
+      // Known difference: vt100 Rust crate doesn't expose strikethrough
+      // TS vt100 correctly reports strikethrough=true, Rust always returns false
+      const tsCell = ts.getCell(0, 0)
+      const rustCell = rust.getCell(0, 0)
+      expect(cellChar(tsCell)).toBe(cellChar(rustCell))
+      expect(tsCell.strikethrough).toBe(true) // TS correctly detects it
+      expect(rustCell.strikethrough).toBe(false) // Rust crate limitation
       compareCells(ts, rust, 0, 1, "normal N")
     })
 
