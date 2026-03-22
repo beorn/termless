@@ -137,10 +137,10 @@ Most users only need `@termless/test` -- it includes everything for writing Vite
 ### Backend Management CLI
 
 ```bash
-npx termless backends                  # List all backends and install status
-npx termless install                   # Install default backends
-npx termless install ghostty           # Install a specific backend
-npx termless doctor                    # Health check installed backends
+bunx termless backends                  # List all backends and install status
+bunx termless install                   # Install default backends
+bunx termless install ghostty           # Install a specific backend
+bunx termless doctor                    # Health check installed backends
 ```
 
 ### Two Ways to Choose a Backend
@@ -172,7 +172,7 @@ Every backend wraps a real terminal emulator and implements the same interface â
 | **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |
 | **kitty**      | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.       | Native |
 
-See [Backend Capabilities](/guide/backend-capabilities) for the full feature matrix, per-backend details, and usage examples (factory function + string name).
+See [Backend Capabilities](/guide/backends) for the full feature matrix, per-backend details, and usage examples (factory function + string name).
 
 ## Packages
 

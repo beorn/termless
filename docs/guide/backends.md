@@ -8,10 +8,10 @@ Use the CLI to see available backends and their installation status:
 
 ```bash
 # List all backends with install status and capabilities
-npx termless backends
+bunx termless backends
 
 # Check health of installed backends (version mismatches, missing deps)
-npx termless doctor
+bunx termless doctor
 ```
 
 ## Capability Matrix
@@ -60,7 +60,7 @@ Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-acceler
 - **Engine**: ghostty-web 0.4 (WebAssembly)
 - **Best for**: Testing against a modern, standards-compliant parser. Verifying Kitty keyboard protocol support.
 - **Limitations**: WASM build does not support viewport scrolling or Kitty graphics. OSC title changes have no callback in WASM mode.
-- **Install**: `npx termless install ghostty` (or `npm install -D @termless/ghostty`)
+- **Install**: `bunx termless install ghostty` (or `npm install -D @termless/ghostty`)
 
 ```typescript
 // Factory function (requires async WASM init)
@@ -79,7 +79,7 @@ Pure TypeScript VT100 emulator with zero dependencies. Lightweight and fast, ins
 - **Engine**: Built-in (pure TypeScript, zero deps)
 - **Best for**: Environments where you want zero native dependencies and zero WASM. CI runners with constrained environments.
 - **Limitations**: No reflow on resize. No OSC 8 hyperlinks. No Kitty keyboard. More limited escape sequence coverage than xterm.js or Ghostty.
-- **Install**: `npx termless install vt100` (or `npm install -D @termless/vt100`)
+- **Install**: `bunx termless install vt100` (or `npm install -D @termless/vt100`)
 
 ```typescript
 // Factory function
@@ -97,7 +97,7 @@ Uses Alacritty's `alacritty_terminal` crate via napi-rs native bindings. Alacrit
 - **Engine**: alacritty_terminal 0.25 (Rust via napi-rs)
 - **Best for**: Testing against Alacritty's VT parser. Cross-checking reflow behavior.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `npx termless install alacritty` (or `npm install -D @termless/alacritty`; requires Rust build)
+- **Install**: `bunx termless install alacritty` (or `npm install -D @termless/alacritty`; requires Rust build)
 
 ```typescript
 // Factory function
@@ -115,7 +115,7 @@ Uses WezTerm's `wezterm-term` VT parser via napi-rs native bindings. WezTerm has
 - **Engine**: wezterm-term (Rust via napi-rs)
 - **Best for**: Testing sixel graphics support, semantic prompts, and the widest protocol coverage.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `npx termless install wezterm` (or `npm install -D @termless/wezterm`; requires Rust build)
+- **Install**: `bunx termless install wezterm` (or `npm install -D @termless/wezterm`; requires Rust build)
 
 ```typescript
 // Factory function
@@ -133,7 +133,7 @@ OS-level terminal automation. Launches a real terminal application, sends keystr
 - **Engine**: OS accessibility APIs (macOS only)
 - **Best for**: End-to-end testing against a real terminal application (e.g., testing your app in actual Ghostty or iTerm2). OS-level screenshots of the real terminal window.
 - **Limitations**: macOS only. Requires accessibility permissions. Much slower than in-memory backends. Not suitable for unit tests.
-- **Install**: `npx termless install peekaboo` (or `npm install -D @termless/peekaboo`)
+- **Install**: `bunx termless install peekaboo` (or `npm install -D @termless/peekaboo`)
 
 ```typescript
 // Factory function
@@ -151,7 +151,7 @@ Reference Rust implementation of VT100 terminal emulation. Uses the `vt100` Rust
 - **Engine**: vt100 0.15.0 (Rust via napi-rs)
 - **Best for**: Cross-validating the TypeScript vt100 backend. Finding disagreements between implementations. Reference conformance testing.
 - **Limitations**: Requires Rust toolchain. Similar feature set to the TypeScript vt100 backend (no reflow, no OSC 8).
-- **Install**: `npx termless install vt100-rust` (or `npm install -D @termless/vt100-rust`; requires Rust build)
+- **Install**: `bunx termless install vt100-rust` (or `npm install -D @termless/vt100-rust`; requires Rust build)
 
 ```typescript
 // Factory function
@@ -169,7 +169,7 @@ Neovim's VT parser compiled to WebAssembly via Emscripten. A completely differen
 - **Engine**: libvterm (C via Emscripten WASM)
 - **Best for**: Cross-terminal conformance testing against neovim's parser. Finding bugs that only appear in C-based implementations.
 - **Limitations**: Requires Emscripten SDK to build WASM. No Kitty keyboard, no reflow, no OSC 8.
-- **Install**: `npx termless install libvterm` (or `npm install -D @termless/libvterm`; requires Emscripten build)
+- **Install**: `bunx termless install libvterm` (or `npm install -D @termless/libvterm`; requires Emscripten build)
 
 ```typescript
 // Factory function (requires async WASM init)
@@ -188,7 +188,7 @@ Kitty's VT parser built from GPL-3.0 source. Kitty is a modern, feature-rich ter
 - **Engine**: kitty VT parser (C, built from source)
 - **Best for**: Testing Kitty keyboard protocol, Kitty graphics protocol, and cross-checking against kitty's parser behavior. The only backend with Kitty graphics support.
 - **Limitations**: Requires building from GPL-3.0 source (C compiler + Python 3 + git). The resulting `.node` binary is GPL-3.0 and must not be distributed. Build script is WIP.
-- **Install**: `npx termless install kitty` (or `npm install -D @termless/kitty`; requires build from source)
+- **Install**: `bunx termless install kitty` (or `npm install -D @termless/kitty`; requires build from source)
 
 ```typescript
 // Factory function

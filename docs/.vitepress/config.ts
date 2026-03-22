@@ -59,7 +59,7 @@ export default defineConfig({
       {
         text: "Backends",
         items: [
-          { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
+          { text: "Backend Capabilities", link: "/guide/backends" },
           { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
           { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
         ],

@@ -212,18 +212,18 @@ Every backend implements the same `TerminalBackend` interface — write tests on
 | **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.          | WASM   | No      |
 | **kitty**      | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.             | Native | No      |
 
-See the [Backend Capability Matrix](https://termless.dev/guide/backend-capabilities) for detailed per-backend features, limitations, and usage examples (factory function + string name).
+See the [Backend Capability Matrix](https://termless.dev/guide/backends) for detailed per-backend features, limitations, and usage examples (factory function + string name).
 
 ### Backend Management
 
 Termless includes a Playwright-inspired CLI for managing backends. `backends.json` pins all versions — upgrade termless, upgrade all backends:
 
 ```bash
-npx termless backends                       # List all backends and install status
-npx termless install                        # Install default backends (xtermjs, ghostty, vt100)
-npx termless install ghostty alacritty      # Install specific backends
-npx termless doctor                         # Health check all installed backends
-npx termless upgrade                        # Upgrade installed backends to manifest versions
+bunx termless backends                       # List all backends and install status
+bunx termless install                        # Install default backends (xtermjs, ghostty, vt100)
+bunx termless install ghostty alacritty      # Install specific backends
+bunx termless doctor                         # Health check all installed backends
+bunx termless upgrade                        # Upgrade installed backends to manifest versions
 ```
 
 ### Programmatic Backend Selection
@@ -351,7 +351,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 - [Screenshots](https://termless.dev/guide/screenshots) -- SVG & PNG screenshots, themes, custom fonts
 - [Best Practices](https://termless.dev/guide/best-practices) -- avoiding flaky tests, PTY timing, selectors
 - [Multi-Backend Testing](https://termless.dev/guide/multi-backend) -- test against any backend
-- [Backend Capabilities](https://termless.dev/guide/backend-capabilities) -- which backends support what
+- [Backend Capabilities](https://termless.dev/guide/backends) -- which backends support what
 - [CLI & MCP](https://termless.dev/guide/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://termless.dev/api/terminal) | [Backend](https://termless.dev/api/backend) | [Cell & Types](https://termless.dev/api/cell) | [Matchers](https://termless.dev/api/matchers)
 

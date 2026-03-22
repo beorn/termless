@@ -1,0 +1,19 @@
+{
+  "name": "@termless/census",
+  "version": "0.3.0",
+  "description": "Terminal capability census — probe backends for feature support, generate compatibility matrix",
+  "keywords": ["census", "compatibility", "conformance", "terminal", "terminal-testing"],
+  "homepage": "https://termless.dev/",
+  "bugs": { "url": "https://github.com/beorn/termless/issues" },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": { "type": "git", "url": "https://github.com/beorn/termless.git", "directory": "packages/census" },
+  "files": ["src"],
+  "type": "module",
+  "module": "./src/index.ts",
+  "bin": { "census": "./src/cli.ts" },
+  "exports": { ".": "./src/index.ts" },
+  "publishConfig": { "access": "public" },
+  "peerDependencies": { "@termless/core": "*" },
+  "engines": { "bun": ">=1.0.0", "node": ">=18" }
+}

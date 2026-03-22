@@ -40,13 +40,13 @@ Most users only need `@termless/test`. To add extra backends, use the CLI:
 
 ```bash
 # See all available backends
-npx termless backends
+bunx termless backends
 
 # Install additional backends (e.g., Ghostty)
-npx termless install ghostty
+bunx termless install ghostty
 ```
 
-See [Backend Capabilities](/guide/backend-capabilities) for a full comparison of all backends.
+See [Backend Capabilities](/guide/backends) for a full comparison of all backends.
 
 ## First Test
 
@@ -169,5 +169,5 @@ test("with explicit cleanup", async () => {
 - [Screenshots](/guide/screenshots) -- SVG & PNG screenshot capture
 - [Best Practices](/guide/best-practices) -- avoiding flaky tests, PTY timing, selector tips
 - [Multi-Backend Testing](/guide/multi-backend) -- test against multiple backends
-- [Backend Capabilities](/guide/backend-capabilities) -- which backends support which features
+- [Backend Capabilities](/guide/backends) -- which backends support which features
 - [Terminal API](/api/terminal) -- complete Terminal method reference

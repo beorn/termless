@@ -9,3 +9,7 @@ coverage/
 *.tgz
 *.tsbuildinfo
 termless-vt100-rust.node
+*.node
+.direnv/
+packages/*/native/target/
+packages/*/native/Cargo.lock

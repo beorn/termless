@@ -85,9 +85,8 @@ export function registerBackendsCommand(program: Command): void {
       const defaultCount = defaults.size
       console.error(`\n  ${installedCount} of ${totalCount} installed (${defaultCount} default)`)
       if (installedCount < totalCount) {
-        console.error("  Install more: bunx termless install <name>\n")
-      } else {
-        console.error("")
+        console.error("  Install more: bunx termless install <name>")
       }
+      console.error("  Docs: https://termless.dev/guide/backends\n")
     })
 }

@@ -112,7 +112,7 @@ Most projects should start with the default xterm.js backend via `@termless/test
 
 ### Backend-specific assertions
 
-Some behaviors differ between backends (see the [Backend Capability Matrix](/guide/backend-capabilities)). Use `term.backend.capabilities` to skip tests that don't apply:
+Some behaviors differ between backends (see the [Backend Capability Matrix](/guide/backends)). Use `term.backend.capabilities` to skip tests that don't apply:
 
 ```typescript
 test("kitty keyboard protocol", () => {

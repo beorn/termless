@@ -11,11 +11,11 @@ If you only need the default xterm.js backend, you don't need any of this. Just 
 Install the backends you want to test against:
 
 ```bash
-npx termless backends                  # See what's available
-npx termless install ghostty vt100     # Install specific backends
+bunx termless backends                  # See what's available
+bunx termless install ghostty vt100     # Install specific backends
 ```
 
-See [Backend Capabilities](/guide/backend-capabilities) for the full list of backends, their capabilities, and per-backend usage examples (factory function + string name).
+See [Backend Capabilities](/guide/backends) for the full list of backends, their capabilities, and per-backend usage examples (factory function + string name).
 
 ## Three Approaches
 
