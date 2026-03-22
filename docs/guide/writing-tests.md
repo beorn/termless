@@ -6,18 +6,18 @@ Import the fixture:
 
 ```typescript
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "@termless/test"
+import { createTestTerminal } from "@termless/test"
 ```
 
-`createTerminalFixture()` wraps `createTerminal()` with the xterm.js backend and registers cleanup in `afterEach` -- no manual `close()` needed. Matchers are auto-registered when importing from `"@termless/test"`.
+`createTestTerminal()` wraps `createTerminal()` with the xterm.js backend and registers cleanup in `afterEach` -- no manual `close()` needed. Matchers are auto-registered when importing from `"@termless/test"`.
 
-For named backends (async — handles WASM/native initialization):
+For named backends (async -- handles WASM/native initialization):
 
 ```typescript
-import { createTerminalFixtureAsync } from "@termless/test"
+import { createTestTerminalByName } from "@termless/test"
 
 test("works on ghostty", async () => {
-  const term = await createTerminalFixtureAsync({ backendName: "ghostty" })
+  const term = await createTestTerminalByName({ backendName: "ghostty" })
   term.feed("Hello")
   expect(term.screen).toContainText("Hello")
 })
@@ -29,8 +29,12 @@ You can also pass a factory-created backend directly:
 import { createGhosttyBackend, initGhostty } from "@termless/ghostty"
 
 const ghostty = await initGhostty()
-const term = createTerminalFixture({ backend: createGhosttyBackend(undefined, ghostty) })
+const term = createTestTerminal({ backend: createGhosttyBackend(undefined, ghostty) })
 ```
+
+::: details Deprecated aliases
+`createTerminalFixture` and `createTerminalFixtureAsync` still work as deprecated aliases for `createTestTerminal` and `createTestTerminalByName` respectively.
+:::
 
 ## Composable API
 
@@ -161,7 +165,7 @@ expect.addSnapshotSerializer(terminalSerializer)
 
 test("renders correctly", () => {
   const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
-  const term = createTerminalFixture({ cols: 40, rows: 5 })
+  const term = createTestTerminal({ cols: 40, rows: 5 })
   term.feed(`${BOLD("Title")}\r\nContent`)
 
   expect(terminalSnapshot(term)).toMatchSnapshot()
@@ -194,7 +198,7 @@ With style annotations when cells have non-default attributes:
 const BOLD_RED = (s: string) => `\x1b[1;31m${s}\x1b[0m`
 
 test("error message is red and bold", () => {
-  const term = createTerminalFixture()
+  const term = createTestTerminal()
   term.feed(`${BOLD_RED("Error:")} file not found`)
 
   expect(term.screen).toContainText("Error: file not found")
@@ -208,7 +212,7 @@ test("error message is red and bold", () => {
 
 ```typescript
 test("cursor tracks input", () => {
-  const term = createTerminalFixture()
+  const term = createTestTerminal()
   term.feed("Hello")
   expect(term).toHaveCursorAt(5, 0)
 
@@ -221,7 +225,7 @@ test("cursor tracks input", () => {
 
 ```typescript
 test("app enters alt screen", async () => {
-  const term = createTerminalFixture({ cols: 80, rows: 24 })
+  const term = createTestTerminal({ cols: 80, rows: 24 })
   await term.spawn(["my-tui"])
   await term.waitForStable()
 
@@ -238,7 +242,7 @@ test("app enters alt screen", async () => {
 
 ```typescript
 test("find specific text", () => {
-  const term = createTerminalFixture()
+  const term = createTestTerminal()
   term.feed("Line 0\r\nLine 1\r\nTarget here")
 
   const pos = term.find("Target")
@@ -256,7 +260,7 @@ test("find specific text", () => {
 
 ```typescript
 test("read text from different regions", () => {
-  const term = createTerminalFixture({ cols: 80, rows: 5 })
+  const term = createTestTerminal({ cols: 80, rows: 5 })
 
   // Feed enough lines to create scrollback
   for (let i = 0; i < 10; i++) {

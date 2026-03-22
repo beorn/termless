@@ -1,7 +1,7 @@
 # API: Vitest Matchers
 
 ```typescript
-import { createTerminalFixture } from "@termless/test" // Matchers auto-registered on import
+import { createTestTerminal } from "@termless/test" // Matchers auto-registered on import
 
 // Or register manually (e.g., when using createTerminal directly):
 import "@termless/test/matchers"

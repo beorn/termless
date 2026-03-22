@@ -55,7 +55,7 @@ Create a test file:
 ```typescript
 // tests/terminal.test.ts
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "@termless/test"
+import { createTestTerminal } from "@termless/test"
 
 // ANSI helpers — real apps use @silvery/term or @silvery/ansi, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
@@ -63,7 +63,7 @@ const RED = (s: string) => `\x1b[38;2;255;0;0m${s}\x1b[0m`
 
 describe("my TUI app", () => {
   test("displays welcome message", () => {
-    const term = createTerminalFixture({ cols: 80, rows: 24 })
+    const term = createTestTerminal({ cols: 80, rows: 24 })
 
     term.feed(`Welcome to ${BOLD("MyApp")} v1.0`)
 
@@ -73,7 +73,7 @@ describe("my TUI app", () => {
   })
 
   test("renders colored status", () => {
-    const term = createTerminalFixture({ cols: 40, rows: 10 })
+    const term = createTestTerminal({ cols: 40, rows: 10 })
 
     term.feed(`${RED("ERROR")}: something went wrong`)
 
@@ -95,10 +95,10 @@ To test a real TUI application with PTY:
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "@termless/test"
+import { createTestTerminal } from "@termless/test"
 
 test("ls output contains files", async () => {
-  const term = createTerminalFixture({
+  const term = createTestTerminal({
     cols: 80,
     rows: 24,
   })
@@ -110,7 +110,7 @@ test("ls output contains files", async () => {
 })
 
 test("interactive app responds to keypresses", async () => {
-  const term = createTerminalFixture({
+  const term = createTestTerminal({
     cols: 120,
     rows: 40,
   })
@@ -126,7 +126,7 @@ test("interactive app responds to keypresses", async () => {
 })
 
 test("mouse interaction", async () => {
-  const term = createTerminalFixture({
+  const term = createTestTerminal({
     cols: 120,
     rows: 40,
   })

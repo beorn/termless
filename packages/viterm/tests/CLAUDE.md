@@ -8,7 +8,7 @@
 - **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeFaint`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + RGB)
 - **Terminal matchers (TerminalReadable)**: `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`, `toMatchTerminalSnapshot`
 - **Matcher edge cases**: `.not` negation, wrong-type error handling (passing TerminalReadable to a RegionView matcher, passing string/null/plain object)
-- **Fixtures**: `createTerminalFixture()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach
+- **Fixtures**: `createTestTerminal()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach. `createTestTerminalByName()` resolves by name (async). Old names (`createTerminalFixture`, `createTerminalFixtureAsync`) kept as deprecated aliases.
 - **Serializer**: `terminalSnapshot()` marker creation, `terminalSerializer.test()` identification, `serialize()` output format (header, dimensions, cursor, line numbers, separator, style annotations, altScreen mode, custom name, hidden cursor)
 
 ## What NOT to Test Here

@@ -202,7 +202,7 @@ export async function resolveBackend(name: string, opts?: Partial<TerminalOption
   if (!isBackendInstalled(name)) {
     throw new Error(
       `Backend "${name}" is not installed.\n` +
-        `Run: npx termless install ${name}\n` +
+        `Run: bunx termless install ${name}\n` +
         `Or:  npm install -D ${entry.package}`,
     )
   }

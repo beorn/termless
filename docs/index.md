@@ -52,7 +52,7 @@ yarn add -D @termless/test
 
 ```typescript
 import { test, expect } from "vitest"
-import { createTerminalFixture } from "@termless/test"
+import { createTestTerminal } from "@termless/test"
 
 // ANSI helpers — real apps use @silvery/term or @silvery/ansi, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
@@ -61,7 +61,7 @@ const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
 test("inspect what string matching can't see", () => {
   // Creates an xterm.js terminal by default. Ghostty, Alacritty, WezTerm, vt100,
   // and Peekaboo backends are also available — see Multi-Backend Testing below.
-  const term = createTerminalFixture({ cols: 40, rows: 3 })
+  const term = createTestTerminal({ cols: 40, rows: 3 })
 
   // Simulate a build pipeline — 4 lines overflow a 3-row terminal
   term.feed("Step 1: install\r\n")

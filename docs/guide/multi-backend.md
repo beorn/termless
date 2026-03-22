@@ -3,7 +3,7 @@
 Termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
 
 ::: tip Single-backend testing
-If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "@termless/test"` -- it handles the backend automatically.
+If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTestTerminal } from "@termless/test"` -- it handles the backend automatically. (`createTerminalFixture` still works as a deprecated alias.)
 :::
 
 ## Getting Started
@@ -17,39 +17,63 @@ npx termless install ghostty vt100     # Install specific backends
 
 See [Backend Capabilities](/guide/backend-capabilities) for the full list of backends, their capabilities, and per-backend usage examples (factory function + string name).
 
-## Two Approaches
+## Three Approaches
 
-### 1. Programmatic (simplest)
+### 1. describeBackends (recommended)
 
-Use `resolveBackend()` or `createTerminalFixtureAsync()` to select backends by name:
+The most ergonomic way to run the same tests across all installed backends. Creates a `describe` block per backend with a factory that handles resolution and cleanup:
 
 ```typescript
-import { createTerminalFixtureAsync } from "@termless/test"
+import { describeBackends } from "@termless/test"
+
+describeBackends((ctx) => {
+  test("renders bold", async () => {
+    const term = await ctx.createTerminal({ cols: 80, rows: 24 })
+    term.feed("\x1b[1mBold\x1b[0m")
+    expect(term.cell(0, 0)).toBeBold()
+  })
+})
+
+// Or filter to specific backends:
+describeBackends(["ghostty", "vt100"], (ctx) => {
+  test("italic works", async () => {
+    const term = await ctx.createTerminal()
+    term.feed("\x1b[3mI")
+    expect(term.cell(0, 0)).toBeItalic()
+  })
+})
+```
+
+### 2. Programmatic (per-test control)
+
+Use `createTestTerminalByName()` to select a specific backend for individual tests:
+
+```typescript
+import { createTestTerminalByName } from "@termless/test"
 
 test("works on ghostty", async () => {
-  const term = await createTerminalFixtureAsync({ backendName: "ghostty" })
+  const term = await createTestTerminalByName({ backendName: "ghostty" })
   term.feed("Hello")
   expect(term.screen).toContainText("Hello")
 })
 ```
 
-Or resolve all installed backends for cross-backend comparison:
+Or use `backendCases()` to iterate over installed backends manually:
 
 ```typescript
-import { resolveAllInstalled, createTerminal } from "termless"
+import { backendCases } from "@termless/test"
 
-const backends = await resolveAllInstalled()
-for (const [name, backend] of Object.entries(backends)) {
-  test(`renders correctly on ${name}`, () => {
-    const term = createTerminal({ backend, cols: 80, rows: 24 })
+const cases = await backendCases()
+for (const { name, createTerminal } of cases) {
+  test(`renders correctly on ${name}`, async () => {
+    const term = await createTerminal({ cols: 80, rows: 24 })
     term.feed("\x1b[1mBold\x1b[0m")
     expect(term.cell(0, 0)).toBeBold()
-    term.close()
   })
 }
 ```
 
-### 2. Vitest Workspace (full control)
+### 3. Vitest Workspace (full control)
 
 Each backend gets its own vitest project with a setup file. This gives you per-backend configuration, separate test runs, and CI matrix support.
 

@@ -10,7 +10,7 @@ In-memory tests (feed ANSI data, assert on terminal state) are synchronous, dete
 
 ```typescript
 // Fast, deterministic — no process, no timing
-const term = createTerminalFixture({ cols: 80, rows: 24 })
+const term = createTestTerminal({ cols: 80, rows: 24 })
 term.feed("\x1b[1mBold\x1b[0m Normal")
 expect(term.cell(0, 0)).toBeBold()
 ```
@@ -19,7 +19,7 @@ expect(term.cell(0, 0)).toBeBold()
 
 ```typescript
 // Slower, but tests the real thing
-const term = createTerminalFixture({ cols: 80, rows: 24 })
+const term = createTestTerminal({ cols: 80, rows: 24 })
 await term.spawn(["my-tui-app"])
 await expect(term.screen).toContainText("ready>", { timeout: 10000 })
 ```
@@ -101,7 +101,7 @@ PTY tests involve real process I/O and are subject to system load, startup time,
 
 - **Startup time varies.** An app that starts in 100ms on your machine may take 500ms in CI. Always use auto-retry matchers rather than assuming timing.
 - **Output may arrive in chunks.** Terminal output is buffered by the PTY layer. A single `feed()` in-memory becomes multiple write events over PTY. Don't assert on intermediate states unless you explicitly wait for them.
-- **Process cleanup matters.** Always close terminals after tests. Use `createTerminalFixture()` (auto-cleanup) or `using` declarations to avoid leaked processes.
+- **Process cleanup matters.** Always close terminals after tests. Use `createTestTerminal()` (auto-cleanup) or `using` declarations to avoid leaked processes.
 - **CI environments are slower.** Consider marking PTY-heavy tests as slow (`.slow.test.ts`) so they can run separately from your fast unit tests.
 
 ## Cross-Backend Testing Strategies
@@ -116,7 +116,7 @@ Some behaviors differ between backends (see the [Backend Capability Matrix](/gui
 
 ```typescript
 test("kitty keyboard protocol", () => {
-  const term = createTerminalFixture()
+  const term = createTestTerminal()
   if (!term.backend.capabilities.kittyKeyboard) {
     return // Skip on backends without Kitty keyboard support
   }
