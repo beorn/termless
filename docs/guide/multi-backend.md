@@ -6,58 +6,22 @@ Termless separates the test API from the terminal emulator. Write tests once, ru
 If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "@termless/test"` -- it handles the backend automatically.
 :::
 
-## Backend Management
+## Getting Started
 
-Termless includes a Playwright-inspired backend management system. Every backend version is pinned in `backends.json` -- when you upgrade termless, all backends upgrade together.
-
-### Quick Start
+Install the backends you want to test against:
 
 ```bash
-# See available backends and their install status
-npx termless backends
-
-# Install default backends (xtermjs, ghostty, vt100)
-npx termless install
-
-# Install a specific backend
-npx termless install ghostty
-
-# Install all backends (including native ones)
-npx termless install --all
-
-# Check installation health
-npx termless doctor
-
-# Upgrade installed backends to match manifest versions
-npx termless upgrade
+npx termless backends                  # See what's available
+npx termless install ghostty vt100     # Install specific backends
 ```
 
-### Backend Types
+See [Backend Capabilities](/guide/backend-capabilities) for the full list of backends, their capabilities, and per-backend usage examples (factory function + string name).
 
-| Type       | Backends           | Deps          | Notes                             |
-| ---------- | ------------------ | ------------- | --------------------------------- |
-| **js**     | xtermjs, vt100     | None          | Pure JavaScript, works everywhere |
-| **wasm**   | ghostty            | None (auto)   | WebAssembly, auto-initialized     |
-| **native** | alacritty, wezterm | Rust/napi-rs  | Requires build step               |
-| **os**     | peekaboo           | OS automation | Platform-specific (macOS only)    |
+## Two Approaches
 
-### Programmatic API
+### 1. Programmatic (simplest)
 
-```typescript
-import { resolveBackend, createTerminalByName } from "termless"
-
-// Resolve by name (async -- handles WASM init, native loading)
-const backend = await resolveBackend("ghostty")
-const term = createTerminal({ backend })
-
-// Or use the shorthand
-const term = await createTerminalByName("ghostty", { cols: 120, rows: 40 })
-
-// Resolve all installed backends for cross-backend testing
-const all = await resolveAllInstalled()
-```
-
-### Async Test Fixture
+Use `resolveBackend()` or `createTerminalFixtureAsync()` to select backends by name:
 
 ```typescript
 import { createTerminalFixtureAsync } from "@termless/test"
@@ -69,28 +33,27 @@ test("works on ghostty", async () => {
 })
 ```
 
-## Architecture
+Or resolve all installed backends for cross-backend comparison:
 
+```typescript
+import { resolveAllInstalled, createTerminal } from "termless"
+
+const backends = await resolveAllInstalled()
+for (const [name, backend] of Object.entries(backends)) {
+  test(`renders correctly on ${name}`, () => {
+    const term = createTerminal({ backend, cols: 80, rows: 24 })
+    term.feed("\x1b[1mBold\x1b[0m")
+    expect(term.cell(0, 0)).toBeBold()
+    term.close()
+  })
+}
 ```
-Your tests
-  └── termless (Terminal API)
-        ├── @termless/xtermjs   (xterm.js via @xterm/headless)
-        ├── @termless/ghostty   (Ghostty via ghostty-web WASM)
-        ├── @termless/vt100     (pure TypeScript, zero deps)
-        ├── @termless/alacritty (alacritty_terminal via napi-rs)
-        ├── @termless/wezterm   (wezterm-term via napi-rs)
-        └── @termless/peekaboo  (xterm.js + OS automation)
-```
 
-Tests interact with the `Terminal` interface. The backend is injected at creation time.
+### 2. Vitest Workspace (full control)
 
-## Vitest Workspace Setup
+Each backend gets its own vitest project with a setup file. This gives you per-backend configuration, separate test runs, and CI matrix support.
 
-::: tip Simpler alternative
-For many use cases, `resolveBackend()` from the programmatic API (see above) can replace manual setup files. The workspace approach below gives you full control over per-backend configuration.
-:::
-
-### 1. Create setup files per backend
+#### Create setup files per backend
 
 ```typescript
 // test/setup-xterm.ts
@@ -115,7 +78,7 @@ const ghostty = await initGhostty()
 globalThis.createBackend = () => createGhosttyBackend(undefined, ghostty)
 ```
 
-### 2. Configure vitest workspace
+#### Configure vitest workspace
 
 ```typescript
 // vitest.workspace.ts
@@ -137,13 +100,13 @@ export default [
 ]
 ```
 
-### 3. Write backend-agnostic tests
+#### Write backend-agnostic tests
 
 ```typescript
 // test/my-app.test.ts
 import { test, expect } from "vitest"
 import { createTerminal } from "@termless/core"
-import "@termless/test/matchers" // Needed when using createTerminal directly (auto-registered with createTerminalFixture)
+import "@termless/test/matchers"
 
 function createTerm(cols = 80, rows = 24) {
   return createTerminal({ backend: globalThis.createBackend(), cols, rows })
@@ -165,51 +128,32 @@ test("bold text renders as bold", () => {
 })
 ```
 
-### 4. Run
+#### Run
 
 ```bash
 bun vitest run              # Runs all workspace projects
 bun vitest run --project xterm   # Run xterm only
 ```
 
-## Same Test, Different Backends
+## What Multi-Backend Testing Catches
 
-The key insight: all backends implement the same `TerminalBackend` interface, so `Terminal` behavior is identical. Differences between backends surface as test failures, revealing compatibility issues.
-
-Example of what multi-backend testing catches:
+All backends implement the same `TerminalBackend` interface, so `Terminal` behavior should be identical. Differences surface as test failures, revealing compatibility issues:
 
 - Different color palette handling
 - Reflow behavior on resize
 - Unicode/wide character edge cases
 - Escape sequence support differences
+- Key encoding variations
 
-## How Termless Compares to Other Matrix Testing
+See [Cross-Backend Conformance](/advanced/compat-matrix) for the 120+ conformance tests that Termless runs across backends.
 
-Matrix testing — running the same tests across multiple implementations — is a well-established pattern. Here's how Termless fits in:
+## How Termless Compares
 
-| System                               | What it matrices                           | How it works                                                                    | Output                                      |
-| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------- |
-| **GitHub Actions `strategy.matrix`** | OS, runtime version, config variants       | CI runs same workflow N times with different env vars                           | Per-combination pass/fail                   |
-| **Playwright `projects`**            | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             | Per-browser test results                    |
-| **Vitest `workspace`**               | Any axis (backends, configs, environments) | Named projects with different setup files                                       | Per-project test results                    |
-| **BrowserStack / Sauce Labs**        | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            | Compatibility matrix reports                |
-| **Termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison | Vitest assertions that fail on disagreement |
+| System                               | What it matrices                           | How it works                                                                    |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------- |
+| **Playwright `projects`**            | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             |
+| **Vitest `workspace`**               | Any axis (backends, configs, environments) | Named projects with different setup files                                       |
+| **BrowserStack / Sauce Labs**        | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            |
+| **Termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison |
 
-### Key differences
-
-**Playwright** is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Playwright runs tests independently per browser; Termless additionally **compares backends side-by-side** in the same test run and produces a diff report. Playwright has no built-in "cross-browser conformance report" — you'd need a custom reporter.
-
-**GitHub CI matrix** is infrastructure-level: "does our code build on Linux and macOS?" It varies the environment, not the system under test. Termless varies the terminal emulator implementation itself.
-
-**BrowserStack/Sauce Labs** are the commercial-scale version of what Termless does for terminals. They run thousands of browser combinations and produce compatibility matrices. Termless aims to be the open-source equivalent for terminal emulators — currently xterm.js and Ghostty, with WezTerm and Alacritty planned.
-
-**Vitest workspace** is the underlying mechanism Termless uses. Each backend gets a workspace project with its own setup file. The `cross-backend.test.ts` conformance suite adds cross-backend comparison assertions on top.
-
-### What's unique about Termless
-
-No existing tool does automated cross-terminal-emulator conformance testing. Individual terminals test their own VT parser (Ghostty has vttest, xterm.js has its own suite), but no one feeds the **same sequences through multiple parsers and compares cell-by-cell**. Termless is the first cross-terminal conformance testing framework. The long-term vision:
-
-1. **Conformance suite**: Shared VT100/ECMA-48 tests all backends must pass
-2. **Auto-generated reports**: Which features are identical, which differ, which are unsupported
-3. **Regression detection**: CI catches when a new backend version changes behavior
-4. **Upstream contribution**: Published findings for terminal emulator projects ("here's where xterm.js and Ghostty disagree on sequence X")
+Playwright is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Termless additionally **compares backends side-by-side** in the same test run. No existing tool does automated cross-terminal-emulator conformance testing.
