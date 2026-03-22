@@ -196,9 +196,22 @@ npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
 
+### Available Backends
+
+Every backend implements the same `TerminalBackend` interface — write tests once, run against any:
+
+| Backend | Engine | What It Is | Type | Default |
+|---------|--------|------------|------|---------|
+| **xtermjs** | @xterm/headless 5.5 | The terminal emulator inside VS Code. Most battle-tested. | JS | Yes |
+| **ghostty** | ghostty-web 0.4 | Ghostty's GPU-accelerated VT parser via WASM. Best standards compliance, Kitty keyboard. | WASM | Yes |
+| **vt100** | (built-in) | Pure TypeScript, zero dependencies. Lightning fast, great for CI. | JS | Yes |
+| **alacritty** | alacritty_terminal 0.25 | Alacritty's Rust VT parser via napi-rs. Strong reflow. | Native | No |
+| **wezterm** | wezterm-term | WezTerm's parser — broadest feature set: sixel, semantic prompts. | Native | No |
+| **peekaboo** | (OS automation) | Launches a real terminal app, captures via OS accessibility APIs. macOS only. | OS | No |
+
 ### Backend Management
 
-Termless includes a Playwright-inspired CLI for managing backends:
+Termless includes a Playwright-inspired CLI for managing backends. `backends.json` pins all versions — upgrade termless, upgrade all backends:
 
 ```bash
 npx termless backends                       # List all backends and install status

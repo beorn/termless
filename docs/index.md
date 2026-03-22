@@ -156,6 +156,21 @@ const backend = await resolveBackend("ghostty")
 const term = createTerminal({ backend })
 ```
 
+## Backends
+
+Every backend wraps a real terminal emulator and implements the same interface — write once, test everywhere:
+
+| Backend | Engine | Highlights | Type |
+|---------|--------|------------|------|
+| **xtermjs** | @xterm/headless 5.5 | VS Code's terminal. Most mature, zero native deps. | JS |
+| **ghostty** | ghostty-web 0.4 | Modern GPU-accelerated parser. Best standards compliance, Kitty keyboard protocol. | WASM |
+| **vt100** | (built-in) | Pure TypeScript, zero dependencies. Fastest backend, ideal for CI. | JS |
+| **alacritty** | alacritty_terminal 0.25 | Rust parser via napi-rs. Strong reflow behavior. | Native |
+| **wezterm** | wezterm-term | Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard. | Native |
+| **peekaboo** | (OS automation) | Tests against a real terminal app via OS accessibility APIs. macOS only. | OS |
+
+See [Backend Capabilities](/guide/backend-capabilities) for the full feature matrix.
+
 ## Packages
 
 | Package               | Description                                                             |
