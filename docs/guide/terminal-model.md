@@ -95,7 +95,7 @@ Silvery operates at a higher level (React component tree → rendered cells), no
 | [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                          | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
 | [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)                 | Clickable hyperlinks in terminal output.                                               |
 
-See also `vendor/silvery/docs/reference/terminal-matrix.md` for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
+See also the [silvery terminal matrix](https://silvery.dev/reference/terminal-matrix) for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
 
 ## Coordinate Systems
 

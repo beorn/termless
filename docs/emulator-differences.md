@@ -93,8 +93,8 @@ This architecture ensures that:
 # Cross-backend conformance (requires Ghostty WASM)
 bun vitest run tests/cross-backend.test.ts
 
-# Cross-backend scrollback fuzz (xterm.js + vt100, no WASM needed)
-FUZZ=1 bun vitest run vendor/silvery/tests/features/scrollback-cross-backend.fuzz.tsx
+# Cross-backend scrollback fuzz (in a silvery project with termless)
+FUZZ=1 bun vitest run tests/features/scrollback-cross-backend.fuzz.tsx
 ```
 
 ## See Also
