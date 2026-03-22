@@ -1,0 +1,57 @@
+{
+  "$comment": "Termless backend manifest. Maps backend names to packages and upstream versions. Do not edit manually — use scripts/roll-backend.ts to update upstream versions.",
+  "version": "0.3.0",
+  "backends": {
+    "xtermjs": {
+      "package": "@termless/xtermjs",
+      "upstream": "@xterm/headless",
+      "upstreamVersion": "5.5.0",
+      "description": "xterm.js terminal emulator (same engine as VS Code)",
+      "type": "js",
+      "default": true
+    },
+    "ghostty": {
+      "package": "@termless/ghostty",
+      "upstream": "ghostty-web",
+      "upstreamVersion": "0.4.0",
+      "description": "Ghostty VT parser via WebAssembly",
+      "type": "wasm",
+      "default": true
+    },
+    "vt100": {
+      "package": "@termless/vt100",
+      "upstream": null,
+      "upstreamVersion": null,
+      "description": "Pure TypeScript VT100 emulator, zero dependencies",
+      "type": "js",
+      "default": true
+    },
+    "alacritty": {
+      "package": "@termless/alacritty",
+      "upstream": "alacritty_terminal",
+      "upstreamVersion": "0.25.1",
+      "description": "Alacritty terminal via napi-rs Rust bindings",
+      "type": "native",
+      "default": false,
+      "requiresBuild": "Rust toolchain (cargo build --release)"
+    },
+    "wezterm": {
+      "package": "@termless/wezterm",
+      "upstream": "wezterm-term",
+      "upstreamVersion": null,
+      "description": "WezTerm terminal via napi-rs Rust bindings",
+      "type": "native",
+      "default": false,
+      "requiresBuild": "Rust toolchain (cargo build --release)"
+    },
+    "peekaboo": {
+      "package": "@termless/peekaboo",
+      "upstream": null,
+      "upstreamVersion": null,
+      "description": "OS-level terminal automation (real app + screenshots)",
+      "type": "os",
+      "default": false,
+      "platforms": ["darwin"]
+    }
+  }
+}

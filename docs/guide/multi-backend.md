@@ -6,6 +6,69 @@ Termless separates the test API from the terminal emulator. Write tests once, ru
 If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTerminalFixture } from "@termless/test"` -- it handles the backend automatically.
 :::
 
+## Backend Management
+
+Termless includes a Playwright-inspired backend management system. Every backend version is pinned in `backends.json` -- when you upgrade termless, all backends upgrade together.
+
+### Quick Start
+
+```bash
+# See available backends and their install status
+npx termless backends
+
+# Install default backends (xtermjs, ghostty, vt100)
+npx termless install
+
+# Install a specific backend
+npx termless install ghostty
+
+# Install all backends (including native ones)
+npx termless install --all
+
+# Check installation health
+npx termless doctor
+
+# Upgrade installed backends to match manifest versions
+npx termless upgrade
+```
+
+### Backend Types
+
+| Type       | Backends           | Deps          | Notes                             |
+| ---------- | ------------------ | ------------- | --------------------------------- |
+| **js**     | xtermjs, vt100     | None          | Pure JavaScript, works everywhere |
+| **wasm**   | ghostty            | None (auto)   | WebAssembly, auto-initialized     |
+| **native** | alacritty, wezterm | Rust/napi-rs  | Requires build step               |
+| **os**     | peekaboo           | OS automation | Platform-specific (macOS only)    |
+
+### Programmatic API
+
+```typescript
+import { resolveBackend, createTerminalByName } from "termless"
+
+// Resolve by name (async -- handles WASM init, native loading)
+const backend = await resolveBackend("ghostty")
+const term = createTerminal({ backend })
+
+// Or use the shorthand
+const term = await createTerminalByName("ghostty", { cols: 120, rows: 40 })
+
+// Resolve all installed backends for cross-backend testing
+const all = await resolveAllInstalled()
+```
+
+### Async Test Fixture
+
+```typescript
+import { createTerminalFixtureAsync } from "@termless/test"
+
+test("works on ghostty", async () => {
+  const term = await createTerminalFixtureAsync({ backendName: "ghostty" })
+  term.feed("Hello")
+  expect(term.screen).toContainText("Hello")
+})
+```
+
 ## Architecture
 
 ```
@@ -22,6 +85,10 @@ Your tests
 Tests interact with the `Terminal` interface. The backend is injected at creation time.
 
 ## Vitest Workspace Setup
+
+::: tip Simpler alternative
+For many use cases, `resolveBackend()` from the programmatic API (see above) can replace manual setup files. The workspace approach below gives you full control over per-backend configuration.
+:::
 
 ### 1. Create setup files per backend
 

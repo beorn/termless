@@ -31,6 +31,7 @@
   ],
   "files": [
     "src",
+    "backends.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

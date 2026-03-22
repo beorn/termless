@@ -30,6 +30,61 @@ Or run directly:
 bunx termless capture --command "ls -la" --text
 ```
 
+## Backend Management
+
+Manage backend installation with Playwright-inspired CLI commands. Backend versions are pinned in `backends.json` -- upgrading termless upgrades all backends together.
+
+### `termless backends`
+
+List all available backends with their type, install status, and version.
+
+```bash
+termless backends
+```
+
+Example output:
+
+```
+Backend        Type    Status       Version
+xtermjs        js      installed    5.5.0
+ghostty        wasm    installed    1.2.0
+vt100          js      installed    0.8.0
+alacritty      native  not installed  0.24.0
+wezterm        native  not installed  0.5.0
+peekaboo       os      installed    0.3.0
+```
+
+### `termless install`
+
+Install backends. With no arguments, installs the default set (xtermjs, ghostty, vt100).
+
+```bash
+# Install default backends
+termless install
+
+# Install a specific backend
+termless install ghostty
+
+# Install all backends
+termless install --all
+```
+
+### `termless upgrade`
+
+Upgrade installed backends to match the versions in `backends.json`.
+
+```bash
+termless upgrade
+```
+
+### `termless doctor`
+
+Check installation health: verify installed backends load correctly, detect version mismatches, and report missing dependencies.
+
+```bash
+termless doctor
+```
+
 ## `termless capture`
 
 One-shot terminal capture: start a process, optionally send keypresses, capture text and/or screenshot (SVG or PNG).

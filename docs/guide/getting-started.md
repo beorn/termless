@@ -36,7 +36,17 @@ yarn add -D @termless/test
 | Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
 | Use the CLI or MCP server                       | `@termless/cli`                                           |
 
-Most users only need `@termless/test`. See [Backend Capabilities](/guide/backend-capabilities) for a full comparison of all backends.
+Most users only need `@termless/test`. To add extra backends, use the CLI:
+
+```bash
+# See all available backends
+npx termless backends
+
+# Install additional backends (e.g., Ghostty)
+npx termless install ghostty
+```
+
+See [Backend Capabilities](/guide/backend-capabilities) for a full comparison of all backends.
 
 ## First Test
 

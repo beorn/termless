@@ -52,7 +52,33 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 ## Commands
 
 ```bash
-bun test   # Run all tests
+bun test                     # Run all tests
+bun cli backends             # List backends and install status
+bun cli doctor               # Health check installed backends
+bun cli install [names...]   # Install backends
+bun cli upgrade [names...]   # Upgrade backends to manifest versions
+```
+
+## Backend Registry
+
+`backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/registry.ts` provides:
+
+- `resolveBackend("ghostty")` — async resolution (handles WASM/native init)
+- `createTerminalByName("ghostty", { cols, rows })` — shorthand
+- `getBackendStatus()` / `checkAllHealth()` — status and health checks
+- `getInstallCommand(names, pm)` / `detectPackageManager()` — install helpers
+
+Each backend exports a `resolve()` function for self-describing initialization.
+
+Two ways to choose a backend:
+
+```typescript
+// Factory function (explicit, sync)
+const term = createTerminal({ backend: createXtermBackend() })
+
+// String name via registry (async — handles WASM/native init)
+const backend = await resolveBackend("ghostty")
+const term = createTerminal({ backend })
 ```
 
 ## Code Style

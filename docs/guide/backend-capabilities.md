@@ -2,6 +2,18 @@
 
 Each Termless backend wraps a different terminal emulator. They all implement the same `TerminalBackend` interface, but their underlying capabilities differ.
 
+## Discovering Backends
+
+Use the CLI to see available backends and their installation status:
+
+```bash
+# List all backends with install status and capabilities
+npx termless backends
+
+# Check health of installed backends (version mismatches, missing deps)
+npx termless doctor
+```
+
 ## Capability Matrix
 
 | Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo |
@@ -35,7 +47,7 @@ Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-acceler
 
 - **Best for**: Testing against a modern, standards-compliant parser. Verifying Kitty keyboard protocol support.
 - **Limitations**: WASM build does not support viewport scrolling or Kitty graphics. OSC title changes have no callback in WASM mode.
-- **Install**: `npm install -D @termless/ghostty`
+- **Install**: `npx termless install ghostty` (or `npm install -D @termless/ghostty`)
 
 ### @termless/vt100
 
@@ -43,7 +55,7 @@ Pure TypeScript VT100 emulator with zero dependencies. Lightweight and fast, ins
 
 - **Best for**: Environments where you want zero native dependencies and zero WASM. CI runners with constrained environments.
 - **Limitations**: No reflow on resize. No OSC 8 hyperlinks. No Kitty keyboard. More limited escape sequence coverage than xterm.js or Ghostty.
-- **Install**: `npm install -D @termless/vt100`
+- **Install**: `npx termless install vt100` (or `npm install -D @termless/vt100`)
 
 ### @termless/alacritty
 
@@ -51,7 +63,7 @@ Uses Alacritty's `alacritty_terminal` crate via napi-rs native bindings. Alacrit
 
 - **Best for**: Testing against Alacritty's VT parser. Cross-checking reflow behavior.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `npm install -D @termless/alacritty` (requires Rust build)
+- **Install**: `npx termless install alacritty` (or `npm install -D @termless/alacritty`; requires Rust build)
 
 ### @termless/wezterm
 
@@ -59,7 +71,7 @@ Uses WezTerm's `wezterm-term` VT parser via napi-rs native bindings. WezTerm has
 
 - **Best for**: Testing sixel graphics support, semantic prompts, and the widest protocol coverage.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `npm install -D @termless/wezterm` (requires Rust build)
+- **Install**: `npx termless install wezterm` (or `npm install -D @termless/wezterm`; requires Rust build)
 
 ### @termless/peekaboo
 
@@ -67,7 +79,7 @@ OS-level terminal automation. Launches a real terminal application, sends keystr
 
 - **Best for**: End-to-end testing against a real terminal application (e.g., testing your app in actual Ghostty or iTerm2). OS-level screenshots of the real terminal window.
 - **Limitations**: macOS only. Requires accessibility permissions. Much slower than in-memory backends. Not suitable for unit tests.
-- **Install**: `npm install -D @termless/peekaboo`
+- **Install**: `npx termless install peekaboo` (or `npm install -D @termless/peekaboo`)
 
 ## Choosing a Backend
 

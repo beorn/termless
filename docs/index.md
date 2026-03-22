@@ -134,6 +134,28 @@ expect(term).toHaveTitle("my-app")
 
 Most users only need `@termless/test` -- it includes everything for writing Vitest terminal tests with the xterm.js backend. Add extra backend packages only if you want [multi-backend testing](/guide/multi-backend).
 
+### Backend Management CLI
+
+```bash
+npx termless backends                  # List all backends and install status
+npx termless install                   # Install default backends
+npx termless install ghostty           # Install a specific backend
+npx termless doctor                    # Health check installed backends
+```
+
+### Two Ways to Choose a Backend
+
+```typescript
+// Factory function (explicit, sync)
+import { createXtermBackend } from "@termless/xtermjs"
+const term = createTerminal({ backend: createXtermBackend() })
+
+// String name via registry (async — handles WASM/native init)
+import { resolveBackend } from "@termless/core"
+const backend = await resolveBackend("ghostty")
+const term = createTerminal({ backend })
+```
+
 ## Packages
 
 | Package               | Description                                                             |

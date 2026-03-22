@@ -11,6 +11,27 @@ import { createTerminalFixture } from "@termless/test"
 
 `createTerminalFixture()` wraps `createTerminal()` with the xterm.js backend and registers cleanup in `afterEach` -- no manual `close()` needed. Matchers are auto-registered when importing from `"@termless/test"`.
 
+For named backends (async — handles WASM/native initialization):
+
+```typescript
+import { createTerminalFixtureAsync } from "@termless/test"
+
+test("works on ghostty", async () => {
+  const term = await createTerminalFixtureAsync({ backendName: "ghostty" })
+  term.feed("Hello")
+  expect(term.screen).toContainText("Hello")
+})
+```
+
+You can also pass a factory-created backend directly:
+
+```typescript
+import { createGhosttyBackend, initGhostty } from "@termless/ghostty"
+
+const ghostty = await initGhostty()
+const term = createTerminalFixture({ backend: createGhosttyBackend(undefined, ghostty) })
+```
+
 ## Composable API
 
 The key design principle: separate **where** to look from **what** to assert.

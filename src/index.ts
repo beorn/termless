@@ -52,3 +52,22 @@ export type { MockTimerController } from "./timer.ts"
 
 // Emulator warning registry
 export { pushWarning, drainWarnings, hasWarnings, clearWarnings } from "./warnings.ts"
+
+// Backend registry
+export {
+  loadManifest,
+  isBackendInstalled,
+  getInstalledVersion,
+  backendNames,
+  defaultBackendNames,
+  installedBackendNames,
+  getBackendStatus,
+  resolveBackend,
+  createTerminalByName,
+  resolveAllInstalled,
+  checkBackendHealth,
+  checkAllHealth,
+  getInstallCommand,
+  detectPackageManager,
+} from "./registry.ts"
+export type { BackendManifest, BackendManifestEntry, BackendStatus, BackendHealthResult } from "./registry.ts"

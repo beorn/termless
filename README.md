@@ -196,6 +196,35 @@ npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
 
+### Backend Management
+
+Termless includes a Playwright-inspired CLI for managing backends:
+
+```bash
+npx termless backends                       # List all backends and install status
+npx termless install                        # Install default backends (xtermjs, ghostty, vt100)
+npx termless install ghostty alacritty      # Install specific backends
+npx termless doctor                         # Health check all installed backends
+npx termless upgrade                        # Upgrade installed backends to manifest versions
+```
+
+### Programmatic Backend Selection
+
+Two ways to choose a backend:
+
+```typescript
+// 1. Factory function (explicit import, sync)
+import { createXtermBackend } from "@termless/xtermjs"
+const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
+
+// 2. String name via registry (async — handles WASM init, native loading)
+import { resolveBackend, createTerminalByName } from "@termless/core"
+const backend = await resolveBackend("ghostty")
+const term = createTerminal({ backend, cols: 80, rows: 24 })
+// or shorthand:
+const term = await createTerminalByName("ghostty", { cols: 80, rows: 24 })
+```
+
 ## Runtime Compatibility
 
 Termless works on both **Bun** (>=1.0) and **Node.js** (>=18).

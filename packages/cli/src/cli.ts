@@ -26,11 +26,14 @@
 
 import { Command } from "commander"
 import { createSessionManager } from "./session.ts"
+import { registerBackendsCommand } from "./backends-cmd.ts"
+import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.ts"
+import { registerDoctorCommand } from "./doctor-cmd.ts"
 
 const program = new Command()
   .name("termless")
   .description("Headless terminal capture CLI and MCP server")
-  .version("0.1.0")
+  .version("0.3.0")
 
 // ── capture ──
 
@@ -129,5 +132,12 @@ program
     const { startMcpServer } = await import("./mcp.ts")
     await startMcpServer()
   })
+
+// ── backend management ──
+
+registerBackendsCommand(program)
+registerInstallCommand(program)
+registerUpgradeCommand(program)
+registerDoctorCommand(program)
 
 program.parse()
