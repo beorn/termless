@@ -40,83 +40,51 @@ export default defineConfig({
       },
     ],
 
-    sidebar: {
-      "/guide/": [
-        {
-          text: "Get Started",
-          items: [
-            { text: "Getting Started", link: "/guide/getting-started" },
-            { text: "Terminal Model", link: "/guide/terminal-model" },
-          ],
-        },
-        {
-          text: "Testing",
-          items: [
-            { text: "Writing Tests", link: "/guide/writing-tests" },
-            { text: "Screenshots", link: "/guide/screenshots" },
-            { text: "Best Practices", link: "/guide/best-practices" },
-          ],
-        },
-        {
-          text: "Backends",
-          items: [
-            { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
-            { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
-            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-          ],
-        },
-        {
-          text: "Tools",
-          items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
-        },
-        {
-          text: "Integrations",
-          collapsed: false,
-          items: [{ text: "Silvery Integration", link: "/advanced/silvery-integration" }],
-        },
-      ],
-      "/api/": [
-        {
-          text: "API Reference",
-          items: [
-            { text: "Terminal", link: "/api/terminal" },
-            { text: "Backend", link: "/api/backend" },
-            { text: "Cell & Types", link: "/api/cell" },
-            { text: "Matchers", link: "/api/matchers" },
-          ],
-        },
-        {
-          text: "Guide",
-          collapsed: false,
-          items: [
-            { text: "Getting Started", link: "/guide/getting-started" },
-            { text: "Writing Tests", link: "/guide/writing-tests" },
-            { text: "Screenshots", link: "/guide/screenshots" },
-            { text: "Best Practices", link: "/guide/best-practices" },
-          ],
-        },
-      ],
-      "/advanced/": [
-        {
-          text: "Advanced",
-          items: [
-            { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
-            { text: "Silvery Integration", link: "/advanced/silvery-integration" },
-          ],
-        },
-        {
-          text: "Guide",
-          collapsed: false,
-          items: [
-            { text: "Getting Started", link: "/guide/getting-started" },
-            { text: "Writing Tests", link: "/guide/writing-tests" },
-            { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
-            { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
-            { text: "Best Practices", link: "/guide/best-practices" },
-          ],
-        },
-      ],
-    },
+    sidebar: [
+      {
+        text: "Guide",
+        items: [
+          { text: "Getting Started", link: "/guide/getting-started" },
+          { text: "Terminal Model", link: "/guide/terminal-model" },
+        ],
+      },
+      {
+        text: "Testing",
+        items: [
+          { text: "Writing Tests", link: "/guide/writing-tests" },
+          { text: "Screenshots", link: "/guide/screenshots" },
+          { text: "Best Practices", link: "/guide/best-practices" },
+        ],
+      },
+      {
+        text: "Backends",
+        items: [
+          { text: "Backend Capabilities", link: "/guide/backend-capabilities" },
+          { text: "Multi-Backend Testing", link: "/guide/multi-backend" },
+          { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
+        ],
+      },
+      {
+        text: "Tools",
+        items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
+      },
+      {
+        text: "API Reference",
+        items: [
+          { text: "Terminal", link: "/api/terminal" },
+          { text: "Backend", link: "/api/backend" },
+          { text: "Cell & Types", link: "/api/cell" },
+          { text: "Matchers", link: "/api/matchers" },
+        ],
+      },
+      {
+        text: "Advanced",
+        items: [
+          { text: "Silvery Integration", link: "/advanced/silvery-integration" },
+          { text: "Emulator Differences", link: "/emulator-differences" },
+        ],
+      },
+    ],
 
     socialLinks: [{ icon: "github", link: "https://github.com/beorn/termless" }],
 
