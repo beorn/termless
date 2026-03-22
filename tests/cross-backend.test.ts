@@ -10,10 +10,9 @@ import { describe, test, expect, beforeAll, afterEach } from "vitest"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createGhosttyBackend, initGhostty } from "../packages/ghostty/src/backend.ts"
 import { createVt100Backend } from "../packages/vt100/src/backend.ts"
-import type { Ghostty } from "ghostty-web"
 import type { TerminalBackend, Cell } from "../src/types.ts"
 
-let ghostty: Ghostty
+let ghostty: Awaited<ReturnType<typeof initGhostty>>
 
 beforeAll(async () => {
   ghostty = await initGhostty()

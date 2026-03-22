@@ -34,7 +34,7 @@ function createMockBackend(): TerminalBackend {
   let grid: string[][] = []
   let cursorX = 0
   let cursorY = 0
-  let title = ""
+  const title = ""
 
   function initGrid(c: number, r: number): void {
     cols = c

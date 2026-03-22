@@ -56,9 +56,7 @@ describe("ghostty backend", () => {
       _resetSharedForTesting()
       try {
         const b = createGhosttyBackend()
-        expect(() => b.init({ cols: 80, rows: 24 })).toThrow(
-          "Ghostty WASM not loaded",
-        )
+        expect(() => b.init({ cols: 80, rows: 24 })).toThrow("Ghostty WASM not loaded")
       } finally {
         // Restore shared instance for subsequent tests
         ghostty = await initGhostty()

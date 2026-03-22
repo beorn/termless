@@ -20,10 +20,10 @@ process.on("unhandledRejection", (err) => {
 })
 
 /** Wrap a tool handler so errors become MCP error responses, not process crashes */
-function safeTool<T>(
-  fn: (args: T) => Promise<{ content: Array<{ type: string; [k: string]: unknown }> }>,
-): (args: T) => Promise<{ content: Array<{ type: string; [k: string]: unknown }> }> {
-  return async (args: T) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeTool(fn: (args: any) => Promise<{ content: Array<{ type: string; [k: string]: unknown }> }>): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (args: any) => {
     try {
       return await fn(args)
     } catch (err) {
@@ -40,6 +40,12 @@ function textResult(data: unknown): { content: Array<{ type: "text"; text: strin
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] }
 }
 
+/** Type-safe registerTool that bridges safeTool's return type to McpServer's expected handler type */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function register(srv: McpServer, name: string, schema: any, handler: any): void {
+  srv.registerTool(name, schema, handler)
+}
+
 // ── Server ──
 
 export async function startMcpServer(): Promise<void> {
@@ -47,7 +53,8 @@ export async function startMcpServer(): Promise<void> {
   const server = new McpServer({ name: "termless", version: "0.1.0" })
 
   // start — Create terminal session
-  server.registerTool(
+  register(
+    server,
     "start",
     {
       description: "Start a terminal session with a PTY and xterm-headless emulator",
@@ -86,7 +93,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // stop — Kill session
-  server.registerTool(
+  register(
+    server,
     "stop",
     {
       description: "Stop a terminal session and kill the process",
@@ -101,7 +109,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // list — List active sessions
-  server.registerTool(
+  register(
+    server,
     "list",
     {
       description: "List all active terminal sessions",
@@ -113,7 +122,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // press — Send key press
-  server.registerTool(
+  register(
+    server,
     "press",
     {
       description: "Press a keyboard key (e.g. 'Enter', 'ArrowDown', 'Control+c', 'j')",
@@ -132,7 +142,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // type — Type text
-  server.registerTool(
+  register(
+    server,
     "type",
     {
       description: "Type text into the terminal",
@@ -151,7 +162,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // text — Get terminal text
-  server.registerTool(
+  register(
+    server,
     "text",
     {
       description: "Get the text content of the terminal",
@@ -166,7 +178,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // screenshot — SVG or PNG screenshot
-  server.registerTool(
+  register(
+    server,
     "screenshot",
     {
       description: "Capture a screenshot of the terminal (SVG or PNG, no browser needed)",
@@ -209,7 +222,8 @@ export async function startMcpServer(): Promise<void> {
   )
 
   // wait — Wait for text/stability
-  server.registerTool(
+  register(
+    server,
     "wait",
     {
       description: "Wait for specific text or terminal stability",
