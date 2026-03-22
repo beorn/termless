@@ -56,7 +56,7 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "cli": "bun packages/cli/src/cli.ts",
-    "census": "bun packages/census/src/cli.ts",
+    "census": "bun vitest run packages/census/probes/",
     "publish:all": "bun run publish:core && bun run publish:packages",
     "publish:core": "npm publish",
     "publish:packages": "for pkg in packages/core packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
