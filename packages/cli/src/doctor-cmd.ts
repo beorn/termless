@@ -17,8 +17,8 @@ export function registerDoctorCommand(program: Command): void {
       const manifest = loadManifest()
       const statuses = getBackendStatus()
 
-      console.error(`\ntermless doctor v${manifest.version}\n`)
-      console.error("Checking backends...\n")
+      console.log(`\ntermless doctor v${manifest.version}\n`)
+      console.log("Checking backends...\n")
 
       let healthy = 0
       let unhealthy = 0
@@ -27,7 +27,7 @@ export function registerDoctorCommand(program: Command): void {
       for (const s of statuses) {
         if (!s.installed) {
           // Not installed
-          console.error(`  \u2500 ${s.name.padEnd(12)} not installed`)
+          console.log(`  \u2500 ${s.name.padEnd(12)} not installed`)
           notInstalled++
           continue
         }
@@ -47,30 +47,30 @@ export function registerDoctorCommand(program: Command): void {
         const verStr = s.installedVersion ?? "unknown"
 
         if (result.healthy) {
-          console.error(`  \u2713 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
+          console.log(`  \u2713 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
           if (result.capabilities) {
-            console.error(`    \u2192 ${result.capabilities}`)
+            console.log(`    \u2192 ${result.capabilities}`)
           }
           healthy++
         } else {
-          console.error(`  \u2717 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
+          console.log(`  \u2717 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
           if (result.error) {
-            console.error(`    \u2192 Error: ${result.error}`)
+            console.log(`    \u2192 Error: ${result.error}`)
           }
           unhealthy++
         }
       }
 
       // Summary
-      console.error(`\n  ${healthy} healthy, ${unhealthy} unhealthy, ${notInstalled} not installed`)
+      console.log(`\n  ${healthy} healthy, ${unhealthy} unhealthy, ${notInstalled} not installed`)
 
       if (unhealthy === 0 && healthy > 0) {
-        console.error("  All installed backends are healthy.\n")
+        console.log("  All installed backends are healthy.\n")
       } else if (unhealthy > 0) {
-        console.error("  Some backends are unhealthy. Run `termless install` to reinstall.\n")
+        console.log("  Some backends are unhealthy. Run `termless install` to reinstall.\n")
         process.exitCode = 1
       } else {
-        console.error("  No backends installed. Run `termless install` to get started.\n")
+        console.log("  No backends installed. Run `termless install` to get started.\n")
       }
     })
 }

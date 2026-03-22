@@ -46,7 +46,7 @@ export function registerInstallCommand(program: Command): void {
         toInstall = defaultBackendNames()
       }
 
-      console.error(`\ntermless install (${pm})\n`)
+      console.log(`\ntermless install (${pm})\n`)
 
       // Partition into already-installed, skipped (wrong platform), and installable
       const toRun: string[] = []
@@ -58,36 +58,36 @@ export function registerInstallCommand(program: Command): void {
         // Check if already installed
         if (isBackendInstalled(name)) {
           const ver = getInstalledVersion(entry.package)
-          console.error(`  \u2713 ${name} already installed (${ver ?? "unknown"})`)
+          console.log(`  \u2713 ${name} already installed (${ver ?? "unknown"})`)
           continue
         }
 
         // Check platform restrictions
         if (entry.platforms && !entry.platforms.includes(platform)) {
-          console.error(`  \u2717 ${name} — not available on ${platform} (requires: ${entry.platforms.join(", ")})`)
+          console.log(`  \u2717 ${name} — not available on ${platform} (requires: ${entry.platforms.join(", ")})`)
           continue
         }
 
         // Warn about native build requirements
         if (entry.requiresBuild) {
-          console.error(`  ! ${name} — requires: ${entry.requiresBuild}`)
+          console.log(`  ! ${name} — requires: ${entry.requiresBuild}`)
         }
 
         toRun.push(name)
       }
 
       if (toRun.length === 0) {
-        console.error("\n  Nothing to install.\n")
+        console.log("\n  Nothing to install.\n")
         return
       }
 
       // Build and run the install command
       const cmd = getInstallCommand(toRun, pm)
-      console.error(`\n  Running: ${cmd}\n`)
+      console.log(`\n  Running: ${cmd}\n`)
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        console.error(`\n  \u2713 Installed: ${toRun.join(", ")}\n`)
+        console.log(`\n  \u2713 Installed: ${toRun.join(", ")}\n`)
       } catch {
         console.error(`\n  \u2717 Install failed. Run manually:\n  ${cmd}\n`)
         process.exitCode = 1
@@ -124,7 +124,7 @@ export function registerUpgradeCommand(program: Command): void {
         toCheck = backendNames().filter(isBackendInstalled)
       }
 
-      console.error(`\ntermless upgrade (${pm})\n`)
+      console.log(`\ntermless upgrade (${pm})\n`)
 
       // Check which need upgrading
       const toUpgrade: string[] = []
@@ -135,25 +135,25 @@ export function registerUpgradeCommand(program: Command): void {
         const target = manifest.version
 
         if (installed === target) {
-          console.error(`  \u2713 ${name} ${installed} (up to date)`)
+          console.log(`  \u2713 ${name} ${installed} (up to date)`)
         } else {
-          console.error(`  \u2191 ${name} ${installed ?? "unknown"} \u2192 ${target}`)
+          console.log(`  \u2191 ${name} ${installed ?? "unknown"} \u2192 ${target}`)
           toUpgrade.push(name)
         }
       }
 
       if (toUpgrade.length === 0) {
-        console.error("\n  All backends up to date.\n")
+        console.log("\n  All backends up to date.\n")
         return
       }
 
       // Build and run the install command (install with version pins upgrades)
       const cmd = getInstallCommand(toUpgrade, pm)
-      console.error(`\n  Running: ${cmd}\n`)
+      console.log(`\n  Running: ${cmd}\n`)
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        console.error(`\n  \u2713 Upgraded: ${toUpgrade.join(", ")}\n`)
+        console.log(`\n  \u2713 Upgraded: ${toUpgrade.join(", ")}\n`)
       } catch {
         console.error(`\n  \u2717 Upgrade failed. Run manually:\n  ${cmd}\n`)
         process.exitCode = 1

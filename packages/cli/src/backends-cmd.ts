@@ -17,7 +17,7 @@ export function registerBackendsCommand(program: Command): void {
       const statuses = getBackendStatus()
       const defaults = new Set(defaultBackendNames())
 
-      console.error(`\ntermless v${manifest.version} — Backend Status\n`)
+      console.log(`\ntermless v${manifest.version} — Backend Status\n`)
 
       // Column headers
       const cols = {
@@ -51,11 +51,11 @@ export function registerBackendsCommand(program: Command): void {
       const typeWidth = Math.max(cols.type.length, ...statuses.map((s) => s.manifest.type.length))
 
       // Header
-      console.error(
+      console.log(
         `  ${cols.name.padEnd(nameWidth)}  ${cols.status.padEnd(statusWidth)}  ${cols.upstream.padEnd(upstreamWidth)}  ${cols.type}`,
       )
       // Separator using em dashes
-      console.error(
+      console.log(
         `  ${"─".repeat(nameWidth)}  ${"─".repeat(statusWidth)}  ${"─".repeat(upstreamWidth)}  ${"─".repeat(typeWidth)}`,
       )
 
@@ -74,7 +74,7 @@ export function registerBackendsCommand(program: Command): void {
           upstreamStr = `${s.manifest.upstream}${ver}`
         }
 
-        console.error(
+        console.log(
           `  ${nameStr}  ${statusStr.padEnd(statusWidth)}  ${upstreamStr.padEnd(upstreamWidth)}  ${s.manifest.type}`,
         )
       }
@@ -83,10 +83,10 @@ export function registerBackendsCommand(program: Command): void {
       const installedCount = statuses.filter((s) => s.installed).length
       const totalCount = statuses.length
       const defaultCount = defaults.size
-      console.error(`\n  ${installedCount} of ${totalCount} installed (${defaultCount} default)`)
+      console.log(`\n  ${installedCount} of ${totalCount} installed (${defaultCount} default)`)
       if (installedCount < totalCount) {
-        console.error("  Install more: bunx termless install <name>")
+        console.log("  Install more: bunx termless install <name>")
       }
-      console.error("  Docs: https://termless.dev/guide/backends\n")
+      console.log("  Docs: https://termless.dev/guide/backends\n")
     })
 }
