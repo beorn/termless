@@ -69,6 +69,15 @@
       "description": "Neovim's VT parser via Emscripten WASM",
       "type": "wasm",
       "default": false
+    },
+    "kitty": {
+      "package": "@termless/kitty",
+      "upstream": "kitty",
+      "upstreamVersion": null,
+      "description": "Kitty VT parser built from source (GPL-3.0 dependency)",
+      "type": "native",
+      "default": false,
+      "requiresBuild": "C compiler + Python 3 + git (clones kitty GPL source)"
     }
   }
 }

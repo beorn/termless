@@ -28,6 +28,7 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 | `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                         | Bun + Node.js | Active (macOS)         |
 | `@termless/vt100-rust` | Rust vt100 crate via napi-rs                                               | Bun + Node.js | Needs Rust build       |
 | `@termless/libvterm`   | neovim's libvterm via WASM                                                 | Bun + Node.js | Needs Emscripten build |
+| `@termless/kitty`      | Kitty VT parser built from GPL source (not distributed)                    | Bun + Node.js | Needs C build          |
 | `@termless/test`       | Vitest integration: matchers, fixtures, snapshots                          | Bun + Node.js | Active                 |
 | `@termless/cli`        | CLI + MCP server                                                           | Bun + Node.js | Active                 |
 
@@ -51,6 +52,7 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
         ├── @termless/wezterm (Rust napi-rs)
         ├── @termless/vt100-rust (Rust napi-rs)
         ├── @termless/libvterm (C via Emscripten WASM)
+        ├── @termless/kitty (C built from GPL source)
         └── @termless/peekaboo (xterm.js + OS automation)
 ```
 

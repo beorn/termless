@@ -16,20 +16,20 @@ npx termless doctor
 
 ## Capability Matrix
 
-| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo | vt100-rust     | libvterm          |
-| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- | -------------- | ----------------- |
-| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               |
-| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       | No             | No                |
-| **Kitty graphics**      | No       | No      | No    | No             | No             | No       | No             | No                |
-| **Sixel**               | No       | No      | No    | No             | Yes            | No       | No             | No                |
-| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                |
-| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       | No             | No                |
-| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     | 15.1           | 15.1              |
-| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                |
-| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               |
-| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      | No             | No                |
-| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     | Rust (napi-rs) | WASM (Emscripten) |
-| **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     | Rust toolchain | Emscripten SDK    |
+| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo | vt100-rust     | libvterm          | Kitty                      |
+| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- | -------------- | ----------------- | -------------------------- |
+| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                        |
+| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       | No             | No                | Yes                        |
+| **Kitty graphics**      | No       | No      | No    | No             | No             | No       | No             | No                | Yes                        |
+| **Sixel**               | No       | No      | No    | No             | Yes            | No       | No             | No                | No                         |
+| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                        |
+| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       | No             | No                | No                         |
+| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     | 15.1           | 15.1              | 15.1                       |
+| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                        |
+| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                        |
+| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      | No             | No                | No                         |
+| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     | Rust (napi-rs) | WASM (Emscripten) | C (built from GPL source)  |
+| **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     | Rust toolchain | Emscripten SDK    | C compiler + Python 3 + git |
 
 ## Backend Details
 
@@ -179,6 +179,24 @@ const term = createTerminal({ backend: createLibvtermBackend() })
 
 // String name (handles WASM init automatically)
 const term = await createTerminalByName("libvterm")
+```
+
+### @termless/kitty
+
+Kitty's VT parser built from GPL-3.0 source. Kitty is a modern, feature-rich terminal with its own keyboard protocol and graphics protocol.
+
+- **Engine**: kitty VT parser (C, built from source)
+- **Best for**: Testing Kitty keyboard protocol, Kitty graphics protocol, and cross-checking against kitty's parser behavior. The only backend with Kitty graphics support.
+- **Limitations**: Requires building from GPL-3.0 source (C compiler + Python 3 + git). The resulting `.node` binary is GPL-3.0 and must not be distributed. Build script is WIP.
+- **Install**: `npx termless install kitty` (or `npm install -D @termless/kitty`; requires build from source)
+
+```typescript
+// Factory function
+import { createKittyBackend } from "@termless/kitty"
+const term = createTerminal({ backend: createKittyBackend() })
+
+// String name (handles native module loading)
+const term = await createTerminalByName("kitty")
 ```
 
 ## Choosing a Backend

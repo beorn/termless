@@ -1,0 +1,47 @@
+{
+  "name": "@termless/kitty",
+  "version": "0.3.0",
+  "description": "Kitty backend for termless — kitty's VT parser built from source (GPL-3.0 dependency, not distributed)",
+  "keywords": [
+    "headless",
+    "kitty",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "tui",
+    "vt-parser"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/kitty"
+  },
+  "files": [
+    "src",
+    "build"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build:native": "bash build/build.sh"
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18"
+  }
+}

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Termless"
   text: "Headless terminal testing"
-  tagline: "Like Playwright, but for terminal apps. Write tests once, run against xterm.js, Ghostty, Alacritty, WezTerm, VT100, vt100-rust, libvterm, or Peekaboo."
+  tagline: "Like Playwright, but for terminal apps. Write tests once, run against xterm.js, Ghostty, Alacritty, WezTerm, VT100, vt100-rust, libvterm, Kitty, or Peekaboo."
   actions:
     - theme: brand
       text: Get Started
@@ -17,7 +17,7 @@ features:
   - title: Terminal Internals
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
   - title: Cross-Terminal Conformance
-    details: "Run the same tests against 8 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
+    details: "Run the same tests against 9 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
   - title: Fast
     details: "Pure in-process terminal emulation. Typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses, no flakiness."
   - title: Composable Selectors
@@ -170,6 +170,7 @@ Every backend wraps a real terminal emulator and implements the same interface �
 | **peekaboo**   | (OS automation)         | Tests against a real terminal app via OS accessibility APIs. macOS only.           | OS     |
 | **vt100-rust** | vt100 0.15 (Rust)       | Reference Rust implementation — cross-validates the TS vt100 backend.              | Native |
 | **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |
+| **kitty**      | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.       | Native |
 
 See [Backend Capabilities](/guide/backend-capabilities) for the full feature matrix, per-backend details, and usage examples (factory function + string name).
 
@@ -187,6 +188,7 @@ See [Backend Capabilities](/guide/backend-capabilities) for the full feature mat
 | `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                      |
 | `@termless/vt100-rust` | Rust vt100 crate via napi-rs (reference implementation)                 |
 | `@termless/libvterm`   | neovim's libvterm via Emscripten WASM                                   |
+| `@termless/kitty`      | Kitty VT parser built from GPL source (not distributed)                 |
 | `@termless/cli`        | CLI tools + MCP server for AI agents                                    |
 
 ## How It Compares
@@ -196,7 +198,7 @@ See [Backend Capabilities](/guide/backend-capabilities) for the full feature mat
 | Speed                 | &lt;1ms/test (in-memory, no PTY)      | &lt;1ms/test          | ~100ms+/test   |
 | Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |
 | ANSI awareness        | Full (colors, bold, cursor)           | None                  | N/A            |
-| Multi-backend         | 8 terminal emulators                  | N/A                   | 3 browsers     |
+| Multi-backend         | 9 terminal emulators                  | N/A                   | 3 browsers     |
 | Protocol capabilities | Kitty, sixel, OSC 8, reflow           | None                  | N/A            |
 | Wide char support     | Cell-level width tracking             | Broken                | N/A            |
 | Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |
