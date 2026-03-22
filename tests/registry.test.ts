@@ -40,11 +40,22 @@ describe("manifest", () => {
     expect(Object.keys(manifest.backends).length).toBeGreaterThan(0)
   })
 
-  test("manifest has all 6 backends", () => {
+  test("manifest has all 8 backends", () => {
     const manifest = loadManifest()
     const names = Object.keys(manifest.backends)
-    expect(names).toEqual(expect.arrayContaining(["xtermjs", "ghostty", "vt100", "alacritty", "wezterm", "peekaboo"]))
-    expect(names).toHaveLength(6)
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "xtermjs",
+        "ghostty",
+        "vt100",
+        "alacritty",
+        "wezterm",
+        "peekaboo",
+        "vt100-rust",
+        "libvterm",
+      ]),
+    )
+    expect(names).toHaveLength(8)
   })
 
   test("each backend entry has required fields", () => {
@@ -72,15 +83,17 @@ describe("manifest", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("enumeration", () => {
-  test("backendNames() returns all 6 names", () => {
+  test("backendNames() returns all 8 names", () => {
     const names = backendNames()
-    expect(names).toHaveLength(6)
+    expect(names).toHaveLength(8)
     expect(names).toContain("xtermjs")
     expect(names).toContain("ghostty")
     expect(names).toContain("vt100")
     expect(names).toContain("alacritty")
     expect(names).toContain("wezterm")
     expect(names).toContain("peekaboo")
+    expect(names).toContain("vt100-rust")
+    expect(names).toContain("libvterm")
   })
 
   test("defaultBackendNames() returns exactly the 3 defaults", () => {
@@ -257,9 +270,9 @@ describe("install commands", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("getBackendStatus", () => {
-  test("returns status for all 6 backends", () => {
+  test("returns status for all 8 backends", () => {
     const statuses = getBackendStatus()
-    expect(statuses).toHaveLength(6)
+    expect(statuses).toHaveLength(8)
   })
 
   test("each status has name, manifest, and installed flag", () => {

@@ -16,20 +16,20 @@ npx termless doctor
 
 ## Capability Matrix
 
-| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo |
-| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- |
-| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      |
-| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       |
-| **Kitty graphics**      | No       | No      | No    | No             | No             | No       |
-| **Sixel**               | No       | No      | No    | No             | Yes            | No       |
-| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      |
-| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       |
-| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     |
-| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      |
-| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      |
-| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      |
-| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     |
-| **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     |
+| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo | vt100-rust     | libvterm          |
+| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- | -------------- | ----------------- |
+| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               |
+| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       | No             | No                |
+| **Kitty graphics**      | No       | No      | No    | No             | No             | No       | No             | No                |
+| **Sixel**               | No       | No      | No    | No             | Yes            | No       | No             | No                |
+| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                |
+| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       | No             | No                |
+| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     | 15.1           | 15.1              |
+| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                |
+| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               |
+| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      | No             | No                |
+| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     | Rust (napi-rs) | WASM (Emscripten) |
+| **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     | Rust toolchain | Emscripten SDK    |
 
 ## Backend Details
 
@@ -142,6 +142,43 @@ const term = createTerminal({ backend: createPeekabooBackend() })
 
 // String name
 const term = await createTerminalByName("peekaboo")
+```
+
+### @termless/vt100-rust
+
+Reference Rust implementation of VT100 terminal emulation. Uses the `vt100` Rust crate by doy — the same parser used in several terminal multiplexers.
+
+- **Engine**: vt100 0.15.0 (Rust via napi-rs)
+- **Best for**: Cross-validating the TypeScript vt100 backend. Finding disagreements between implementations. Reference conformance testing.
+- **Limitations**: Requires Rust toolchain. Similar feature set to the TypeScript vt100 backend (no reflow, no OSC 8).
+- **Install**: `npx termless install vt100-rust` (or `npm install -D @termless/vt100-rust`; requires Rust build)
+
+```typescript
+// Factory function
+import { createVt100RustBackend } from "@termless/vt100-rust"
+const term = createTerminal({ backend: createVt100RustBackend() })
+
+// String name (handles native module loading)
+const term = await createTerminalByName("vt100-rust")
+```
+
+### @termless/libvterm
+
+Neovim's VT parser compiled to WebAssembly via Emscripten. A completely different C implementation from all other backends — high conformance testing value.
+
+- **Engine**: libvterm (C via Emscripten WASM)
+- **Best for**: Cross-terminal conformance testing against neovim's parser. Finding bugs that only appear in C-based implementations.
+- **Limitations**: Requires Emscripten SDK to build WASM. No Kitty keyboard, no reflow, no OSC 8.
+- **Install**: `npx termless install libvterm` (or `npm install -D @termless/libvterm`; requires Emscripten build)
+
+```typescript
+// Factory function (requires async WASM init)
+import { createLibvtermBackend, initLibvterm } from "@termless/libvterm"
+await initLibvterm()
+const term = createTerminal({ backend: createLibvtermBackend() })
+
+// String name (handles WASM init automatically)
+const term = await createTerminalByName("libvterm")
 ```
 
 ## Choosing a Backend

@@ -1,0 +1,50 @@
+{
+  "name": "@termless/vt100-rust",
+  "version": "0.3.0",
+  "description": "Rust vt100 backend for termless — doy/vt100-rust crate via napi-rs for cross-terminal TUI testing",
+  "keywords": [
+    "headless",
+    "napi-rs",
+    "rust",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "tui",
+    "vt100"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/vt100-rust"
+  },
+  "files": [
+    "src",
+    "native",
+    "*.node"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build:native": "cd native && cargo build --release",
+    "postbuild:native": "cp native/target/release/libtermless_vt100_rust_native.dylib termless-vt100-rust.node"
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18"
+  }
+}

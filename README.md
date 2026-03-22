@@ -7,7 +7,7 @@ Terminal apps are hard to test because the terminal is a black box — you can s
 Built alongside [silvery](https://silvery.dev), a React TUI framework, but works with any terminal app.
 
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
-- **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, and Peekaboo to find where terminals disagree
+- **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, vt100-rust, libvterm, and Peekaboo to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
 - **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
@@ -200,14 +200,16 @@ npm install node-pty                         # Optional: PTY support on Node.js 
 
 Every backend implements the same `TerminalBackend` interface — write tests once, run against any:
 
-| Backend       | Engine                  | What It Is                                                                               | Type   | Default |
-| ------------- | ----------------------- | ---------------------------------------------------------------------------------------- | ------ | ------- |
-| **xtermjs**   | @xterm/headless 5.5     | The terminal emulator inside VS Code. Most battle-tested.                                | JS     | Yes     |
-| **ghostty**   | ghostty-web 0.4         | Ghostty's GPU-accelerated VT parser via WASM. Best standards compliance, Kitty keyboard. | WASM   | Yes     |
-| **vt100**     | (built-in)              | Pure TypeScript, zero dependencies. Lightning fast, great for CI.                        | JS     | Yes     |
-| **alacritty** | alacritty_terminal 0.25 | Alacritty's Rust VT parser via napi-rs. Strong reflow.                                   | Native | No      |
-| **wezterm**   | wezterm-term            | WezTerm's parser — broadest feature set: sixel, semantic prompts.                        | Native | No      |
-| **peekaboo**  | (OS automation)         | Launches a real terminal app, captures via OS accessibility APIs. macOS only.            | OS     | No      |
+| Backend        | Engine                  | What It Is                                                                               | Type   | Default |
+| -------------- | ----------------------- | ---------------------------------------------------------------------------------------- | ------ | ------- |
+| **xtermjs**    | @xterm/headless 5.5     | The terminal emulator inside VS Code. Most battle-tested.                                | JS     | Yes     |
+| **ghostty**    | ghostty-web 0.4         | Ghostty's GPU-accelerated VT parser via WASM. Best standards compliance, Kitty keyboard. | WASM   | Yes     |
+| **vt100**      | (built-in)              | Pure TypeScript, zero dependencies. Lightning fast, great for CI.                        | JS     | Yes     |
+| **alacritty**  | alacritty_terminal 0.25 | Alacritty's Rust VT parser via napi-rs. Strong reflow.                                   | Native | No      |
+| **wezterm**    | wezterm-term            | WezTerm's parser — broadest feature set: sixel, semantic prompts.                        | Native | No      |
+| **peekaboo**   | (OS automation)         | Launches a real terminal app, captures via OS accessibility APIs. macOS only.            | OS     | No      |
+| **vt100-rust** | vt100 0.15 (Rust)       | Reference Rust implementation — cross-validates the TS vt100 backend.                    | Native | No      |
+| **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.          | WASM   | No      |
 
 See the [Backend Capability Matrix](https://termless.dev/guide/backend-capabilities) for detailed per-backend features, limitations, and usage examples (factory function + string name).
 
@@ -308,17 +310,19 @@ bun vitest run tests/cross-backend.test.ts
 
 ## Packages
 
-| Package                                   | Description                                                         |
-| ----------------------------------------- | ------------------------------------------------------------------- |
-| [termless](.)                             | Core: Terminal, PTY, SVG/PNG screenshots, key mapping, region views |
-| [@termless/xtermjs](packages/xtermjs)     | xterm.js backend (`@xterm/headless`)                                |
-| [@termless/ghostty](packages/ghostty)     | Ghostty backend (`ghostty-web` WASM)                                |
-| [@termless/vt100](packages/vt100)         | Pure TypeScript VT100 emulator (zero native deps)                   |
-| [@termless/alacritty](packages/alacritty) | Alacritty backend (`alacritty_terminal` via napi-rs)                |
-| [@termless/wezterm](packages/wezterm)     | WezTerm backend (`wezterm-term` via napi-rs)                        |
-| [@termless/peekaboo](packages/peekaboo)   | OS-level terminal automation (xterm.js + real app)                  |
-| [@termless/test](packages/viterm)         | Vitest matchers, fixtures, and snapshot serializer                  |
-| [@termless/cli](packages/cli)             | CLI (`termless capture`) + MCP server (`termless mcp`)              |
+| Package                                     | Description                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------- |
+| [termless](.)                               | Core: Terminal, PTY, SVG/PNG screenshots, key mapping, region views |
+| [@termless/xtermjs](packages/xtermjs)       | xterm.js backend (`@xterm/headless`)                                |
+| [@termless/ghostty](packages/ghostty)       | Ghostty backend (`ghostty-web` WASM)                                |
+| [@termless/vt100](packages/vt100)           | Pure TypeScript VT100 emulator (zero native deps)                   |
+| [@termless/alacritty](packages/alacritty)   | Alacritty backend (`alacritty_terminal` via napi-rs)                |
+| [@termless/wezterm](packages/wezterm)       | WezTerm backend (`wezterm-term` via napi-rs)                        |
+| [@termless/peekaboo](packages/peekaboo)     | OS-level terminal automation (xterm.js + real app)                  |
+| [@termless/vt100-rust](packages/vt100-rust) | Rust vt100 crate via napi-rs (reference implementation)             |
+| [@termless/libvterm](packages/libvterm)     | neovim's libvterm via Emscripten WASM                               |
+| [@termless/test](packages/viterm)           | Vitest matchers, fixtures, and snapshot serializer                  |
+| [@termless/cli](packages/cli)               | CLI (`termless capture`) + MCP server (`termless mcp`)              |
 
 ## How Termless Compares
 
@@ -327,7 +331,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 | Feature                   | Termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
 | ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
 | **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
-| **Multi-backend**         | ✅ 6 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
+| **Multi-backend**         | ✅ 8 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
 | **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |

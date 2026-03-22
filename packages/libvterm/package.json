@@ -1,0 +1,46 @@
+{
+  "name": "@termless/libvterm",
+  "version": "0.3.0",
+  "description": "libvterm backend for termless — neovim's VT parser via Emscripten WASM for cross-terminal TUI testing",
+  "keywords": [
+    "headless",
+    "libvterm",
+    "neovim",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "tui",
+    "vt-parser",
+    "wasm"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/libvterm"
+  },
+  "files": [
+    "src",
+    "wasm"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18"
+  }
+}

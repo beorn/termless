@@ -149,11 +149,11 @@ See [Cross-Backend Conformance](/advanced/compat-matrix) for the 120+ conformanc
 
 ## How Termless Compares
 
-| System                               | What it matrices                           | How it works                                                                    |
-| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| **Playwright `projects`**            | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             |
-| **Vitest `workspace`**               | Any axis (backends, configs, environments) | Named projects with different setup files                                       |
-| **BrowserStack / Sauce Labs**        | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            |
-| **Termless cross-backend**           | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison |
+| System                        | What it matrices                           | How it works                                                                    |
+| ----------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
+| **Playwright `projects`**     | Browsers (Chromium, Firefox, WebKit)       | Same tests injected with different browser launcher                             |
+| **Vitest `workspace`**        | Any axis (backends, configs, environments) | Named projects with different setup files                                       |
+| **BrowserStack / Sauce Labs** | Browsers + devices + OS combinations       | Cloud farms running tests across hundreds of targets                            |
+| **Termless cross-backend**    | Terminal emulator VT parsers               | Same VT sequences fed to different WASM/native parsers, cell-by-cell comparison |
 
 Playwright is the closest analog — "do different browsers render the same HTML?" maps to "do different terminals parse the same escape sequences?" But Termless additionally **compares backends side-by-side** in the same test run. No existing tool does automated cross-terminal-emulator conformance testing.

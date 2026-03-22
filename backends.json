@@ -52,6 +52,23 @@
       "type": "os",
       "default": false,
       "platforms": ["darwin"]
+    },
+    "vt100-rust": {
+      "package": "@termless/vt100-rust",
+      "upstream": "vt100 (Rust crate)",
+      "upstreamVersion": "0.15.0",
+      "description": "Rust vt100 reference implementation via napi-rs",
+      "type": "native",
+      "default": false,
+      "requiresBuild": "Rust toolchain (cargo build --release)"
+    },
+    "libvterm": {
+      "package": "@termless/libvterm",
+      "upstream": "libvterm (neovim)",
+      "upstreamVersion": null,
+      "description": "Neovim's VT parser via Emscripten WASM",
+      "type": "wasm",
+      "default": false
     }
   }
 }
