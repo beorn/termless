@@ -1,149 +1,175 @@
-#!/usr/bin/env bun
 /**
- * Census report generator — reads vitest JSON output from stdin,
- * prints a capability matrix, writes packages/census/results/current.json
- * and per-backend result files (e.g., xtermjs-5.5.0.json).
+ * Census report rendering — silvery-powered capability matrix.
+ *
+ * Renders a colored matrix showing pass/fail for each feature across backends,
+ * grouped by category with summary bars.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import React from "react"
+import { renderString } from "silvery"
+import { Box, Text } from "silvery"
+import type { CensusData } from "./parse.ts"
 
-const input = await Bun.stdin.text()
-const json = JSON.parse(input) as any
+// ── Components ──
 
-// Parse vitest JSON → backend/feature results
-// Result is now simply boolean: true = pass, false = fail
-const backends = new Map<string, Map<string, boolean>>()
-const testNotes = new Map<string, Map<string, string>>()
-
-for (const file of json.testResults ?? []) {
-  for (const test of file.assertionResults ?? []) {
-    // ancestorTitles: [backend, category]
-    const titles: string[] = test.ancestorTitles ?? []
-    const backend = titles[0] ?? "unknown"
-    const id = test.title ?? "unknown"
-
-    if (!backends.has(backend)) backends.set(backend, new Map())
-    if (!testNotes.has(backend)) testNotes.set(backend, new Map())
-    const features = backends.get(backend)!
-    const notes = testNotes.get(backend)!
-
-    const result = test.status === "passed"
-    features.set(id, result)
-
-    // Capture failure messages as notes
-    if (!result) {
-      const failureMessages: string[] = test.failureMessages ?? []
-      const failureText = failureMessages.join("; ").trim()
-      if (failureText) {
-        notes.set(id, failureText)
-      }
-    }
-  }
+function Header({
+  featureCount,
+  backendCount,
+}: {
+  featureCount: number
+  backendCount: number
+}): React.ReactElement {
+  return (
+    <Box marginBottom={1}>
+      <Text bold color="$primary">
+        @termless/census
+      </Text>
+      <Text color="$muted">
+        {" "}
+        — {featureCount} features × {backendCount} backends
+      </Text>
+    </Box>
+  )
 }
 
-// Print matrix
-const backendNames = [...backends.keys()]
-const featureCount = backends.get(backendNames[0]!)?.size ?? 0
-
-console.log(`\n@termless/census — ${featureCount} features × ${backendNames.length} backends\n`)
-
-for (const name of backendNames) {
-  const features = backends.get(name)!
-  let yes = 0
-  let no = 0
-  for (const [, r] of features) {
-    if (r) yes++
-    else no++
-  }
-  const total = features.size
+function SummaryBar({
+  name,
+  yes,
+  total,
+}: {
+  name: string
+  yes: number
+  total: number
+}): React.ReactElement {
   const pct = Math.round((yes / (total || 1)) * 100)
-  const bar = "\u2588".repeat(Math.round(pct / 5)) + "\u2591".repeat(20 - Math.round(pct / 5))
-  console.log(`  ${name.padEnd(14)} ${String(yes).padStart(3)}/${total}  ${bar}  ${pct}%`)
+  const filled = Math.round(pct / 5)
+  const empty = 20 - filled
+  const bar = "\u2588".repeat(filled) + "\u2591".repeat(empty)
+
+  return (
+    <Box>
+      <Text color="$primary" bold>
+        {"  "}
+        {name.padEnd(16)}
+      </Text>
+      <Text>{String(yes).padStart(3)}/{total} </Text>
+      <Text color={pct >= 90 ? "$success" : pct >= 70 ? "$warning" : "$error"}>{bar}</Text>
+      <Text> {pct}%</Text>
+    </Box>
+  )
 }
 
-// Build hierarchical matrix from dot paths
-const allIds = new Set<string>()
-for (const features of backends.values()) {
-  for (const id of features.keys()) allIds.add(id)
-}
-const sortedIds = [...allIds].sort()
+function SummarySection({ data }: { data: CensusData }): React.ReactElement {
+  const bars = data.backendNames.map((name) => {
+    const features = data.results.get(name)!
+    let yes = 0
+    for (const r of features.values()) {
+      if (r) yes++
+    }
+    return <SummaryBar key={name} name={name} yes={yes} total={features.size} />
+  })
 
-// Group by top-level category
-const categories = new Map<string, string[]>()
-for (const id of sortedIds) {
-  const cat = id.split(".")[0]!
-  if (!categories.has(cat)) categories.set(cat, [])
-  categories.get(cat)!.push(id)
+  return <Box flexDirection="column">{bars}</Box>
 }
 
-console.log("\nDetailed results:\n")
-for (const [cat, ids] of categories) {
-  console.log(`  ${cat}:`)
-  for (const id of ids) {
-    const suffix = id.slice(cat.length + 1)
-    const statuses = backendNames.map((name) => {
-      const r = backends.get(name)!.get(id)
-      return r ? "\u2713" : "\u2717"
-    })
-    console.log(`    ${suffix.padEnd(24)} ${statuses.join("  ")}`)
-  }
-}
-console.log(`\n  ${"".padEnd(28)} ${backendNames.map((n) => n.slice(0, 5).padEnd(5)).join("  ")}`)
+function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
+  // Build backend name header
+  const headerCells = data.backendNames.map((n) => n.slice(0, 8).padEnd(8)).join("  ")
 
-// Write JSON
-const resultsOutput: Record<string, Record<string, boolean>> = {}
-const notesOutput: Record<string, Record<string, string>> = {}
+  const sections: React.ReactElement[] = []
 
-for (const name of backendNames) {
-  const features = backends.get(name)!
-  const notes = testNotes.get(name)!
-  resultsOutput[name] = Object.fromEntries(features)
-  if (notes.size > 0) {
-    notesOutput[name] = Object.fromEntries(notes)
-  }
-}
+  for (const [cat, ids] of data.categories) {
+    const rows: React.ReactElement[] = []
 
-const output = {
-  generated: new Date().toISOString(),
-  backends: backendNames,
-  results: resultsOutput,
-  ...(Object.keys(notesOutput).length > 0 ? { notes: notesOutput } : {}),
-}
+    for (const id of ids) {
+      const suffix = id.slice(cat.length + 1)
+      const cells: React.ReactElement[] = data.backendNames.map((name, i) => {
+        const r = data.results.get(name)!.get(id)
+        return r ? (
+          <Text key={i} color="$success">
+            {"\u2713".padEnd(10)}
+          </Text>
+        ) : (
+          <Text key={i} color="$error">
+            {"\u2717".padEnd(10)}
+          </Text>
+        )
+      })
 
-mkdirSync("packages/census/results", { recursive: true })
-writeFileSync("packages/census/results/current.json", JSON.stringify(output, null, 2))
-console.log(`\n  Wrote: packages/census/results/current.json`)
+      rows.push(
+        <Box key={id}>
+          <Text color="$muted">{"    "}</Text>
+          <Text>{suffix.padEnd(24)}</Text>
+          {cells}
+        </Box>,
+      )
+    }
 
-// ── Per-backend result files ──
-// Read backends.json to get upstream versions for filenames.
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const manifestPath = join(__dirname, "..", "..", "..", "backends.json")
-let manifest: { backends: Record<string, { upstreamVersion: string | null }> } | null = null
-try {
-  manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as typeof manifest
-} catch {
-  // If manifest can't be read, fall back to "latest" for all versions
-}
-
-const generated = output.generated
-for (const name of backendNames) {
-  const features = backends.get(name)!
-  const notes = testNotes.get(name)!
-  const version = manifest?.backends[name]?.upstreamVersion ?? "latest"
-  const filename = `${name}-${version}.json`
-
-  const perBackend = {
-    backend: name,
-    version,
-    generated,
-    results: Object.fromEntries(features),
-    ...(notes.size > 0 ? { notes: Object.fromEntries(notes) } : {}),
+    sections.push(
+      <Box key={cat} flexDirection="column" marginBottom={1}>
+        <Box>
+          <Text color="$muted">{"  "}</Text>
+          <Text bold>{cat}:</Text>
+        </Box>
+        {rows}
+      </Box>,
+    )
   }
 
-  writeFileSync(`packages/census/results/${filename}`, JSON.stringify(perBackend, null, 2))
-  console.log(`  Wrote: packages/census/results/${filename}`)
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Box marginBottom={1}>
+        <Text bold color="$muted">
+          {"  "}
+          {"Feature".padEnd(28)}
+        </Text>
+        <Text bold>{headerCells}</Text>
+      </Box>
+      {sections}
+    </Box>
+  )
 }
 
-console.log("")
+function FileOutput({ paths }: { paths: string[] }): React.ReactElement {
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      {paths.map((p) => (
+        <Box key={p}>
+          <Text color="$muted">{"  Wrote: "}</Text>
+          <Text>{p}</Text>
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+export function CensusReport({
+  data,
+  writtenFiles,
+}: {
+  data: CensusData
+  writtenFiles?: string[]
+}): React.ReactElement {
+  return (
+    <Box flexDirection="column">
+      <Header featureCount={data.featureIds.length} backendCount={data.backendNames.length} />
+      <SummarySection data={data} />
+      <CategoryMatrix data={data} />
+      {writtenFiles && writtenFiles.length > 0 && <FileOutput paths={writtenFiles} />}
+    </Box>
+  )
+}
+
+/**
+ * Render the census report to a string via silvery.
+ */
+export async function renderReport(
+  data: CensusData,
+  opts?: { writtenFiles?: string[] },
+): Promise<string> {
+  const width = process.stdout.columns || 120
+  return renderString(
+    React.createElement(CensusReport, { data, writtenFiles: opts?.writtenFiles }),
+    { width },
+  )
+}
