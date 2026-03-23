@@ -60,13 +60,16 @@ function BackendsView({ rows, version }: { rows: BackendRow[]; version: string }
       <Header title="termless" version={version} />
       <BackendsTable rows={rows} />
       <Summary>
-        {installedCount} of {totalCount} installed ({defaultCount} default)
+        {installedCount} of {totalCount} installed ({defaultCount} default, marked *)
       </Summary>
       {installedCount < totalCount && (
         <Box>
-          <Text color="$muted">Install more: bunx termless install {"<name>"}</Text>
+          <Text color="$muted">  bunx termless install {"<name>"}</Text>
         </Box>
       )}
+      <Box>
+        <Text color="$muted">  https://termless.dev/guide/backends</Text>
+      </Box>
     </Box>
   )
 }
