@@ -27,6 +27,7 @@ export interface BackendEntry {
   version: string | null
   type: "js" | "wasm" | "native" | "os"
   default?: boolean
+  platforms?: string[]
 }
 
 export interface Manifest {
@@ -51,6 +52,7 @@ export function manifest(): Manifest {
       version: entry.upstreamVersion ?? null,
       type: entry.type,
       default: entry.default,
+      platforms: entry.platforms,
     }
   }
   _manifest = { version: raw.version, backends }
@@ -219,9 +221,7 @@ export async function backend(
   const entry = m.backends[name]
 
   if (!entry) {
-    throw new Error(
-      `Unknown backend "${name}". Available: ${Object.keys(m.backends).join(", ")}`,
-    )
+    throw new Error(`Unknown backend "${name}". Available: ${Object.keys(m.backends).join(", ")}`)
   }
 
   const type = backendTypes[entry.type]
@@ -236,19 +236,13 @@ export async function backend(
   try {
     import.meta.resolve(entry.package)
   } catch {
-    throw new Error(
-      `Backend "${name}" is not installed.\n` +
-        `Run: bunx termless install ${name}`,
-    )
+    throw new Error(`Backend "${name}" is not installed.\n` + `Run: bunx termless install ${name}`)
   }
 
   // Check if built
   const pkgDir = findPackageDir(entry.package)
   if (pkgDir && !type.isReady(pkgDir)) {
-    throw new Error(
-      `Backend "${name}" is installed but not built.\n` +
-        `Run: cd ${pkgDir} && ${getBuildHint(entry)}`,
-    )
+    throw new Error(`Backend "${name}" is installed but not built.\n` + `Run: cd ${pkgDir} && ${getBuildHint(entry)}`)
   }
 
   return type.resolve(entry.package, opts)
@@ -408,7 +402,9 @@ export const backendNames = backends
 /** @deprecated */
 export function defaultBackendNames(): string[] {
   const m = manifest()
-  return Object.entries(m.backends).filter(([_, e]) => e.default).map(([n]) => n)
+  return Object.entries(m.backends)
+    .filter(([_, e]) => e.default)
+    .map(([n]) => n)
 }
 /** @deprecated */
 export function installedBackendNames(): string[] {
@@ -426,9 +422,9 @@ export function getBackendStatus() {
 }
 /** @deprecated */
 export function resolveAllInstalled(opts?: Partial<TerminalOptions>) {
-  return Promise.all(
-    installedBackendNames().map(async (n) => [n, await backend(n, opts)] as const),
-  ).then(Object.fromEntries)
+  return Promise.all(installedBackendNames().map(async (n) => [n, await backend(n, opts)] as const)).then(
+    Object.fromEntries,
+  )
 }
 /** @deprecated */
 export function checkBackendHealth(name: string) {
@@ -439,7 +435,11 @@ export function checkBackendHealth(name: string) {
       const ok = b.getText().includes("Hello")
       const caps = b.capabilities
       b.destroy()
-      return { name, healthy: ok, capabilities: `${caps.name} (truecolor: ${caps.truecolor}, kitty: ${caps.kittyKeyboard})` }
+      return {
+        name,
+        healthy: ok,
+        capabilities: `${caps.name} (truecolor: ${caps.truecolor}, kitty: ${caps.kittyKeyboard})`,
+      }
     },
     (e) => ({ name, healthy: false, error: e instanceof Error ? e.message : String(e) }),
   )
@@ -449,17 +449,23 @@ export const checkAllHealth = () => Promise.all(installedBackendNames().map(chec
 /** @deprecated */
 export function getInstallCommand(names: string[], pm: "npm" | "bun" | "pnpm" | "yarn" = "npm") {
   const m = manifest()
-  const pkgs = names.map((n) => {
-    const e = m.backends[n]
-    if (!e) throw new Error(`Unknown backend: ${n}`)
-    return `${e.package}@${m.version}`
-  }).join(" ")
+  const pkgs = names
+    .map((n) => {
+      const e = m.backends[n]
+      if (!e) throw new Error(`Unknown backend: ${n}`)
+      return `${e.package}@${m.version}`
+    })
+    .join(" ")
   return `${pm} ${pm === "npm" ? "install -D" : "add -D"} ${pkgs}`
 }
 
 // Re-export types for backward compat
 export type BackendManifest = Manifest
-export type BackendManifestEntry = BackendEntry & { upstreamVersion?: string | null; description?: string; requiresBuild?: string }
+export type BackendManifestEntry = BackendEntry & {
+  upstreamVersion?: string | null
+  description?: string
+  requiresBuild?: string
+}
 export type BackendStatus = ReturnType<typeof getBackendStatus>[0]
 export type BackendHealthResult = Awaited<ReturnType<typeof checkBackendHealth>>
 export type ResolveOptions = Partial<TerminalOptions> & { version?: string }

@@ -8,26 +8,25 @@
 import type { Command } from "commander"
 import { execSync } from "node:child_process"
 import {
-  loadManifest,
-  backendNames,
-  defaultBackendNames,
-  isBackendInstalled,
+  manifest,
+  backends,
+  entry,
+  isReady,
   getInstalledVersion,
   getInstallCommand,
   detectPackageManager,
   buildBackend,
-  isReady,
 } from "../../../src/backends.ts"
 
 /** Show all other backends that weren't part of this install. */
 function showOtherBackends(installed: string[]): void {
-  const manifest = loadManifest()
+  const m = manifest()
   const installedSet = new Set(installed)
-  const others = Object.entries(manifest.backends)
+  const others = Object.entries(m.backends)
     .filter(([name]) => !installedSet.has(name))
-    .map(([name, entry]) => {
-      const ver = entry.upstreamVersion ? ` ${entry.upstreamVersion}` : ""
-      return `${name} (${entry.type})${ver}`
+    .map(([name, e]) => {
+      const ver = e.version ? ` ${e.version}` : ""
+      return `${name} (${e.type})${ver}`
     })
   if (others.length > 0) {
     console.log(`\n  Other backends: ${others.join(", ")}`)
@@ -41,27 +40,30 @@ export function registerInstallCommand(program: Command): void {
     .description("Install backends (default backends if none specified)")
     .option("--all", "Install all backends")
     .action((names: string[], opts: { all?: boolean }) => {
-      const manifest = loadManifest()
+      const m = manifest()
       const pm = detectPackageManager()
-      const all = backendNames()
+      const allNames = backends()
+
+      // Default backend names: those with default=true in the manifest
+      const defaultNames = allNames.filter((name) => entry(name)?.default)
 
       // Determine which backends to install
       let toInstall: string[]
       if (opts.all) {
-        toInstall = all
+        toInstall = allNames
       } else if (names.length > 0) {
         // Validate names
         for (const name of names) {
-          if (!manifest.backends[name]) {
+          if (!m.backends[name]) {
             console.error(`\u2717 Unknown backend: ${name}`)
-            console.error(`  Available: ${all.join(", ")}`)
+            console.error(`  Available: ${allNames.join(", ")}`)
             process.exitCode = 1
             return
           }
         }
         toInstall = names
       } else {
-        toInstall = defaultBackendNames()
+        toInstall = defaultNames
       }
 
       console.log(`\ntermless install (${pm})\n`)
@@ -71,18 +73,18 @@ export function registerInstallCommand(program: Command): void {
       const platform = process.platform
 
       for (const name of toInstall) {
-        const entry = manifest.backends[name]
+        const e = entry(name)!
 
         // Check if already installed
-        if (isBackendInstalled(name)) {
-          const upstreamVer = entry.upstreamVersion ?? "latest"
-          console.log(`  \u2713 ${name} already installed (${entry.upstream ?? name} ${upstreamVer})`)
+        if (isReady(name)) {
+          const upstreamVer = e.version ?? "latest"
+          console.log(`  \u2713 ${name} already installed (${e.upstream ?? name} ${upstreamVer})`)
           continue
         }
 
         // Check platform restrictions
-        if (entry.platforms && !entry.platforms.includes(platform)) {
-          console.log(`  \u2717 ${name} — not available on ${platform} (requires: ${entry.platforms.join(", ")})`)
+        if (e.platforms && !e.platforms.includes(platform)) {
+          console.log(`  \u2717 ${name} — not available on ${platform} (requires: ${e.platforms.join(", ")})`)
           continue
         }
 
@@ -148,28 +150,28 @@ export function registerUpgradeCommand(program: Command): void {
     .command("upgrade [names...]")
     .description("Upgrade installed backends to manifest versions")
     .action((names: string[]) => {
-      const manifest = loadManifest()
+      const m = manifest()
       const pm = detectPackageManager()
+      const allNames = backends()
 
       // Determine which backends to check
       let toCheck: string[]
       if (names.length > 0) {
-        const all = backendNames()
         for (const name of names) {
-          if (!manifest.backends[name]) {
+          if (!m.backends[name]) {
             console.error(`\u2717 Unknown backend: ${name}`)
-            console.error(`  Available: ${all.join(", ")}`)
+            console.error(`  Available: ${allNames.join(", ")}`)
             process.exitCode = 1
             return
           }
         }
-        toCheck = names.filter(isBackendInstalled)
-        const notInstalled = names.filter((n) => !isBackendInstalled(n))
+        toCheck = names.filter(isReady)
+        const notInstalled = names.filter((n) => !isReady(n))
         for (const name of notInstalled) {
           console.error(`  \u2717 ${name} is not installed (use \`termless install ${name}\` first)`)
         }
       } else {
-        toCheck = backendNames().filter(isBackendInstalled)
+        toCheck = allNames.filter(isReady)
       }
 
       console.log(`\ntermless upgrade (${pm})\n`)
@@ -178,9 +180,9 @@ export function registerUpgradeCommand(program: Command): void {
       const toUpgrade: string[] = []
 
       for (const name of toCheck) {
-        const entry = manifest.backends[name]
-        const installed = getInstalledVersion(entry.package)
-        const target = manifest.version
+        const e = entry(name)!
+        const installed = getInstalledVersion(e.package)
+        const target = m.version
 
         if (installed === target) {
           console.log(`  \u2713 ${name} ${installed} (up to date)`)

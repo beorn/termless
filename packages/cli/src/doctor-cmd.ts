@@ -7,53 +7,79 @@
  */
 
 import type { Command } from "commander"
-import { loadManifest, getBackendStatus, checkBackendHealth } from "../../../src/backends.ts"
+import { manifest, backends, entry, isReady, getInstalledVersion, backend } from "../../../src/backends.ts"
+
+/** Run a health check on a single backend: resolve, init, feed, read, destroy. */
+async function checkHealth(name: string): Promise<{
+  name: string
+  healthy: boolean
+  capabilities?: string
+  error?: string
+}> {
+  try {
+    const b = await backend(name)
+    b.init({ cols: 80, rows: 24 })
+    b.feed(new TextEncoder().encode("Hello"))
+    const ok = b.getText().includes("Hello")
+    const caps = b.capabilities
+    b.destroy()
+    return {
+      name,
+      healthy: ok,
+      capabilities: `${caps.name} (truecolor: ${caps.truecolor}, kitty: ${caps.kittyKeyboard})`,
+    }
+  } catch (e) {
+    return { name, healthy: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
 
 export function registerDoctorCommand(program: Command): void {
   program
     .command("doctor")
     .description("Check health of all backends")
     .action(async () => {
-      const manifest = loadManifest()
-      const statuses = getBackendStatus()
+      const m = manifest()
+      const allNames = backends()
 
-      console.log(`\ntermless doctor v${manifest.version}\n`)
+      console.log(`\ntermless doctor v${m.version}\n`)
       console.log("Checking backends...\n")
 
       let healthy = 0
       let unhealthy = 0
       let notInstalled = 0
 
-      for (const s of statuses) {
-        if (!s.installed) {
-          // Not installed
-          console.log(`  \u2500 ${s.name.padEnd(12)} not installed`)
+      for (const name of allNames) {
+        const e = entry(name)!
+        const installed = isReady(name)
+
+        if (!installed) {
+          console.log(`  \u2500 ${name.padEnd(12)} not installed`)
           notInstalled++
           continue
         }
 
         // Run health check
-        const result = await checkBackendHealth(s.name)
+        const result = await checkHealth(name)
 
         // Format upstream info
         let upstreamStr: string
-        if (!s.manifest.upstream) {
-          upstreamStr = s.manifest.type === "os" ? "(OS automation)" : "(built-in)"
+        if (!e.upstream) {
+          upstreamStr = e.type === "os" ? "(OS automation)" : "(built-in)"
         } else {
-          const ver = s.manifest.upstreamVersion ? ` ${s.manifest.upstreamVersion}` : ""
-          upstreamStr = `${s.manifest.upstream}${ver}`
+          const ver = e.version ? ` ${e.version}` : ""
+          upstreamStr = `${e.upstream}${ver}`
         }
 
-        const verStr = s.installedVersion ?? "unknown"
+        const verStr = getInstalledVersion(e.package) ?? "unknown"
 
         if (result.healthy) {
-          console.log(`  \u2713 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
+          console.log(`  \u2713 ${name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
           if (result.capabilities) {
             console.log(`    \u2192 ${result.capabilities}`)
           }
           healthy++
         } else {
-          console.log(`  \u2717 ${s.name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
+          console.log(`  \u2717 ${name.padEnd(12)} ${verStr.padEnd(7)} ${upstreamStr}`)
           if (result.error) {
             console.log(`    \u2192 Error: ${result.error}`)
           }

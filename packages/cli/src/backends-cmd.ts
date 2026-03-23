@@ -3,27 +3,31 @@
  */
 
 import type { Command } from "commander"
-import { loadManifest, getBackendStatus, defaultBackendNames } from "../../../src/backends.ts"
+import { manifest, backends, entry, isReady, getInstalledVersion } from "../../../src/backends.ts"
 
 export function registerBackendsCommand(program: Command): void {
   program
     .command("backends")
     .description("List all backends and their install status")
     .action(() => {
-      const manifest = loadManifest()
-      const statuses = getBackendStatus()
-      const defaults = new Set(defaultBackendNames())
+      const m = manifest()
+      const allNames = backends()
+      const defaultNames = new Set(
+        allNames.filter((name) => entry(name)?.default),
+      )
 
       // Build rows
-      const rows = statuses.map((s) => {
-        const isDefault = defaults.has(s.name)
-        const nameWithType = `${s.name} (${s.manifest.type})`
+      const rows = allNames.map((name) => {
+        const e = entry(name)!
+        const installed = isReady(name)
+        const isDefault = defaultNames.has(name)
+        const nameWithType = `${name} (${e.type})`
 
-        const upstream = s.manifest.upstream ?? ""
-        const version = s.manifest.upstreamVersion ?? ""
+        const upstream = e.upstream ?? ""
+        const version = e.version ?? ""
 
         let status: string
-        if (s.installed) {
+        if (installed) {
           status = isDefault ? "✓ installed (default)" : "✓ installed"
         } else {
           status = "available"
@@ -37,7 +41,7 @@ export function registerBackendsCommand(program: Command): void {
       const col2 = Math.max("Upstream".length, ...rows.map((r) => r.upstream.length))
       const col3 = Math.max("Version".length, ...rows.map((r) => r.version.length))
 
-      console.log(`\ntermless v${manifest.version}\n`)
+      console.log(`\ntermless v${m.version}\n`)
 
       // Header
       console.log(`  ${"Backend".padEnd(col1)}  ${"Upstream".padEnd(col2)}  ${"Version".padEnd(col3)}  Status`)
@@ -51,8 +55,8 @@ export function registerBackendsCommand(program: Command): void {
       }
 
       // Footer
-      const installedCount = statuses.filter((s) => s.installed).length
-      const totalCount = statuses.length
+      const installedCount = allNames.filter(isReady).length
+      const totalCount = allNames.length
       console.log(`\n  ${installedCount} of ${totalCount} installed`)
       if (installedCount < totalCount) {
         console.log("  bunx termless install <name>")
