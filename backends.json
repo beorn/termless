@@ -10,7 +10,8 @@
       "default": true,
       "label": "xterm.js",
       "description": "The most widely used web terminal emulator. Powers VS Code's terminal.",
-      "url": "https://xtermjs.org"
+      "url": "https://xtermjs.org",
+      "caveat": "Headless mode doesn't expose cursor visibility or underline variants"
     },
     "ghostty": {
       "package": "@termless/ghostty",
@@ -18,18 +19,18 @@
       "upstreamVersion": "0.4.0",
       "type": "wasm",
       "default": true,
-      "label": "Ghostty",
-      "description": "Mitchell Hashimoto's GPU-accelerated terminal. Best standards compliance, Kitty keyboard protocol.",
+      "label": "Ghostty (WASM)",
+      "description": "Mitchell Hashimoto's GPU-accelerated terminal via WASM.",
       "url": "https://ghostty.org"
     },
     "vt100": {
       "package": "@termless/vt100",
-      "upstream": "npm:@termless/vt100",
-      "upstreamVersion": "0.3.0",
+      "upstream": "npm:vt100.js",
+      "upstreamVersion": "0.1.0",
       "type": "js",
       "default": true,
       "label": "vt100",
-      "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend, ideal for CI."
+      "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend."
     },
     "alacritty": {
       "package": "@termless/alacritty",
@@ -71,8 +72,9 @@
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "vt100-rust",
-      "description": "Reference Rust VT100 implementation. Cross-validates the TypeScript vt100 backend.",
-      "url": "https://crates.io/crates/vt100"
+      "description": "Reference Rust VT100 implementation.",
+      "url": "https://crates.io/crates/vt100",
+      "caveat": "Doesn't expose scrollback beyond screen height"
     },
     "libvterm": {
       "package": "@termless/libvterm",
@@ -82,7 +84,7 @@
       "default": false,
       "requiresBuild": "Emscripten SDK (bash build/build.sh)",
       "label": "libvterm",
-      "description": "Neovim's C VT parser compiled to WASM. Different implementation catches different bugs.",
+      "description": "Neovim's C VT parser compiled to WASM.",
       "url": "https://github.com/neovim/libvterm"
     },
     "ghostty-native": {
@@ -93,7 +95,7 @@
       "default": false,
       "requiresBuild": "Zig 0.15.2+ (via nix)",
       "label": "Ghostty Native",
-      "description": "Native Ghostty via Zig N-API bindings. Same parser as Ghostty WASM, no WASM overhead.",
+      "description": "Native Ghostty via Zig N-API bindings. Full API access, no WASM overhead.",
       "url": "https://ghostty.org"
     },
     "kitty": {
@@ -104,7 +106,7 @@
       "default": false,
       "requiresBuild": "kitty terminal installed (brew install --cask kitty)",
       "label": "Kitty",
-      "description": "Kitty's VT parser via subprocess bridge. Uses kitty's actual GPL-3.0 code without compilation.",
+      "description": "Kitty's VT parser via Python subprocess bridge. Only backend with Kitty graphics.",
       "url": "https://sw.kovidgoyal.net/kitty"
     }
   }
