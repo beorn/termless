@@ -50,13 +50,7 @@ function buildBackendRows(): { rows: BackendRow[]; version: string } {
 // Component
 // =============================================================================
 
-function BackendsView({
-  rows,
-  version,
-}: {
-  rows: BackendRow[]
-  version: string
-}): React.ReactElement {
+function BackendsView({ rows, version }: { rows: BackendRow[]; version: string }): React.ReactElement {
   const installedCount = rows.filter((r) => r.installed).length
   const totalCount = rows.length
   const defaultCount = rows.filter((r) => r.isDefault).length

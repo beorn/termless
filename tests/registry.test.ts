@@ -51,7 +51,7 @@ describe("manifest", () => {
         "kitty",
       ]),
     )
-    expect(names).toHaveLength(9)
+    expect(names).toHaveLength(10)
   })
 
   test("each backend entry has required fields", () => {
@@ -80,7 +80,7 @@ describe("manifest", () => {
 describe("enumeration", () => {
   test("backends() returns all 9 names", () => {
     const names = backends()
-    expect(names).toHaveLength(9)
+    expect(names).toHaveLength(10)
     expect(names).toContain("xtermjs")
     expect(names).toContain("ghostty")
     expect(names).toContain("vt100")

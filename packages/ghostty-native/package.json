@@ -1,0 +1,46 @@
+{
+  "name": "@termless/ghostty-native",
+  "version": "0.3.0",
+  "description": "Native Ghostty backend for termless — libghostty-vt via Zig napigen N-API bindings",
+  "keywords": [
+    "ghostty",
+    "headless",
+    "libghostty",
+    "native",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "tui",
+    "vt-parser",
+    "zig"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/ghostty-native"
+  },
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18"
+  }
+}

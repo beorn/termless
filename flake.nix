@@ -29,6 +29,9 @@
             rustc
             rustfmt
 
+            # Zig toolchain (ghostty-native backend via libghostty-vt)
+            zig
+
             # C/C++ toolchain (libvterm backend via Emscripten)
             emscripten
             git
@@ -41,7 +44,7 @@
           ];
 
           shellHook = ''
-            echo "termless dev shell — bun + rust + emscripten"
+            echo "termless dev shell — bun + rust + zig + emscripten"
             echo "  bun test              Run all tests"
             echo "  bun cli backends      List backends"
             echo "  bun cli doctor        Health check"

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-23T05:39:00.783Z",
+  "generated": "2026-03-23T06:26:27.961Z",
   "backends": ["xtermjs", "vt100", "vt100-rust", "wezterm"],
   "results": {
     "xtermjs": {

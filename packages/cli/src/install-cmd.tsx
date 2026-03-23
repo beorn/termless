@@ -30,7 +30,11 @@ function InstallHeader({ pm }: { pm: string }): React.ReactElement {
   return <Header title={`termless install (${pm})`} />
 }
 
-function InstallResults({ lines }: { lines: Array<{ icon: string; variant: "success" | "error" | "warning" | "muted"; text: string }> }): React.ReactElement {
+function InstallResults({
+  lines,
+}: {
+  lines: Array<{ icon: string; variant: "success" | "error" | "warning" | "muted"; text: string }>
+}): React.ReactElement {
   return (
     <Box flexDirection="column">
       {lines.map((line, i) => (
@@ -70,7 +74,15 @@ function RunningCommand({ cmd }: { cmd: string }): React.ReactElement {
   )
 }
 
-function ResultMessage({ icon, variant, text }: { icon: string; variant: "success" | "error"; text: string }): React.ReactElement {
+function ResultMessage({
+  icon,
+  variant,
+  text,
+}: {
+  icon: string
+  variant: "success" | "error"
+  text: string
+}): React.ReactElement {
   return (
     <Box marginTop={1}>
       <StatusLine icon={icon} variant={variant}>
@@ -128,7 +140,11 @@ export function registerInstallCommand(program: Command): void {
 
         if (isReady(name)) {
           const upstreamVer = e.version ?? "latest"
-          statusLines.push({ icon: "\u2713", variant: "success", text: `${name} already installed (${e.upstream ?? name} ${upstreamVer})` })
+          statusLines.push({
+            icon: "\u2713",
+            variant: "success",
+            text: `${name} already installed (${e.upstream ?? name} ${upstreamVer})`,
+          })
           continue
         }
 
@@ -157,7 +173,11 @@ export function registerInstallCommand(program: Command): void {
               buildBackend(name)
               statusLines.push({ icon: "\u2713", variant: "success", text: `${name} built` })
             } catch (e) {
-              statusLines.push({ icon: "\u2717", variant: "error", text: `${name} build failed: ${e instanceof Error ? e.message : e}` })
+              statusLines.push({
+                icon: "\u2717",
+                variant: "error",
+                text: `${name} build failed: ${e instanceof Error ? e.message : e}`,
+              })
             }
           }
         }
@@ -174,7 +194,9 @@ export function registerInstallCommand(program: Command): void {
         execSync(cmd, { stdio: "inherit" })
         await printComponent(<ResultMessage icon="\u2713" variant="success" text={`Installed: ${toRun.join(", ")}`} />)
       } catch {
-        await printComponent(<ResultMessage icon="\u2717" variant="error" text={`Install failed. Run manually:\n  ${cmd}`} />)
+        await printComponent(
+          <ResultMessage icon="\u2717" variant="error" text={`Install failed. Run manually:\n  ${cmd}`} />,
+        )
         process.exitCode = 1
       }
 
@@ -237,7 +259,11 @@ export function registerUpgradeCommand(program: Command): void {
         if (installed === target) {
           statusLines.push({ icon: "\u2713", variant: "success", text: `${name} ${installed} (up to date)` })
         } else {
-          statusLines.push({ icon: "\u2191", variant: "warning", text: `${name} ${installed ?? "unknown"} \u2192 ${target}` })
+          statusLines.push({
+            icon: "\u2191",
+            variant: "warning",
+            text: `${name} ${installed ?? "unknown"} \u2192 ${target}`,
+          })
           toUpgrade.push(name)
         }
       }
@@ -257,9 +283,13 @@ export function registerUpgradeCommand(program: Command): void {
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        await printComponent(<ResultMessage icon="\u2713" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />)
+        await printComponent(
+          <ResultMessage icon="\u2713" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />,
+        )
       } catch {
-        await printComponent(<ResultMessage icon="\u2717" variant="error" text={`Upgrade failed. Run manually:\n  ${cmd}`} />)
+        await printComponent(
+          <ResultMessage icon="\u2717" variant="error" text={`Upgrade failed. Run manually:\n  ${cmd}`} />,
+        )
         process.exitCode = 1
       }
     })

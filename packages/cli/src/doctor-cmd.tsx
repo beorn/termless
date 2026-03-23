@@ -9,7 +9,14 @@
 import React from "react"
 import { Box, Text } from "silvery"
 import type { Command } from "commander"
-import { manifest as getManifest, backends, entry, isReady, backend, getInstalledVersion } from "../../../src/backends.ts"
+import {
+  manifest as getManifest,
+  backends,
+  entry,
+  isReady,
+  backend,
+  getInstalledVersion,
+} from "../../../src/backends.ts"
 import { printComponent } from "./render.tsx"
 import { Header, StatusLine, Summary } from "./ui.tsx"
 
@@ -54,7 +61,9 @@ function DoctorResult({
         </StatusLine>
         {capabilities && (
           <Box marginLeft={4}>
-            <Text color="$muted">{"\u2192"} {capabilities}</Text>
+            <Text color="$muted">
+              {"\u2192"} {capabilities}
+            </Text>
           </Box>
         )}
       </Box>
@@ -70,7 +79,9 @@ function DoctorResult({
       </StatusLine>
       {error && (
         <Box marginLeft={4}>
-          <Text color="$error">{"\u2192"} Error: {error}</Text>
+          <Text color="$error">
+            {"\u2192"} Error: {error}
+          </Text>
         </Box>
       )}
     </Box>
@@ -130,12 +141,12 @@ export function registerDoctorCommand(program: Command): void {
         const e = entry(name)!
         const upstreamStr = e.upstream
           ? `${e.upstream}${e.version ? ` ${e.version}` : ""}`
-          : e.type === "os" ? "(OS automation)" : "(built-in)"
+          : e.type === "os"
+            ? "(OS automation)"
+            : "(built-in)"
 
         if (!isReady(name)) {
-          await printComponent(
-            <DoctorResult name={name} installed={false} upstream={upstreamStr} />,
-          )
+          await printComponent(<DoctorResult name={name} installed={false} upstream={upstreamStr} />)
           notInstalled++
           continue
         }
@@ -180,9 +191,7 @@ export function registerDoctorCommand(program: Command): void {
         }
       }
 
-      await printComponent(
-        <DoctorSummary healthy={healthy} unhealthy={unhealthy} notInstalled={notInstalled} />,
-      )
+      await printComponent(<DoctorSummary healthy={healthy} unhealthy={unhealthy} notInstalled={notInstalled} />)
 
       if (unhealthy > 0) {
         process.exitCode = 1

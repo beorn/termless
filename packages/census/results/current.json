@@ -35,7 +35,13 @@
     { "name": "sgr.underline", "backend": "vt100", "status": "pass", "duration": 2 },
     { "name": "sgr.strikethrough", "backend": "xtermjs", "status": "pass", "duration": 4 },
     { "name": "sgr.strikethrough", "backend": "ghostty", "status": "pass", "duration": 7 },
-    { "name": "sgr.strikethrough", "backend": "vt100", "status": "fail", "duration": 3, "error": "strikethrough not supported" },
+    {
+      "name": "sgr.strikethrough",
+      "backend": "vt100",
+      "status": "fail",
+      "duration": 3,
+      "error": "strikethrough not supported"
+    },
     { "name": "sgr.inverse", "backend": "xtermjs", "status": "pass", "duration": 4 },
     { "name": "sgr.inverse", "backend": "ghostty", "status": "pass", "duration": 7 },
     { "name": "sgr.inverse", "backend": "vt100", "status": "pass", "duration": 2 },
@@ -80,6 +86,12 @@
     { "name": "mode.bracketed-paste", "backend": "vt100", "status": "todo", "duration": 0 },
     { "name": "mode.mouse-tracking", "backend": "xtermjs", "status": "pass", "duration": 5 },
     { "name": "mode.mouse-tracking", "backend": "ghostty", "status": "pass", "duration": 8 },
-    { "name": "mode.mouse-tracking", "backend": "vt100", "status": "fail", "duration": 3, "error": "mouse tracking not implemented" }
+    {
+      "name": "mode.mouse-tracking",
+      "backend": "vt100",
+      "status": "fail",
+      "duration": 3,
+      "error": "mouse tracking not implemented"
+    }
   ]
 }
