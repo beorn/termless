@@ -15,6 +15,7 @@ import { backends as allBackendNames, isReady, entry } from "../../../src/backen
 interface BackendStatus {
   name: string
   type: string
+  upstream: string
   installed: boolean
   tested: boolean
   yes?: number
@@ -45,12 +46,15 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
   // "XX/YY " is 7 chars — status text for untested backends aligns there
   const SCORE_WIDTH = 7
 
+  const upstreamSuffix = b.upstream ? <Text color="$muted"> {b.upstream}</Text> : null
+
   if (!b.installed) {
     return (
       <Box marginLeft={2}>
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
         <Box width={SCORE_WIDTH} />
         <Text color="$muted">not installed</Text>
+        {upstreamSuffix}
       </Box>
     )
   }
@@ -61,6 +65,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
         <Box width={SCORE_WIDTH} />
         <Text color="$muted">installed, not tested</Text>
+        {upstreamSuffix}
       </Box>
     )
   }
@@ -73,6 +78,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
       <Text>{String(b.yes).padStart(3)}/{b.total} </Text>
       <ProgressBar pct={pct} />
       <Text> {pct}%</Text>
+      {upstreamSuffix}
     </Box>
   )
 }
@@ -91,7 +97,8 @@ function SummarySection({ data }: { data: CensusData }): React.ReactElement {
         if (r) yes++
       }
     }
-    return { name, type: e?.type ?? "unknown", installed, tested, yes, total }
+    const upstream = e?.upstream ? `${e.upstream}${e.version ? ` ${e.version}` : ""}` : ""
+    return { name, type: e?.type ?? "unknown", upstream, installed, tested, yes, total }
   })
 
   // Sort: tested first, then installed-not-tested, then not installed

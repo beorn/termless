@@ -17,7 +17,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
 import { parseVitestJson, fromPerBackendFiles } from "./parse.ts"
-import { manifest, backends as allBackendNames, isReady } from "../../../src/backends.ts"
+import { manifest, backends as allBackendNames, isReady, entry } from "../../../src/backends.ts"
 import { renderReport } from "./report.tsx"
 import { runVersionedCensus, probeHash, loadVersionsCatalog } from "./versions.ts"
 
@@ -168,9 +168,13 @@ program
       console.log(`  Features:      ${data.featureIds.length}`)
       console.log(`  Tested:        ${data.backendNames.length} (${data.backendNames.join(", ")})`)
     }
-    console.log(`  Installed:     ${installed.length} (${installed.join(", ")})`)
-    if (available.length > 0) {
-      console.log(`  Available:     ${available.length} (${available.join(", ")})`)
+    console.log(`\n  Backends:`)
+    for (const name of [...installed, ...available]) {
+      const e = entry(name)
+      const ready = isReady(name)
+      const upstream = e?.upstream ? `${e.upstream}${e.version ? ` ${e.version}` : ""}` : ""
+      const status = ready ? "✓" : "✗"
+      console.log(`    ${status} ${`${name} (${e?.type ?? "?"})`.padEnd(26)} ${upstream}`)
     }
     console.log(`  Results:       ${resultFiles.length} files in ${shortPath(RESULTS_DIR)}/`)
     console.log(`  Cache:         ${cacheValid ? "valid" : "stale (re-run needed)"}`)
