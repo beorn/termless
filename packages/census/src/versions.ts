@@ -234,6 +234,8 @@ export interface VersionsRunOptions {
   backends?: string[]
   /** Force re-run even if cache is valid */
   force?: boolean
+  /** Results directory (default: packages/census/results) */
+  resultsDir?: string
 }
 
 /**

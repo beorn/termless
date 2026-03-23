@@ -4,19 +4,18 @@
  *
  * @example
  * ```bash
- * bun census report               # Run probes on all latest backends
- * bun census report --force       # Re-run even if cached
- * bun census report --cached      # Show saved results only
- * bun census report xtermjs       # Just xtermjs, latest
- * bun census report xtermjs/*     # All xtermjs versions (from versions.json)
- * bun census report xtermjs/5.4.0 # Specific version
- * bun census status               # Config, probes, cache
+ * bun census run                # Run probes on all latest backends + show report
+ * bun census run --force        # Re-run even if cached
+ * bun census run xtermjs/*      # Run all xtermjs versions
+ * bun census run xtermjs/5.4.0  # Run specific version
+ * bun census report             # Show last saved results
+ * bun census status             # Config, probes, cache
  * ```
  */
 
 import { Command } from "commander"
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
 import { parseVitestJson, fromPerBackendFiles, type CensusData } from "./parse.ts"
@@ -28,8 +27,9 @@ const log = createLogger("census")
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, "..", "..", "..")
-const RESULTS_DIR = join(__dirname, "..", "results")
-const MANIFEST_PATH = join(ROOT, "backends.json")
+const DEFAULT_RESULTS_DIR = join(ROOT, "census-results")
+
+let RESULTS_DIR = DEFAULT_RESULTS_DIR
 
 // ── Selector parsing ──
 
@@ -38,17 +38,7 @@ interface BackendSelector {
   version: string | null // null = latest, "*" = all from versions.json
 }
 
-/**
- * Parse a selector string into backend name + version.
- *
- * Formats:
- *   "xtermjs"         → { backend: "xtermjs", version: null }
- *   "xtermjs/5.4.0"   → { backend: "xtermjs", version: "5.4.0" }
- *   "xtermjs/*"        → { backend: "xtermjs", version: "*" }
- *   "npm:ghostty-web"  → resolve upstream to backend name, latest
- */
 function parseSelector(arg: string): BackendSelector[] {
-  // Split on / for version
   const slashIdx = arg.indexOf("/")
   let name: string
   let version: string | null = null
@@ -60,7 +50,7 @@ function parseSelector(arg: string): BackendSelector[] {
     name = arg
   }
 
-  // Resolve upstream URI to backend name (e.g., "npm:ghostty-web" → "ghostty")
+  // Resolve upstream URI to backend name
   if (name.includes(":")) {
     const m = manifest()
     const match = Object.entries(m.backends).find(([_, e]) => e.upstream === name)
@@ -71,15 +61,12 @@ function parseSelector(arg: string): BackendSelector[] {
     name = match[0]
   }
 
-  // Validate backend name
   const all = allBackendNames()
   if (!all.includes(name)) {
-    console.error(`Unknown backend: ${name}`)
-    console.error(`Available: ${all.join(", ")}`)
+    console.error(`Unknown backend: ${name}\nAvailable: ${all.join(", ")}`)
     process.exit(1)
   }
 
-  // Expand "*" into all versions from versions.json
   if (version === "*") {
     try {
       const catalog = loadVersionsCatalog()
@@ -109,62 +96,46 @@ const program = new Command()
     `Terminal capability census — probe features across all backends
 
 Examples:
-  bun census report               All latest backends
-  bun census report --force       Re-run all probes
-  bun census report --cached      Show saved results only
-  bun census report xtermjs       Just xtermjs, latest
-  bun census report xtermjs/*     All xtermjs versions
-  bun census report xtermjs/5.4.0 Specific version
-  bun census status               Config, probes, cache
+  bun census run                Run probes + show report
+  bun census run --force        Re-run all probes
+  bun census run xtermjs/*      All xtermjs versions
+  bun census run xtermjs/5.4.0  Specific version
+  bun census report             Show last saved results
+  bun census status             Config, probes, cache
 
 Backends (${installed.length} installed): ${installed.join(", ")}${available.length > 0 ? `\nAvailable: ${available.join(", ")}` : ""}`,
   )
+  .option("--results-dir <path>", "Results directory", DEFAULT_RESULTS_DIR)
+  .hook("preAction", (thisCommand) => {
+    const opts = thisCommand.opts()
+    if (opts.resultsDir) RESULTS_DIR = resolve(opts.resultsDir)
+  })
+
+// ── run ──
 
 program
-  .command("report [selectors...]")
+  .command("run [selectors...]")
   .description("Run probes and show capability matrix")
   .option("-f, --force", "Re-run probes even if cached results are valid")
-  .option("--cached", "Show saved results without re-running probes")
-  .action(async (selectors: string[], opts: { force?: boolean; cached?: boolean }) => {
-    // --cached: just show saved results
-    if (opts.cached) {
-      const data = loadSavedResults()
-      if (!data) {
-        console.error("No saved results. Run: bun census report")
-        process.exit(1)
-      }
-      const output = await renderReport(data)
-      console.log(output)
-      printNotes(data)
-      return
-    }
-
-    // Parse selectors
-    const parsed = selectors.length > 0
-      ? selectors.flatMap(parseSelector)
-      : null // null = all latest
-
-    // If any selectors request specific versions, run versioned census for those
+  .action(async (selectors: string[], opts: { force?: boolean }) => {
+    const parsed = selectors.length > 0 ? selectors.flatMap(parseSelector) : null
     const versionedSelectors = parsed?.filter((s) => s.version !== null) ?? []
     const latestSelectors = parsed?.filter((s) => s.version === null) ?? []
-
     const hash = probeHash()
 
-    // Run latest probes (either all or filtered)
+    // Run latest probes
     let latestData: CensusData | null = null
 
     if (!parsed || latestSelectors.length > 0) {
-      // Check cache
       if (!opts.force && !parsed) {
         const cached = loadSavedResults()
         if (cached && isCacheValid(hash)) {
-          console.log(`\nCensus results are up to date (probe hash: ${hash}). Use --force to re-run.\n`)
+          console.log(`\nResults up to date (probe hash: ${hash}). Use --force to re-run.\n`)
           latestData = cached
         }
       }
 
       if (!latestData) {
-        log.debug?.("Spawning vitest with census config")
         console.log(`\nRunning census probes (hash: ${hash})...\n`)
 
         const proc = Bun.spawn(["bun", "vitest", "run", "--config", "vitest.census.ts", "--reporter", "json"], {
@@ -188,12 +159,6 @@ program
           process.exit(1)
         }
 
-        if (latestData.backendNames.length === 0) {
-          console.error("Error: no backend results found")
-          process.exit(1)
-        }
-
-        // Filter to requested backends if selectors provided
         if (latestSelectors.length > 0) {
           const names = new Set(latestSelectors.map((s) => s.backend))
           latestData = filterData(latestData, names)
@@ -203,38 +168,51 @@ program
       }
     }
 
-    // Run versioned probes if requested
+    // Run versioned probes
     if (versionedSelectors.length > 0) {
-      console.log(`\nRunning versioned probes: ${versionedSelectors.map((s) => `${s.backend}/${s.version}`).join(", ")}\n`)
+      console.log(
+        `\nRunning versioned probes: ${versionedSelectors.map((s) => `${s.backend}/${s.version}`).join(", ")}\n`,
+      )
 
       const results = await runVersionedCensus({
         force: opts.force,
-        // Filter to only requested backend+version pairs
         backends: [...new Set(versionedSelectors.map((s) => s.backend))],
+        resultsDir: RESULTS_DIR,
       })
 
       for (const r of results) {
-        if (r.skipped) {
-          console.log(`  ${r.backend}@${r.version} — cached`)
-        } else if (r.error) {
-          console.log(`  ${r.backend}@${r.version} — error: ${r.error}`)
-        } else {
-          console.log(`  ${r.backend}@${r.version} — ${r.passCount}/${r.featureCount}`)
-        }
+        if (r.skipped) console.log(`  ${r.backend}@${r.version} — cached`)
+        else if (r.error) console.log(`  ${r.backend}@${r.version} — error: ${r.error}`)
+        else console.log(`  ${r.backend}@${r.version} — ${r.passCount}/${r.featureCount}`)
       }
     }
 
-    // Render report from saved results (includes both latest + versioned)
+    // Show report
     const allData = loadSavedResults()
     if (allData) {
-      const writtenFiles = existsSync(RESULTS_DIR)
-        ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json")).map((f) => join("results", f))
-        : []
-      const output = await renderReport(allData, { writtenFiles })
+      const output = await renderReport(allData)
       console.log(output)
       printNotes(allData)
     }
   })
+
+// ── report ──
+
+program
+  .command("report")
+  .description("Show last saved census results")
+  .action(async () => {
+    const data = loadSavedResults()
+    if (!data) {
+      console.error("No saved results. Run: bun census run")
+      process.exit(1)
+    }
+    const output = await renderReport(data)
+    console.log(output)
+    printNotes(data)
+  })
+
+// ── status ──
 
 program
   .command("status")
@@ -246,10 +224,7 @@ program
       .filter((f) => f.endsWith(".probe.ts"))
       .sort()
 
-    const resultFiles = existsSync(RESULTS_DIR)
-      ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json"))
-      : []
-    const cacheValid = isCacheValid(hash)
+    const resultFiles = existsSync(RESULTS_DIR) ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json")) : []
 
     let catalog: ReturnType<typeof loadVersionsCatalog> | null = null
     try {
@@ -271,12 +246,11 @@ program
       const e = entry(name)
       const ready = isReady(name)
       const upstream = e?.upstream ? `${e.upstream}${e.version ? ` ${e.version}` : ""}` : ""
-      const status = ready ? "✓" : "✗"
-      console.log(`    ${status} ${`${name} (${e?.type ?? "?"})`.padEnd(26)} ${upstream}`)
+      console.log(`    ${ready ? "✓" : "✗"} ${`${name} (${e?.type ?? "?"})`.padEnd(26)} ${upstream}`)
     }
 
     console.log(`  Results:       ${resultFiles.length} files in ${shortPath(RESULTS_DIR)}/`)
-    console.log(`  Cache:         ${cacheValid ? "valid" : "stale (re-run needed)"}`)
+    console.log(`  Cache:         ${isCacheValid(hash) ? "valid" : "stale (re-run needed)"}`)
 
     if (catalog) {
       console.log(`\n  Versions (from versions.json):`)
@@ -320,9 +294,7 @@ function loadSavedResults(): CensusData | null {
   for (const file of files) {
     try {
       const data = JSON.parse(readFileSync(join(RESULTS_DIR, file), "utf-8"))
-      if (data.backend && data.results) {
-        perBackend.push(data)
-      }
+      if (data.backend && data.results) perBackend.push(data)
     } catch {
       log.debug?.(`Failed to parse ${file}`)
     }
@@ -330,13 +302,10 @@ function loadSavedResults(): CensusData | null {
 
   if (perBackend.length === 0) return null
 
-  // Keep only the latest version per backend (by generated timestamp)
   const latest = new Map<string, (typeof perBackend)[0]>()
   for (const e of perBackend) {
     const existing = latest.get(e.backend)
-    if (!existing || e.generated > existing.generated) {
-      latest.set(e.backend, e)
-    }
+    if (!existing || e.generated > existing.generated) latest.set(e.backend, e)
   }
 
   return fromPerBackendFiles([...latest.values()])
@@ -401,26 +370,30 @@ function saveResults(data: CensusData, hash?: string): string[] {
 
   let m: { backends: Record<string, { upstreamVersion: string | null }> } | null = null
   try {
-    m = JSON.parse(readFileSync(MANIFEST_PATH, "utf-8")) as typeof m
+    m = JSON.parse(readFileSync(join(ROOT, "backends.json"), "utf-8")) as typeof m
   } catch {}
 
   for (const name of data.backendNames) {
     const features = data.results.get(name)!
     const backendNotes = data.notes.get(name)
     const version = m?.backends[name]?.upstreamVersion ?? "latest"
-    const filename = `${name}-${version}.json`
-    const filepath = join(RESULTS_DIR, filename)
+    const filepath = join(RESULTS_DIR, `${name}-${version}.json`)
 
-    const perBackend = {
-      backend: name,
-      version,
-      generated,
-      ...(hash ? { probeHash: hash } : {}),
-      results: Object.fromEntries(features),
-      ...(backendNotes && backendNotes.size > 0 ? { notes: Object.fromEntries(backendNotes) } : {}),
-    }
-
-    writeFileSync(filepath, JSON.stringify(perBackend, null, 2))
+    writeFileSync(
+      filepath,
+      JSON.stringify(
+        {
+          backend: name,
+          version,
+          generated,
+          ...(hash ? { probeHash: hash } : {}),
+          results: Object.fromEntries(features),
+          ...(backendNotes && backendNotes.size > 0 ? { notes: Object.fromEntries(backendNotes) } : {}),
+        },
+        null,
+        2,
+      ),
+    )
     writtenFiles.push(filepath)
   }
 

@@ -64,11 +64,11 @@ function BackendsView({ rows, version }: { rows: BackendRow[]; version: string }
       </Summary>
       {installedCount < totalCount && (
         <Box>
-          <Text color="$muted">  bunx termless install {"<name>"}</Text>
+          <Text color="$muted"> bunx termless install {"<name>"}</Text>
         </Box>
       )}
       <Box>
-        <Text color="$muted">  https://termless.dev/guide/backends</Text>
+        <Text color="$muted"> https://termless.dev/guide/backends</Text>
       </Box>
     </Box>
   )

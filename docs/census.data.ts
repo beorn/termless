@@ -28,7 +28,7 @@ export { data }
 
 export default {
   load(): CensusPageData {
-    const resultsDir = join(__dirname, "../packages/census/results")
+    const resultsDir = join(__dirname, "../census-results")
 
     let files: string[]
     try {

@@ -27,8 +27,13 @@ interface BackendStatus {
 function Header({ featureCount, backendCount }: { featureCount: number; backendCount: number }): React.ReactElement {
   return (
     <Box marginBottom={1}>
-      <Text bold color="$primary">@termless/census</Text>
-      <Text color="$muted"> — {featureCount} features × {backendCount} backends</Text>
+      <Text bold color="$primary">
+        @termless/census
+      </Text>
+      <Text color="$muted">
+        {" "}
+        — {featureCount} features × {backendCount} backends
+      </Text>
     </Box>
   )
 }
@@ -51,7 +56,9 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
   if (!b.installed) {
     return (
       <Box marginLeft={2}>
-        <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
+        <Box width={labelWidth}>
+          <Text color="$muted">{label}</Text>
+        </Box>
         <Box width={SCORE_WIDTH} />
         <Text color="$muted">not installed</Text>
         {upstreamSuffix}
@@ -62,7 +69,9 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
   if (!b.tested) {
     return (
       <Box marginLeft={2}>
-        <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
+        <Box width={labelWidth}>
+          <Text color="$muted">{label}</Text>
+        </Box>
         <Box width={SCORE_WIDTH} />
         <Text color="$muted">installed, not tested</Text>
         {upstreamSuffix}
@@ -74,8 +83,12 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
 
   return (
     <Box marginLeft={2}>
-      <Box width={labelWidth}><Text bold>{label}</Text></Box>
-      <Text>{String(b.yes).padStart(3)}/{b.total} </Text>
+      <Box width={labelWidth}>
+        <Text bold>{label}</Text>
+      </Box>
+      <Text>
+        {String(b.yes).padStart(3)}/{b.total}{" "}
+      </Text>
       <ProgressBar pct={pct} />
       <Text> {pct}%</Text>
       {upstreamSuffix}
@@ -112,7 +125,9 @@ function SummarySection({ data }: { data: CensusData }): React.ReactElement {
 
   return (
     <Box flexDirection="column">
-      {statuses.map((b) => <BackendLine key={b.name} b={b} labelWidth={labelWidth} />)}
+      {statuses.map((b) => (
+        <BackendLine key={b.name} b={b} labelWidth={labelWidth} />
+      ))}
     </Box>
   )
 }
@@ -135,11 +150,15 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
       {/* Header row */}
       <Box marginBottom={1}>
         <Box width={featureWidth} marginLeft={2}>
-          <Text bold color="$primary">Feature</Text>
+          <Text bold color="$primary">
+            Feature
+          </Text>
         </Box>
         {data.backendNames.map((name) => (
           <Box key={name} width={colWidth} justifyContent="center">
-            <Text bold color="$primary">{name}</Text>
+            <Text bold color="$primary">
+              {name}
+            </Text>
           </Box>
         ))}
       </Box>

@@ -5,6 +5,7 @@ docs/.vitepress/dist/
 .DS_Store
 bun.lockb
 coverage/
+census-results/
 *.log
 *.tgz
 *.tsbuildinfo
