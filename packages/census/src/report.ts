@@ -32,19 +32,26 @@ for (const file of json.testResults ?? []) {
     if (!backends.has(backend)) backends.set(backend, new Map())
     const features = backends.get(backend)!
 
-    const notes = test.meta?.notes as string | undefined
-    const checks = (test.meta?.checks as number) ?? 0
-    const passed = (test.meta?.passed as number) ?? 0
+    // vitest --reporter json doesn't include test.meta, so we parse
+    // census state from failure messages: [census:partial] or [census:no]
+    const failureMessages: string[] = test.failureMessages ?? []
+    const failureText = failureMessages.join("\n")
 
     let support: Support
+    let notes: string | undefined
+
     if (test.status === "passed") {
-      if (checks > 0 && passed < checks) {
-        support = "partial"
-      } else {
-        support = notes ? "partial" : "yes"
-      }
-    } else if (test.status === "failed") {
+      support = "yes"
+    } else if (failureText.includes("[census:partial]")) {
+      support = "partial"
+      const match = failureText.match(/\[census:partial]\s*(.*)/)
+      notes = match?.[1]?.trim() || undefined
+    } else if (failureText.includes("[census:no]")) {
       support = "no"
+      const match = failureText.match(/\[census:no]\s*(.*)/)
+      notes = match?.[1]?.trim() || undefined
+    } else if (test.status === "failed") {
+      support = "error"
     } else {
       support = "error"
     }

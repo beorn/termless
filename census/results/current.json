@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-23T00:33:38.791Z",
+  "generated": "2026-03-23T00:37:32.001Z",
   "backends": [
     "xtermjs",
     "vt100",
@@ -89,7 +89,8 @@
         "support": "yes"
       },
       "cursor-hide": {
-        "support": "no"
+        "support": "no",
+        "notes": "hidden"
       },
       "cursor-save-restore": {
         "support": "yes"
@@ -113,13 +114,16 @@
         "support": "yes"
       },
       "ext-kitty-keyboard": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty keyboard capable"
       },
       "ext-kitty-graphics": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty graphics capable"
       },
       "ext-sixel": {
-        "support": "no"
+        "support": "no",
+        "notes": "sixel capable"
       },
       "ext-osc8": {
         "support": "yes"
@@ -128,7 +132,8 @@
         "support": "yes"
       },
       "ext-semantic-prompts": {
-        "support": "no"
+        "support": "no",
+        "notes": "semantic prompts capable"
       },
       "ext-osc2-title": {
         "support": "yes"
@@ -155,7 +160,8 @@
         "support": "yes"
       },
       "mode-reverse-video": {
-        "support": "no"
+        "support": "no",
+        "notes": "reverseVideo on"
       },
       "reset-sgr": {
         "support": "yes"
@@ -173,7 +179,8 @@
         "support": "yes"
       },
       "scrollback-scroll-up": {
-        "support": "no"
+        "support": "no",
+        "notes": "TOP scrolled away"
       },
       "scrollback-reverse-index": {
         "support": "yes"
@@ -194,16 +201,20 @@
         "support": "yes"
       },
       "sgr-underline-double": {
-        "support": "yes"
+        "support": "partial",
+        "notes": "double variant"
       },
       "sgr-underline-curly": {
-        "support": "yes"
+        "support": "partial",
+        "notes": "curly variant"
       },
       "sgr-underline-dotted": {
-        "support": "yes"
+        "support": "partial",
+        "notes": "dotted variant"
       },
       "sgr-underline-dashed": {
-        "support": "yes"
+        "support": "partial",
+        "notes": "dashed variant"
       },
       "sgr-blink": {
         "support": "yes"
@@ -242,7 +253,8 @@
         "support": "yes"
       },
       "text-wide-emoji": {
-        "support": "no"
+        "support": "no",
+        "notes": "emoji is wide"
       },
       "text-cjk": {
         "support": "yes"
@@ -298,22 +310,28 @@
         "support": "yes"
       },
       "ext-kitty-keyboard": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty keyboard capable"
       },
       "ext-kitty-graphics": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty graphics capable"
       },
       "ext-sixel": {
-        "support": "no"
+        "support": "no",
+        "notes": "sixel capable"
       },
       "ext-osc8": {
-        "support": "no"
+        "support": "no",
+        "notes": "osc8 capable"
       },
       "ext-reflow": {
-        "support": "no"
+        "support": "no",
+        "notes": "reflow capable"
       },
       "ext-semantic-prompts": {
-        "support": "no"
+        "support": "no",
+        "notes": "semantic prompts capable"
       },
       "ext-osc2-title": {
         "support": "yes"
@@ -391,13 +409,15 @@
         "support": "yes"
       },
       "sgr-blink": {
-        "support": "no"
+        "support": "no",
+        "notes": "blink attribute"
       },
       "sgr-inverse": {
         "support": "yes"
       },
       "sgr-hidden": {
-        "support": "no"
+        "support": "no",
+        "notes": "hidden attribute"
       },
       "sgr-strikethrough": {
         "support": "yes"
@@ -483,22 +503,28 @@
         "support": "yes"
       },
       "ext-kitty-keyboard": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty keyboard capable"
       },
       "ext-kitty-graphics": {
-        "support": "no"
+        "support": "no",
+        "notes": "kitty graphics capable"
       },
       "ext-sixel": {
-        "support": "no"
+        "support": "no",
+        "notes": "sixel capable"
       },
       "ext-osc8": {
-        "support": "no"
+        "support": "no",
+        "notes": "osc8 capable"
       },
       "ext-reflow": {
-        "support": "no"
+        "support": "no",
+        "notes": "reflow capable"
       },
       "ext-semantic-prompts": {
-        "support": "no"
+        "support": "no",
+        "notes": "semantic prompts capable"
       },
       "ext-osc2-title": {
         "support": "yes"
@@ -522,10 +548,12 @@
         "support": "yes"
       },
       "mode-focus-tracking": {
-        "support": "no"
+        "support": "no",
+        "notes": "focusTracking on"
       },
       "mode-reverse-video": {
-        "support": "no"
+        "support": "no",
+        "notes": "reverseVideo on"
       },
       "reset-sgr": {
         "support": "yes"
@@ -537,10 +565,12 @@
         "support": "yes"
       },
       "scrollback-accumulate": {
-        "support": "no"
+        "support": "no",
+        "notes": "more than screen height"
       },
       "scrollback-total-lines": {
-        "support": "no"
+        "support": "no",
+        "notes": "at least 30 lines"
       },
       "scrollback-scroll-up": {
         "support": "yes"
@@ -555,7 +585,8 @@
         "support": "yes"
       },
       "sgr-faint": {
-        "support": "no"
+        "support": "no",
+        "notes": "dim attribute"
       },
       "sgr-italic": {
         "support": "yes"
@@ -564,28 +595,35 @@
         "support": "yes"
       },
       "sgr-underline-double": {
-        "support": "no"
+        "support": "no",
+        "notes": "has underline; double variant"
       },
       "sgr-underline-curly": {
-        "support": "no"
+        "support": "no",
+        "notes": "has underline; curly variant"
       },
       "sgr-underline-dotted": {
-        "support": "no"
+        "support": "no",
+        "notes": "has underline; dotted variant"
       },
       "sgr-underline-dashed": {
-        "support": "no"
+        "support": "no",
+        "notes": "has underline; dashed variant"
       },
       "sgr-blink": {
-        "support": "no"
+        "support": "no",
+        "notes": "blink attribute"
       },
       "sgr-inverse": {
         "support": "yes"
       },
       "sgr-hidden": {
-        "support": "no"
+        "support": "no",
+        "notes": "hidden attribute"
       },
       "sgr-strikethrough": {
-        "support": "no"
+        "support": "no",
+        "notes": "strikethrough attribute"
       },
       "sgr-fg-256": {
         "support": "yes"

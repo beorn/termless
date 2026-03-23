@@ -197,8 +197,7 @@ export function census(
               throw new Error(`[census:no] ${state.failed.join("; ")}`)
             }
             if (state.failed.length > 0) {
-              // Partial — mark via soft failure message but don't throw
-              // (test passes, reporter reads failureMessages for notes)
+              throw new Error(`[census:partial] ${state.failed.join("; ")}`)
             }
           }
 

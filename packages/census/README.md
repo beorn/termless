@@ -1,26 +1,40 @@
 # @termless/census
 
-Terminal capability census — probe backends for feature support, generate a compatibility matrix.
+Terminal capability census -- probe backends for feature support, generate a compatibility matrix.
 
 ## Usage
 
 ```bash
 bun census                      # run all probes against installed backends
-bun census --backend ghostty    # probe one backend
-bun census --json               # raw JSON to stdout
-bun census --output results.json
 ```
+
+Results are written to `census/results/current.json` and printed as a summary table.
 
 ## How It Works
 
-1. **Probes** feed specific ANSI escape sequences to each backend
-2. Each probe checks whether the feature works correctly
-3. Results: yes, partial, no, unknown
-4. Output is a JSON database of features x backends
+1. **Probes** (`.probe.ts` files) feed specific ANSI escape sequences to each backend
+2. Each probe uses `check()` assertions that record pass/fail without throwing
+3. Results are determined from check state:
+   - All checks pass --> **yes** (test passes)
+   - Some checks pass, some fail --> **partial** (test fails with `[census:partial]` prefix)
+   - All checks fail --> **no** (test fails with `[census:no]` prefix)
+   - Uncaught error --> **error** (probe bug)
+4. `report.ts` parses vitest JSON output and builds the feature x backend matrix
 
 ## Adding Probes
 
-Edit `src/probes.ts` and re-run `bun census`.
+Create a new `.probe.ts` file in `probes/` using the `census()` helper from `_backends.ts`:
+
+```typescript
+import { census, feed } from "./_backends.ts"
+
+census("my-category", { spec: "ECMA-48 section" }, (b, test) => {
+  test("feature-id", { meta: { description: "Human name" } }, ({ check }) => {
+    feed(b, "\x1b[...some sequence...")
+    check(b.getCell(0, 0).bold, "has bold").toBe(true)
+  })
+})
+```
 
 ## Categories
 

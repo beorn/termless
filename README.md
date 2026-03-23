@@ -226,6 +226,16 @@ bunx termless doctor                         # Health check all installed backen
 bunx termless upgrade                        # Upgrade installed backends to manifest versions
 ```
 
+### Terminal Census
+
+Run standardized probes against all backends to generate a capability matrix:
+
+```bash
+bun census
+```
+
+See the [live census results](https://termless.dev/census) or view locally at `census/results/current.json`.
+
 ### Programmatic Backend Selection
 
 Two ways to choose a backend:
