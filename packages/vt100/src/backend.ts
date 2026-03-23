@@ -6,7 +6,7 @@
  * inspired by the Rust vt100 crate's design.
  */
 
-import { createScreen, type Screen } from "./screen.ts"
+import { createVt100Screen as createScreen, type Vt100Screen as Screen } from "vt100.js"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -86,7 +86,7 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
   }
 
   /** Map vt100 screen underline ("none"|"single"|...) to Cell underline (false|"single"|...) */
-  function mapUnderline(u: import("./screen.ts").UnderlineStyle): Cell["underline"] {
+  function mapUnderline(u: import("vt100.js").UnderlineStyle): Cell["underline"] {
     return u === "none" ? false : u
   }
 

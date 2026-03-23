@@ -102,9 +102,9 @@
       "upstreamVersion": "0.40.0",
       "type": "native",
       "default": false,
-      "requiresBuild": "C compiler + Python 3 + git (clones kitty GPL source)",
+      "requiresBuild": "kitty terminal installed (brew install --cask kitty)",
       "label": "Kitty",
-      "description": "Kitty's VT parser built from GPL source. Only backend with Kitty graphics protocol.",
+      "description": "Kitty's VT parser via subprocess bridge. Uses kitty's actual GPL-3.0 code without compilation.",
       "url": "https://sw.kovidgoyal.net/kitty"
     }
   }

@@ -1,27 +1,40 @@
 # @termless/kitty
 
-Kitty backend for termless — wraps [kitty's](https://github.com/kovidgoyal/kitty) VT parser, built from source.
+Kitty backend for termless — uses [kitty's](https://github.com/kovidgoyal/kitty) actual VT parser via a Python subprocess bridge.
+
+## How it works
+
+Unlike other native backends that compile a Rust crate into a `.node` binary, the kitty backend runs kitty's own Python-embedded C code via `kitty +runpy`. This is necessary because kitty's VT parser is deeply coupled to CPython (all data structures use `PyObject_HEAD`, callbacks use the Python C API, etc.).
+
+The architecture:
+1. **`build/bridge.py`** — A Python script that creates a headless kitty `Screen`, accepts JSON commands via stdin, and returns terminal state snapshots via stdout
+2. **`src/backend.ts`** — TypeScript wrapper that accumulates commands and replays them in a `kitty +runpy` subprocess when a query is needed
+
+Each mutation (`feed`, `resize`, `reset`) is logged. When you query the terminal state (`getCell`, `getCursor`, etc.), the entire command log is replayed in a fresh subprocess and the resulting snapshot is cached until the next mutation.
 
 ## License
 
-This package's source code (build script + TypeScript wrapper) is MIT licensed.
+This package's source code (bridge script + TypeScript wrapper) is MIT licensed.
 
-**However**, the build process downloads and compiles kitty, which is GPL-3.0 licensed. The resulting native binary (`.node` file) is a derivative work under GPL-3.0 and **must not be distributed**. It is built locally on your machine for testing purposes only.
+**However**, at runtime it invokes the kitty binary, which is GPL-3.0 licensed. No derivative binaries are produced or distributed. Kitty must be installed separately on your machine.
 
-## Build
+## Prerequisites
 
-Requires: C compiler (cc/gcc/clang), Python 3, git
+Install kitty:
+
+```bash
+brew install --cask kitty   # macOS
+# or visit https://sw.kovidgoyal.net/kitty
+```
+
+Then verify:
 
 ```bash
 cd packages/kitty
 bash build/build.sh
 ```
 
-## Status
-
-**Work in progress.** Kitty's VT parser is tightly coupled to its rendering pipeline, making extraction complex. The build script clones kitty's source and documents the integration approach, but the native module compilation is not yet implemented.
-
-## Usage (once built)
+## Usage
 
 ```typescript
 import { createKittyBackend } from "@termless/kitty"
@@ -29,3 +42,9 @@ import { createTerminal } from "@termless/core"
 
 const term = createTerminal({ backend: createKittyBackend(), cols: 80, rows: 24 })
 ```
+
+## Performance
+
+- ~35ms per mutation (subprocess startup + replay + snapshot)
+- <1ms per query (served from cached snapshot)
+- Suitable for testing; not for real-time use

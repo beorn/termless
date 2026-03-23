@@ -1,7 +1,7 @@
 {
   "name": "@termless/kitty",
   "version": "0.3.0",
-  "description": "Kitty backend for termless — kitty's VT parser built from source (GPL-3.0 dependency, not distributed)",
+  "description": "Kitty backend for termless — uses kitty's VT parser via subprocess bridge (GPL-3.0 dependency, not distributed)",
   "keywords": [
     "headless",
     "kitty",

@@ -36,6 +36,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "vt100.js": "^0.1.0"
+  },
   "peerDependencies": {
     "@termless/core": "*"
   },
