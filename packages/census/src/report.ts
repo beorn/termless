@@ -1,10 +1,13 @@
 #!/usr/bin/env bun
 /**
  * Census report generator — reads vitest JSON output from stdin,
- * prints a capability matrix, writes census/results/current.json.
+ * prints a capability matrix, writes census/results/current.json
+ * and per-backend result files (e.g., xtermjs-5.5.0.json).
  */
 
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 const input = await Bun.stdin.text()
 const json = JSON.parse(input)
@@ -88,11 +91,39 @@ const output = {
   generated: new Date().toISOString(),
   backends: backendNames,
   descriptions: Object.fromEntries(descriptions),
-  results: Object.fromEntries(
-    [...backends.entries()].map(([name, features]) => [name, Object.fromEntries(features)]),
-  ),
+  results: Object.fromEntries([...backends.entries()].map(([name, features]) => [name, Object.fromEntries(features)])),
 }
 
 mkdirSync("census/results", { recursive: true })
 writeFileSync("census/results/current.json", JSON.stringify(output, null, 2))
-console.log(`\n  Wrote: census/results/current.json\n`)
+console.log(`\n  Wrote: census/results/current.json`)
+
+// ── Per-backend result files ──
+// Read backends.json to get upstream versions for filenames.
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const manifestPath = join(__dirname, "..", "..", "..", "backends.json")
+let manifest: { backends: Record<string, { upstreamVersion: string | null }> } | null = null
+try {
+  manifest = JSON.parse(readFileSync(manifestPath, "utf-8"))
+} catch {
+  // If manifest can't be read, fall back to "latest" for all versions
+}
+
+const generated = output.generated
+for (const name of backendNames) {
+  const features = backends.get(name)!
+  const version = manifest?.backends[name]?.upstreamVersion ?? "latest"
+  const filename = `${name}-${version}.json`
+
+  const perBackend = {
+    backend: name,
+    version,
+    generated,
+    results: Object.fromEntries(features),
+  }
+
+  writeFileSync(`census/results/${filename}`, JSON.stringify(perBackend, null, 2))
+  console.log(`  Wrote: census/results/${filename}`)
+}
+
+console.log("")

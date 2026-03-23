@@ -5,21 +5,38 @@ census("extensions", {}, (b, test) => {
     check(b.capabilities.truecolor, "truecolor capable").toBe(true)
   })
 
-  test("ext-kitty-keyboard", { meta: { description: "Kitty keyboard protocol", spec: "https://sw.kovidgoyal.net/kitty/keyboard-protocol/" } }, ({ check }) => {
-    check(b.capabilities.kittyKeyboard, "kitty keyboard capable").toBe(true)
-  })
+  test(
+    "ext-kitty-keyboard",
+    { meta: { description: "Kitty keyboard protocol", spec: "https://sw.kovidgoyal.net/kitty/keyboard-protocol/" } },
+    ({ check }) => {
+      check(b.capabilities.kittyKeyboard, "kitty keyboard capable").toBe(true)
+    },
+  )
 
-  test("ext-kitty-graphics", { meta: { description: "Kitty graphics protocol", spec: "https://sw.kovidgoyal.net/kitty/graphics-protocol/" } }, ({ check }) => {
-    check(b.capabilities.kittyGraphics, "kitty graphics capable").toBe(true)
-  })
+  test(
+    "ext-kitty-graphics",
+    { meta: { description: "Kitty graphics protocol", spec: "https://sw.kovidgoyal.net/kitty/graphics-protocol/" } },
+    ({ check }) => {
+      check(b.capabilities.kittyGraphics, "kitty graphics capable").toBe(true)
+    },
+  )
 
   test("ext-sixel", { meta: { description: "Sixel graphics", spec: "DEC Sixel" } }, ({ check }) => {
     check(b.capabilities.sixel, "sixel capable").toBe(true)
   })
 
-  test("ext-osc8", { meta: { description: "OSC 8 hyperlinks", spec: "https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda" } }, ({ check }) => {
-    check(b.capabilities.osc8Hyperlinks, "osc8 capable").toBe(true)
-  })
+  test(
+    "ext-osc8",
+    {
+      meta: {
+        description: "OSC 8 hyperlinks",
+        spec: "https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda",
+      },
+    },
+    ({ check }) => {
+      check(b.capabilities.osc8Hyperlinks, "osc8 capable").toBe(true)
+    },
+  )
 
   test("ext-reflow", { meta: { description: "Text reflow on resize" } }, ({ check }) => {
     check(b.capabilities.reflow, "reflow capable").toBe(true)

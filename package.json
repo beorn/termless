@@ -62,6 +62,12 @@
     "publish:packages": "for pkg in packages/core packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
   },
   "devDependencies": {
+    "@termless/alacritty": "workspace:*",
+    "@termless/kitty": "workspace:*",
+    "@termless/libvterm": "workspace:*",
+    "@termless/peekaboo": "workspace:*",
+    "@termless/vt100-rust": "workspace:*",
+    "@termless/wezterm": "workspace:*",
     "@types/bun": "^1.1.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3",

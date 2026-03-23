@@ -1,8 +1,8 @@
 /**
  * `termless backends` — list all backends and their install status.
  *
- * Shows a formatted table with backend name, installed version,
- * upstream info, and type. Default backends are marked with *.
+ * Shows a formatted table with backend name, install status,
+ * upstream info, type, and whether it's a default backend.
  */
 
 import type { Command } from "commander"
@@ -22,22 +22,14 @@ export function registerBackendsCommand(program: Command): void {
       // Column headers
       const cols = {
         name: "Backend",
-        status: "Status",
+        installed: "Installed",
         upstream: "Upstream",
         type: "Type",
       }
 
       // Compute column widths from data
-      const nameWidth = Math.max(
-        cols.name.length,
-        ...statuses.map((s) => s.name.length + (defaults.has(s.name) ? 2 : 0)),
-      )
-      const statusWidth = Math.max(
-        cols.status.length,
-        ...statuses.map((s) =>
-          s.installed ? `\u2713 ${s.installedVersion ?? "unknown"}`.length : "\u2717 not installed".length,
-        ),
-      )
+      const nameWidth = Math.max(cols.name.length, ...statuses.map((s) => s.name.length))
+      const installedWidth = Math.max(cols.installed.length, "\u2713 yes".length, "\u2717 no".length)
       const upstreamWidth = Math.max(
         cols.upstream.length,
         ...statuses.map((s) => {
@@ -52,19 +44,18 @@ export function registerBackendsCommand(program: Command): void {
 
       // Header
       console.log(
-        `  ${cols.name.padEnd(nameWidth)}  ${cols.status.padEnd(statusWidth)}  ${cols.upstream.padEnd(upstreamWidth)}  ${cols.type}`,
+        `  ${cols.name.padEnd(nameWidth)}   ${cols.installed.padEnd(installedWidth)}   ${cols.upstream.padEnd(upstreamWidth)}   ${cols.type.padEnd(typeWidth)}`,
       )
       // Separator using em dashes
       console.log(
-        `  ${"─".repeat(nameWidth)}  ${"─".repeat(statusWidth)}  ${"─".repeat(upstreamWidth)}  ${"─".repeat(typeWidth)}`,
+        `  ${"─".repeat(nameWidth)}   ${"─".repeat(installedWidth)}   ${"─".repeat(upstreamWidth)}   ${"─".repeat(typeWidth)}`,
       )
 
       // Rows
       for (const s of statuses) {
         const isDefault = defaults.has(s.name)
-        const nameStr = (s.name + (isDefault ? " *" : "")).padEnd(nameWidth)
-
-        const statusStr = s.installed ? `\u2713 ${s.installedVersion ?? "unknown"}` : "\u2717 not installed"
+        const nameStr = s.name.padEnd(nameWidth)
+        const installedStr = s.installed ? "\u2713 yes" : "\u2717 no"
 
         let upstreamStr: string
         if (!s.manifest.upstream) {
@@ -74,8 +65,10 @@ export function registerBackendsCommand(program: Command): void {
           upstreamStr = `${s.manifest.upstream}${ver}`
         }
 
+        const suffix = isDefault ? "  (default)" : ""
+
         console.log(
-          `  ${nameStr}  ${statusStr.padEnd(statusWidth)}  ${upstreamStr.padEnd(upstreamWidth)}  ${s.manifest.type}`,
+          `  ${nameStr}   ${installedStr.padEnd(installedWidth)}   ${upstreamStr.padEnd(upstreamWidth)}   ${s.manifest.type.padEnd(typeWidth)}${suffix}`,
         )
       }
 
@@ -83,9 +76,10 @@ export function registerBackendsCommand(program: Command): void {
       const installedCount = statuses.filter((s) => s.installed).length
       const totalCount = statuses.length
       const defaultCount = defaults.size
-      console.log(`\n  ${installedCount} of ${totalCount} installed (${defaultCount} default)`)
+      console.log(`\n  ${installedCount} of ${totalCount} installed \u00b7 ${defaultCount} default (marked above)`)
       if (installedCount < totalCount) {
         console.log("  Install more: bunx termless install <name>")
+        console.log("  Install all:  bunx termless install --all")
       }
       console.log("  Docs: https://termless.dev/guide/backends\n")
     })

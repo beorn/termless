@@ -8,60 +8,96 @@
  *     feed(b, "\x1b[1mX")
  *     check(b.getCell(0, 0).bold, "bold attribute").toBe(true)
  *   })
- *
- *   test("sgr-underline-curly", { meta: { description: "Underline curly" } }, ({ check }) => {
- *     feed(b, "\x1b[4:3mX")
- *     const cell = b.getCell(0, 0)
- *     check(cell.underline, "has underline").toBeTruthy()
- *     check(cell.underline, "curly variant").toBe("curly")
- *   })
  * })
  * ```
- *
- * Result interpretation:
- * - All checks pass → **yes**
- * - Some checks fail → **partial** (failed check notes recorded)
- * - All checks fail → **no**
- * - Uncaught error (TypeError, null deref) → **error** (probe bug)
  */
 
 import { describe, test as vitestTest, beforeAll, afterAll, beforeEach } from "vitest"
 import type { TerminalBackend } from "@termless/core"
-import { createXtermBackend } from "@termless/xtermjs"
-import { createVt100Backend } from "@termless/vt100"
 
 // ── Backend resolution (top-level await) ──
+// Direct imports — import.meta.resolve doesn't work in vitest's VM.
 
-const backends: [string, () => TerminalBackend][] = [
-  ["xtermjs", () => createXtermBackend()],
-  ["vt100", () => createVt100Backend()],
-]
+const backends: [string, () => Promise<TerminalBackend>][] = []
 
+// JS backends (always available)
+try {
+  const { createXtermBackend } = await import("@termless/xtermjs")
+  createXtermBackend()
+  backends.push(["xtermjs", async () => (await import("@termless/xtermjs")).createXtermBackend()])
+} catch {}
+
+try {
+  const { createVt100Backend } = await import("@termless/vt100")
+  createVt100Backend()
+  backends.push(["vt100", async () => (await import("@termless/vt100")).createVt100Backend()])
+} catch {}
+
+// WASM backends
 try {
   const mod = await import("@termless/ghostty")
   const ghostty = await mod.initGhostty()
-  backends.push(["ghostty", () => mod.createGhosttyBackend(undefined, ghostty)])
+  backends.push(["ghostty", async () => {
+    const m = await import("@termless/ghostty")
+    return m.createGhosttyBackend(undefined, ghostty)
+  }])
 } catch {}
 
 try {
-  const mod = await import("../../vt100-rust/src/backend.ts")
-  mod.loadVt100RustNative()
-  const b = mod.createVt100RustBackend()
+  const mod = await import("../../libvterm/src/backend.ts")
+  const b = mod.createLibvtermBackend()
   b.init({ cols: 1, rows: 1 })
   b.destroy()
-  backends.push(["vt100-rust", () => mod.createVt100RustBackend()])
+  backends.push(["libvterm", async () => (await import("../../libvterm/src/backend.ts")).createLibvtermBackend()])
 } catch {}
+
+// Native backends (require Rust builds)
+try {
+  const mod = await import("../../vt100-rust/src/backend.ts")
+  mod.loadVt100RustNative()
+  backends.push(["vt100-rust", async () => (await import("../../vt100-rust/src/backend.ts")).createVt100RustBackend()])
+} catch {}
+
+try {
+  const mod = await import("../../alacritty/src/backend.ts")
+  mod.loadAlacrittyNative()
+  backends.push(["alacritty", async () => (await import("../../alacritty/src/backend.ts")).createAlacrittyBackend()])
+} catch {}
+
+try {
+  const mod = await import("../../wezterm/src/backend.ts")
+  mod.loadWeztermNative()
+  backends.push(["wezterm", async () => (await import("../../wezterm/src/backend.ts")).createWeztermBackend()])
+} catch {}
+
+try {
+  const mod = await import("../../kitty/src/backend.ts")
+  mod.loadKittyNative()
+  backends.push(["kitty", async () => (await import("../../kitty/src/backend.ts")).createKittyBackend()])
+} catch {}
+
+// OS-level (macOS only)
+try {
+  const mod = await import("../../peekaboo/src/backend.ts")
+  const b = mod.createPeekabooBackend()
+  b.init({ cols: 1, rows: 1 })
+  b.destroy()
+  backends.push(["peekaboo", async () => (await import("../../peekaboo/src/backend.ts")).createPeekabooBackend()])
+} catch {}
+
+if (backends.length === 0) {
+  console.warn("Warning: No backends available for census")
+}
 
 // ── Helpers ──
 
 const enc = new TextEncoder()
 
-/** Feed a string to a backend as UTF-8 bytes. */
 export function feed(b: TerminalBackend, text: string): void {
   b.feed(enc.encode(text))
 }
 
-// ── Check assertion (census-specific) ──
+// ── Check assertion ──
 
 interface CheckChain {
   toBe(expected: unknown): void
@@ -88,14 +124,11 @@ function createCheck(state: CheckState) {
   return function check(value: unknown, note: string): CheckChain {
     function record(pass: boolean) {
       state.total++
-      if (pass) {
-        state.passed++
-      } else {
-        state.failed.push(note)
-      }
+      if (pass) state.passed++
+      else state.failed.push(note)
     }
 
-    const chain: CheckChain = {
+    return {
       toBe(expected) { record(value === expected) },
       toBeTruthy() { record(!!value) },
       toEqual(expected) { record(JSON.stringify(value) === JSON.stringify(expected)) },
@@ -109,18 +142,12 @@ function createCheck(state: CheckState) {
         toContain(expected) { record(typeof value !== "string" || !value.includes(expected)) },
       },
     }
-    return chain
   }
 }
 
-// ── Census context ──
-
 export interface CensusContext {
-  /** Assert a value with a descriptive note. Never throws — records pass/fail. */
   check: (value: unknown, note: string) => CheckChain
 }
-
-// ── Census test type ──
 
 type TestOpts = { meta?: { description?: string; spec?: string } }
 type TestFn = (ctx: CensusContext) => void | Promise<void>
@@ -141,8 +168,8 @@ export function census(
     describe(name, () => {
       let _b: TerminalBackend
 
-      beforeAll(() => {
-        _b = factory()
+      beforeAll(async () => {
+        _b = await factory()
         _b.init({ cols: 80, rows: 24 })
       })
 
@@ -154,8 +181,6 @@ export function census(
         _b.reset()
       })
 
-      // Proxy: reference b during describe collection,
-      // actual access deferred to test callbacks (after beforeAll)
       const proxy = new Proxy({} as TerminalBackend, {
         get(_target, prop) {
           return (_b as any)[prop]
@@ -174,10 +199,8 @@ export function census(
           const state: CheckState = { total: 0, passed: 0, failed: [] }
           const ctx: CensusContext = { check: createCheck(state) }
 
-          // Run the probe — uncaught errors (TypeError etc.) propagate as real failures
           const result = testFn(ctx)
 
-          // After probe runs, record results in meta
           const finish = () => {
             const meta = vitestCtx.meta ?? ((vitestCtx as any).meta = {})
             meta.checks = state.total
@@ -185,14 +208,6 @@ export function census(
             if (state.failed.length > 0) {
               meta.notes = state.failed.join("; ")
             }
-            // Determine census result:
-            // all pass → yes (test passes)
-            // some fail → partial (test passes, notes recorded)
-            // all fail → no (test fails with assertion)
-            // Determine census result from check state:
-            // all passed → yes (test passes)
-            // some passed, some failed → partial (test passes, notes in meta)
-            // all failed → no (test fails)
             if (state.total > 0 && state.passed === 0) {
               throw new Error(`[census:no] ${state.failed.join("; ")}`)
             }

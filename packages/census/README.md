@@ -38,13 +38,13 @@ census("my-category", { spec: "ECMA-48 section" }, (b, test) => {
 
 ## Categories
 
-| Category | What's tested |
-|----------|---------------|
-| sgr | Bold, italic, underline variants, colors, strikethrough, blink |
-| cursor | CUP, movement, hide/show, save/restore |
-| mode | Alt screen, bracketed paste, mouse tracking, auto-wrap |
-| scrollback | Accumulation, scroll regions, reverse index |
-| text | Basic rendering, wrap, wide chars, emoji, tabs |
-| erase | Line erase, screen erase |
-| extension | Kitty keyboard/graphics, sixel, OSC 8, reflow, truecolor |
-| reset | SGR reset, RIS, backend reset() |
+| Category   | What's tested                                                  |
+| ---------- | -------------------------------------------------------------- |
+| sgr        | Bold, italic, underline variants, colors, strikethrough, blink |
+| cursor     | CUP, movement, hide/show, save/restore                         |
+| mode       | Alt screen, bracketed paste, mouse tracking, auto-wrap         |
+| scrollback | Accumulation, scroll regions, reverse index                    |
+| text       | Basic rendering, wrap, wide chars, emoji, tabs                 |
+| erase      | Line erase, screen erase                                       |
+| extension  | Kitty keyboard/graphics, sixel, OSC 8, reflow, truecolor       |
+| reset      | SGR reset, RIS, backend reset()                                |

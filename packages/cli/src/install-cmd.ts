@@ -15,7 +15,19 @@ import {
   getInstalledVersion,
   getInstallCommand,
   detectPackageManager,
+  getBackendStatus,
 } from "../../../src/registry.ts"
+
+/** Show uninstalled backends as a footer hint (only if any are uninstalled). */
+function showUninstalledFooter(): void {
+  const statuses = getBackendStatus()
+  const uninstalled = statuses.filter((s) => !s.installed).map((s) => s.name)
+  if (uninstalled.length > 0) {
+    console.log("")
+    console.log(`  Not installed: ${uninstalled.join(", ")}`)
+    console.log("  Install all:   bunx termless install --all")
+  }
+}
 
 export function registerInstallCommand(program: Command): void {
   program
@@ -77,7 +89,9 @@ export function registerInstallCommand(program: Command): void {
       }
 
       if (toRun.length === 0) {
-        console.log("\n  Nothing to install.\n")
+        console.log("\n  Nothing to install.")
+        showUninstalledFooter()
+        console.log("")
         return
       }
 
@@ -87,9 +101,11 @@ export function registerInstallCommand(program: Command): void {
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        console.log(`\n  \u2713 Installed: ${toRun.join(", ")}\n`)
+        console.log(`\n  \u2713 Installed: ${toRun.join(", ")}`)
+        showUninstalledFooter()
+        console.log("")
       } catch {
-        console.error(`\n  \u2717 Install failed. Run manually:\n  ${cmd}\n`)
+        console.log(`\n  \u2717 Install failed. Run manually:\n  ${cmd}\n`)
         process.exitCode = 1
       }
     })
