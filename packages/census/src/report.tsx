@@ -9,6 +9,16 @@ import React from "react"
 import { renderString } from "silvery"
 import { Box, Text } from "silvery"
 import type { CensusData } from "./parse.ts"
+import { backends as allBackendNames, isReady, entry } from "../../../src/backends.ts"
+
+interface BackendStatus {
+  name: string
+  type: string
+  installed: boolean
+  tested: boolean
+  yes?: number
+  total?: number
+}
 
 // ── Components ──
 
@@ -26,21 +36,34 @@ function Header({ featureCount, backendCount }: { featureCount: number; backendC
   )
 }
 
-function SummaryBar({ name, yes, total }: { name: string; yes: number; total: number }): React.ReactElement {
-  const pct = Math.round((yes / (total || 1)) * 100)
+function BackendLine({ b }: { b: BackendStatus }): React.ReactElement {
+  const label = `${b.name} (${b.type})`
+
+  if (!b.installed) {
+    return (
+      <Box>
+        <Text color="$muted">{"  "}{label.padEnd(28)} not installed</Text>
+      </Box>
+    )
+  }
+
+  if (!b.tested) {
+    return (
+      <Box>
+        <Text color="$muted">{"  "}{label.padEnd(28)} installed, not tested</Text>
+      </Box>
+    )
+  }
+
+  const pct = Math.round(((b.yes ?? 0) / (b.total || 1)) * 100)
   const filled = Math.round(pct / 5)
   const empty = 20 - filled
   const bar = "\u2588".repeat(filled) + "\u2591".repeat(empty)
 
   return (
     <Box>
-      <Text color="$primary" bold>
-        {"  "}
-        {name.padEnd(16)}
-      </Text>
-      <Text>
-        {String(yes).padStart(3)}/{total}{" "}
-      </Text>
+      <Text bold>{"  "}{label.padEnd(28)}</Text>
+      <Text>{String(b.yes).padStart(3)}/{b.total} </Text>
       <Text color={pct >= 90 ? "$success" : pct >= 70 ? "$warning" : "$error"}>{bar}</Text>
       <Text> {pct}%</Text>
     </Box>
@@ -48,16 +71,27 @@ function SummaryBar({ name, yes, total }: { name: string; yes: number; total: nu
 }
 
 function SummarySection({ data }: { data: CensusData }): React.ReactElement {
-  const bars = data.backendNames.map((name) => {
-    const features = data.results.get(name)!
+  const statuses: BackendStatus[] = allBackendNames().map((name) => {
+    const e = entry(name)
+    const installed = isReady(name)
+    const tested = data.backendNames.includes(name)
     let yes = 0
-    for (const r of features.values()) {
-      if (r) yes++
+    let total = 0
+    if (tested) {
+      const features = data.results.get(name)!
+      total = features.size
+      for (const r of features.values()) {
+        if (r) yes++
+      }
     }
-    return <SummaryBar key={name} name={name} yes={yes} total={features.size} />
+    return { name, type: e?.type ?? "unknown", installed, tested, yes, total }
   })
 
-  return <Box flexDirection="column">{bars}</Box>
+  return (
+    <Box flexDirection="column">
+      {statuses.map((b) => <BackendLine key={b.name} b={b} />)}
+    </Box>
+  )
 }
 
 // Column widths
