@@ -33,15 +33,18 @@ try {
   backends.push(["vt100", async () => (await import("../../vt100/src/backend.ts")).createVt100Backend()])
 } catch {}
 
-// WASM backends — init deferred to beforeAll (top-level await doesn't work for WASM in vitest)
+// WASM backends — verify full init works before adding
 try {
-  await import("../../ghostty/src/backend.ts") // verify module exists
-  backends.push(["ghostty", async () => {
-    const { createGhosttyBackend, initGhostty } = await import("../../ghostty/src/backend.ts")
-    const ghostty = await initGhostty()
-    return createGhosttyBackend(undefined, ghostty)
-  }])
-} catch {}
+  const ghosttyMod = await import("../../ghostty/src/backend.ts")
+  const ghosttyInstance = await ghosttyMod.initGhostty()
+  // Verify it actually works
+  const testBackend = ghosttyMod.createGhosttyBackend(undefined, ghosttyInstance)
+  testBackend.init({ cols: 1, rows: 1 })
+  testBackend.destroy()
+  backends.push(["ghostty", async () => ghosttyMod.createGhosttyBackend(undefined, ghosttyInstance)])
+} catch {
+  // Ghostty WASM not available (common in vitest VM context)
+}
 
 try {
   const mod = await import("../../libvterm/src/backend.ts")
@@ -123,17 +126,37 @@ function createCheck(state: CheckState) {
     }
 
     return {
-      toBe(expected) { record(value === expected) },
-      toBeTruthy() { record(!!value) },
-      toEqual(expected) { record(JSON.stringify(value) === JSON.stringify(expected)) },
-      toContain(expected) { record(typeof value === "string" && value.includes(expected)) },
-      toBeGreaterThan(n) { record(typeof value === "number" && value > n) },
-      toBeGreaterThanOrEqual(n) { record(typeof value === "number" && value >= n) },
-      toBeNull() { record(value === null) },
+      toBe(expected) {
+        record(value === expected)
+      },
+      toBeTruthy() {
+        record(!!value)
+      },
+      toEqual(expected) {
+        record(JSON.stringify(value) === JSON.stringify(expected))
+      },
+      toContain(expected) {
+        record(typeof value === "string" && value.includes(expected))
+      },
+      toBeGreaterThan(n) {
+        record(typeof value === "number" && value > n)
+      },
+      toBeGreaterThanOrEqual(n) {
+        record(typeof value === "number" && value >= n)
+      },
+      toBeNull() {
+        record(value === null)
+      },
       not: {
-        toBe(expected) { record(value !== expected) },
-        toBeNull() { record(value !== null) },
-        toContain(expected) { record(typeof value !== "string" || !value.includes(expected)) },
+        toBe(expected) {
+          record(value !== expected)
+        },
+        toBeNull() {
+          record(value !== null)
+        },
+        toContain(expected) {
+          record(typeof value !== "string" || !value.includes(expected))
+        },
       },
     }
   }
@@ -181,11 +204,7 @@ export function census(
         },
       })
 
-      const censusTest: CensusTest = (
-        testName: string,
-        optsOrFn: TestOpts | TestFn,
-        maybeFn?: TestFn,
-      ) => {
+      const censusTest: CensusTest = (testName: string, optsOrFn: TestOpts | TestFn, maybeFn?: TestFn) => {
         const testOpts = typeof optsOrFn === "function" ? {} : optsOrFn
         const testFn = typeof optsOrFn === "function" ? optsOrFn : maybeFn!
 
