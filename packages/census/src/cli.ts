@@ -36,8 +36,7 @@ program
   .command("run")
   .description("Execute probes via vitest, show matrix, save results")
   .option("-f, --force", "Re-run all probes even if cached results are valid")
-  .option("-v, --verbose", "Show failure notes for each backend")
-  .action(async (opts: { force?: boolean; verbose?: boolean }) => {
+  .action(async (opts: { force?: boolean }) => {
     const hash = probeHash()
 
     // Check cache — skip if results exist and probe hash matches
@@ -47,7 +46,7 @@ program
         console.log(`\nCensus results are up to date (probe hash: ${hash}). Use --force to re-run.\n`)
         const output = await renderReport(cached)
         console.log(output)
-        if (opts.verbose) printNotes(cached)
+        printNotes(cached)
         return
       }
     }
@@ -99,14 +98,13 @@ program
     const output = await renderReport(data, { writtenFiles: writtenFiles.map(shortPath) })
     console.log(output)
 
-    if (opts.verbose) printNotes(data)
+    printNotes(data)
   })
 
 program
   .command("report")
   .description("Display last saved census results")
-  .option("-v, --verbose", "Show failure notes for each backend")
-  .action(async (opts: { verbose?: boolean }) => {
+  .action(async () => {
     const data = loadSavedResults()
     if (!data) {
       console.error("No saved results. Run: bun census run")
@@ -117,7 +115,7 @@ program
 
     const output = await renderReport(data)
     console.log(output)
-    if (opts.verbose) printNotes(data)
+    printNotes(data)
   })
 
 program
