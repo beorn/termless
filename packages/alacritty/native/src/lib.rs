@@ -13,7 +13,7 @@ use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::term::cell::Flags as CellFlags;
 use alacritty_terminal::term::Config;
 use alacritty_terminal::term::Term;
-use alacritty_terminal::vte::ansi::{Color, Handler, NamedColor, Processor};
+use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor};
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -229,7 +229,7 @@ impl AlacrittyTerminal {
     pub fn feed(&mut self, data: Buffer) {
         if let Some(ref mut term) = self.term {
             for byte in data.as_ref() {
-                self.processor.advance(term, *byte);
+                self.processor.advance(term, &[*byte]);
             }
         }
     }
@@ -269,7 +269,7 @@ impl AlacrittyTerminal {
             for col in 0..cols {
                 let point = Point::new(line, Column(col));
                 let cell = &grid[point];
-                if cell.flags().contains(CellFlags::WIDE_CHAR_SPACER) {
+                if cell.flags.contains(CellFlags::WIDE_CHAR_SPACER) {
                     continue;
                 }
                 let c = cell.c;
@@ -326,7 +326,7 @@ impl AlacrittyTerminal {
             for col in col_start..col_end {
                 let point = Point::new(line, Column(col));
                 let cell = &grid[point];
-                if cell.flags().contains(CellFlags::WIDE_CHAR_SPACER) {
+                if cell.flags.contains(CellFlags::WIDE_CHAR_SPACER) {
                     continue;
                 }
                 let c = cell.c;
@@ -371,7 +371,7 @@ impl AlacrittyTerminal {
         let grid = term.grid();
         let point = Point::new(Line(row as i32), Column(col as usize));
         let cell = &grid[point];
-        let flags = *cell.flags();
+        let flags = cell.flags;
 
         let mut text = String::new();
         let c = cell.c;
@@ -433,8 +433,8 @@ impl AlacrittyTerminal {
             }
         };
 
-        let cursor = term.grid().cursor;
-        let style = match term.cursor_style() {
+        let cursor = term.grid().cursor.clone();
+        let style = match term.cursor_style().shape {
             alacritty_terminal::vte::ansi::CursorShape::Block => "block",
             alacritty_terminal::vte::ansi::CursorShape::Underline => "underline",
             alacritty_terminal::vte::ansi::CursorShape::Beam => "beam",
