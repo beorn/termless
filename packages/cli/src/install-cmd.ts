@@ -15,6 +15,8 @@ import {
   getInstalledVersion,
   getInstallCommand,
   detectPackageManager,
+  buildBackend,
+  isReady,
 } from "../../../src/backends.ts"
 
 /** Show all other backends that weren't part of this install. */
@@ -84,34 +86,60 @@ export function registerInstallCommand(program: Command): void {
           continue
         }
 
-        // Warn about native build requirements
-        if (entry.requiresBuild) {
-          console.log(`  ! ${name} — requires: ${entry.requiresBuild}`)
-        }
-
         toRun.push(name)
       }
 
       if (toRun.length === 0) {
-        console.log("\n  Nothing to install.")
+        // Nothing to npm-install, but check if anything needs building
+        const needsBuild = toInstall.filter((n) => !isReady(n))
+        if (needsBuild.length > 0) {
+          console.log("")
+          for (const name of needsBuild) {
+            try {
+              buildBackend(name)
+              console.log(`  ✓ ${name} built`)
+            } catch (e) {
+              console.log(`  ✗ ${name} build failed: ${e instanceof Error ? e.message : e}`)
+            }
+          }
+        } else {
+          console.log("\n  Nothing to install.")
+        }
         showOtherBackends(toInstall)
         console.log("")
         return
       }
 
-      // Build and run the install command
+      // Install npm packages
       const cmd = getInstallCommand(toRun, pm)
       console.log(`\n  Running: ${cmd}\n`)
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        console.log(`\n  \u2713 Installed: ${toRun.join(", ")}`)
-        showOtherBackends(toInstall)
-        console.log("")
+        console.log(`\n  ✓ Packages installed: ${toRun.join(", ")}`)
       } catch {
-        console.log(`\n  \u2717 Install failed. Run manually:\n  ${cmd}\n`)
+        console.log(`\n  ✗ Install failed. Run manually:\n  ${cmd}\n`)
         process.exitCode = 1
+        return
       }
+
+      // Build native/wasm backends
+      const allInstalled = [...new Set([...toInstall, ...toRun])]
+      const toBuild = allInstalled.filter((n) => !isReady(n))
+      if (toBuild.length > 0) {
+        console.log("\n  Building backends...\n")
+        for (const name of toBuild) {
+          try {
+            buildBackend(name)
+            console.log(`  ✓ ${name} built`)
+          } catch (e) {
+            console.log(`  ✗ ${name} build failed: ${e instanceof Error ? e.message : e}`)
+          }
+        }
+      }
+
+      showOtherBackends(allInstalled)
+      console.log("")
     })
 }
 
