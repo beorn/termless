@@ -1,7 +1,8 @@
 {
   "backend": "xtermjs",
   "version": "5.5.0",
-  "generated": "2026-03-23T14:46:16.179Z",
+  "probeHash": "fdacab50809d",
+  "generated": "2026-03-23T15:21:45.038Z",
   "results": {
     "cursor.move.absolute": true,
     "cursor.move.home": true,
