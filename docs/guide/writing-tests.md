@@ -281,15 +281,57 @@ test("read text from different regions", () => {
 })
 ```
 
+## Lazy Views & Auto-Retry
+
+Region selectors (`term.screen`, `term.scrollback`, `term.row(n)`, etc.) return **lazy views** -- they re-read from the terminal backend on every access. You never need to "refresh" a view; it always reflects the current terminal state.
+
+This makes them work naturally with auto-retry matchers. When you `await` a matcher with a `{ timeout }` option, vitest polls the lazy view repeatedly until the assertion passes or the timeout expires:
+
+```typescript
+// The lazy view re-reads the terminal on each poll iteration
+await expect(term.screen).toContainText("ready", { timeout: 10000 })
+```
+
+This replaces the deprecated `waitFor()` pattern:
+
+```typescript
+// Deprecated -- no diff on failure, worse error messages
+await term.waitFor("ready", 10000)
+
+// Preferred -- integrates with vitest expect, shows diff on failure
+await expect(term.screen).toContainText("ready", { timeout: 10000 })
+```
+
+You can combine lazy views with any matcher. The `{ timeout }` option is supported by all text matchers (`toContainText`, `toHaveText`, `toMatchLines`) and terminal matchers (`toHaveCursorAt`, `toBeInMode`, etc.):
+
+```typescript
+// Wait for cursor to reach a specific position
+await expect(term).toHaveCursorAt(0, 5, { timeout: 5000 })
+
+// Wait for a specific row to contain text
+await expect(term.row(0)).toContainText("Title", { timeout: 5000 })
+
+// Wait for alt screen mode
+await expect(term).toBeInMode("altScreen", { timeout: 5000 })
+```
+
+Without `{ timeout }`, matchers run synchronously -- they pass or fail immediately without polling. Use the synchronous form for in-memory tests where the terminal state is already set:
+
+```typescript
+term.feed("\x1b[1mBold\x1b[0m")
+expect(term.cell(0, 0)).toBeBold() // sync, no polling
+```
+
 ## Migration from Old API
 
-| Old                                       | New                                       |
-| ----------------------------------------- | ----------------------------------------- |
-| `expect(term).toContainText("x")`         | `expect(term.screen).toContainText("x")`  |
-| `expect(term).toBeBoldAt(r, c)`           | `expect(term.cell(r, c)).toBeBold()`      |
-| `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)` |
-| `expect(term).toBeInAltScreen()`          | `expect(term).toBeInMode("altScreen")`    |
-| `expect(term).toMatchViewport(lines)`     | `expect(term.screen).toMatchLines(lines)` |
-| `term.getViewportText()`                  | `term.screen.getText()`                   |
-| `term.getScrollbackText()`                | `term.scrollback.getText()`               |
-| `term.getRowText(n)`                      | `term.row(n).getText()`                   |
+| Old                                       | New                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| `await term.waitFor("x", 5000)`           | `await expect(term.screen).toContainText("x", { timeout: 5000 })` |
+| `expect(term).toContainText("x")`         | `expect(term.screen).toContainText("x")`                        |
+| `expect(term).toBeBoldAt(r, c)`           | `expect(term.cell(r, c)).toBeBold()`                            |
+| `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)`                       |
+| `expect(term).toBeInAltScreen()`          | `expect(term).toBeInMode("altScreen")`                          |
+| `expect(term).toMatchViewport(lines)`     | `expect(term.screen).toMatchLines(lines)`                       |
+| `term.getViewportText()`                  | `term.screen.getText()`                                         |
+| `term.getScrollbackText()`                | `term.scrollback.getText()`                                     |
+| `term.getRowText(n)`                      | `term.row(n).getText()`                                         |

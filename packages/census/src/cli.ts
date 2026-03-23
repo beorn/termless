@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
 import { parseVitestJson, fromPerBackendFiles } from "./parse.ts"
 import { renderReport } from "./report.tsx"
+import { runVersionedCensus, probeHash, loadVersionsCatalog } from "./versions.ts"
 
 const log = createLogger("census")
 
@@ -116,6 +117,57 @@ program
       console.log(`  ${cat.padEnd(20)} ${ids.length} features`)
     }
     console.log(`\n  Total: ${data.featureIds.length} features across ${data.backendNames.length} backends\n`)
+  })
+
+program
+  .command("versions")
+  .description("Run probes against older upstream versions (from versions.json)")
+  .option("-f, --force", "Force re-run even if cached results are valid")
+  .option("-b, --backend <name>", "Only run a specific backend")
+  .action(async (opts: { force?: boolean; backend?: string }) => {
+    const catalog = loadVersionsCatalog()
+    const hash = probeHash()
+
+    // Show what we're about to do
+    const pairs: string[] = []
+    for (const [name, config] of Object.entries(catalog.backends)) {
+      if (opts.backend && name !== opts.backend) continue
+      for (const version of config.versions) {
+        pairs.push(`${name}@${version}`)
+      }
+    }
+    console.log(`\nVersioned census: ${pairs.length} backend-version pairs`)
+    console.log(`  Probe hash: ${hash}`)
+    console.log(`  Pairs: ${pairs.join(", ")}\n`)
+
+    const results = await runVersionedCensus({
+      backends: opts.backend ? [opts.backend] : undefined,
+      force: opts.force,
+    })
+
+    // Display results
+    for (const r of results) {
+      if (r.skipped) {
+        console.log(`  ${r.backend}@${r.version} — skipped (cached)`)
+      } else if (r.error) {
+        console.log(`  ${r.backend}@${r.version} — error: ${r.error}`)
+      } else {
+        const pct = Math.round(((r.passCount ?? 0) / (r.featureCount || 1)) * 100)
+        console.log(`  ${r.backend}@${r.version} — ${r.passCount}/${r.featureCount} (${pct}%)`)
+      }
+    }
+
+    const ran = results.filter((r) => !r.skipped && !r.error).length
+    const skipped = results.filter((r) => r.skipped).length
+    const errors = results.filter((r) => r.error).length
+    console.log(`\n  Done: ${ran} ran, ${skipped} cached, ${errors} errors\n`)
+  })
+
+program
+  .command("hash")
+  .description("Show current probe hash (for cache debugging)")
+  .action(() => {
+    console.log(probeHash())
   })
 
 // ── Default: run if no subcommand ──

@@ -16,7 +16,6 @@ interface BackendResult {
 interface CensusPageData {
   backends: Array<{ name: string; version: string }>
   features: string[]
-  categories: Map<string, string[]>
   /** backend name -> feature id -> boolean */
   results: Record<string, Record<string, boolean>>
   /** backend name -> feature id -> note string */
@@ -38,7 +37,6 @@ export default {
       return {
         backends: [],
         features: [],
-        categories: new Map(),
         results: {},
         notes: {},
         generated: "",
@@ -69,14 +67,6 @@ export default {
     }
     const features = Array.from(featureSet).sort()
 
-    // Group into categories
-    const categories = new Map<string, string[]>()
-    for (const id of features) {
-      const cat = id.split(".")[0]!
-      if (!categories.has(cat)) categories.set(cat, [])
-      categories.get(cat)!.push(id)
-    }
-
     // Build results and notes maps
     const results: Record<string, Record<string, boolean>> = {}
     const notes: Record<string, Record<string, string>> = {}
@@ -94,7 +84,6 @@ export default {
     return {
       backends: perBackend.map((b) => ({ name: b.backend, version: b.version })),
       features,
-      categories,
       results,
       notes,
       generated,

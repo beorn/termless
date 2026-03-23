@@ -43,7 +43,7 @@ export { diffBuffers } from "./diff.ts"
 export type { CellDiff, CellSummary, DiffResult } from "./diff.ts"
 
 // Recording and replay
-export { startRecording, replayRecording } from "./recording.ts"
+export { startRecording, replayRecording, snapshotVisualState } from "./recording.ts"
 export type { RecordedEvent, Recording, RecordingHandle } from "./recording.ts"
 
 // Mock timer for animation testing

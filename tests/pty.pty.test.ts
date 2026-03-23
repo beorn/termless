@@ -40,8 +40,7 @@ describe.skipIf(!hasPty)("PTY integration", () => {
     const term = createXterm()
     try {
       await term.spawn(["echo", "hello termless"])
-      await term.waitFor("hello termless", 5000)
-      expect(term.getText()).toContain("hello termless")
+      await expect(term.screen).toContainText("hello termless", { timeout: 5000 })
     } finally {
       await term.close()
     }
@@ -79,7 +78,7 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       await term.spawn(["bash", "-c", "read line && echo got:$line"])
       term.type("hello")
       term.press("Enter")
-      await term.waitFor("got:hello", 5000)
+      await expect(term.screen).toContainText("got:hello", { timeout: 5000 })
     } finally {
       await term.close()
     }
@@ -91,7 +90,7 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       // Use bash -c explicitly for shell features (&&, $variable)
       await term.spawn(["bash", "-c", "read line && echo got:$line"])
       term.type("typed text\n")
-      await term.waitFor("got:typed text", 5000)
+      await expect(term.screen).toContainText("got:typed text", { timeout: 5000 })
     } finally {
       await term.close()
     }
@@ -102,8 +101,7 @@ describe.skipIf(!hasPty)("PTY integration", () => {
     try {
       // Arguments with spaces should be passed as-is, not split by shell
       await term.spawn(["echo", "hello world", "foo bar"])
-      await term.waitFor("hello world foo bar", 5000)
-      expect(term.getText()).toContain("hello world foo bar")
+      await expect(term.screen).toContainText("hello world foo bar", { timeout: 5000 })
     } finally {
       await term.close()
     }
@@ -118,9 +116,8 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       // The argument ";echo injected" should appear as-is (a single argument
       // to echo), NOT as a separate shell command that would produce a second
       // line of output containing just "injected".
-      await term.waitFor("$(whoami)", 5000)
-      expect(term.getText()).toContain("$(whoami)")
-      expect(term.getText()).toContain(";echo injected")
+      await expect(term.screen).toContainText("$(whoami)", { timeout: 5000 })
+      expect(term.screen).toContainText(";echo injected")
     } finally {
       await term.close()
     }
