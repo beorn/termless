@@ -234,7 +234,7 @@ Run standardized probes against all backends to generate a capability matrix:
 bun census
 ```
 
-See the [live census results](https://termless.dev/census) or view locally at `census/results/current.json`.
+See the full interactive matrix at [terminfo.dev](https://terminfo.dev).
 
 ### Programmatic Backend Selection
 
