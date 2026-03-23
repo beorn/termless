@@ -1,7 +1,7 @@
 {
   "backend": "wezterm",
   "version": "0.1.0-fork.5",
-  "generated": "2026-03-23T14:38:41.132Z",
+  "generated": "2026-03-23T14:44:32.128Z",
   "results": {
     "cursor.move.absolute": true,
     "cursor.move.home": true,

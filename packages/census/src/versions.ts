@@ -3,14 +3,21 @@
  *
  * For each backend+version pair in versions.json:
  * 1. Install the upstream package at that version to a cache directory
- * 2. Run vitest probes in a subprocess with NODE_PATH pointing to the cached version
- * 3. Parse results and save as {backend}-{version}.json
- * 4. Skip if result already exists and probe files haven't changed (hash match)
+ * 2. Generate a vitest config with `resolve.alias` to redirect the upstream import
+ * 3. Run vitest probes in a subprocess, parsing JSON output
+ * 4. Save results as {backend}-{version}.json
+ * 5. Skip if result already exists and probe files haven't changed (hash match)
  *
- * Only JS/WASM backends are supported — native backends require building from source.
+ * Uses Vite's `resolve.alias` rather than NODE_PATH because Bun's module
+ * resolution ignores NODE_PATH when the package is already available in
+ * the workspace node_modules. The alias approach intercepts at the bundler
+ * level before Bun's resolver runs.
+ *
+ * Only JS/WASM backends are supported — native backends require building
+ * each version from source (deferred).
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -88,7 +95,7 @@ export function loadVersionsCatalog(): VersionsCatalog {
 
 /**
  * Install an upstream package at a specific version to the cache directory.
- * Returns the path to the node_modules directory.
+ * Returns the path to the cache directory (contains node_modules/).
  */
 function ensureVersionInstalled(upstream: string, version: string): string {
   const cacheDir = join(CACHE_DIR, `${upstream.replace(/[/@]/g, "_")}-${version}`)
@@ -96,7 +103,7 @@ function ensureVersionInstalled(upstream: string, version: string): string {
 
   if (existsSync(nodeModules)) {
     log.debug?.(`Cache hit: ${upstream}@${version}`)
-    return nodeModules
+    return cacheDir
   }
 
   log.debug?.(`Installing ${upstream}@${version} to ${cacheDir}`)
@@ -112,7 +119,7 @@ function ensureVersionInstalled(upstream: string, version: string): string {
     throw new Error(`Failed to install ${upstream}@${version}: ${e.message}`)
   }
 
-  return nodeModules
+  return cacheDir
 }
 
 /**
@@ -129,38 +136,93 @@ function isCacheValid(resultPath: string, currentHash: string): boolean {
   }
 }
 
+/**
+ * Resolve the path to the upstream package entry point within a cache dir.
+ * For scoped packages like @xterm/headless, walk node_modules/@xterm/headless.
+ */
+function resolveUpstreamPath(cacheDir: string, upstream: string): string {
+  const nodeModules = join(cacheDir, "node_modules")
+  const pkgDir = join(nodeModules, ...upstream.split("/"))
+
+  if (!existsSync(pkgDir)) {
+    throw new Error(`Package ${upstream} not found in ${nodeModules}`)
+  }
+
+  // Read package.json to find the entry point
+  const pkgJson = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf-8"))
+  const entry = pkgJson.module ?? pkgJson.main ?? "index.js"
+  const entryPath = join(pkgDir, entry)
+
+  if (existsSync(entryPath)) return entryPath
+
+  // Fallback: just return the package directory (Vite will resolve from there)
+  return pkgDir
+}
+
 // ── Run probes for a single backend+version ──
+
+/**
+ * Generate a temporary vitest config that uses resolve.alias to redirect
+ * the upstream package import to the cached version.
+ */
+function generateVersionedConfig(upstream: string, aliasTarget: string): string {
+  // Escape backslashes for the path in the generated JS
+  const escapedTarget = aliasTarget.replace(/\\/g, "\\\\")
+
+  return `
+import { defineConfig } from "vitest/config"
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "${upstream}": "${escapedTarget}",
+    },
+  },
+  test: {
+    include: ["packages/census/probes/**/*.probe.ts"],
+  },
+})
+`.trim()
+}
 
 /**
  * Run census probes for a specific backend at a specific upstream version.
  *
- * Strategy: run vitest in a subprocess with NODE_PATH set so the upstream
- * package resolves from our cached version instead of workspace node_modules.
- * The `--reporter json` flag gives us structured output to parse.
- *
- * We filter vitest to only run probes for the specific backend by using
- * a custom environment variable that _backends.ts can check.
+ * Strategy: generate a vitest config with `resolve.alias` that redirects the
+ * upstream package import (e.g., @xterm/headless) to a cached version.
+ * CENSUS_BACKEND env var tells _backends.ts to only load that single backend.
  */
 function runProbesForVersion(
   backendName: string,
   upstream: string,
   version: string,
-  nodeModulesPath: string,
+  cacheDir: string,
 ): ReturnType<typeof parseVitestJson> | null {
   log.debug?.(`Running probes: ${backendName}@${version}`)
 
-  // Build NODE_PATH: our versioned cache first, then existing paths
-  const existingNodePath = process.env.NODE_PATH ?? ""
-  const nodePath = nodeModulesPath + (existingNodePath ? `:${existingNodePath}` : "")
+  // Resolve the cached upstream package path
+  let aliasTarget: string
+  try {
+    aliasTarget = resolveUpstreamPath(cacheDir, upstream)
+  } catch (e: any) {
+    log.debug?.(`Failed to resolve upstream path: ${e.message}`)
+    return null
+  }
+
+  // Generate temporary vitest config
+  const configContent = generateVersionedConfig(upstream, aliasTarget)
+  const configPath = join(TERMLESS_ROOT, `.vitest.census-${backendName}-${version.replace(/\./g, "_")}.ts`)
 
   try {
+    writeFileSync(configPath, configContent)
+
     const result = execSync(
       [
         "bun",
         "vitest",
         "run",
         "--config",
-        "vitest.census.ts",
+        configPath,
         "--reporter",
         "json",
       ].join(" "),
@@ -169,7 +231,6 @@ function runProbesForVersion(
         stdio: ["pipe", "pipe", "pipe"],
         env: {
           ...process.env,
-          NODE_PATH: nodePath,
           CENSUS_BACKEND: backendName,
         },
         timeout: 120_000,
@@ -198,6 +259,11 @@ function runProbesForVersion(
     }
     log.debug?.(`Error running probes for ${backendName}@${version}: ${e.message}`)
     return null
+  } finally {
+    // Clean up temporary config
+    try {
+      unlinkSync(configPath)
+    } catch {}
   }
 }
 
@@ -239,16 +305,16 @@ export async function runVersionedCensus(opts?: VersionsRunOptions): Promise<Ver
       }
 
       // Install upstream at version
-      let nodeModulesPath: string
+      let cacheDir: string
       try {
-        nodeModulesPath = ensureVersionInstalled(config.upstream, version)
+        cacheDir = ensureVersionInstalled(config.upstream, version)
       } catch (e: any) {
         results.push({ backend: backendName, version, skipped: false, error: e.message })
         continue
       }
 
       // Run probes
-      const data = runProbesForVersion(backendName, config.upstream, version, nodeModulesPath)
+      const data = runProbesForVersion(backendName, config.upstream, version, cacheDir)
 
       if (!data || data.backendNames.length === 0) {
         results.push({
