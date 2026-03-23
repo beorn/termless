@@ -76,14 +76,8 @@ try {
   backends.push(["kitty", async () => (await import("../../kitty/src/backend.ts")).createKittyBackend()])
 } catch {}
 
-// OS-level (macOS only)
-try {
-  const mod = await import("../../peekaboo/src/backend.ts")
-  const b = mod.createPeekabooBackend()
-  b.init({ cols: 1, rows: 1 })
-  b.destroy()
-  backends.push(["peekaboo", async () => (await import("../../peekaboo/src/backend.ts")).createPeekabooBackend()])
-} catch {}
+// Peekaboo excluded — it's OS automation, not a terminal emulator.
+// Its capabilities depend on whichever real terminal app it's driving.
 
 if (backends.length === 0) {
   console.warn("Warning: No backends available for census")

@@ -20,8 +20,8 @@
     },
     "vt100": {
       "package": "@termless/vt100",
-      "upstream": null,
-      "upstreamVersion": null,
+      "upstream": "@termless/vt100",
+      "upstreamVersion": "0.3.0",
       "description": "Pure TypeScript VT100 emulator, zero dependencies",
       "type": "js",
       "default": true
