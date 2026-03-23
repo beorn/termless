@@ -1,7 +1,7 @@
 {
   "backend": "vt100-rust",
   "version": "0.15.0",
-  "generated": "2026-03-23T00:44:39.173Z",
+  "generated": "2026-03-23T00:52:13.954Z",
   "results": {
     "cursor-cup": {
       "support": "yes"

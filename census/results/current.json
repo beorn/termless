@@ -1,10 +1,10 @@
 {
-  "generated": "2026-03-23T00:44:39.173Z",
+  "generated": "2026-03-23T00:52:13.954Z",
   "backends": [
     "xtermjs",
     "vt100",
-    "vt100-rust",
-    "peekaboo"
+    "ghostty",
+    "vt100-rust"
   ],
   "descriptions": {
     "cursor-cup": "CUP absolute positioning",
@@ -460,6 +460,191 @@
         "support": "yes"
       }
     },
+    "ghostty": {
+      "cursor-cup": {
+        "support": "error"
+      },
+      "cursor-home": {
+        "support": "error"
+      },
+      "cursor-forward": {
+        "support": "error"
+      },
+      "cursor-back": {
+        "support": "error"
+      },
+      "cursor-down": {
+        "support": "error"
+      },
+      "cursor-up": {
+        "support": "error"
+      },
+      "cursor-hide": {
+        "support": "error"
+      },
+      "cursor-save-restore": {
+        "support": "error"
+      },
+      "erase-line-right": {
+        "support": "error"
+      },
+      "erase-line-left": {
+        "support": "error"
+      },
+      "erase-line-all": {
+        "support": "error"
+      },
+      "erase-screen-below": {
+        "support": "error"
+      },
+      "erase-screen-all": {
+        "support": "error"
+      },
+      "ext-truecolor": {
+        "support": "error"
+      },
+      "ext-kitty-keyboard": {
+        "support": "error"
+      },
+      "ext-kitty-graphics": {
+        "support": "error"
+      },
+      "ext-sixel": {
+        "support": "error"
+      },
+      "ext-osc8": {
+        "support": "error"
+      },
+      "ext-reflow": {
+        "support": "error"
+      },
+      "ext-semantic-prompts": {
+        "support": "error"
+      },
+      "ext-osc2-title": {
+        "support": "error"
+      },
+      "mode-alt-screen": {
+        "support": "error"
+      },
+      "mode-alt-screen-exit": {
+        "support": "error"
+      },
+      "mode-bracketed-paste": {
+        "support": "error"
+      },
+      "mode-application-cursor": {
+        "support": "error"
+      },
+      "mode-auto-wrap": {
+        "support": "error"
+      },
+      "mode-mouse-tracking": {
+        "support": "error"
+      },
+      "mode-focus-tracking": {
+        "support": "error"
+      },
+      "mode-reverse-video": {
+        "support": "error"
+      },
+      "reset-sgr": {
+        "support": "error"
+      },
+      "reset-ris": {
+        "support": "error"
+      },
+      "reset-method": {
+        "support": "error"
+      },
+      "scrollback-accumulate": {
+        "support": "error"
+      },
+      "scrollback-total-lines": {
+        "support": "error"
+      },
+      "scrollback-scroll-up": {
+        "support": "error"
+      },
+      "scrollback-reverse-index": {
+        "support": "error"
+      },
+      "scrollback-alt-screen": {
+        "support": "error"
+      },
+      "sgr-bold": {
+        "support": "error"
+      },
+      "sgr-faint": {
+        "support": "error"
+      },
+      "sgr-italic": {
+        "support": "error"
+      },
+      "sgr-underline-single": {
+        "support": "error"
+      },
+      "sgr-underline-double": {
+        "support": "error"
+      },
+      "sgr-underline-curly": {
+        "support": "error"
+      },
+      "sgr-underline-dotted": {
+        "support": "error"
+      },
+      "sgr-underline-dashed": {
+        "support": "error"
+      },
+      "sgr-blink": {
+        "support": "error"
+      },
+      "sgr-inverse": {
+        "support": "error"
+      },
+      "sgr-hidden": {
+        "support": "error"
+      },
+      "sgr-strikethrough": {
+        "support": "error"
+      },
+      "sgr-fg-256": {
+        "support": "error"
+      },
+      "sgr-fg-truecolor": {
+        "support": "error"
+      },
+      "sgr-bg-truecolor": {
+        "support": "error"
+      },
+      "sgr-reset": {
+        "support": "error"
+      },
+      "text-basic": {
+        "support": "error"
+      },
+      "text-newline": {
+        "support": "error"
+      },
+      "text-wrap": {
+        "support": "error"
+      },
+      "text-tab": {
+        "support": "error"
+      },
+      "text-wide-emoji": {
+        "support": "error"
+      },
+      "text-cjk": {
+        "support": "error"
+      },
+      "text-overwrite": {
+        "support": "error"
+      },
+      "text-cr": {
+        "support": "error"
+      }
+    },
     "vt100-rust": {
       "cursor-cup": {
         "support": "yes"
@@ -652,203 +837,6 @@
       },
       "text-wide-emoji": {
         "support": "yes"
-      },
-      "text-cjk": {
-        "support": "yes"
-      },
-      "text-overwrite": {
-        "support": "yes"
-      },
-      "text-cr": {
-        "support": "yes"
-      }
-    },
-    "peekaboo": {
-      "cursor-cup": {
-        "support": "yes"
-      },
-      "cursor-home": {
-        "support": "yes"
-      },
-      "cursor-forward": {
-        "support": "yes"
-      },
-      "cursor-back": {
-        "support": "yes"
-      },
-      "cursor-down": {
-        "support": "yes"
-      },
-      "cursor-up": {
-        "support": "yes"
-      },
-      "cursor-hide": {
-        "support": "no",
-        "notes": "hidden"
-      },
-      "cursor-save-restore": {
-        "support": "yes"
-      },
-      "erase-line-right": {
-        "support": "yes"
-      },
-      "erase-line-left": {
-        "support": "yes"
-      },
-      "erase-line-all": {
-        "support": "yes"
-      },
-      "erase-screen-below": {
-        "support": "yes"
-      },
-      "erase-screen-all": {
-        "support": "yes"
-      },
-      "ext-truecolor": {
-        "support": "yes"
-      },
-      "ext-kitty-keyboard": {
-        "support": "no",
-        "notes": "kitty keyboard capable"
-      },
-      "ext-kitty-graphics": {
-        "support": "no",
-        "notes": "kitty graphics capable"
-      },
-      "ext-sixel": {
-        "support": "no",
-        "notes": "sixel capable"
-      },
-      "ext-osc8": {
-        "support": "yes"
-      },
-      "ext-reflow": {
-        "support": "yes"
-      },
-      "ext-semantic-prompts": {
-        "support": "no",
-        "notes": "semantic prompts capable"
-      },
-      "ext-osc2-title": {
-        "support": "yes"
-      },
-      "mode-alt-screen": {
-        "support": "yes"
-      },
-      "mode-alt-screen-exit": {
-        "support": "yes"
-      },
-      "mode-bracketed-paste": {
-        "support": "yes"
-      },
-      "mode-application-cursor": {
-        "support": "yes"
-      },
-      "mode-auto-wrap": {
-        "support": "yes"
-      },
-      "mode-mouse-tracking": {
-        "support": "yes"
-      },
-      "mode-focus-tracking": {
-        "support": "yes"
-      },
-      "mode-reverse-video": {
-        "support": "no",
-        "notes": "reverseVideo on"
-      },
-      "reset-sgr": {
-        "support": "yes"
-      },
-      "reset-ris": {
-        "support": "yes"
-      },
-      "reset-method": {
-        "support": "yes"
-      },
-      "scrollback-accumulate": {
-        "support": "yes"
-      },
-      "scrollback-total-lines": {
-        "support": "yes"
-      },
-      "scrollback-scroll-up": {
-        "support": "no",
-        "notes": "TOP scrolled away"
-      },
-      "scrollback-reverse-index": {
-        "support": "yes"
-      },
-      "scrollback-alt-screen": {
-        "support": "yes"
-      },
-      "sgr-bold": {
-        "support": "yes"
-      },
-      "sgr-faint": {
-        "support": "yes"
-      },
-      "sgr-italic": {
-        "support": "yes"
-      },
-      "sgr-underline-single": {
-        "support": "yes"
-      },
-      "sgr-underline-double": {
-        "support": "partial",
-        "notes": "double variant"
-      },
-      "sgr-underline-curly": {
-        "support": "partial",
-        "notes": "curly variant"
-      },
-      "sgr-underline-dotted": {
-        "support": "partial",
-        "notes": "dotted variant"
-      },
-      "sgr-underline-dashed": {
-        "support": "partial",
-        "notes": "dashed variant"
-      },
-      "sgr-blink": {
-        "support": "yes"
-      },
-      "sgr-inverse": {
-        "support": "yes"
-      },
-      "sgr-hidden": {
-        "support": "yes"
-      },
-      "sgr-strikethrough": {
-        "support": "yes"
-      },
-      "sgr-fg-256": {
-        "support": "yes"
-      },
-      "sgr-fg-truecolor": {
-        "support": "yes"
-      },
-      "sgr-bg-truecolor": {
-        "support": "yes"
-      },
-      "sgr-reset": {
-        "support": "yes"
-      },
-      "text-basic": {
-        "support": "yes"
-      },
-      "text-newline": {
-        "support": "yes"
-      },
-      "text-wrap": {
-        "support": "yes"
-      },
-      "text-tab": {
-        "support": "yes"
-      },
-      "text-wide-emoji": {
-        "support": "no",
-        "notes": "emoji is wide"
       },
       "text-cjk": {
         "support": "yes"

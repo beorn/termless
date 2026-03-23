@@ -22,24 +22,24 @@ const backends: [string, () => Promise<TerminalBackend>][] = []
 
 // JS backends (always available)
 try {
-  const { createXtermBackend } = await import("@termless/xtermjs")
-  createXtermBackend()
-  backends.push(["xtermjs", async () => (await import("@termless/xtermjs")).createXtermBackend()])
+  const mod = await import("../../xtermjs/src/backend.ts")
+  mod.createXtermBackend()
+  backends.push(["xtermjs", async () => (await import("../../xtermjs/src/backend.ts")).createXtermBackend()])
 } catch {}
 
 try {
-  const { createVt100Backend } = await import("@termless/vt100")
-  createVt100Backend()
-  backends.push(["vt100", async () => (await import("@termless/vt100")).createVt100Backend()])
+  const mod = await import("../../vt100/src/backend.ts")
+  mod.createVt100Backend()
+  backends.push(["vt100", async () => (await import("../../vt100/src/backend.ts")).createVt100Backend()])
 } catch {}
 
-// WASM backends
+// WASM backends — init deferred to beforeAll (top-level await doesn't work for WASM in vitest)
 try {
-  const mod = await import("@termless/ghostty")
-  const ghostty = await mod.initGhostty()
+  await import("../../ghostty/src/backend.ts") // verify module exists
   backends.push(["ghostty", async () => {
-    const m = await import("@termless/ghostty")
-    return m.createGhosttyBackend(undefined, ghostty)
+    const { createGhosttyBackend, initGhostty } = await import("../../ghostty/src/backend.ts")
+    const ghostty = await initGhostty()
+    return createGhosttyBackend(undefined, ghostty)
   }])
 } catch {}
 

@@ -38,7 +38,7 @@
     "wezterm": {
       "package": "@termless/wezterm",
       "upstream": "wezterm-term",
-      "upstreamVersion": null,
+      "upstreamVersion": "0.1.0",
       "description": "WezTerm terminal via napi-rs Rust bindings",
       "type": "native",
       "default": false,
@@ -46,8 +46,8 @@
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
-      "upstream": null,
-      "upstreamVersion": null,
+      "upstream": "peekaboo",
+      "upstreamVersion": "0.7.0",
       "description": "OS-level terminal automation (real app + screenshots)",
       "type": "os",
       "default": false,
@@ -64,8 +64,8 @@
     },
     "libvterm": {
       "package": "@termless/libvterm",
-      "upstream": "libvterm (neovim)",
-      "upstreamVersion": null,
+      "upstream": "libvterm",
+      "upstreamVersion": "0.3.0",
       "description": "Neovim's VT parser via Emscripten WASM",
       "type": "wasm",
       "default": false
@@ -73,7 +73,7 @@
     "kitty": {
       "package": "@termless/kitty",
       "upstream": "kitty",
-      "upstreamVersion": null,
+      "upstreamVersion": "0.40.0",
       "description": "Kitty VT parser built from source (GPL-3.0 dependency)",
       "type": "native",
       "default": false,
