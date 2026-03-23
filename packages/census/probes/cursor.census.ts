@@ -1,47 +1,46 @@
-
-import { census, feed, expect } from "./_backends.ts"
+import { census, feed } from "./_backends.ts"
 
 census("cursor", { spec: "ECMA-48 §8.3" }, (b, test) => {
-  test("cursor-cup", { meta: { description: "CUP absolute positioning" } }, () => {
+  test("cursor-cup", { meta: { description: "CUP absolute positioning" } }, ({ check }) => {
     feed(b, "\x1b[5;10H")
-    expect(b.getCursor().x).toBe(9)
-    expect(b.getCursor().y).toBe(4)
+    check(b.getCursor().x, "column").toBe(9)
+    check(b.getCursor().y, "row").toBe(4)
   })
 
-  test("cursor-home", { meta: { description: "Cursor home (0,0)" } }, () => {
+  test("cursor-home", { meta: { description: "Cursor home (0,0)" } }, ({ check }) => {
     feed(b, "ABC\x1b[H")
-    expect(b.getCursor().x).toBe(0)
-    expect(b.getCursor().y).toBe(0)
+    check(b.getCursor().x, "column").toBe(0)
+    check(b.getCursor().y, "row").toBe(0)
   })
 
-  test("cursor-forward", { meta: { description: "Cursor forward (CUF)" } }, () => {
+  test("cursor-forward", { meta: { description: "Cursor forward (CUF)" } }, ({ check }) => {
     feed(b, "\x1b[5C")
-    expect(b.getCursor().x).toBe(5)
+    check(b.getCursor().x, "moved right 5").toBe(5)
   })
 
-  test("cursor-back", { meta: { description: "Cursor back (CUB)" } }, () => {
+  test("cursor-back", { meta: { description: "Cursor back (CUB)" } }, ({ check }) => {
     feed(b, "ABC\x1b[2D")
-    expect(b.getCursor().x).toBe(1)
+    check(b.getCursor().x, "moved back 2").toBe(1)
   })
 
-  test("cursor-down", { meta: { description: "Cursor down (CUD)" } }, () => {
+  test("cursor-down", { meta: { description: "Cursor down (CUD)" } }, ({ check }) => {
     feed(b, "\x1b[3B")
-    expect(b.getCursor().y).toBe(3)
+    check(b.getCursor().y, "moved down 3").toBe(3)
   })
 
-  test("cursor-up", { meta: { description: "Cursor up (CUU)" } }, () => {
+  test("cursor-up", { meta: { description: "Cursor up (CUU)" } }, ({ check }) => {
     feed(b, "\x1b[5B\x1b[2A")
-    expect(b.getCursor().y).toBe(3)
+    check(b.getCursor().y, "net 3 down").toBe(3)
   })
 
-  test("cursor-hide", { meta: { description: "Cursor hide (DECTCEM)" } }, () => {
+  test("cursor-hide", { meta: { description: "Cursor hide (DECTCEM)" } }, ({ check }) => {
     feed(b, "\x1b[?25l")
-    expect(b.getCursor().visible).toBe(false)
+    check(b.getCursor().visible, "hidden").toBe(false)
   })
 
-  test("cursor-save-restore", { meta: { description: "Cursor save/restore (DECSC/DECRC)" } }, () => {
+  test("cursor-save-restore", { meta: { description: "Save/restore (DECSC/DECRC)" } }, ({ check }) => {
     feed(b, "AB\x1b7\x1b[5;5H\x1b8")
-    expect(b.getCursor().x).toBe(2)
-    expect(b.getCursor().y).toBe(0)
+    check(b.getCursor().x, "restored column").toBe(2)
+    check(b.getCursor().y, "restored row").toBe(0)
   })
 })

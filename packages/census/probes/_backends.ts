@@ -1,34 +1,31 @@
 /**
- * Census infrastructure — backend matrix + helpers.
- *
- * The census() function is the only thing probe files need. It handles
- * the backend matrix, lifecycle (init/reset/destroy), and describe blocks.
+ * Census infrastructure — backend matrix + check() assertions.
  *
  * @example
  * ```typescript
  * census("sgr", { spec: "ECMA-48 §8.3.117" }, (b, test) => {
- *   test("sgr-bold", { meta: { description: "Bold" } }, () => {
+ *   test("sgr-bold", { meta: { description: "Bold" } }, ({ check }) => {
  *     feed(b, "\x1b[1mX")
- *     expect(b.getCell(0, 0).bold).toBe(true)
+ *     check(b.getCell(0, 0).bold, "bold attribute").toBe(true)
  *   })
  *
- *   test("sgr-underline-curly", { meta: { description: "Underline curly" } }, ({ partial }) => {
+ *   test("sgr-underline-curly", { meta: { description: "Underline curly" } }, ({ check }) => {
  *     feed(b, "\x1b[4:3mX")
- *     partial(b.getCell(0, 0).underline, "has underline but not curly")
- *     expect(b.getCell(0, 0).underline).toBe("curly")
+ *     const cell = b.getCell(0, 0)
+ *     check(cell.underline, "has underline").toBeTruthy()
+ *     check(cell.underline, "curly variant").toBe("curly")
  *   })
  * })
  * ```
+ *
+ * Result interpretation:
+ * - All checks pass → **yes**
+ * - Some checks fail → **partial** (failed check notes recorded)
+ * - All checks fail → **no**
+ * - Uncaught error (TypeError, null deref) → **error** (probe bug)
  */
 
-import {
-  describe,
-  test as vitestTest,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  expect as vitestExpect,
-} from "vitest"
+import { describe, test as vitestTest, beforeAll, afterAll, beforeEach } from "vitest"
 import type { TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 import { createVt100Backend } from "@termless/vt100"
@@ -64,13 +61,63 @@ export function feed(b: TerminalBackend, text: string): void {
   b.feed(enc.encode(text))
 }
 
-// ── Census context (destructured in test callbacks) ──
+// ── Check assertion (census-specific) ──
+
+interface CheckChain {
+  toBe(expected: unknown): void
+  toBeTruthy(): void
+  toEqual(expected: unknown): void
+  toContain(expected: string): void
+  toBeGreaterThan(n: number): void
+  toBeGreaterThanOrEqual(n: number): void
+  toBeNull(): void
+  not: {
+    toBe(expected: unknown): void
+    toBeNull(): void
+    toContain(expected: string): void
+  }
+}
+
+interface CheckState {
+  total: number
+  passed: number
+  failed: string[]
+}
+
+function createCheck(state: CheckState) {
+  return function check(value: unknown, note: string): CheckChain {
+    function record(pass: boolean) {
+      state.total++
+      if (pass) {
+        state.passed++
+      } else {
+        state.failed.push(note)
+      }
+    }
+
+    const chain: CheckChain = {
+      toBe(expected) { record(value === expected) },
+      toBeTruthy() { record(!!value) },
+      toEqual(expected) { record(JSON.stringify(value) === JSON.stringify(expected)) },
+      toContain(expected) { record(typeof value === "string" && value.includes(expected)) },
+      toBeGreaterThan(n) { record(typeof value === "number" && value > n) },
+      toBeGreaterThanOrEqual(n) { record(typeof value === "number" && value >= n) },
+      toBeNull() { record(value === null) },
+      not: {
+        toBe(expected) { record(value !== expected) },
+        toBeNull() { record(value !== null) },
+        toContain(expected) { record(typeof value !== "string" || !value.includes(expected)) },
+      },
+    }
+    return chain
+  }
+}
+
+// ── Census context ──
 
 export interface CensusContext {
-  /** Mark as partial support if condition is truthy. */
-  partial: (condition: unknown, msg: string) => void
-  /** Attach a note to the test result. */
-  note: (msg: string) => void
+  /** Assert a value with a descriptive note. Never throws — records pass/fail. */
+  check: (value: unknown, note: string) => CheckChain
 }
 
 // ── Census test type ──
@@ -107,15 +154,14 @@ export function census(
         _b.reset()
       })
 
-      // Proxy: lets fn() reference b during describe collection,
-      // but actual access happens inside test() callbacks (after beforeAll)
+      // Proxy: reference b during describe collection,
+      // actual access deferred to test callbacks (after beforeAll)
       const proxy = new Proxy({} as TerminalBackend, {
         get(_target, prop) {
           return (_b as any)[prop]
         },
       })
 
-      // Augmented test function that provides { partial, note } in context
       const censusTest: CensusTest = (
         testName: string,
         optsOrFn: TestOpts | TestFn,
@@ -125,21 +171,34 @@ export function census(
         const testFn = typeof optsOrFn === "function" ? optsOrFn : maybeFn!
 
         vitestTest(testName, testOpts, (vitestCtx) => {
-          const ctx: CensusContext = {
-            partial: (condition, msg) => {
-              if (condition) {
-                // Just add to notes — reporter interprets:
-                // fail + notes = partial, fail + no notes = no
-                const existing = vitestCtx.meta.notes as string | undefined
-                vitestCtx.meta.notes = existing ? `${existing}; ${msg}` : msg
-              }
-            },
-            note: (msg) => {
-              const existing = vitestCtx.meta.notes as string | undefined
-              vitestCtx.meta.notes = existing ? `${existing}; ${msg}` : msg
-            },
+          const state: CheckState = { total: 0, passed: 0, failed: [] }
+          const ctx: CensusContext = { check: createCheck(state) }
+
+          // Run the probe — uncaught errors (TypeError etc.) propagate as real failures
+          const result = testFn(ctx)
+
+          // After probe runs, record results in meta
+          const finish = () => {
+            const meta = vitestCtx.meta ?? ((vitestCtx as any).meta = {})
+            meta.checks = state.total
+            meta.passed = state.passed
+            if (state.failed.length > 0) {
+              meta.notes = state.failed.join("; ")
+            }
+            // Determine census result:
+            // all pass → yes (test passes)
+            // some fail → partial (test passes, notes recorded)
+            // all fail → no (test fails with assertion)
+            if (state.total > 0 && state.passed === 0) {
+              // All checks failed → this is "no" — fail the test
+              throw new Error(`No support: ${state.failed.join("; ")}`)
+            }
+            // If some passed and some failed → "partial" — test passes, notes in meta
+            // If all passed → "yes" — test passes, no notes
           }
-          return testFn(ctx)
+
+          if (result instanceof Promise) return result.then(finish)
+          finish()
         })
       }
 
@@ -150,6 +209,4 @@ export function census(
   }
 }
 
-// Re-export vitest's expect
-export { vitestExpect as expect }
 export type { TerminalBackend }

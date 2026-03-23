@@ -1,46 +1,45 @@
-
-import { census, feed, expect } from "./_backends.ts"
+import { census, feed } from "./_backends.ts"
 
 census("text", {}, (b, test) => {
-  test("text-basic", { meta: { description: "Basic text rendering" } }, () => {
+  test("text-basic", { meta: { description: "Basic text rendering" } }, ({ check }) => {
     feed(b, "Hello")
-    expect(b.getText()).toContain("Hello")
+    check(b.getText(), "contains text").toContain("Hello")
   })
 
-  test("text-newline", { meta: { description: "CR+LF newline" } }, () => {
+  test("text-newline", { meta: { description: "CR+LF newline" } }, ({ check }) => {
     feed(b, "A\r\nB")
-    expect(b.getCell(0, 0).char).toBe("A")
-    expect(b.getCell(1, 0).char).toBe("B")
+    check(b.getCell(0, 0).char, "A on row 0").toBe("A")
+    check(b.getCell(1, 0).char, "B on row 1").toBe("B")
   })
 
-  test("text-wrap", { meta: { description: "Line wrap at right margin" } }, () => {
+  test("text-wrap", { meta: { description: "Line wrap at right margin" } }, ({ check }) => {
     feed(b, "X".repeat(85))
-    expect(b.getCell(1, 0).char).toBe("X")
+    check(b.getCell(1, 0).char, "wrapped to row 1").toBe("X")
   })
 
-  test("text-tab", { meta: { description: "Tab stop at column 8" } }, () => {
+  test("text-tab", { meta: { description: "Tab stop at column 8" } }, ({ check }) => {
     feed(b, "\tX")
-    expect(b.getCell(0, 8).char).toBe("X")
+    check(b.getCell(0, 8).char, "X at col 8").toBe("X")
   })
 
-  test("text-wide-emoji", { meta: { description: "Wide emoji character" } }, () => {
+  test("text-wide-emoji", { meta: { description: "Wide emoji character" } }, ({ check }) => {
     feed(b, "🎉")
-    expect(b.getCell(0, 0).wide).toBe(true)
+    check(b.getCell(0, 0).wide, "emoji is wide").toBe(true)
   })
 
-  test("text-cjk", { meta: { description: "CJK wide character" } }, () => {
+  test("text-cjk", { meta: { description: "CJK wide character" } }, ({ check }) => {
     feed(b, "中")
-    expect(b.getCell(0, 0).wide).toBe(true)
+    check(b.getCell(0, 0).wide, "CJK is wide").toBe(true)
   })
 
-  test("text-overwrite", { meta: { description: "Overwrite with cursor positioning" } }, () => {
+  test("text-overwrite", { meta: { description: "Overwrite with cursor positioning" } }, ({ check }) => {
     feed(b, "AB\x1b[1GC")
-    expect(b.getCell(0, 0).char).toBe("C")
+    check(b.getCell(0, 0).char, "overwritten").toBe("C")
   })
 
-  test("text-cr", { meta: { description: "Carriage return overwrites" } }, () => {
+  test("text-cr", { meta: { description: "Carriage return overwrites" } }, ({ check }) => {
     feed(b, "AB\rC")
-    expect(b.getCell(0, 0).char).toBe("C")
-    expect(b.getCell(0, 1).char).toBe("B")
+    check(b.getCell(0, 0).char, "CR overwrote A").toBe("C")
+    check(b.getCell(0, 1).char, "B preserved").toBe("B")
   })
 })
