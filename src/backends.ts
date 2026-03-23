@@ -29,6 +29,9 @@ export interface BackendEntry {
   type: "js" | "wasm" | "native" | "os"
   default?: boolean
   platforms?: string[]
+  label?: string
+  description?: string
+  url?: string
 }
 
 export interface Manifest {
@@ -54,6 +57,9 @@ export function manifest(): Manifest {
       type: entry.type,
       default: entry.default,
       platforms: entry.platforms,
+      label: entry.label,
+      description: entry.description,
+      url: entry.url,
     }
   }
   _manifest = { version: raw.version, backends }

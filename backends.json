@@ -7,21 +7,29 @@
       "upstream": "npm:@xterm/headless",
       "upstreamVersion": "5.5.0",
       "type": "js",
-      "default": true
+      "default": true,
+      "label": "xterm.js",
+      "description": "The most widely used web terminal emulator. Powers VS Code's terminal.",
+      "url": "https://xtermjs.org"
     },
     "ghostty": {
       "package": "@termless/ghostty",
       "upstream": "npm:ghostty-web",
       "upstreamVersion": "0.4.0",
       "type": "wasm",
-      "default": true
+      "default": true,
+      "label": "Ghostty",
+      "description": "Mitchell Hashimoto's GPU-accelerated terminal. Best standards compliance, Kitty keyboard protocol.",
+      "url": "https://ghostty.org"
     },
     "vt100": {
       "package": "@termless/vt100",
       "upstream": "npm:@termless/vt100",
       "upstreamVersion": "0.3.0",
       "type": "js",
-      "default": true
+      "default": true,
+      "label": "vt100",
+      "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend, ideal for CI."
     },
     "alacritty": {
       "package": "@termless/alacritty",
@@ -29,7 +37,10 @@
       "upstreamVersion": "0.26.0",
       "type": "native",
       "default": false,
-      "requiresBuild": "Rust toolchain (cargo build --release)"
+      "requiresBuild": "Rust toolchain (cargo build --release)",
+      "label": "Alacritty",
+      "description": "Rust-based GPU-accelerated terminal. Strong reflow behavior.",
+      "url": "https://alacritty.org"
     },
     "wezterm": {
       "package": "@termless/wezterm",
@@ -37,7 +48,10 @@
       "upstreamVersion": "0.1.0-fork.5",
       "type": "native",
       "default": false,
-      "requiresBuild": "Rust toolchain (cargo build --release)"
+      "requiresBuild": "Rust toolchain (cargo build --release)",
+      "label": "WezTerm",
+      "description": "Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.",
+      "url": "https://wezfurlong.org/wezterm"
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
@@ -45,7 +59,9 @@
       "upstreamVersion": "0.7.0",
       "type": "os",
       "default": false,
-      "platforms": ["darwin"]
+      "platforms": ["darwin"],
+      "label": "Peekaboo",
+      "description": "Tests against a real terminal app via OS accessibility APIs. macOS only."
     },
     "vt100-rust": {
       "package": "@termless/vt100-rust",
@@ -53,7 +69,10 @@
       "upstreamVersion": "0.15.0",
       "type": "native",
       "default": false,
-      "requiresBuild": "Rust toolchain (cargo build --release)"
+      "requiresBuild": "Rust toolchain (cargo build --release)",
+      "label": "vt100-rust",
+      "description": "Reference Rust VT100 implementation. Cross-validates the TypeScript vt100 backend.",
+      "url": "https://crates.io/crates/vt100"
     },
     "libvterm": {
       "package": "@termless/libvterm",
@@ -61,7 +80,10 @@
       "upstreamVersion": "0.3.0",
       "type": "wasm",
       "default": false,
-      "requiresBuild": "Emscripten SDK (bash build/build.sh)"
+      "requiresBuild": "Emscripten SDK (bash build/build.sh)",
+      "label": "libvterm",
+      "description": "Neovim's C VT parser compiled to WASM. Different implementation catches different bugs.",
+      "url": "https://github.com/neovim/libvterm"
     },
     "ghostty-native": {
       "package": "@termless/ghostty-native",
@@ -69,7 +91,10 @@
       "upstreamVersion": "1.3.1",
       "type": "native",
       "default": false,
-      "requiresBuild": "Zig 0.15.2+ (via nix)"
+      "requiresBuild": "Zig 0.15.2+ (via nix)",
+      "label": "Ghostty Native",
+      "description": "Native Ghostty via Zig N-API bindings. Same parser as Ghostty WASM, no WASM overhead.",
+      "url": "https://ghostty.org"
     },
     "kitty": {
       "package": "@termless/kitty",
@@ -77,7 +102,10 @@
       "upstreamVersion": "0.40.0",
       "type": "native",
       "default": false,
-      "requiresBuild": "C compiler + Python 3 + git (clones kitty GPL source)"
+      "requiresBuild": "C compiler + Python 3 + git (clones kitty GPL source)",
+      "label": "Kitty",
+      "description": "Kitty's VT parser built from GPL source. Only backend with Kitty graphics protocol.",
+      "url": "https://sw.kovidgoyal.net/kitty"
     }
   }
 }
