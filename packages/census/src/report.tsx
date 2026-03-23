@@ -42,11 +42,14 @@ function ProgressBar({ pct }: { pct: number }): React.ReactElement {
 function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }): React.ReactElement {
   const label = `${b.name} (${b.type})`
 
+  // "XX/YY " is 7 chars — status text for untested backends aligns there
+  const SCORE_WIDTH = 7
+
   if (!b.installed) {
     return (
       <Box marginLeft={2}>
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
-        <Text>{"      "}</Text>
+        <Box width={SCORE_WIDTH} />
         <Text color="$muted">not installed</Text>
       </Box>
     )
@@ -56,7 +59,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
     return (
       <Box marginLeft={2}>
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
-        <Text>{"      "}</Text>
+        <Box width={SCORE_WIDTH} />
         <Text color="$muted">installed, not tested</Text>
       </Box>
     )
