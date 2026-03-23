@@ -17,6 +17,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
 import { parseVitestJson, fromPerBackendFiles } from "./parse.ts"
+import { manifest, backends as allBackendNames, isReady } from "../../../src/backends.ts"
 import { renderReport } from "./report.tsx"
 import { runVersionedCensus, probeHash, loadVersionsCatalog } from "./versions.ts"
 
@@ -29,9 +30,23 @@ const MANIFEST_PATH = join(ROOT, "backends.json")
 
 // ── Commands ──
 
+const installed = allBackendNames().filter(isReady)
+const available = allBackendNames().filter((n) => !isReady(n))
+
 const program = new Command()
   .name("census")
-  .description("Terminal capability census — probe features across all backends")
+  .description(
+    `Terminal capability census — probe features across all backends
+
+Examples:
+  bun census report            Run probes + show matrix (cached if unchanged)
+  bun census report --force    Re-run all probes
+  bun census report --cached   Show saved results without re-running
+  bun census versions          Test older upstream versions
+  bun census status            Show config, probes, cache status
+
+Backends (${installed.length} installed): ${installed.join(", ")}${available.length > 0 ? `\nAvailable: ${available.join(", ")}` : ""}`,
+  )
 
 program
   .command("report")
@@ -116,20 +131,60 @@ program
   })
 
 program
-  .command("list")
-  .description("List probe categories with feature counts")
-  .action(async () => {
+  .command("status")
+  .description("Show census configuration, probes, backends, and cache status")
+  .action(() => {
+    const hash = probeHash()
+
+    // Probe files
+    const probeFiles = readdirSync(join(__dirname, "..", "probes"))
+      .filter((f) => f.endsWith(".probe.ts"))
+      .sort()
+    const probeCount = probeFiles.length
+
+    // Results
+    const resultFiles = existsSync(RESULTS_DIR)
+      ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json"))
+      : []
+    const cacheValid = isCacheValid(hash)
+
+    // Versions catalog
+    let versionPairs = 0
+    try {
+      const catalog = loadVersionsCatalog()
+      for (const config of Object.values(catalog.backends)) {
+        versionPairs += config.versions.length
+      }
+    } catch {}
+
+    // Categories from saved results
     const data = loadSavedResults()
-    if (!data) {
-      console.error("No saved results. Run: bun census run")
-      process.exit(1)
+
+    console.log("\n@termless/census\n")
+    console.log(`  Probe hash:    ${hash}`)
+    console.log(`  Probe files:   ${probeCount} (${probeFiles.join(", ")})`)
+    if (data) {
+      console.log(`  Features:      ${data.featureIds.length}`)
+      console.log(`  Tested:        ${data.backendNames.length} (${data.backendNames.join(", ")})`)
+    }
+    console.log(`  Installed:     ${installed.length} (${installed.join(", ")})`)
+    if (available.length > 0) {
+      console.log(`  Available:     ${available.length} (${available.join(", ")})`)
+    }
+    console.log(`  Results:       ${resultFiles.length} files in ${shortPath(RESULTS_DIR)}/`)
+    console.log(`  Cache:         ${cacheValid ? "valid" : "stale (re-run needed)"}`)
+    if (versionPairs > 0) {
+      console.log(`  Version pairs: ${versionPairs}`)
     }
 
-    console.log("\nProbe categories:\n")
-    for (const [cat, ids] of data.categories) {
-      console.log(`  ${cat.padEnd(20)} ${ids.length} features`)
+    if (data) {
+      console.log("\n  Categories:")
+      for (const [cat, ids] of data.categories) {
+        console.log(`    ${cat.padEnd(20)} ${ids.length} features`)
+      }
     }
-    console.log(`\n  Total: ${data.featureIds.length} features across ${data.backendNames.length} backends\n`)
+
+    console.log("")
   })
 
 program
@@ -141,7 +196,6 @@ program
     const catalog = loadVersionsCatalog()
     const hash = probeHash()
 
-    // Show what we're about to do
     const pairs: string[] = []
     for (const [name, config] of Object.entries(catalog.backends)) {
       if (opts.backend && name !== opts.backend) continue
@@ -158,7 +212,6 @@ program
       force: opts.force,
     })
 
-    // Display results
     for (const r of results) {
       if (r.skipped) {
         console.log(`  ${r.backend}@${r.version} — skipped (cached)`)
@@ -174,13 +227,6 @@ program
     const skipped = results.filter((r) => r.skipped).length
     const errors = results.filter((r) => r.error).length
     console.log(`\n  Done: ${ran} ran, ${skipped} cached, ${errors} errors\n`)
-  })
-
-program
-  .command("hash")
-  .description("Show current probe hash (for cache debugging)")
-  .action(() => {
-    console.log(probeHash())
   })
 
 // ── Default: show help ──
