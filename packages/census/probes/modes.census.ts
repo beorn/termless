@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("modes", { spec: "DEC private modes" }, (b) => {
+census("modes", { spec: "DEC private modes" }, (b, test) => {
   test("mode-alt-screen", { meta: { description: "Alt screen enter" } }, () => {
     feed(b, "\x1b[?1049h")
     expect(b.getMode("altScreen")).toBe(true)

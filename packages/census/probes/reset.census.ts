@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("reset", {}, (b) => {
+census("reset", {}, (b, test) => {
   test("reset-sgr", { meta: { description: "SGR 0 clears all attributes" } }, () => {
     feed(b, "\x1b[1;3;7mX\x1b[0mY")
     const cell = b.getCell(0, 1)

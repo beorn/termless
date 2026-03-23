@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("scrollback", {}, (b) => {
+census("scrollback", {}, (b, test) => {
   test("scrollback-accumulate", { meta: { description: "Scrollback accumulates on overflow" } }, () => {
     for (let i = 0; i < 30; i++) feed(b, `line ${i}\r\n`)
     expect(b.getScrollback().totalLines).toBeGreaterThan(24)

@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("cursor", { spec: "ECMA-48 §8.3" }, (b) => {
+census("cursor", { spec: "ECMA-48 §8.3" }, (b, test) => {
   test("cursor-cup", { meta: { description: "CUP absolute positioning" } }, () => {
     feed(b, "\x1b[5;10H")
     expect(b.getCursor().x).toBe(9)

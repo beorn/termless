@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("text", {}, (b) => {
+census("text", {}, (b, test) => {
   test("text-basic", { meta: { description: "Basic text rendering" } }, () => {
     feed(b, "Hello")
     expect(b.getText()).toContain("Hello")

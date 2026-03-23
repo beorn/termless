@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("erase", { spec: "ECMA-48 §8.3.39 (EL), §8.3.40 (ED)" }, (b) => {
+census("erase", { spec: "ECMA-48 §8.3.39 (EL), §8.3.40 (ED)" }, (b, test) => {
   test("erase-line-right", { meta: { description: "Erase line from cursor right (EL 0)" } }, () => {
     feed(b, "XXXXX\x1b[1G\x1b[K")
     const c = b.getCell(0, 0).char

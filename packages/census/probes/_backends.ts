@@ -3,9 +3,32 @@
  *
  * The census() function is the only thing probe files need. It handles
  * the backend matrix, lifecycle (init/reset/destroy), and describe blocks.
+ *
+ * @example
+ * ```typescript
+ * census("sgr", { spec: "ECMA-48 §8.3.117" }, (b, test) => {
+ *   test("sgr-bold", { meta: { description: "Bold" } }, () => {
+ *     feed(b, "\x1b[1mX")
+ *     expect(b.getCell(0, 0).bold).toBe(true)
+ *   })
+ *
+ *   test("sgr-underline-curly", { meta: { description: "Underline curly" } }, ({ partial }) => {
+ *     feed(b, "\x1b[4:3mX")
+ *     partial(b.getCell(0, 0).underline, "has underline but not curly")
+ *     expect(b.getCell(0, 0).underline).toBe("curly")
+ *   })
+ * })
+ * ```
  */
 
-import { describe, beforeAll, afterAll, beforeEach, expect as vitestExpect } from "vitest"
+import {
+  describe,
+  test as vitestTest,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  expect as vitestExpect,
+} from "vitest"
 import type { TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 import { createVt100Backend } from "@termless/vt100"
@@ -41,50 +64,31 @@ export function feed(b: TerminalBackend, text: string): void {
   b.feed(enc.encode(text))
 }
 
-/**
- * Attach a note to the current test result. The reporter includes this
- * in the census output regardless of pass/fail.
- */
-export function note(msg: string, level?: "partial" | "info"): void {
-  // getCurrentTest() may not be available, so we store on a thread-local-ish global
-  ;(globalThis as any).__census_note = msg
-  ;(globalThis as any).__census_level = level
+// ── Census context (destructured in test callbacks) ──
+
+export interface CensusContext {
+  /** Mark as partial support if condition is truthy. */
+  partial: (condition: unknown, msg: string) => void
+  /** Attach a note to the test result. */
+  note: (msg: string) => void
 }
 
-/**
- * Mark the current test as partial support if condition is truthy.
- * Call before the expect() that will fail — the reporter reads the
- * level to distinguish partial from no.
- */
-export function partial(condition: unknown, msg: string): void {
-  if (condition) note(msg, "partial")
-}
+// ── Census test type ──
 
-export { PartialSupport } from "../src/types.ts"
+type TestOpts = { meta?: { description?: string; spec?: string } }
+type TestFn = (ctx: CensusContext) => void | Promise<void>
+
+export interface CensusTest {
+  (name: string, fn: TestFn): void
+  (name: string, opts: TestOpts, fn: TestFn): void
+}
 
 // ── Census runner ──
 
-/**
- * Define a census probe suite. Runs the probes against all available backends.
- *
- * The callback receives a proxy that lazily accesses the backend — this is
- * necessary because describe blocks run synchronously during collection,
- * but the backend is only initialized in beforeAll.
- *
- * @example
- * ```typescript
- * census("sgr", { spec: "ECMA-48 §8.3.117" }, (b) => {
- *   test("sgr-bold", { meta: { description: "Bold" } }, () => {
- *     feed(b, "\x1b[1mX")
- *     expect(b.getCell(0, 0).bold).toBe(true)
- *   })
- * })
- * ```
- */
 export function census(
   category: string,
   opts: { spec?: string },
-  fn: (b: TerminalBackend) => void,
+  fn: (b: TerminalBackend, test: CensusTest) => void,
 ): void {
   for (const [name, factory] of backends) {
     describe(name, () => {
@@ -101,8 +105,6 @@ export function census(
 
       beforeEach(() => {
         _b.reset()
-        ;(globalThis as any).__census_note = undefined
-        ;(globalThis as any).__census_level = undefined
       })
 
       // Proxy: lets fn() reference b during describe collection,
@@ -113,13 +115,41 @@ export function census(
         },
       })
 
+      // Augmented test function that provides { partial, note } in context
+      const censusTest: CensusTest = (
+        testName: string,
+        optsOrFn: TestOpts | TestFn,
+        maybeFn?: TestFn,
+      ) => {
+        const testOpts = typeof optsOrFn === "function" ? {} : optsOrFn
+        const testFn = typeof optsOrFn === "function" ? optsOrFn : maybeFn!
+
+        vitestTest(testName, testOpts, (vitestCtx) => {
+          const ctx: CensusContext = {
+            partial: (condition, msg) => {
+              if (condition) {
+                // Just add to notes — reporter interprets:
+                // fail + notes = partial, fail + no notes = no
+                const existing = vitestCtx.meta.notes as string | undefined
+                vitestCtx.meta.notes = existing ? `${existing}; ${msg}` : msg
+              }
+            },
+            note: (msg) => {
+              const existing = vitestCtx.meta.notes as string | undefined
+              vitestCtx.meta.notes = existing ? `${existing}; ${msg}` : msg
+            },
+          }
+          return testFn(ctx)
+        })
+      }
+
       describe(category, { meta: { spec: opts.spec } }, () => {
-        fn(proxy)
+        fn(proxy, censusTest)
       })
     })
   }
 }
 
-// Re-export vitest's expect (probe files need it)
+// Re-export vitest's expect
 export { vitestExpect as expect }
 export type { TerminalBackend }

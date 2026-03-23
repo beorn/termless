@@ -1,7 +1,7 @@
-import { test } from "vitest"
+
 import { census, feed, expect } from "./_backends.ts"
 
-census("extensions", {}, (b) => {
+census("extensions", {}, (b, test) => {
   test("ext-truecolor", { meta: { description: "24-bit truecolor support", spec: "SGR 38;2 / 48;2" } }, () => {
     expect(b.capabilities.truecolor).toBe(true)
   })

@@ -1,7 +1,7 @@
-import { test } from "vitest"
-import { census, feed, expect, partial } from "./_backends.ts"
 
-census("sgr", { spec: "ECMA-48 §8.3.117" }, (b) => {
+import { census, feed, expect } from "./_backends.ts"
+
+census("sgr", { spec: "ECMA-48 §8.3.117" }, (b, test) => {
   test("sgr-bold", { meta: { description: "Bold" } }, () => {
     feed(b, "\x1b[1mX")
     expect(b.getCell(0, 0).bold).toBe(true)
@@ -22,28 +22,28 @@ census("sgr", { spec: "ECMA-48 §8.3.117" }, (b) => {
     expect(!!b.getCell(0, 0).underline).toBe(true)
   })
 
-  test("sgr-underline-double", { meta: { description: "Underline double (SGR 21)" } }, () => {
+  test("sgr-underline-double", { meta: { description: "Underline double (SGR 21)" } }, ({ partial }) => {
     feed(b, "\x1b[21mX")
     const cell = b.getCell(0, 0)
     partial(cell.underline, `underline=${cell.underline}, not double`)
     expect(cell.underline).toBe("double")
   })
 
-  test("sgr-underline-curly", { meta: { description: "Underline curly (SGR 4:3)" } }, () => {
+  test("sgr-underline-curly", { meta: { description: "Underline curly (SGR 4:3)" } }, ({ partial }) => {
     feed(b, "\x1b[4:3mX")
     const cell = b.getCell(0, 0)
     partial(cell.underline, `underline=${cell.underline}, not curly`)
     expect(cell.underline).toBe("curly")
   })
 
-  test("sgr-underline-dotted", { meta: { description: "Underline dotted (SGR 4:4)" } }, () => {
+  test("sgr-underline-dotted", { meta: { description: "Underline dotted (SGR 4:4)" } }, ({ partial }) => {
     feed(b, "\x1b[4:4mX")
     const cell = b.getCell(0, 0)
     partial(cell.underline, `underline=${cell.underline}, not dotted`)
     expect(cell.underline).toBe("dotted")
   })
 
-  test("sgr-underline-dashed", { meta: { description: "Underline dashed (SGR 4:5)" } }, () => {
+  test("sgr-underline-dashed", { meta: { description: "Underline dashed (SGR 4:5)" } }, ({ partial }) => {
     feed(b, "\x1b[4:5mX")
     const cell = b.getCell(0, 0)
     partial(cell.underline, `underline=${cell.underline}, not dashed`)
