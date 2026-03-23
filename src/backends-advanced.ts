@@ -3,20 +3,14 @@
  * Import from "termless/backends" for these advanced APIs.
  */
 export {
-  loadManifest,
-  isBackendInstalled,
-  getInstalledVersion,
-  backendNames,
-  defaultBackendNames,
-  installedBackendNames,
-  getBackendStatus,
-  resolveBackend,
+  backend,
+  backends,
+  isReady,
+  entry,
+  manifest,
+  buildBackend,
   createTerminalByName,
-  resolveAllInstalled,
-  checkBackendHealth,
-  checkAllHealth,
-  getInstallCommand,
+  getInstalledVersion,
   detectPackageManager,
-  _resetManifestCache,
 } from "./backends.ts"
-export type { BackendManifest, BackendManifestEntry, BackendStatus, BackendHealthResult } from "./backends.ts"
+export type { BackendEntry, Manifest, ResolveOptions } from "./backends.ts"

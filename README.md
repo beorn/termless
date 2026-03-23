@@ -245,12 +245,10 @@ Two ways to choose a backend:
 import { createXtermBackend } from "@termless/xtermjs"
 const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
 
-// 2. String name via registry (async — handles WASM init, native loading)
-import { resolveBackend, createTerminalByName } from "@termless/core"
-const backend = await resolveBackend("ghostty")
-const term = createTerminal({ backend, cols: 80, rows: 24 })
-// or shorthand:
-const term = await createTerminalByName("ghostty", { cols: 80, rows: 24 })
+// 2. By name (async — handles WASM init, native loading)
+import { backend } from "@termless/core"
+const b = await backend("ghostty")
+const term = createTerminal({ backend: b, cols: 80, rows: 24 })
 ```
 
 ## Runtime Compatibility

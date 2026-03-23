@@ -4,11 +4,11 @@ Termless backends wrap different terminal emulators, each with its own VT parser
 
 ## Backends
 
-| Backend             | Emulator        | Implementation           | Reflow | Kitty Keyboard | OSC 8 |
-| ------------------- | --------------- | ------------------------ | ------ | -------------- | ----- |
-| `@termless/xtermjs` | xterm.js 5.5.0  | `@xterm/headless` (WASM) | Yes    | No             | Yes   |
-| `@termless/ghostty` | Ghostty 0.4.0   | `ghostty-web` (WASM)     | Yes    | Yes            | Yes   |
-| `@termless/vt100`   | Pure TypeScript | Zero native deps         | No     | No             | No    |
+| Backend             | Emulator        | Implementation         | Reflow | Kitty Keyboard | OSC 8 |
+| ------------------- | --------------- | ---------------------- | ------ | -------------- | ----- |
+| `@termless/xtermjs` | xterm.js 5.5.0  | `@xterm/headless` (JS) | Yes    | No             | Yes   |
+| `@termless/ghostty` | Ghostty 0.4.0   | `ghostty-web` (WASM)   | Yes    | Yes            | Yes   |
+| `@termless/vt100`   | Pure TypeScript | Zero native deps       | No     | No             | No    |
 
 xterm.js is the **reference backend** -- it has the widest adoption, passes the most conformance tests, and is what Silvery's test infrastructure (`createTermless()`) uses by default. Divergences from xterm.js are considered bugs in the other backend or in our ANSI output.
 

@@ -44,7 +44,7 @@ import { afterEach, describe } from "vitest"
 import type { Terminal, TerminalCreateOptions } from "../../../src/types.ts"
 import { createTerminal } from "../../../src/index.ts"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
-import { resolveBackend, installedBackendNames } from "../../../src/backends.ts"
+import { backend, backends, isReady } from "../../../src/backends.ts"
 
 // ═══════════════════════════════════════════════════════
 // Option types
@@ -113,8 +113,8 @@ export function createTestTerminal(options?: SyncTestTerminalOptions): Terminal 
  * ```
  */
 export async function createTestTerminalByName(options: NamedTestTerminalOptions): Promise<Terminal> {
-  const backend = await resolveBackend(options.backendName)
-  const terminal = createTerminal({ ...options, backend })
+  const b = await backend(options.backendName)
+  const terminal = createTerminal({ ...options, backend: b })
   activeFixtures.push(terminal)
   return terminal
 }
@@ -151,15 +151,15 @@ export interface BackendCase {
  * ```
  */
 export async function backendCases(filter?: string[]): Promise<BackendCase[]> {
-  const names = filter ?? installedBackendNames()
+  const names = filter ?? backends().filter(isReady)
   const cases: BackendCase[] = []
 
   for (const name of names) {
     cases.push({
       name,
       createTerminal: async (opts?: TestTerminalOptions) => {
-        const backend = await resolveBackend(name)
-        const terminal = createTerminal({ ...opts, backend })
+        const b = await backend(name)
+        const terminal = createTerminal({ ...opts, backend: b })
         activeFixtures.push(terminal)
         return terminal
       },
@@ -198,16 +198,16 @@ export function describeBackends(
   const filterNames = Array.isArray(backendsOrFn) ? backendsOrFn : undefined
   const testFn = Array.isArray(backendsOrFn) ? fn! : backendsOrFn
 
-  // Get names synchronously — installedBackendNames reads manifest from disk
-  const names: string[] = filterNames ?? installedBackendNames()
+  // Get names synchronously — backends()/isReady() reads manifest from disk
+  const names: string[] = filterNames ?? backends().filter(isReady)
 
   for (const name of names) {
     describe(name, () => {
       testFn({
         name,
         createTerminal: async (opts?: TestTerminalOptions) => {
-          const backend = await resolveBackend(name)
-          const terminal = createTerminal({ ...opts, backend })
+          const b = await backend(name)
+          const terminal = createTerminal({ ...opts, backend: b })
           activeFixtures.push(terminal)
           return terminal
         },

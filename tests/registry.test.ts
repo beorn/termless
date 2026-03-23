@@ -1,26 +1,21 @@
 /**
  * Tests for the backend registry — manifest loading, enumeration,
- * installation detection, resolution, health checks, and install helpers.
+ * installation detection, resolution, and install helpers.
  *
  * Note: import.meta.resolve does not resolve workspace packages in vitest's
- * VM context, so tests for isBackendInstalled/resolveBackend/health checks
- * verify the error paths and use direct imports for functional backend tests.
+ * VM context, so tests for isReady/backend() verify the error paths
+ * and use direct imports for functional backend tests.
  */
 
-import { describe, test, expect, afterEach } from "vitest"
+import { describe, test, expect } from "vitest"
 import {
-  loadManifest,
-  backendNames,
-  defaultBackendNames,
-  installedBackendNames,
-  isBackendInstalled,
+  manifest,
+  backends,
+  backend,
+  entry,
+  isReady,
   getInstalledVersion,
-  resolveBackend,
   createTerminalByName,
-  checkBackendHealth,
-  checkAllHealth,
-  getInstallCommand,
-  getBackendStatus,
 } from "../src/backends.ts"
 import { createTerminal } from "../src/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
@@ -32,17 +27,17 @@ import type { TerminalBackend } from "../src/types.ts"
 // ═══════════════════════════════════════════════════════
 
 describe("manifest", () => {
-  test("loadManifest() returns valid manifest with version and backends", () => {
-    const manifest = loadManifest()
-    expect(manifest.version).toBeTypeOf("string")
-    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
-    expect(manifest.backends).toBeTypeOf("object")
-    expect(Object.keys(manifest.backends).length).toBeGreaterThan(0)
+  test("manifest() returns valid manifest with version and backends", () => {
+    const m = manifest()
+    expect(m.version).toBeTypeOf("string")
+    expect(m.version).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(m.backends).toBeTypeOf("object")
+    expect(Object.keys(m.backends).length).toBeGreaterThan(0)
   })
 
   test("manifest has all 9 backends", () => {
-    const manifest = loadManifest()
-    const names = Object.keys(manifest.backends)
+    const m = manifest()
+    const names = Object.keys(m.backends)
     expect(names).toEqual(
       expect.arrayContaining([
         "xtermjs",
@@ -60,17 +55,17 @@ describe("manifest", () => {
   })
 
   test("each backend entry has required fields", () => {
-    const manifest = loadManifest()
-    for (const [name, entry] of Object.entries(manifest.backends)) {
-      expect(entry.package, `${name}.package`).toBeTypeOf("string")
-      expect(entry.type, `${name}.type`).toMatch(/^(js|wasm|native|os)$/)
-      expect(entry.upstream, `${name}.upstream`).toBeTypeOf("string")
+    const m = manifest()
+    for (const [name, e] of Object.entries(m.backends)) {
+      expect(e.package, `${name}.package`).toBeTypeOf("string")
+      expect(e.type, `${name}.type`).toMatch(/^(js|wasm|native|os)$/)
+      // upstream can be null for some backends
     }
   })
 
   test("default backends are xtermjs, ghostty, vt100", () => {
-    const manifest = loadManifest()
-    const defaults = Object.entries(manifest.backends)
+    const m = manifest()
+    const defaults = Object.entries(m.backends)
       .filter(([_, e]) => e.default)
       .map(([name]) => name)
       .sort()
@@ -83,8 +78,8 @@ describe("manifest", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("enumeration", () => {
-  test("backendNames() returns all 9 names", () => {
-    const names = backendNames()
+  test("backends() returns all 9 names", () => {
+    const names = backends()
     expect(names).toHaveLength(9)
     expect(names).toContain("xtermjs")
     expect(names).toContain("ghostty")
@@ -97,22 +92,22 @@ describe("enumeration", () => {
     expect(names).toContain("kitty")
   })
 
-  test("defaultBackendNames() returns exactly the 3 defaults", () => {
-    const defaults = defaultBackendNames()
+  test("default backends are the 3 with default=true", () => {
+    const defaults = backends().filter((n) => entry(n)?.default)
     expect(defaults).toHaveLength(3)
     expect(defaults).toContain("xtermjs")
     expect(defaults).toContain("ghostty")
     expect(defaults).toContain("vt100")
   })
 
-  test("installedBackendNames() returns an array of strings", () => {
+  test("backends().filter(isReady) returns an array of strings", () => {
     // import.meta.resolve may not resolve workspace packages in vitest's VM,
     // so we verify the return type rather than specific contents
-    const installed = installedBackendNames()
+    const installed = backends().filter(isReady)
     expect(Array.isArray(installed)).toBe(true)
     for (const name of installed) {
       expect(name).toBeTypeOf("string")
-      expect(backendNames()).toContain(name)
+      expect(backends()).toContain(name)
     }
   })
 })
@@ -122,13 +117,13 @@ describe("enumeration", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("installation detection", () => {
-  test("isBackendInstalled('nonexistent') returns false", () => {
-    expect(isBackendInstalled("nonexistent")).toBe(false)
+  test("isReady('nonexistent') returns false", () => {
+    expect(isReady("nonexistent")).toBe(false)
   })
 
-  test("isBackendInstalled returns boolean for all backends", () => {
-    for (const name of backendNames()) {
-      expect(typeof isBackendInstalled(name)).toBe("boolean")
+  test("isReady returns boolean for all backends", () => {
+    for (const name of backends()) {
+      expect(typeof isReady(name)).toBe("boolean")
     }
   })
 
@@ -143,14 +138,14 @@ describe("installation detection", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("resolution", () => {
-  test("resolveBackend('nonexistent') throws with helpful error listing available backends", async () => {
-    await expect(resolveBackend("nonexistent")).rejects.toThrow(/Unknown backend "nonexistent"/)
-    await expect(resolveBackend("nonexistent")).rejects.toThrow(/Available:/)
+  test("backend('nonexistent') throws with helpful error listing available backends", async () => {
+    await expect(backend("nonexistent")).rejects.toThrow(/Unknown backend "nonexistent"/)
+    await expect(backend("nonexistent")).rejects.toThrow(/Available:/)
   })
 
-  test("resolveBackend error message lists all backend names", async () => {
+  test("backend error message lists all backend names", async () => {
     try {
-      await resolveBackend("nonexistent")
+      await backend("nonexistent")
     } catch (e) {
       const msg = (e as Error).message
       // Error should mention available backends for discoverability
@@ -207,91 +202,27 @@ describe("createTerminalByName", () => {
 })
 
 // ═══════════════════════════════════════════════════════
-// Health check tests
+// entry() tests
 // ═══════════════════════════════════════════════════════
 
-describe("health checks", () => {
-  test("checkBackendHealth returns structured result for unknown backend", async () => {
-    const result = await checkBackendHealth("nonexistent")
-    expect(result.name).toBe("nonexistent")
-    expect(result.healthy).toBe(false)
-    expect(result.error).toBeTypeOf("string")
+describe("entry", () => {
+  test("entry() returns backend entry for known backends", () => {
+    const e = entry("xtermjs")
+    expect(e).toBeDefined()
+    expect(e!.package).toBe("@termless/xtermjs")
+    expect(e!.type).toBe("js")
   })
 
-  test("checkAllHealth() returns results for all installed backends", async () => {
-    const results = await checkAllHealth()
-    const installed = installedBackendNames()
-    expect(results).toHaveLength(installed.length)
-    for (const result of results) {
-      expect(result.name).toBeTypeOf("string")
-      expect(typeof result.healthy).toBe("boolean")
+  test("entry() returns undefined for unknown backend", () => {
+    expect(entry("nonexistent")).toBeUndefined()
+  })
+
+  test("all backends have entries with required fields", () => {
+    for (const name of backends()) {
+      const e = entry(name)
+      expect(e, `${name} should have an entry`).toBeDefined()
+      expect(e!.package, `${name}.package`).toBeTypeOf("string")
+      expect(e!.type, `${name}.type`).toMatch(/^(js|wasm|native|os)$/)
     }
-  })
-
-  test("healthy result has capabilities string, unhealthy has error string", async () => {
-    // Use a non-existent backend to test unhealthy path
-    const unhealthy = await checkBackendHealth("nonexistent")
-    expect(unhealthy.healthy).toBe(false)
-    expect(unhealthy.error).toBeDefined()
-    expect(unhealthy.capabilities).toBeUndefined()
-  })
-})
-
-// ═══════════════════════════════════════════════════════
-// Install command generation
-// ═══════════════════════════════════════════════════════
-
-describe("install commands", () => {
-  test("getInstallCommand(['xtermjs']) returns correct npm command", () => {
-    const cmd = getInstallCommand(["xtermjs"])
-    expect(cmd).toContain("npm install -D")
-    expect(cmd).toContain("@termless/xtermjs@")
-  })
-
-  test("getInstallCommand(['ghostty', 'vt100'], 'bun') returns bun command", () => {
-    const cmd = getInstallCommand(["ghostty", "vt100"], "bun")
-    expect(cmd).toContain("bun add -D")
-    expect(cmd).toContain("@termless/ghostty@")
-    expect(cmd).toContain("@termless/vt100@")
-  })
-
-  test("getInstallCommand includes manifest version", () => {
-    const manifest = loadManifest()
-    const cmd = getInstallCommand(["xtermjs"])
-    expect(cmd).toContain(`@${manifest.version}`)
-  })
-
-  test("getInstallCommand throws for unknown backend", () => {
-    expect(() => getInstallCommand(["nonexistent"])).toThrow(/Unknown backend/)
-  })
-})
-
-// ═══════════════════════════════════════════════════════
-// getBackendStatus tests
-// ═══════════════════════════════════════════════════════
-
-describe("getBackendStatus", () => {
-  test("returns status for all 9 backends", () => {
-    const statuses = getBackendStatus()
-    expect(statuses).toHaveLength(9)
-  })
-
-  test("each status has name, manifest, and installed flag", () => {
-    const statuses = getBackendStatus()
-    for (const status of statuses) {
-      expect(status.name).toBeTypeOf("string")
-      expect(status.manifest).toBeDefined()
-      expect(status.manifest.package).toBeTypeOf("string")
-      expect(status.manifest.type).toBeTypeOf("string")
-      expect(status.manifest.description).toBeTypeOf("string")
-      expect(typeof status.installed).toBe("boolean")
-    }
-  })
-
-  test("status names match manifest backend names", () => {
-    const statuses = getBackendStatus()
-    const statusNames = statuses.map((s) => s.name).sort()
-    const manifestNames = backendNames().sort()
-    expect(statusNames).toEqual(manifestNames)
   })
 })

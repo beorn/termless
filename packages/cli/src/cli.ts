@@ -29,6 +29,7 @@ import { createSessionManager } from "./session.ts"
 import { registerBackendsCommand } from "./backends-cmd.ts"
 import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.ts"
 import { registerDoctorCommand } from "./doctor-cmd.ts"
+import { registerUpdateCommand } from "./update-cmd.ts"
 
 const program = new Command()
   .name("termless")
@@ -139,5 +140,6 @@ registerBackendsCommand(program)
 registerInstallCommand(program)
 registerUpgradeCommand(program)
 registerDoctorCommand(program)
+registerUpdateCommand(program)
 
 program.parse()

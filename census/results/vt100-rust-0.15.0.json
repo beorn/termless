@@ -1,208 +1,88 @@
 {
   "backend": "vt100-rust",
   "version": "0.15.0",
-  "generated": "2026-03-23T04:49:51.654Z",
+  "generated": "2026-03-23T05:39:00.783Z",
   "results": {
-    "cursor-cup": {
-      "support": "yes"
-    },
-    "cursor-home": {
-      "support": "yes"
-    },
-    "cursor-forward": {
-      "support": "yes"
-    },
-    "cursor-back": {
-      "support": "yes"
-    },
-    "cursor-down": {
-      "support": "yes"
-    },
-    "cursor-up": {
-      "support": "yes"
-    },
-    "cursor-hide": {
-      "support": "yes"
-    },
-    "cursor-save-restore": {
-      "support": "yes"
-    },
-    "erase-line-right": {
-      "support": "yes"
-    },
-    "erase-line-left": {
-      "support": "yes"
-    },
-    "erase-line-all": {
-      "support": "yes"
-    },
-    "erase-screen-below": {
-      "support": "yes"
-    },
-    "erase-screen-all": {
-      "support": "yes"
-    },
-    "ext-truecolor": {
-      "support": "yes"
-    },
-    "ext-kitty-keyboard": {
-      "support": "no",
-      "notes": "kitty keyboard capable"
-    },
-    "ext-kitty-graphics": {
-      "support": "no",
-      "notes": "kitty graphics capable"
-    },
-    "ext-sixel": {
-      "support": "no",
-      "notes": "sixel capable"
-    },
-    "ext-osc8": {
-      "support": "no",
-      "notes": "osc8 capable"
-    },
-    "ext-reflow": {
-      "support": "no",
-      "notes": "reflow capable"
-    },
-    "ext-semantic-prompts": {
-      "support": "no",
-      "notes": "semantic prompts capable"
-    },
-    "ext-osc2-title": {
-      "support": "yes"
-    },
-    "mode-alt-screen": {
-      "support": "yes"
-    },
-    "mode-alt-screen-exit": {
-      "support": "yes"
-    },
-    "mode-bracketed-paste": {
-      "support": "yes"
-    },
-    "mode-application-cursor": {
-      "support": "yes"
-    },
-    "mode-auto-wrap": {
-      "support": "yes"
-    },
-    "mode-mouse-tracking": {
-      "support": "yes"
-    },
-    "mode-focus-tracking": {
-      "support": "no",
-      "notes": "focusTracking on"
-    },
-    "mode-reverse-video": {
-      "support": "no",
-      "notes": "reverseVideo on"
-    },
-    "reset-sgr": {
-      "support": "yes"
-    },
-    "reset-ris": {
-      "support": "yes"
-    },
-    "reset-method": {
-      "support": "yes"
-    },
-    "scrollback-accumulate": {
-      "support": "no",
-      "notes": "more than screen height"
-    },
-    "scrollback-total-lines": {
-      "support": "no",
-      "notes": "at least 30 lines"
-    },
-    "scrollback-scroll-up": {
-      "support": "yes"
-    },
-    "scrollback-reverse-index": {
-      "support": "yes"
-    },
-    "scrollback-alt-screen": {
-      "support": "yes"
-    },
-    "sgr-bold": {
-      "support": "yes"
-    },
-    "sgr-faint": {
-      "support": "no",
-      "notes": "dim attribute"
-    },
-    "sgr-italic": {
-      "support": "yes"
-    },
-    "sgr-underline-single": {
-      "support": "yes"
-    },
-    "sgr-underline-double": {
-      "support": "no",
-      "notes": "has underline; double variant"
-    },
-    "sgr-underline-curly": {
-      "support": "no",
-      "notes": "has underline; curly variant"
-    },
-    "sgr-underline-dotted": {
-      "support": "no",
-      "notes": "has underline; dotted variant"
-    },
-    "sgr-underline-dashed": {
-      "support": "no",
-      "notes": "has underline; dashed variant"
-    },
-    "sgr-blink": {
-      "support": "no",
-      "notes": "blink attribute"
-    },
-    "sgr-inverse": {
-      "support": "yes"
-    },
-    "sgr-hidden": {
-      "support": "no",
-      "notes": "hidden attribute"
-    },
-    "sgr-strikethrough": {
-      "support": "no",
-      "notes": "strikethrough attribute"
-    },
-    "sgr-fg-256": {
-      "support": "yes"
-    },
-    "sgr-fg-truecolor": {
-      "support": "yes"
-    },
-    "sgr-bg-truecolor": {
-      "support": "yes"
-    },
-    "sgr-reset": {
-      "support": "yes"
-    },
-    "text-basic": {
-      "support": "yes"
-    },
-    "text-newline": {
-      "support": "yes"
-    },
-    "text-wrap": {
-      "support": "yes"
-    },
-    "text-tab": {
-      "support": "yes"
-    },
-    "text-wide-emoji": {
-      "support": "yes"
-    },
-    "text-cjk": {
-      "support": "yes"
-    },
-    "text-overwrite": {
-      "support": "yes"
-    },
-    "text-cr": {
-      "support": "yes"
-    }
+    "cursor.move.absolute": true,
+    "cursor.move.home": true,
+    "cursor.move.forward": true,
+    "cursor.move.back": true,
+    "cursor.move.down": true,
+    "cursor.move.up": true,
+    "cursor.hide": true,
+    "cursor.save-restore": true,
+    "erase.line.right": true,
+    "erase.line.left": true,
+    "erase.line.all": true,
+    "erase.screen.below": true,
+    "erase.screen.all": true,
+    "extensions.truecolor": true,
+    "extensions.kitty-keyboard": false,
+    "extensions.kitty-graphics": false,
+    "extensions.sixel": false,
+    "extensions.osc8": false,
+    "extensions.reflow": false,
+    "extensions.semantic-prompts": false,
+    "extensions.osc2-title": true,
+    "modes.alt-screen.enter": true,
+    "modes.alt-screen.exit": true,
+    "modes.bracketed-paste": true,
+    "modes.application-cursor": true,
+    "modes.auto-wrap": true,
+    "modes.mouse-tracking": true,
+    "modes.focus-tracking": false,
+    "modes.reverse-video": false,
+    "reset.sgr": true,
+    "reset.ris": true,
+    "reset.method": true,
+    "scrollback.accumulate": false,
+    "scrollback.total-lines": false,
+    "scrollback.scroll-up": true,
+    "scrollback.reverse-index": true,
+    "scrollback.alt-screen": true,
+    "sgr.bold": true,
+    "sgr.faint": false,
+    "sgr.italic": true,
+    "sgr.underline.single": true,
+    "sgr.underline.double": false,
+    "sgr.underline.curly": false,
+    "sgr.underline.dotted": false,
+    "sgr.underline.dashed": false,
+    "sgr.blink": false,
+    "sgr.inverse": true,
+    "sgr.hidden": false,
+    "sgr.strikethrough": false,
+    "sgr.fg.256": true,
+    "sgr.fg.truecolor": true,
+    "sgr.bg.truecolor": true,
+    "sgr.reset": true,
+    "text.basic": true,
+    "text.newline": true,
+    "text.wrap": true,
+    "text.tab": true,
+    "text.wide.emoji": true,
+    "text.wide.cjk": true,
+    "text.overwrite": true,
+    "text.cr": true
+  },
+  "notes": {
+    "extensions.kitty-keyboard": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:9:42\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "extensions.kitty-graphics": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:13:42\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "extensions.sixel": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:17:34\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "extensions.osc8": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:21:43\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "extensions.reflow": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:25:35\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "extensions.semantic-prompts": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/extensions.probe.ts:29:44\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "modes.focus-tracking": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/modes.probe.ts:36:40\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "modes.reverse-video": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/modes.probe.ts:41:39\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "scrollback.accumulate": "AssertionError: expected 24 to be greater than 24\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/scrollback.probe.ts:6:42\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "scrollback.total-lines": "AssertionError: expected 24 to be greater than or equal to 30\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/scrollback.probe.ts:11:42\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.faint": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:11:33\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.underline.double": "AssertionError: expected false to be truthy\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:27:28\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.underline.curly": "AssertionError: expected false to be truthy\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:34:28\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.underline.dotted": "AssertionError: expected false to be truthy\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:41:28\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.underline.dashed": "AssertionError: expected false to be truthy\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:48:28\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.blink": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:54:35\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.hidden": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:64:36\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64",
+    "sgr.strikethrough": "AssertionError: expected false to be true // Object.is equality\n    at /Users/beorn/Code/pim/km/vendor/termless/packages/census/probes/sgr.probe.ts:69:43\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:296:11\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1258:26\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1681:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1678:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1660:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:1627:10)\n    at file:///Users/beorn/Code/pim/km/node_modules/.bun/@vitest+runner@4.1.0/node_modules/@vitest/runner/dist/index.js:2309:64"
   }
 }

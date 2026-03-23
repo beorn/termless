@@ -45,13 +45,17 @@ termless backends
 Example output:
 
 ```
-Backend        Type    Status       Version
-xtermjs        js      installed    5.5.0
-ghostty        wasm    installed    1.2.0
-vt100          js      installed    0.8.0
-alacritty      native  not installed  0.24.0
-wezterm        native  not installed  0.5.0
-peekaboo       os      installed    0.3.0
+Backend              Upstream                   Version       Status
+───────────────────  ─────────────────────────  ────────────  ────────────────────
+xtermjs (js)         npm:@xterm/headless        5.5.0         installed (default)
+ghostty (wasm)       npm:ghostty-web            0.4.0         installed (default)
+vt100 (js)           npm:@termless/vt100        0.3.0         installed (default)
+alacritty (native)   crate:alacritty_terminal   0.26.0        installed
+wezterm (native)     crate:tattoy-wezterm-term  0.1.0-fork.5  installed
+peekaboo (os)        npm:peekaboo               0.7.0         installed
+vt100-rust (native)  crate:vt100                0.15.0        installed
+libvterm (wasm)      github:neovim/libvterm     0.3.0         installed
+kitty (native)       github:kovidgoyal/kitty    0.40.0        available
 ```
 
 ### `termless install`

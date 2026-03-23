@@ -12,16 +12,10 @@ import { fileURLToPath } from "node:url"
 const input = await Bun.stdin.text()
 const json = JSON.parse(input)
 
-type Support = "yes" | "partial" | "no" | "error"
-
-interface Result {
-  support: Support
-  notes?: string
-}
-
 // Parse vitest JSON → backend/feature results
-const backends = new Map<string, Map<string, Result>>()
-const descriptions = new Map<string, string>()
+// Result is now simply boolean: true = pass, false = fail
+const backends = new Map<string, Map<string, boolean>>()
+const testNotes = new Map<string, Map<string, string>>()
 
 for (const file of json.testResults ?? []) {
   for (const test of file.assertionResults ?? []) {
@@ -29,37 +23,23 @@ for (const file of json.testResults ?? []) {
     const titles: string[] = test.ancestorTitles ?? []
     const backend = titles[0] ?? "unknown"
     const id = test.title ?? "unknown"
-    const desc = test.meta?.description as string | undefined
-    if (desc) descriptions.set(id, desc)
 
     if (!backends.has(backend)) backends.set(backend, new Map())
+    if (!testNotes.has(backend)) testNotes.set(backend, new Map())
     const features = backends.get(backend)!
+    const notes = testNotes.get(backend)!
 
-    // vitest --reporter json doesn't include test.meta, so we parse
-    // census state from failure messages: [census:partial] or [census:no]
-    const failureMessages: string[] = test.failureMessages ?? []
-    const failureText = failureMessages.join("\n")
+    const result = test.status === "passed"
+    features.set(id, result)
 
-    let support: Support
-    let notes: string | undefined
-
-    if (test.status === "passed") {
-      support = "yes"
-    } else if (failureText.includes("[census:partial]")) {
-      support = "partial"
-      const match = failureText.match(/\[census:partial]\s*(.*)/)
-      notes = match?.[1]?.trim() || undefined
-    } else if (failureText.includes("[census:no]")) {
-      support = "no"
-      const match = failureText.match(/\[census:no]\s*(.*)/)
-      notes = match?.[1]?.trim() || undefined
-    } else if (test.status === "failed") {
-      support = "error"
-    } else {
-      support = "error"
+    // Capture failure messages as notes
+    if (!result) {
+      const failureMessages: string[] = test.failureMessages ?? []
+      const failureText = failureMessages.join("; ").trim()
+      if (failureText) {
+        notes.set(id, failureText)
+      }
     }
-
-    features.set(id, { support, ...(notes ? { notes } : {}) })
   }
 }
 
@@ -72,26 +52,64 @@ console.log(`\n@termless/census — ${featureCount} features × ${backendNames.l
 for (const name of backendNames) {
   const features = backends.get(name)!
   let yes = 0
-  let partial = 0
   let no = 0
   for (const [, r] of features) {
-    if (r.support === "yes") yes++
-    else if (r.support === "partial") partial++
+    if (r) yes++
     else no++
   }
   const total = features.size
   const pct = Math.round((yes / (total || 1)) * 100)
-  const bar = "█".repeat(Math.round(pct / 5)) + "░".repeat(20 - Math.round(pct / 5))
-  const partialStr = partial > 0 ? ` (${partial} partial)` : ""
-  console.log(`  ${name.padEnd(14)} ${String(yes).padStart(3)}/${total}  ${bar}  ${pct}%${partialStr}`)
+  const bar = "\u2588".repeat(Math.round(pct / 5)) + "\u2591".repeat(20 - Math.round(pct / 5))
+  console.log(`  ${name.padEnd(14)} ${String(yes).padStart(3)}/${total}  ${bar}  ${pct}%`)
 }
 
+// Build hierarchical matrix from dot paths
+const allIds = new Set<string>()
+for (const features of backends.values()) {
+  for (const id of features.keys()) allIds.add(id)
+}
+const sortedIds = [...allIds].sort()
+
+// Group by top-level category
+const categories = new Map<string, string[]>()
+for (const id of sortedIds) {
+  const cat = id.split(".")[0]!
+  if (!categories.has(cat)) categories.set(cat, [])
+  categories.get(cat)!.push(id)
+}
+
+console.log("\nDetailed results:\n")
+for (const [cat, ids] of categories) {
+  console.log(`  ${cat}:`)
+  for (const id of ids) {
+    const suffix = id.slice(cat.length + 1)
+    const statuses = backendNames.map((name) => {
+      const r = backends.get(name)!.get(id)
+      return r ? "\u2713" : "\u2717"
+    })
+    console.log(`    ${suffix.padEnd(24)} ${statuses.join("  ")}`)
+  }
+}
+console.log(`\n  ${"".padEnd(28)} ${backendNames.map((n) => n.slice(0, 5).padEnd(5)).join("  ")}`)
+
 // Write JSON
+const resultsOutput: Record<string, Record<string, boolean>> = {}
+const notesOutput: Record<string, Record<string, string>> = {}
+
+for (const name of backendNames) {
+  const features = backends.get(name)!
+  const notes = testNotes.get(name)!
+  resultsOutput[name] = Object.fromEntries(features)
+  if (notes.size > 0) {
+    notesOutput[name] = Object.fromEntries(notes)
+  }
+}
+
 const output = {
   generated: new Date().toISOString(),
   backends: backendNames,
-  descriptions: Object.fromEntries(descriptions),
-  results: Object.fromEntries([...backends.entries()].map(([name, features]) => [name, Object.fromEntries(features)])),
+  results: resultsOutput,
+  ...(Object.keys(notesOutput).length > 0 ? { notes: notesOutput } : {}),
 }
 
 mkdirSync("census/results", { recursive: true })
@@ -112,6 +130,7 @@ try {
 const generated = output.generated
 for (const name of backendNames) {
   const features = backends.get(name)!
+  const notes = testNotes.get(name)!
   const version = manifest?.backends[name]?.upstreamVersion ?? "latest"
   const filename = `${name}-${version}.json`
 
@@ -120,6 +139,7 @@ for (const name of backendNames) {
     version,
     generated,
     results: Object.fromEntries(features),
+    ...(notes.size > 0 ? { notes: Object.fromEntries(notes) } : {}),
   }
 
   writeFileSync(`census/results/${filename}`, JSON.stringify(perBackend, null, 2))

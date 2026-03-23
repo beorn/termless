@@ -68,24 +68,28 @@ bun cli upgrade [names...]   # Upgrade backends to manifest versions
 
 ## Backend Registry
 
-`backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/registry.ts` provides:
+`backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/backends.ts` provides:
 
-- `resolveBackend("ghostty")` — async resolution (handles WASM/native init)
-- `createTerminalByName("ghostty", { cols, rows })` — shorthand
-- `getBackendStatus()` / `checkAllHealth()` — status and health checks
-- `getInstallCommand(names, pm)` / `detectPackageManager()` — install helpers
-
-Each backend exports a `resolve()` function for self-describing initialization.
+- `backend("ghostty")` — async resolution (handles WASM/native init)
+- `backends()` — list all backend names
+- `isReady(name)` — check if installed and built
+- `entry(name)` — get manifest entry for a backend
+- `manifest()` — get full manifest
+- `buildBackend(name)` — build native/WASM backends
 
 Two ways to choose a backend:
 
 ```typescript
 // Factory function (explicit, sync)
+import { createXtermBackend } from "@termless/xtermjs"
 const term = createTerminal({ backend: createXtermBackend() })
+```
 
-// String name via registry (async — handles WASM/native init)
-const backend = await resolveBackend("ghostty")
-const term = createTerminal({ backend })
+```typescript
+// By name (async — handles WASM/native init)
+import { backend } from "@termless/core"
+const b = await backend("ghostty")
+const term = createTerminal({ backend: b })
 ```
 
 ## Code Style

@@ -16,7 +16,7 @@
  *
  * 2. Use the registry:
  *    ```ts
- *    const backend = await resolveBackend("libvterm")
+ *    const b = await backend("libvterm")
  *    ```
  *
  * Calling init() without loading WASM first throws a clear error.

@@ -1,6 +1,6 @@
 # @termless/census
 
-Terminal capability census -- probe backends for feature support, generate a compatibility matrix.
+Terminal capability census — probe backends for feature support, generate a compatibility matrix.
 
 ## Usage
 
@@ -13,28 +13,29 @@ Results are written to `census/results/current.json` and printed as a summary ta
 ## How It Works
 
 1. **Probes** (`.probe.ts` files) feed specific ANSI escape sequences to each backend
-2. Each probe uses `check()` assertions that record pass/fail without throwing
-3. Results are determined from check state:
-   - All checks pass --> **yes** (test passes)
-   - Some checks pass, some fail --> **partial** (test fails with `[census:partial]` prefix)
-   - All checks fail --> **no** (test fails with `[census:no]` prefix)
-   - Uncaught error --> **error** (probe bug)
-4. `report.ts` parses vitest JSON output and builds the feature x backend matrix
+2. Each probe uses standard vitest `expect()` assertions
+3. Results are determined from test status:
+   - Test passes → supported (true)
+   - Test fails → not supported (false)
+   - Failed expect messages are captured as notes
+4. `report.ts` parses vitest JSON output and builds the feature × backend matrix
 
 ## Adding Probes
 
-Create a new `.probe.ts` file in `probes/` using the `census()` helper from `_backends.ts`:
+Create a new `.probe.ts` file in `probes/` using `describeBackends()` from `_backends.ts`:
 
 ```typescript
-import { census, feed } from "./_backends.ts"
+import { describeBackends, feed, test, expect, notes } from "./_backends.ts"
 
-census("my-category", { spec: "ECMA-48 section" }, (b, test) => {
-  test("feature-id", { meta: { description: "Human name" } }, ({ check }) => {
+describeBackends("my-category", (b) => {
+  test("category.feature.detail", () => {
     feed(b, "\x1b[...some sequence...")
-    check(b.getCell(0, 0).bold, "has bold").toBe(true)
+    expect(b.getCell(0, 0).bold).toBe(true)
   })
 })
 ```
+
+Test IDs use dot-path notation (`sgr.bold`, `cursor.move.absolute`). Hierarchy is derived from dots for rollup display.
 
 ## Categories
 

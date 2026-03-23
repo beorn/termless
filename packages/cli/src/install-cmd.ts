@@ -13,26 +13,10 @@ import {
   entry,
   isReady,
   getInstalledVersion,
-  getInstallCommand,
   detectPackageManager,
   buildBackend,
 } from "../../../src/backends.ts"
-
-/** Show all other backends that weren't part of this install. */
-function showOtherBackends(installed: string[]): void {
-  const m = manifest()
-  const installedSet = new Set(installed)
-  const others = Object.entries(m.backends)
-    .filter(([name]) => !installedSet.has(name))
-    .map(([name, e]) => {
-      const ver = e.version ? ` ${e.version}` : ""
-      return `${name} (${e.type})${ver}`
-    })
-  if (others.length > 0) {
-    console.log(`\n  Other backends: ${others.join(", ")}`)
-    console.log("  Install all: bunx termless install --all")
-  }
-}
+import { printBackendsTable } from "./backends-cmd.ts"
 
 export function registerInstallCommand(program: Command): void {
   program
@@ -105,15 +89,16 @@ export function registerInstallCommand(program: Command): void {
             }
           }
         } else {
-          console.log("\n  Nothing to install.")
+          printBackendsTable()
+          return
         }
-        showOtherBackends(toInstall)
         console.log("")
         return
       }
 
       // Install npm packages
-      const cmd = getInstallCommand(toRun, pm)
+      const pkgs = toRun.map((n) => `${entry(n)!.package}@${m.version}`).join(" ")
+      const cmd = `${pm} ${pm === "npm" ? "install -D" : "add -D"} ${pkgs}`
       console.log(`\n  Running: ${cmd}\n`)
 
       try {
@@ -140,8 +125,7 @@ export function registerInstallCommand(program: Command): void {
         }
       }
 
-      showOtherBackends(allInstalled)
-      console.log("")
+      printBackendsTable()
     })
 }
 
@@ -198,7 +182,8 @@ export function registerUpgradeCommand(program: Command): void {
       }
 
       // Build and run the install command (install with version pins upgrades)
-      const cmd = getInstallCommand(toUpgrade, pm)
+      const pkgs = toUpgrade.map((n) => `${entry(n)!.package}@${m.version}`).join(" ")
+      const cmd = `${pm} ${pm === "npm" ? "install -D" : "add -D"} ${pkgs}`
       console.log(`\n  Running: ${cmd}\n`)
 
       try {

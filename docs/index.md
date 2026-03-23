@@ -146,14 +146,16 @@ bunx termless doctor                    # Health check installed backends
 ### Two Ways to Choose a Backend
 
 ```typescript
-// Factory function (explicit, sync)
+// 1. Factory function (explicit, sync)
 import { createXtermBackend } from "@termless/xtermjs"
 const term = createTerminal({ backend: createXtermBackend() })
+```
 
-// String name via registry (async — handles WASM/native init)
-import { resolveBackend } from "@termless/core"
-const backend = await resolveBackend("ghostty")
-const term = createTerminal({ backend })
+```typescript
+// 2. String name via registry (async — handles WASM/native init)
+import { backend } from "@termless/core"
+const b = await backend("ghostty")
+const term = createTerminal({ backend: b })
 ```
 
 ## Backends
@@ -165,8 +167,8 @@ Every backend wraps a real terminal emulator and implements the same interface �
 | **xtermjs**    | @xterm/headless 5.5     | VS Code's terminal. Most mature, zero native deps.                                 | JS     |
 | **ghostty**    | ghostty-web 0.4         | Modern GPU-accelerated parser. Best standards compliance, Kitty keyboard protocol. | WASM   |
 | **vt100**      | (built-in)              | Pure TypeScript, zero dependencies. Fastest backend, ideal for CI.                 | JS     |
-| **alacritty**  | alacritty_terminal 0.25 | Rust parser via napi-rs. Strong reflow behavior.                                   | Native |
-| **wezterm**    | wezterm-term            | Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.       | Native |
+| **alacritty**  | alacritty_terminal 0.26 | Rust parser via napi-rs. Strong reflow behavior.                                   | Native |
+| **wezterm**    | tattoy-wezterm-term     | Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.       | Native |
 | **peekaboo**   | (OS automation)         | Tests against a real terminal app via OS accessibility APIs. macOS only.           | OS     |
 | **vt100-rust** | vt100 0.15 (Rust)       | Reference Rust implementation — cross-validates the TS vt100 backend.              | Native |
 | **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |

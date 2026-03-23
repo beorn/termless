@@ -1,43 +1,43 @@
-import { census, feed } from "./_backends.ts"
+import { describeBackends, feed, test, expect } from "./_backends.ts"
 
-census("modes", { spec: "DEC private modes" }, (b, test) => {
-  test("mode-alt-screen", { meta: { description: "Alt screen enter" } }, ({ check }) => {
+describeBackends("modes", (b) => {
+  test("modes.alt-screen.enter", () => {
     feed(b, "\x1b[?1049h")
-    check(b.getMode("altScreen"), "altScreen on").toBe(true)
+    expect(b.getMode("altScreen")).toBe(true)
   })
 
-  test("mode-alt-screen-exit", { meta: { description: "Alt screen exit" } }, ({ check }) => {
+  test("modes.alt-screen.exit", () => {
     feed(b, "\x1b[?1049h\x1b[?1049l")
-    check(b.getMode("altScreen"), "altScreen off").toBe(false)
+    expect(b.getMode("altScreen")).toBe(false)
   })
 
-  test("mode-bracketed-paste", { meta: { description: "Bracketed paste mode" } }, ({ check }) => {
+  test("modes.bracketed-paste", () => {
     feed(b, "\x1b[?2004h")
-    check(b.getMode("bracketedPaste"), "bracketedPaste on").toBe(true)
+    expect(b.getMode("bracketedPaste")).toBe(true)
   })
 
-  test("mode-application-cursor", { meta: { description: "Application cursor keys" } }, ({ check }) => {
+  test("modes.application-cursor", () => {
     feed(b, "\x1b[?1h")
-    check(b.getMode("applicationCursor"), "applicationCursor on").toBe(true)
+    expect(b.getMode("applicationCursor")).toBe(true)
   })
 
-  test("mode-auto-wrap", { meta: { description: "Auto-wrap at right margin" } }, ({ check }) => {
+  test("modes.auto-wrap", () => {
     feed(b, "X".repeat(80) + "Y")
-    check(b.getCell(1, 0).char, "wrapped to next line").toBe("Y")
+    expect(b.getCell(1, 0).char).toBe("Y")
   })
 
-  test("mode-mouse-tracking", { meta: { description: "Mouse tracking (X10)" } }, ({ check }) => {
+  test("modes.mouse-tracking", () => {
     feed(b, "\x1b[?1000h")
-    check(b.getMode("mouseTracking"), "mouseTracking on").toBe(true)
+    expect(b.getMode("mouseTracking")).toBe(true)
   })
 
-  test("mode-focus-tracking", { meta: { description: "Focus in/out events" } }, ({ check }) => {
+  test("modes.focus-tracking", () => {
     feed(b, "\x1b[?1004h")
-    check(b.getMode("focusTracking"), "focusTracking on").toBe(true)
+    expect(b.getMode("focusTracking")).toBe(true)
   })
 
-  test("mode-reverse-video", { meta: { description: "Reverse video (DECSCNM)" } }, ({ check }) => {
+  test("modes.reverse-video", () => {
     feed(b, "\x1b[?5h")
-    check(b.getMode("reverseVideo"), "reverseVideo on").toBe(true)
+    expect(b.getMode("reverseVideo")).toBe(true)
   })
 })
