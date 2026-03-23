@@ -4,9 +4,10 @@
  *
  * @example
  * ```bash
- * bun census run           # Execute probes, show matrix, save results
- * bun census report        # Display last saved results
- * bun census list          # List probe categories with counts
+ * bun census report          # Run probes + show matrix (cached if unchanged)
+ * bun census report --force  # Re-run all probes
+ * bun census report --cached # Show saved results without re-running
+ * bun census list            # List probe categories with counts
  * ```
  */
 
@@ -33,10 +34,24 @@ const program = new Command()
   .description("Terminal capability census — probe features across all backends")
 
 program
-  .command("run")
-  .description("Execute probes via vitest, show matrix, save results")
-  .option("-f, --force", "Re-run all probes even if cached results are valid")
-  .action(async (opts: { force?: boolean }) => {
+  .command("report")
+  .description("Run probes and show capability matrix")
+  .option("-f, --force", "Re-run probes even if cached results are valid")
+  .option("--cached", "Show saved results without re-running probes")
+  .action(async (opts: { force?: boolean; cached?: boolean }) => {
+    // --cached: just show saved results
+    if (opts.cached) {
+      const data = loadSavedResults()
+      if (!data) {
+        console.error("No saved results. Run: bun census report")
+        process.exit(1)
+      }
+      const output = await renderReport(data)
+      console.log(output)
+      printNotes(data)
+      return
+    }
+
     const hash = probeHash()
 
     // Check cache — skip if results exist and probe hash matches
@@ -96,24 +111,6 @@ program
 
     // Render
     const output = await renderReport(data, { writtenFiles: writtenFiles.map(shortPath) })
-    console.log(output)
-
-    printNotes(data)
-  })
-
-program
-  .command("report")
-  .description("Display last saved census results")
-  .action(async () => {
-    const data = loadSavedResults()
-    if (!data) {
-      console.error("No saved results. Run: bun census run")
-      process.exit(1)
-    }
-
-    log.debug?.(`Loaded ${data.backendNames.length} backends, ${data.featureIds.length} features`)
-
-    const output = await renderReport(data)
     console.log(output)
     printNotes(data)
   })
