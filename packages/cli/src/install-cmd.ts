@@ -15,17 +15,21 @@ import {
   getInstalledVersion,
   getInstallCommand,
   detectPackageManager,
-  getBackendStatus,
 } from "../../../src/registry.ts"
 
-/** Show uninstalled backends as a footer hint (only if any are uninstalled). */
-function showUninstalledFooter(): void {
-  const statuses = getBackendStatus()
-  const uninstalled = statuses.filter((s) => !s.installed).map((s) => s.name)
-  if (uninstalled.length > 0) {
-    console.log("")
-    console.log(`  Not installed: ${uninstalled.join(", ")}`)
-    console.log("  Install all:   bunx termless install --all")
+/** Show all other backends that weren't part of this install. */
+function showOtherBackends(installed: string[]): void {
+  const manifest = loadManifest()
+  const installedSet = new Set(installed)
+  const others = Object.entries(manifest.backends)
+    .filter(([name]) => !installedSet.has(name))
+    .map(([name, entry]) => {
+      const ver = entry.upstreamVersion ? ` ${entry.upstreamVersion}` : ""
+      return `${name} (${entry.type})${ver}`
+    })
+  if (others.length > 0) {
+    console.log(`\n  Other backends: ${others.join(", ")}`)
+    console.log("  Install all: bunx termless install --all")
   }
 }
 
@@ -90,7 +94,7 @@ export function registerInstallCommand(program: Command): void {
 
       if (toRun.length === 0) {
         console.log("\n  Nothing to install.")
-        showUninstalledFooter()
+        showOtherBackends(toInstall)
         console.log("")
         return
       }
@@ -102,7 +106,7 @@ export function registerInstallCommand(program: Command): void {
       try {
         execSync(cmd, { stdio: "inherit" })
         console.log(`\n  \u2713 Installed: ${toRun.join(", ")}`)
-        showUninstalledFooter()
+        showOtherBackends(toInstall)
         console.log("")
       } catch {
         console.log(`\n  \u2717 Install failed. Run manually:\n  ${cmd}\n`)
