@@ -26,9 +26,9 @@
 
 import { Command } from "commander"
 import { createSessionManager } from "./session.ts"
-import { registerBackendsCommand } from "./backends-cmd.ts"
-import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.ts"
-import { registerDoctorCommand } from "./doctor-cmd.ts"
+import { registerBackendsCommand } from "./backends-cmd.tsx"
+import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.tsx"
+import { registerDoctorCommand } from "./doctor-cmd.tsx"
 import { registerUpdateCommand } from "./update-cmd.ts"
 
 const program = new Command()
