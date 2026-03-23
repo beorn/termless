@@ -273,16 +273,7 @@ async function resolveVersioned(
     throw new Error(`Backend "${name}" has no upstream to version-pin.`)
   }
 
-  const cacheDir = join(CACHE_DIR, `${name}-${version}`)
-
-  if (!existsSync(join(cacheDir, "node_modules"))) {
-    mkdirSync(cacheDir, { recursive: true })
-    writeFileSync(
-      join(cacheDir, "package.json"),
-      JSON.stringify({ private: true, dependencies: { [entry.upstream]: version } }),
-    )
-    execSync("bun install --no-save", { cwd: cacheDir, stdio: "pipe" })
-  }
+  const cacheDir = ensureCachedVersion(entry.upstream, version)
 
   const origNodePath = process.env.NODE_PATH
   process.env.NODE_PATH = join(cacheDir, "node_modules") + (origNodePath ? `:${origNodePath}` : "")
@@ -293,6 +284,30 @@ async function resolveVersioned(
     if (origNodePath) process.env.NODE_PATH = origNodePath
     else delete process.env.NODE_PATH
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// Version cache (shared by backend() and census)
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Install an upstream package at a specific version to the cache directory.
+ * Returns the cache dir path (contains node_modules/).
+ * Shared by backend() version-pinned resolution and census versioned runs.
+ */
+export function ensureCachedVersion(upstream: string, version: string): string {
+  const cacheDir = join(CACHE_DIR, `${upstream.replace(/[/@]/g, "_")}-${version}`)
+
+  if (!existsSync(join(cacheDir, "node_modules"))) {
+    mkdirSync(cacheDir, { recursive: true })
+    writeFileSync(
+      join(cacheDir, "package.json"),
+      JSON.stringify({ private: true, dependencies: { [upstream]: version } }),
+    )
+    execSync("bun install --no-save", { cwd: cacheDir, stdio: "pipe" })
+  }
+
+  return cacheDir
 }
 
 // ═══════════════════════════════════════════════════════

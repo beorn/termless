@@ -17,14 +17,14 @@
  * each version from source (deferred).
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { dirname, join } from "node:path"
-import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import { createLogger } from "loggily"
 import { parseVitestJson } from "./parse.ts"
+import { ensureCachedVersion } from "../../../src/backends.ts"
 
 const log = createLogger("census")
 
@@ -34,7 +34,7 @@ const TERMLESS_ROOT = join(CENSUS_ROOT, "..", "..")
 const RESULTS_DIR = join(CENSUS_ROOT, "results")
 const PROBES_DIR = join(CENSUS_ROOT, "probes")
 const VERSIONS_PATH = join(CENSUS_ROOT, "versions.json")
-const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "termless", "backends")
+// Cache dir handled by ensureCachedVersion() in backends.ts
 
 // ── Types ──
 
@@ -94,34 +94,7 @@ export function loadVersionsCatalog(): VersionsCatalog {
 
 // ── Cache management ──
 
-/**
- * Install an upstream package at a specific version to the cache directory.
- * Returns the path to the cache directory (contains node_modules/).
- */
-function ensureVersionInstalled(upstream: string, version: string): string {
-  const cacheDir = join(CACHE_DIR, `${upstream.replace(/[/@]/g, "_")}-${version}`)
-  const nodeModules = join(cacheDir, "node_modules")
-
-  if (existsSync(nodeModules)) {
-    log.debug?.(`Cache hit: ${upstream}@${version}`)
-    return cacheDir
-  }
-
-  log.debug?.(`Installing ${upstream}@${version} to ${cacheDir}`)
-  mkdirSync(cacheDir, { recursive: true })
-  writeFileSync(
-    join(cacheDir, "package.json"),
-    JSON.stringify({ private: true, dependencies: { [upstream]: version } }),
-  )
-
-  try {
-    execSync("bun install --no-save", { cwd: cacheDir, stdio: "pipe" })
-  } catch (e: any) {
-    throw new Error(`Failed to install ${upstream}@${version}: ${e.message}`)
-  }
-
-  return cacheDir
-}
+// Version installation delegated to ensureCachedVersion() from backends.ts
 
 /**
  * Check if a cached result is still valid (probe hash matches).
@@ -292,7 +265,7 @@ export async function runVersionedCensus(opts?: VersionsRunOptions): Promise<Ver
       // Install upstream at version
       let cacheDir: string
       try {
-        cacheDir = ensureVersionInstalled(config.upstream, version)
+        cacheDir = ensureCachedVersion(config.upstream, version)
       } catch (e: any) {
         results.push({ backend: backendName, version, skipped: false, error: e.message })
         continue
