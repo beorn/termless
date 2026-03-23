@@ -150,8 +150,9 @@ program
 
     // Versions catalog
     let versionPairs = 0
+    let catalog: ReturnType<typeof loadVersionsCatalog> | null = null
     try {
-      const catalog = loadVersionsCatalog()
+      catalog = loadVersionsCatalog()
       for (const config of Object.values(catalog.backends)) {
         versionPairs += config.versions.length
       }
@@ -173,14 +174,17 @@ program
     }
     console.log(`  Results:       ${resultFiles.length} files in ${shortPath(RESULTS_DIR)}/`)
     console.log(`  Cache:         ${cacheValid ? "valid" : "stale (re-run needed)"}`)
-    if (versionPairs > 0) {
-      console.log(`  Version pairs: ${versionPairs}`)
+    if (catalog && versionPairs > 0) {
+      console.log(`\n  Version testing:`)
+      for (const [name, config] of Object.entries(catalog.backends)) {
+        console.log(`    ${name.padEnd(16)} ${config.versions.join(", ")}`)
+      }
     }
 
     if (data) {
-      console.log("\n  Categories:")
+      console.log(`\n  Categories:`)
       for (const [cat, ids] of data.categories) {
-        console.log(`    ${cat.padEnd(20)} ${ids.length} features`)
+        console.log(`    ${cat.padEnd(16)} ${ids.length} features`)
       }
     }
 
