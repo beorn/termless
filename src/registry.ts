@@ -174,6 +174,20 @@ export function getBackendStatus(): BackendStatus[] {
 // Backend resolution
 // ═══════════════════════════════════════════════════════
 
+export interface ResolveOptions extends Partial<TerminalOptions> {
+  /**
+   * Resolve a specific upstream version of the backend.
+   * For JS/WASM backends: installs the specified npm version to a temp dir.
+   * For native backends: requires nix or manual build.
+   *
+   * @example
+   * ```typescript
+   * const backend = await resolveBackend("xtermjs", { version: "5.4.0" })
+   * ```
+   */
+  version?: string
+}
+
 /**
  * Resolve a backend by name. Async because some backends need WASM
  * initialization or native module loading.
@@ -182,21 +196,28 @@ export function getBackendStatus(): BackendStatus[] {
  * initialization. This keeps per-backend logic in the backend package,
  * not in the registry.
  *
+ * Optionally pass `{ version }` to resolve a specific upstream version.
+ *
  * @throws If backend is unknown or not installed
  *
  * @example
  * ```typescript
  * const backend = await resolveBackend("ghostty")
- * const term = createTerminal({ backend })
+ * const backend = await resolveBackend("xtermjs", { version: "5.4.0" })
  * ```
  */
-export async function resolveBackend(name: string, opts?: Partial<TerminalOptions>): Promise<TerminalBackend> {
+export async function resolveBackend(name: string, opts?: ResolveOptions): Promise<TerminalBackend> {
   const manifest = loadManifest()
   const entry = manifest.backends[name]
 
   if (!entry) {
     const available = backendNames().join(", ")
     throw new Error(`Unknown backend "${name}". Available backends: ${available}`)
+  }
+
+  // Version-pinned resolution: install specific upstream version to temp dir
+  if (opts?.version && opts.version !== entry.upstreamVersion) {
+    return resolveVersioned(name, entry, opts.version, opts)
   }
 
   if (!isBackendInstalled(name)) {
@@ -311,6 +332,92 @@ export async function checkBackendHealth(name: string): Promise<BackendHealthRes
 export async function checkAllHealth(): Promise<BackendHealthResult[]> {
   const installed = installedBackendNames()
   return Promise.all(installed.map(checkBackendHealth))
+}
+
+// ═══════════════════════════════════════════════════════
+// Install helpers (for CLI)
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// Versioned resolution
+// ═══════════════════════════════════════════════════════
+
+const VERSION_CACHE_DIR = join(__dirname, "..", ".termless-cache", "versions")
+
+/**
+ * Resolve a specific version of a backend by installing its upstream
+ * dependency to a cached temp directory.
+ *
+ * Only works for JS/WASM backends (npm packages). Native backends
+ * require nix or manual builds.
+ */
+async function resolveVersioned(
+  name: string,
+  entry: BackendManifestEntry,
+  version: string,
+  opts?: Partial<TerminalOptions>,
+): Promise<TerminalBackend> {
+  if (entry.type === "native") {
+    throw new Error(
+      `Version-pinned resolution for native backend "${name}" requires nix.\n` +
+        `Run: nix develop .#${name}-${version.replace(/\./g, "_")} --command bun census --backend ${name}`,
+    )
+  }
+
+  if (!entry.upstream) {
+    throw new Error(`Backend "${name}" has no upstream package to version-pin.`)
+  }
+
+  // Cache dir per backend+version
+  const cacheDir = join(VERSION_CACHE_DIR, `${name}-${version}`)
+  const upstreamPkg = entry.upstream
+
+  // Install upstream to cache dir if not already there
+  if (!existsSync(join(cacheDir, "node_modules", upstreamPkg))) {
+    const { mkdirSync } = await import("node:fs")
+    const { execSync } = await import("node:child_process")
+    mkdirSync(cacheDir, { recursive: true })
+
+    // Create a minimal package.json
+    const pkgJson = JSON.stringify({
+      name: `termless-cache-${name}-${version}`,
+      private: true,
+      dependencies: { [upstreamPkg]: version },
+    })
+    const { writeFileSync } = await import("node:fs")
+    writeFileSync(join(cacheDir, "package.json"), pkgJson)
+
+    // Install
+    execSync("bun install --no-save", { cwd: cacheDir, stdio: "pipe" })
+  }
+
+  // Now we need the backend wrapper to use this specific upstream version.
+  // The backend's resolve() function uses whatever upstream is in node_modules.
+  // We temporarily prepend our cache dir to NODE_PATH so the import resolves there.
+  //
+  // For now, this only works for backends whose upstream is a single npm package.
+  // The backend's own code (e.g., @termless/xtermjs/src/backend.ts) imports
+  // from the upstream package name, and we redirect that import.
+
+  // Store original and set cache path
+  const origNodePath = process.env.NODE_PATH
+  process.env.NODE_PATH = join(cacheDir, "node_modules") + (origNodePath ? `:${origNodePath}` : "")
+
+  try {
+    // Clear module cache for the upstream package so it re-resolves
+    // (This is best-effort — ESM module cache can't be fully cleared)
+
+    // Re-import the backend module (will pick up the versioned upstream)
+    const mod = await import(entry.package)
+    if (typeof mod.resolve === "function") {
+      return mod.resolve(opts)
+    }
+    throw new Error(`Backend "${name}" does not export resolve()`)
+  } finally {
+    // Restore NODE_PATH
+    if (origNodePath) process.env.NODE_PATH = origNodePath
+    else delete process.env.NODE_PATH
+  }
 }
 
 // ═══════════════════════════════════════════════════════

@@ -13,3 +13,4 @@ termless-vt100-rust.node
 .direnv/
 packages/*/native/target/
 packages/*/native/Cargo.lock
+.termless-cache/

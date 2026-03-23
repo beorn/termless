@@ -54,8 +54,5 @@ export type { MockTimerController } from "./timer.ts"
 export { pushWarning, drainWarnings, hasWarnings, clearWarnings } from "./warnings.ts"
 
 // Backend registry (core — user-facing)
-export {
-  resolveBackend,
-  createTerminalByName,
-} from "./registry.ts"
-export type { BackendManifest, BackendManifestEntry, BackendStatus, BackendHealthResult } from "./registry.ts"
+export { resolveBackend, createTerminalByName } from "./registry.ts"
+export type { BackendManifest, BackendManifestEntry, BackendStatus, BackendHealthResult, ResolveOptions } from "./registry.ts"
