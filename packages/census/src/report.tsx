@@ -75,10 +75,17 @@ function SummarySection({ data }: { data: CensusData }): React.ReactElement {
 // Column widths
 const FEATURE_COL = 30
 
+function centerPad(text: string, width: number): string {
+  if (text.length >= width) return text.slice(0, width)
+  const left = Math.floor((width - text.length) / 2)
+  const right = width - text.length - left
+  return " ".repeat(left) + text + " ".repeat(right)
+}
+
 function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
   // Backend column width — fit the longest name + 2 padding
   const backendCol = Math.max(6, ...data.backendNames.map((n) => n.length)) + 2
-  const headerCells = data.backendNames.map((n) => n.padEnd(backendCol)).join("")
+  const headerCells = data.backendNames.map((n) => centerPad(n, backendCol)).join("")
 
   const sections: React.ReactElement[] = []
 
@@ -91,11 +98,11 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
         const r = data.results.get(name)!.get(id)
         return r ? (
           <Text key={i} color="$success">
-            {"✓".padEnd(backendCol)}
+            {centerPad("✓", backendCol)}
           </Text>
         ) : (
           <Text key={i} color="$error">
-            {"✗".padEnd(backendCol)}
+            {centerPad("✗", backendCol)}
           </Text>
         )
       })

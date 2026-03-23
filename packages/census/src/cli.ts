@@ -205,7 +205,16 @@ function loadSavedResults() {
 
   if (perBackend.length === 0) return null
 
-  return fromPerBackendFiles(perBackend)
+  // Keep only the latest version per backend (by generated timestamp)
+  const latest = new Map<string, (typeof perBackend)[0]>()
+  for (const entry of perBackend) {
+    const existing = latest.get(entry.backend)
+    if (!existing || entry.generated > existing.generated) {
+      latest.set(entry.backend, entry)
+    }
+  }
+
+  return fromPerBackendFiles([...latest.values()])
 }
 
 function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
