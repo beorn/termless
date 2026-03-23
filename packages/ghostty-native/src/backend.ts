@@ -26,9 +26,8 @@ import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
 // Native module types (from Zig napigen)
 // ═══════════════════════════════════════════════════════
 
-interface NativeTerminalHandle {
-  // Opaque pointer — napigen wraps this as a JS object
-}
+// Opaque pointer — napigen wraps this as a JS object
+type NativeTerminalHandle = Record<string, never>
 
 interface NativeCell {
   text: string
