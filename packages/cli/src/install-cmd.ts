@@ -73,8 +73,8 @@ export function registerInstallCommand(program: Command): void {
 
         // Check if already installed
         if (isBackendInstalled(name)) {
-          const ver = getInstalledVersion(entry.package)
-          console.log(`  \u2713 ${name} already installed (${ver ?? "unknown"})`)
+          const upstreamVer = entry.upstreamVersion ?? "latest"
+          console.log(`  \u2713 ${name} already installed (${entry.upstream ?? name} ${upstreamVer})`)
           continue
         }
 
