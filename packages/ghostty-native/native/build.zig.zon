@@ -16,5 +16,13 @@
             .url = "git+https://github.com/cztomsik/napigen#bc2c8259d95be774847e60fce9bfc203ab623b30",
             .hash = "napigen-0.1.0-YpiIumJ9AAA4yVKISHKfN_2H0u7-su18jRHSSq_UUTNN",
         },
+
+        // ghostty — terminal emulation core (Zig module)
+        // Uses local path to the cloned ghostty source. The build script
+        // (build/build.sh) clones ghostty into .ghostty-src/ before building.
+        .ghostty = .{
+            .path = ".ghostty-src",
+            .lazy = true,
+        },
     },
 }

@@ -1,12 +1,25 @@
-/// N-API bindings for libghostty-vt — Ghostty's terminal emulation core.
+/// N-API bindings for Ghostty's terminal emulation core.
 ///
-/// Exposes a headless Ghostty terminal to Node.js/Bun via napigen.
-/// Uses the render state API for efficient cell-by-cell reading.
+/// Uses Ghostty's Zig API directly (not the C headers) for full access to
+/// the terminal state machine, screen buffer, cell styles, and scrollback.
+/// Exposes a headless terminal to Node.js/Bun via napigen.
 const std = @import("std");
 const napigen = @import("napigen");
-const c = @cImport({
-    @cInclude("ghostty/vt.h");
-});
+const ghostty = @import("ghostty");
+
+// ghostty's lib_vt.zig public API — types are exported directly,
+// not under a `terminal` namespace.
+const Terminal = ghostty.Terminal;
+const Screen = ghostty.Screen;
+const PageList = ghostty.PageList;
+const Cell = ghostty.Cell;
+const Page = ghostty.Page;
+const Style = ghostty.Style;
+const ReadonlyStream = ghostty.ReadonlyStream;
+const color = ghostty.color;
+const modes = ghostty.modes;
+const point = ghostty.point;
+const size = ghostty.size;
 
 // ─── Allocator ──────────────────────────────────────────
 
@@ -15,14 +28,14 @@ const allocator = gpa.allocator();
 
 // ─── Terminal handle ────────────────────────────────────
 
-/// Wraps a GhosttyTerminal + GhosttyRenderState for the JS side.
+/// Wraps a Ghostty Terminal + VT stream for the JS side.
+/// The stream handles parsing of escape sequences and feeding
+/// them into the terminal state machine.
 const TerminalHandle = struct {
-    terminal: c.GhosttyTerminal,
-    render_state: c.GhosttyRenderState,
-    row_iterator: c.GhosttyRenderStateRowIterator,
-    row_cells: c.GhosttyRenderStateRowCells,
-    cols: u16,
-    rows: u16,
+    terminal: Terminal,
+    stream: ReadonlyStream,
+    cols: size.CellCountInt,
+    rows: size.CellCountInt,
     title: []const u8,
 };
 
@@ -55,209 +68,141 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
 // ─── Terminal lifecycle ─────────────────────────────────
 
 fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
-    var terminal: c.GhosttyTerminal = null;
-    const opts = c.GhosttyTerminalOptions{
+    const handle = allocator.create(TerminalHandle) catch return error.OutOfMemory;
+    errdefer allocator.destroy(handle);
+
+    handle.terminal = Terminal.init(allocator, .{
         .cols = cols,
         .rows = rows,
         .max_scrollback = @as(usize, max_scrollback),
-    };
+    }) catch return error.TerminalCreationFailed;
+    errdefer handle.terminal.deinit(allocator);
 
-    const result = c.ghostty_terminal_new(null, &terminal, opts);
-    if (result != c.GHOSTTY_SUCCESS) return error.TerminalCreationFailed;
+    handle.stream = handle.terminal.vtStream();
+    handle.cols = cols;
+    handle.rows = rows;
+    handle.title = "";
 
-    // Create render state
-    var render_state: c.GhosttyRenderState = null;
-    const rs_result = c.ghostty_render_state_new(null, &render_state);
-    if (rs_result != c.GHOSTTY_SUCCESS) {
-        c.ghostty_terminal_free(terminal);
-        return error.RenderStateCreationFailed;
-    }
-
-    // Create reusable row iterator
-    var row_iterator: c.GhosttyRenderStateRowIterator = null;
-    const ri_result = c.ghostty_render_state_row_iterator_new(null, &row_iterator);
-    if (ri_result != c.GHOSTTY_SUCCESS) {
-        c.ghostty_render_state_free(render_state);
-        c.ghostty_terminal_free(terminal);
-        return error.RowIteratorCreationFailed;
-    }
-
-    // Create reusable row cells
-    var row_cells: c.GhosttyRenderStateRowCells = null;
-    const rc_result = c.ghostty_render_state_row_cells_new(null, &row_cells);
-    if (rc_result != c.GHOSTTY_SUCCESS) {
-        c.ghostty_render_state_row_iterator_free(row_iterator);
-        c.ghostty_render_state_free(render_state);
-        c.ghostty_terminal_free(terminal);
-        return error.RowCellsCreationFailed;
-    }
-
-    const handle = allocator.create(TerminalHandle) catch return error.OutOfMemory;
-    handle.* = .{
-        .terminal = terminal,
-        .render_state = render_state,
-        .row_iterator = row_iterator,
-        .row_cells = row_cells,
-        .cols = cols,
-        .rows = rows,
-        .title = "",
-    };
     return handle;
 }
 
 fn destroyTerminal(handle: *TerminalHandle) void {
-    c.ghostty_render_state_row_cells_free(handle.row_cells);
-    c.ghostty_render_state_row_iterator_free(handle.row_iterator);
-    c.ghostty_render_state_free(handle.render_state);
-    c.ghostty_terminal_free(handle.terminal);
+    handle.stream.deinit();
+    handle.terminal.deinit(allocator);
+    if (handle.title.len > 0) {
+        allocator.free(handle.title);
+    }
     allocator.destroy(handle);
 }
 
 // ─── Feed / resize / reset ──────────────────────────────
 
-fn feed(handle: *TerminalHandle, data: []const u8) void {
-    c.ghostty_terminal_vt_write(handle.terminal, data.ptr, data.len);
-    // Update render state after writing
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
+fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_value) void {
+    // Accept both strings and Uint8Array/Buffer from JS.
+    // Terminal data is raw bytes (escape sequences + UTF-8 text).
+    const napi = napigen.napi;
+    const env = js.env;
+
+    // Try to get data as a Node.js Buffer first
+    var data_ptr: ?[*]u8 = null;
+    var data_len: usize = 0;
+    if (napi.napi_get_buffer_info(env, data_val, @ptrCast(&data_ptr), &data_len) == napi.napi_ok) {
+        if (data_ptr) |ptr| {
+            handle.stream.nextSlice(ptr[0..data_len]) catch {};
+            return;
+        }
+    }
+
+    // Try as a typed array (Uint8Array)
+    var typed_type: napi.napi_typedarray_type = undefined;
+    var typed_len: usize = 0;
+    var typed_data: ?*anyopaque = null;
+    var typed_buf: napi.napi_value = undefined;
+    var typed_offset: usize = 0;
+    if (napi.napi_get_typedarray_info(env, data_val, &typed_type, &typed_len, &typed_data, &typed_buf, &typed_offset) == napi.napi_ok) {
+        if (typed_data) |ptr| {
+            const bytes: [*]u8 = @ptrCast(ptr);
+            handle.stream.nextSlice(bytes[0..typed_len]) catch {};
+            return;
+        }
+    }
+
+    // Fall back to string
+    const str = js.readString(data_val) catch return;
+    handle.stream.nextSlice(str) catch {};
 }
 
 fn resizeTerm(handle: *TerminalHandle, cols: u16, rows: u16) void {
-    _ = c.ghostty_terminal_resize(handle.terminal, cols, rows);
+    handle.terminal.resize(allocator, cols, rows) catch {};
     handle.cols = cols;
     handle.rows = rows;
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
 }
 
 fn resetTerm(handle: *TerminalHandle) void {
-    c.ghostty_terminal_reset(handle.terminal);
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
+    handle.terminal.fullReset();
 }
 
 // ─── Text extraction ────────────────────────────────────
 
 fn getText(handle: *TerminalHandle) ![]const u8 {
-    // Use the formatter API for plain text extraction
-    var formatter: c.GhosttyFormatter = null;
-    var opts: c.GhosttyFormatterTerminalOptions = .{
-        .size = @sizeOf(c.GhosttyFormatterTerminalOptions),
-        .emit = c.GHOSTTY_FORMATTER_FORMAT_PLAIN,
-        .unwrap = false,
-        .trim = true,
-        .extra = std.mem.zeroes(c.GhosttyFormatterTerminalExtra),
-    };
-    opts.extra.size = @sizeOf(c.GhosttyFormatterTerminalExtra);
-
-    const fmt_result = c.ghostty_formatter_terminal_new(null, &formatter, handle.terminal, opts);
-    if (fmt_result != c.GHOSTTY_SUCCESS) return error.FormatterCreationFailed;
-    defer c.ghostty_formatter_free(formatter);
-
-    // Query required size
-    var required_len: usize = 0;
-    _ = c.ghostty_formatter_format_buf(formatter, null, 0, &required_len);
-
-    if (required_len == 0) return "";
-
-    // Allocate and format
-    const buf = allocator.alloc(u8, required_len) catch return error.OutOfMemory;
-    defer allocator.free(buf);
-
-    var written: usize = 0;
-    const result = c.ghostty_formatter_format_buf(formatter, buf.ptr, buf.len, &written);
-    if (result != c.GHOSTTY_SUCCESS) return error.FormatFailed;
-
-    // Return a copy that napigen can manage
-    const out = allocator.alloc(u8, written) catch return error.OutOfMemory;
-    @memcpy(out, buf[0..written]);
-    return out;
+    const str = handle.terminal.plainString(allocator) catch return error.OutOfMemory;
+    return str;
 }
 
 fn getTextRange(handle: *TerminalHandle, start_row: u16, start_col: u16, end_row: u16, end_col: u16) ![]const u8 {
-    // Build text by iterating cells in the range using grid refs
-    var result_buf = std.ArrayList(u8).init(allocator);
-    defer result_buf.deinit();
+    // Zig 0.15: ArrayList is unmanaged, allocator passed to each call
+    var result_buf: std.ArrayList(u8) = .empty;
+    defer result_buf.deinit(allocator);
 
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
+    const screen = handle.terminal.screens.active;
+    const pages = &screen.pages;
 
-    // Get row iterator
-    _ = c.ghostty_render_state_get(
-        handle.render_state,
-        c.GHOSTTY_RENDER_STATE_DATA_ROW_ITERATOR,
-        @ptrCast(&handle.row_iterator),
-    );
-
-    var current_row: u16 = 0;
-    while (c.ghostty_render_state_row_iterator_next(handle.row_iterator)) {
-        if (current_row > end_row) break;
-        if (current_row >= start_row) {
-            if (current_row > start_row) {
-                try result_buf.append('\n');
-            }
-
-            // Get cells for this row
-            _ = c.ghostty_render_state_row_get(
-                handle.row_iterator,
-                c.GHOSTTY_RENDER_STATE_ROW_DATA_CELLS,
-                @ptrCast(&handle.row_cells),
-            );
-
-            const col_start: u16 = if (current_row == start_row) start_col else 0;
-            const col_end: u16 = if (current_row == end_row) end_col else handle.cols;
-
-            var col: u16 = 0;
-            while (c.ghostty_render_state_row_cells_next(handle.row_cells)) {
-                if (col >= col_end) break;
-                if (col >= col_start) {
-                    try appendCellText(&result_buf, handle.row_cells);
-                }
-                col += 1;
-            }
+    var row: u16 = start_row;
+    while (row <= end_row) : (row += 1) {
+        if (row > start_row) {
+            try result_buf.append(allocator, '\n');
         }
-        current_row += 1;
+
+        const col_start: u16 = if (row == start_row) start_col else 0;
+        const col_end: u16 = if (row == end_row) end_col else handle.cols;
+
+        var col: u16 = col_start;
+        while (col < col_end) : (col += 1) {
+            const p = pages.pin(.{ .viewport = .{ .x = col, .y = row } }) orelse continue;
+            const rac = p.rowAndCell();
+            const cell = rac.cell;
+
+            try appendCellTextFromCell(&result_buf, cell, p.node.data);
+        }
     }
 
-    // Trim trailing whitespace per line
     const out = try allocator.alloc(u8, result_buf.items.len);
     @memcpy(out, result_buf.items);
     return out;
 }
 
-fn appendCellText(buf: *std.ArrayList(u8), row_cells: c.GhosttyRenderStateRowCells) !void {
-    // Get grapheme length
-    var grapheme_len: u32 = 0;
-    const len_result = c.ghostty_render_state_row_cells_get(
-        row_cells,
-        c.GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_LEN,
-        @ptrCast(&grapheme_len),
-    );
-    if (len_result != c.GHOSTTY_SUCCESS or grapheme_len == 0) {
-        try buf.append(' ');
+fn appendCellTextFromCell(buf: *std.ArrayList(u8), cell: *const Cell, page: Page) !void {
+    const cp = cell.codepoint();
+    if (cp == 0) {
+        try buf.append(allocator, ' ');
         return;
     }
 
-    // Get codepoints
-    var codepoints: [16]u32 = undefined;
-    const cp_result = c.ghostty_render_state_row_cells_get(
-        row_cells,
-        c.GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
-        @ptrCast(&codepoints),
-    );
-    if (cp_result != c.GHOSTTY_SUCCESS) {
-        try buf.append(' ');
+    // Encode the base codepoint
+    var utf8_buf: [4]u8 = undefined;
+    const utf8_len = std.unicode.utf8Encode(cp, &utf8_buf) catch {
+        try buf.append(allocator, '?');
         return;
-    }
+    };
+    try buf.appendSlice(allocator, utf8_buf[0..utf8_len]);
 
-    // Encode codepoints as UTF-8
-    const len = @min(grapheme_len, 16);
-    for (codepoints[0..len]) |cp| {
-        if (cp == 0) {
-            try buf.append(' ');
-        } else {
-            var utf8_buf: [4]u8 = undefined;
-            const utf8_len = std.unicode.utf8Encode(@intCast(cp), &utf8_buf) catch {
-                try buf.append('?');
-                continue;
-            };
-            try buf.appendSlice(utf8_buf[0..utf8_len]);
+    // If this cell has grapheme cluster data, append the extra codepoints
+    if (cell.hasGrapheme()) {
+        if (page.lookupGrapheme(cell)) |extra_cps| {
+            for (extra_cps) |extra_cp| {
+                const extra_len = std.unicode.utf8Encode(extra_cp, &utf8_buf) catch continue;
+                try buf.appendSlice(allocator, utf8_buf[0..extra_len]);
+            }
         }
     }
 }
@@ -283,83 +228,120 @@ const JsCell = struct {
 };
 
 fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
-    // Use grid_ref for single cell access
-    var grid_ref: c.GhosttyGridRef = .{
-        .size = @sizeOf(c.GhosttyGridRef),
-        .node = null,
-        .x = 0,
-        .y = 0,
-    };
+    const screen = handle.terminal.screens.active;
+    const pages = &screen.pages;
 
-    const point = c.GhosttyPoint{
-        .tag = c.GHOSTTY_POINT_TAG_VIEWPORT,
-        .value = .{ .coordinate = .{ .x = col, .y = row } },
-    };
+    // Get the pin for this viewport position
+    const p = pages.pin(.{ .viewport = .{ .x = col, .y = row } }) orelse return defaultCell();
+    const rac = p.rowAndCell();
+    const cell = rac.cell;
+    const page = &p.node.data;
 
-    const result = c.ghostty_terminal_grid_ref(handle.terminal, point, &grid_ref);
-    if (result != c.GHOSTTY_SUCCESS) return defaultCell();
-
-    // Get cell
-    var cell: c.GhosttyCell = 0;
-    _ = c.ghostty_grid_ref_cell(&grid_ref, &cell);
-
-    // Get style
-    var style: c.GhosttyStyle = std.mem.zeroes(c.GhosttyStyle);
-    style.size = @sizeOf(c.GhosttyStyle);
-    _ = c.ghostty_grid_ref_style(&grid_ref, &style);
-
-    // Get wide status
-    var wide_val: c.GhosttyCellWide = c.GHOSTTY_CELL_WIDE_NARROW;
-    _ = c.ghostty_cell_get(cell, c.GHOSTTY_CELL_DATA_WIDE, @ptrCast(&wide_val));
-
-    // Get codepoint
-    var codepoint: u32 = 0;
-    _ = c.ghostty_cell_get(cell, c.GHOSTTY_CELL_DATA_CODEPOINT, @ptrCast(&codepoint));
-
-    // Get graphemes
-    var grapheme_buf: [16]u32 = undefined;
-    var grapheme_len: usize = 0;
-    _ = c.ghostty_grid_ref_graphemes(&grid_ref, &grapheme_buf, 16, &grapheme_len);
-
-    // Build text
+    // Extract text (codepoint + grapheme cluster)
     var text_buf: [64]u8 = undefined;
     var text_pos: usize = 0;
 
-    if (grapheme_len > 0) {
-        for (grapheme_buf[0..grapheme_len]) |cp| {
-            if (cp == 0) continue;
-            const utf8_len = std.unicode.utf8Encode(@intCast(cp), text_buf[text_pos..][0..4]) catch continue;
-            text_pos += utf8_len;
-        }
-    } else if (codepoint != 0) {
-        const utf8_len = std.unicode.utf8Encode(@intCast(codepoint), text_buf[0..4]) catch 0;
+    const cp = cell.codepoint();
+    if (cp != 0) {
+        const utf8_len = std.unicode.utf8Encode(cp, text_buf[0..4]) catch 0;
         text_pos = utf8_len;
+
+        // Append grapheme cluster extra codepoints
+        if (cell.hasGrapheme()) {
+            if (page.lookupGrapheme(cell)) |extra_cps| {
+                for (extra_cps) |extra_cp| {
+                    if (text_pos + 4 > text_buf.len) break;
+                    const extra_len = std.unicode.utf8Encode(extra_cp, text_buf[text_pos..][0..4]) catch continue;
+                    text_pos += extra_len;
+                }
+            }
+        }
     }
 
-    // Extract colors
+    // Extract style
     var fg_r: i16 = -1;
     var fg_g: i16 = -1;
     var fg_b: i16 = -1;
     var bg_r: i16 = -1;
     var bg_g: i16 = -1;
     var bg_b: i16 = -1;
+    var bold: bool = false;
+    var faint: bool = false;
+    var italic: bool = false;
+    var underline: i8 = 0;
+    var strikethrough: bool = false;
+    var inverse: bool = false;
 
-    if (style.fg_color.tag == c.GHOSTTY_STYLE_COLOR_RGB) {
-        fg_r = style.fg_color.value.rgb.r;
-        fg_g = style.fg_color.value.rgb.g;
-        fg_b = style.fg_color.value.rgb.b;
-    } else if (style.fg_color.tag == c.GHOSTTY_STYLE_COLOR_PALETTE) {
-        // Resolve palette color through render state
-        fg_r = -1; // Will be resolved in TypeScript via getDefaultColors
-        fg_g = -1;
-        fg_b = -1;
+    if (cell.style_id != 0) {
+        const sty = page.styles.get(page.memory, cell.style_id);
+
+        // Extract foreground color
+        switch (sty.fg_color) {
+            .rgb => |rgb| {
+                fg_r = rgb.r;
+                fg_g = rgb.g;
+                fg_b = rgb.b;
+            },
+            .palette => |idx| {
+                // Resolve palette color to RGB
+                const rgb = handle.terminal.colors.palette.current[idx];
+                fg_r = rgb.r;
+                fg_g = rgb.g;
+                fg_b = rgb.b;
+            },
+            .none => {},
+        }
+
+        // Extract background color
+        switch (sty.bg_color) {
+            .rgb => |rgb| {
+                bg_r = rgb.r;
+                bg_g = rgb.g;
+                bg_b = rgb.b;
+            },
+            .palette => |idx| {
+                const rgb = handle.terminal.colors.palette.current[idx];
+                bg_r = rgb.r;
+                bg_g = rgb.g;
+                bg_b = rgb.b;
+            },
+            .none => {},
+        }
+
+        // Extract style flags
+        bold = sty.flags.bold;
+        faint = sty.flags.faint;
+        italic = sty.flags.italic;
+        underline = @intCast(@intFromEnum(sty.flags.underline));
+        strikethrough = sty.flags.strikethrough;
+        inverse = sty.flags.inverse;
+    } else {
+        // Handle bg-only cells (content_tag == .bg_color_palette or .bg_color_rgb)
+        switch (cell.content_tag) {
+            .bg_color_palette => {
+                const idx = cell.content.color_palette;
+                const rgb = handle.terminal.colors.palette.current[idx];
+                bg_r = rgb.r;
+                bg_g = rgb.g;
+                bg_b = rgb.b;
+            },
+            .bg_color_rgb => {
+                const rgb = cell.content.color_rgb;
+                bg_r = rgb.r;
+                bg_g = rgb.g;
+                bg_b = rgb.b;
+            },
+            else => {},
+        }
     }
 
-    if (style.bg_color.tag == c.GHOSTTY_STYLE_COLOR_RGB) {
-        bg_r = style.bg_color.value.rgb.r;
-        bg_g = style.bg_color.value.rgb.g;
-        bg_b = style.bg_color.value.rgb.b;
-    }
+    // Wide status
+    const wide_val: u8 = switch (cell.wide) {
+        .narrow => 0,
+        .wide => 1,
+        .spacer_tail => 2,
+        .spacer_head => 0, // treated as narrow for our purposes
+    };
 
     // Copy text to stable allocation
     const text = if (text_pos > 0) blk: {
@@ -376,13 +358,13 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
         .bg_r = bg_r,
         .bg_g = bg_g,
         .bg_b = bg_b,
-        .bold = style.bold,
-        .faint = style.faint,
-        .italic = style.italic,
-        .underline = @intCast(style.underline),
-        .strikethrough = style.strikethrough,
-        .inverse = style.inverse,
-        .wide = @intCast(@intFromEnum(wide_val)),
+        .bold = bold,
+        .faint = faint,
+        .italic = italic,
+        .underline = underline,
+        .strikethrough = strikethrough,
+        .inverse = inverse,
+        .wide = wide_val,
     };
 }
 
@@ -410,7 +392,7 @@ fn getCell(handle: *TerminalHandle, row: u16, col: u16) JsCell {
 }
 
 fn getLine(js: *napigen.JsContext, handle: *TerminalHandle, row: u16) !napigen.napi_value {
-    const arr = try js.createArray(handle.cols);
+    const arr = try js.createArrayWithLength(handle.cols);
     for (0..handle.cols) |col| {
         const cell = readCellAt(handle, row, @intCast(col));
         try js.setElement(arr, @intCast(col), try js.write(cell));
@@ -419,7 +401,7 @@ fn getLine(js: *napigen.JsContext, handle: *TerminalHandle, row: u16) !napigen.n
 }
 
 fn getLines(js: *napigen.JsContext, handle: *TerminalHandle) !napigen.napi_value {
-    const arr = try js.createArray(handle.rows);
+    const arr = try js.createArrayWithLength(handle.rows);
     for (0..handle.rows) |row| {
         const line = try getLine(js, handle, @intCast(row));
         try js.setElement(arr, @intCast(row), line);
@@ -437,54 +419,42 @@ const JsCursor = struct {
 };
 
 fn getCursor(handle: *TerminalHandle) JsCursor {
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
+    const screen = handle.terminal.screens.active;
+    const cursor = &screen.cursor;
 
-    var x: u16 = 0;
-    var y: u16 = 0;
-    var visible: bool = true;
-    var visual_style: c.GhosttyRenderStateCursorVisualStyle = c.GHOSTTY_RENDER_STATE_CURSOR_VISUAL_STYLE_BLOCK;
-    var has_viewport: bool = false;
-
-    _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_CURSOR_VIEWPORT_HAS_VALUE, @ptrCast(&has_viewport));
-    if (has_viewport) {
-        _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_CURSOR_VIEWPORT_X, @ptrCast(&x));
-        _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_CURSOR_VIEWPORT_Y, @ptrCast(&y));
-    }
-
-    _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_CURSOR_VISIBLE, @ptrCast(&visible));
-    _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_CURSOR_VISUAL_STYLE, @ptrCast(&visual_style));
+    const cursor_style: u8 = switch (cursor.cursor_style) {
+        .bar => 0,
+        .block => 1,
+        .underline => 2,
+        .block_hollow => 3,
+    };
 
     return .{
-        .x = x,
-        .y = y,
-        .visible = visible,
-        .style = @intCast(@intFromEnum(visual_style)),
+        .x = cursor.x,
+        .y = cursor.y,
+        .visible = handle.terminal.modes.get(.cursor_visible),
+        .style = cursor_style,
     };
 }
 
 // ─── Modes ──────────────────────────────────────────────
 
 fn getMode(handle: *TerminalHandle, mode_name: []const u8) bool {
-    const mode: c.GhosttyMode = modeFromName(mode_name) orelse return false;
-    var value: bool = false;
-    const result = c.ghostty_terminal_mode_get(handle.terminal, mode, &value);
-    if (result != c.GHOSTTY_SUCCESS) return false;
-    return value;
-}
-
-fn modeFromName(name: []const u8) ?c.GhosttyMode {
-    if (std.mem.eql(u8, name, "altScreen")) return c.GHOSTTY_MODE_ALT_SCREEN;
-    if (std.mem.eql(u8, name, "cursorVisible")) return c.GHOSTTY_MODE_CURSOR_VISIBLE;
-    if (std.mem.eql(u8, name, "bracketedPaste")) return c.GHOSTTY_MODE_BRACKETED_PASTE;
-    if (std.mem.eql(u8, name, "applicationCursor")) return c.GHOSTTY_MODE_DECCKM;
-    if (std.mem.eql(u8, name, "applicationKeypad")) return c.GHOSTTY_MODE_KEYPAD_KEYS;
-    if (std.mem.eql(u8, name, "autoWrap")) return c.GHOSTTY_MODE_WRAPAROUND;
-    if (std.mem.eql(u8, name, "mouseTracking")) return c.GHOSTTY_MODE_NORMAL_MOUSE;
-    if (std.mem.eql(u8, name, "focusTracking")) return c.GHOSTTY_MODE_FOCUS_EVENT;
-    if (std.mem.eql(u8, name, "originMode")) return c.GHOSTTY_MODE_ORIGIN;
-    if (std.mem.eql(u8, name, "insertMode")) return c.GHOSTTY_MODE_INSERT;
-    if (std.mem.eql(u8, name, "reverseVideo")) return c.GHOSTTY_MODE_REVERSE_COLORS;
-    return null;
+    if (std.mem.eql(u8, mode_name, "altScreen")) {
+        return handle.terminal.modes.get(.alt_screen) or
+            handle.terminal.modes.get(.alt_screen_save_cursor_clear_enter);
+    }
+    if (std.mem.eql(u8, mode_name, "cursorVisible")) return handle.terminal.modes.get(.cursor_visible);
+    if (std.mem.eql(u8, mode_name, "bracketedPaste")) return handle.terminal.modes.get(.bracketed_paste);
+    if (std.mem.eql(u8, mode_name, "applicationCursor")) return handle.terminal.modes.get(.cursor_keys);
+    if (std.mem.eql(u8, mode_name, "applicationKeypad")) return handle.terminal.modes.get(.keypad_keys);
+    if (std.mem.eql(u8, mode_name, "autoWrap")) return handle.terminal.modes.get(.wraparound);
+    if (std.mem.eql(u8, mode_name, "mouseTracking")) return handle.terminal.modes.get(.mouse_event_normal);
+    if (std.mem.eql(u8, mode_name, "focusTracking")) return handle.terminal.modes.get(.focus_event);
+    if (std.mem.eql(u8, mode_name, "originMode")) return handle.terminal.modes.get(.origin);
+    if (std.mem.eql(u8, mode_name, "insertMode")) return handle.terminal.modes.get(.insert);
+    if (std.mem.eql(u8, mode_name, "reverseVideo")) return handle.terminal.modes.get(.reverse_colors);
+    return false;
 }
 
 // ─── Title ──────────────────────────────────────────────
@@ -496,33 +466,54 @@ fn getTitle(handle: *TerminalHandle) []const u8 {
 // ─── Scrollback ─────────────────────────────────────────
 
 const JsScrollback = struct {
-    viewport_offset: u64,
-    total_lines: u64,
+    viewport_offset: u32,
+    total_lines: u32,
     screen_lines: u16,
 };
 
 fn getScrollback(handle: *TerminalHandle) JsScrollback {
-    var scrollbar: c.GhosttyTerminalScrollbar = .{
-        .total = 0,
-        .offset = 0,
-        .len = 0,
-    };
-    _ = c.ghostty_terminal_get(handle.terminal, c.GHOSTTY_TERMINAL_DATA_SCROLLBAR, @ptrCast(&scrollbar));
+    const screen = handle.terminal.screens.active;
+    const pages = &screen.pages;
+
+    // Calculate viewport offset: distance from viewport top to active area top
+    const viewport_tl = pages.getTopLeft(.viewport);
+
+    // Count rows between viewport and active area top
+    var offset: u32 = 0;
+    if (pages.pointFromPin(.active, viewport_tl)) |_| {
+        // viewport is within or at the active area — no scrollback offset
+        offset = 0;
+    } else {
+        // viewport is in scrollback — count rows from viewport to active
+        var pin = viewport_tl;
+        while (pin.down(1)) |next| {
+            if (pages.pointFromPin(.active, next) != null) break;
+            offset += 1;
+            pin = next;
+        }
+        offset += 1; // include the starting row
+    }
+
+    // Total lines = all rows in the screen (scrollback + active)
+    const screen_tl = pages.getTopLeft(.screen);
+    var total: u32 = 1;
+    {
+        var pin = screen_tl;
+        while (pin.down(1)) |next| {
+            total += 1;
+            pin = next;
+        }
+    }
 
     return .{
-        .viewport_offset = scrollbar.offset,
-        .total_lines = scrollbar.total,
+        .viewport_offset = offset,
+        .total_lines = total,
         .screen_lines = handle.rows,
     };
 }
 
 fn scrollViewport(handle: *TerminalHandle, delta: i32) void {
-    const behavior = c.GhosttyTerminalScrollViewport{
-        .tag = c.GHOSTTY_SCROLL_VIEWPORT_DELTA,
-        .value = .{ .delta = @intCast(delta) },
-    };
-    c.ghostty_terminal_scroll_viewport(handle.terminal, behavior);
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
+    handle.terminal.scrollViewport(.{ .delta = @as(isize, delta) });
 }
 
 // ─── Colors ─────────────────────────────────────────────
@@ -537,13 +528,9 @@ const JsColors = struct {
 };
 
 fn getDefaultColors(handle: *TerminalHandle) JsColors {
-    _ = c.ghostty_render_state_update(handle.render_state, handle.terminal);
-
-    var fg: c.GhosttyColorRgb = .{ .r = 0, .g = 0, .b = 0 };
-    var bg: c.GhosttyColorRgb = .{ .r = 0, .g = 0, .b = 0 };
-
-    _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_COLOR_FOREGROUND, @ptrCast(&fg));
-    _ = c.ghostty_render_state_get(handle.render_state, c.GHOSTTY_RENDER_STATE_DATA_COLOR_BACKGROUND, @ptrCast(&bg));
+    // Get foreground color — use configured or default (white)
+    const fg = handle.terminal.colors.foreground.get() orelse color.RGB{ .r = 255, .g = 255, .b = 255 };
+    const bg = handle.terminal.colors.background.get() orelse color.RGB{ .r = 0, .g = 0, .b = 0 };
 
     return .{
         .fg_r = fg.r,

@@ -16,24 +16,13 @@ pub fn build(b: *std.Build) !void {
     const napigen_dep = b.dependency("napigen", .{});
     root_module.addImport("napigen", napigen_dep.module("napigen"));
 
-    // libghostty-vt: headers and library from environment or default paths.
-    // The build script (build/build.sh) sets GHOSTTY_INCLUDE_DIR and
-    // GHOSTTY_LIB_DIR before invoking zig build.
-    if (std.process.getEnvVarOwned(b.allocator, "GHOSTTY_INCLUDE_DIR")) |inc| {
-        root_module.addIncludePath(.{ .cwd_relative = inc });
-    } else |_| {
-        // Fallback: ghostty source cloned by build script
-        root_module.addIncludePath(.{ .cwd_relative = ".ghostty-src/include" });
+    // ghostty dependency — provides the terminal emulation core as a Zig module.
+    // This compiles ghostty's terminal code directly into our library (no separate
+    // libghostty-vt shared library needed). Uses ghostty's own build system which
+    // handles all dependencies (unicode tables, SIMD, etc.).
+    if (b.lazyDependency("ghostty", .{})) |ghostty_dep| {
+        root_module.addImport("ghostty", ghostty_dep.module("ghostty-vt"));
     }
-
-    if (std.process.getEnvVarOwned(b.allocator, "GHOSTTY_LIB_DIR")) |libdir| {
-        root_module.addLibraryPath(.{ .cwd_relative = libdir });
-    } else |_| {
-        root_module.addLibraryPath(.{ .cwd_relative = ".ghostty-src/zig-out/lib" });
-    }
-
-    // Link against libghostty-vt
-    root_module.linkSystemLibrary("ghostty-vt", .{});
 
     // Build as a shared library (.dylib/.so)
     const lib = b.addLibrary(.{
