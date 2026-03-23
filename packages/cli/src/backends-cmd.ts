@@ -19,9 +19,7 @@ export function registerBackendsCommand(program: Command): void {
         const isDefault = defaults.has(s.name)
         const nameWithType = `${s.name} (${s.manifest.type})`
 
-        // Parse URI format: npm:pkg, crate:name, github:org/repo
-        const rawUpstream = s.manifest.upstream ?? ""
-        const upstream = rawUpstream.replace(/^(npm|crate|github):/, "")
+        const upstream = s.manifest.upstream ?? ""
         const version = s.manifest.upstreamVersion ?? ""
 
         let status: string
@@ -47,7 +45,9 @@ export function registerBackendsCommand(program: Command): void {
 
       // Rows
       for (const r of rows) {
-        console.log(`  ${r.nameWithType.padEnd(col1)}  ${r.upstream.padEnd(col2)}  ${r.version.padEnd(col3)}  ${r.status}`)
+        console.log(
+          `  ${r.nameWithType.padEnd(col1)}  ${r.upstream.padEnd(col2)}  ${r.version.padEnd(col3)}  ${r.status}`,
+        )
       }
 
       // Footer
