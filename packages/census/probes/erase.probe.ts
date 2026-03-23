@@ -1,4 +1,4 @@
-import { describeBackends, feed, test, expect } from "./_backends.ts"
+import { describeBackends, feed, test, expect } from "./setup.ts"
 
 describeBackends("erase", (b) => {
   test("erase.line.right", () => {
