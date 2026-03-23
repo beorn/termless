@@ -190,7 +190,7 @@ export default defineConfig({
  *
  * Strategy: generate a vitest config with `resolve.alias` that redirects the
  * upstream package import (e.g., @xterm/headless) to a cached version.
- * CENSUS_BACKEND env var tells _backends.ts to only load that single backend.
+ * All backends load; we extract only the target backend's results.
  */
 function runProbesForVersion(
   backendName: string,
@@ -216,26 +216,12 @@ function runProbesForVersion(
   try {
     writeFileSync(configPath, configContent)
 
-    const result = execSync(
-      [
-        "bun",
-        "vitest",
-        "run",
-        "--config",
-        configPath,
-        "--reporter",
-        "json",
-      ].join(" "),
-      {
-        cwd: TERMLESS_ROOT,
-        stdio: ["pipe", "pipe", "pipe"],
-        env: {
-          ...process.env,
-          CENSUS_BACKEND: backendName,
-        },
-        timeout: 120_000,
-      },
-    )
+    const result = execSync(["bun", "vitest", "run", "--config", configPath, "--reporter", "json"].join(" "), {
+      cwd: TERMLESS_ROOT,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: process.env,
+      timeout: 120_000,
+    })
 
     const stdout = result.toString("utf-8")
     if (!stdout.trim()) {
@@ -286,9 +272,7 @@ export async function runVersionedCensus(opts?: VersionsRunOptions): Promise<Ver
 
   mkdirSync(RESULTS_DIR, { recursive: true })
 
-  const backendFilter = opts?.backends
-    ? new Set(opts.backends)
-    : new Set(Object.keys(catalog.backends))
+  const backendFilter = opts?.backends ? new Set(opts.backends) : new Set(Object.keys(catalog.backends))
 
   for (const [backendName, config] of Object.entries(catalog.backends)) {
     if (!backendFilter.has(backendName)) continue

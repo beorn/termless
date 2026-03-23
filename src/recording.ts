@@ -161,11 +161,7 @@ export async function replayRecording(
 // =============================================================================
 
 /** Modes that affect visual appearance and should be tracked for change detection. */
-const VISUAL_MODES: TerminalMode[] = [
-  "altScreen",
-  "cursorVisible",
-  "reverseVideo",
-]
+const VISUAL_MODES: TerminalMode[] = ["altScreen", "cursorVisible", "reverseVideo"]
 
 function rgbToString(color: RGB | null): string {
   if (color === null) return "-"

@@ -128,9 +128,7 @@ export function registerUpdateCommand(program: Command): void {
 
       // Header
       console.log(`  ${"Backend".padEnd(col1)}  ${"Current".padEnd(col2)}  ${"Latest".padEnd(col3)}  Status`)
-      console.log(
-        `  ${"─".repeat(col1)}  ${"─".repeat(col2)}  ${"─".repeat(col3)}  ${"─".repeat(20)}`,
-      )
+      console.log(`  ${"─".repeat(col1)}  ${"─".repeat(col2)}  ${"─".repeat(col3)}  ${"─".repeat(20)}`)
 
       // Rows
       for (const r of rows) {

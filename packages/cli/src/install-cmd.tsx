@@ -291,9 +291,7 @@ export function registerUpgradeCommand(program: Command): void {
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        await printComponent(
-          <ResultMessage icon="✓" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />,
-        )
+        await printComponent(<ResultMessage icon="✓" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />)
       } catch {
         await printComponent(
           <ResultMessage icon="✗" variant="error" text={`Upgrade failed. Run manually:\n  ${cmd}`} />,

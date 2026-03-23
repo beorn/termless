@@ -49,12 +49,7 @@ const BACKEND_PATHS: Record<string, string> = {
 
 const m = manifest()
 
-// When CENSUS_BACKEND is set (by `census versions`), only probe that single backend.
-// This enables version-pinned runs where NODE_PATH swaps the upstream dependency.
-const censusBackend = process.env.CENSUS_BACKEND
-const allNames = censusBackend
-  ? [censusBackend].filter((name) => !EXCLUDED.has(name))
-  : Object.keys(m.backends).filter((name) => !EXCLUDED.has(name))
+const allNames = Object.keys(m.backends).filter((name) => !EXCLUDED.has(name))
 
 for (const name of allNames) {
   const importPath = BACKEND_PATHS[name]

@@ -8,7 +8,15 @@
 
 import { describe, test, expect, vi } from "vitest"
 import { startRecording, replayRecording, snapshotVisualState } from "../src/recording.ts"
-import type { Recording, Terminal, TerminalReadable, Cell, CursorState, ScrollbackState, TerminalMode } from "../src/index.ts"
+import type {
+  Recording,
+  Terminal,
+  TerminalReadable,
+  Cell,
+  CursorState,
+  ScrollbackState,
+  TerminalMode,
+} from "../src/index.ts"
 
 // =============================================================================
 // Mock Terminal
@@ -342,13 +350,15 @@ const DEFAULT_CELL: Cell = {
   hyperlink: null,
 }
 
-function createReadable(opts: {
-  lines?: string[]
-  cells?: Map<string, Partial<Cell>>
-  cursor?: Partial<CursorState>
-  modes?: Partial<Record<TerminalMode, boolean>>
-  title?: string
-} = {}): TerminalReadable {
+function createReadable(
+  opts: {
+    lines?: string[]
+    cells?: Map<string, Partial<Cell>>
+    cursor?: Partial<CursorState>
+    modes?: Partial<Record<TerminalMode, boolean>>
+    title?: string
+  } = {},
+): TerminalReadable {
   const { lines = [""], cells = new Map(), cursor = {}, modes = {}, title = "" } = opts
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
 

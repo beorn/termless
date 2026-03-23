@@ -324,14 +324,14 @@ expect(term.cell(0, 0)).toBeBold() // sync, no polling
 
 ## Migration from Old API
 
-| Old                                       | New                                                              |
-| ----------------------------------------- | ---------------------------------------------------------------- |
+| Old                                       | New                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------- |
 | `await term.waitFor("x", 5000)`           | `await expect(term.screen).toContainText("x", { timeout: 5000 })` |
-| `expect(term).toContainText("x")`         | `expect(term.screen).toContainText("x")`                        |
-| `expect(term).toBeBoldAt(r, c)`           | `expect(term.cell(r, c)).toBeBold()`                            |
-| `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)`                       |
-| `expect(term).toBeInAltScreen()`          | `expect(term).toBeInMode("altScreen")`                          |
-| `expect(term).toMatchViewport(lines)`     | `expect(term.screen).toMatchLines(lines)`                       |
-| `term.getViewportText()`                  | `term.screen.getText()`                                         |
-| `term.getScrollbackText()`                | `term.scrollback.getText()`                                     |
-| `term.getRowText(n)`                      | `term.row(n).getText()`                                         |
+| `expect(term).toContainText("x")`         | `expect(term.screen).toContainText("x")`                          |
+| `expect(term).toBeBoldAt(r, c)`           | `expect(term.cell(r, c)).toBeBold()`                              |
+| `expect(term).toHaveFgColor(r, c, color)` | `expect(term.cell(r, c)).toHaveFg(color)`                         |
+| `expect(term).toBeInAltScreen()`          | `expect(term).toBeInMode("altScreen")`                            |
+| `expect(term).toMatchViewport(lines)`     | `expect(term.screen).toMatchLines(lines)`                         |
+| `term.getViewportText()`                  | `term.screen.getText()`                                           |
+| `term.getScrollbackText()`                | `term.scrollback.getText()`                                       |
+| `term.getRowText(n)`                      | `term.row(n).getText()`                                           |

@@ -76,10 +76,11 @@ export default {
     }
 
     // Latest generated timestamp
-    const generated = perBackend
-      .map((b) => b.generated)
-      .sort()
-      .pop() ?? ""
+    const generated =
+      perBackend
+        .map((b) => b.generated)
+        .sort()
+        .pop() ?? ""
 
     return {
       backends: perBackend.map((b) => ({ name: b.backend, version: b.version })),

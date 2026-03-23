@@ -12,13 +12,7 @@ import type { CensusData } from "./parse.ts"
 
 // ── Components ──
 
-function Header({
-  featureCount,
-  backendCount,
-}: {
-  featureCount: number
-  backendCount: number
-}): React.ReactElement {
+function Header({ featureCount, backendCount }: { featureCount: number; backendCount: number }): React.ReactElement {
   return (
     <Box marginBottom={1}>
       <Text bold color="$primary">
@@ -32,15 +26,7 @@ function Header({
   )
 }
 
-function SummaryBar({
-  name,
-  yes,
-  total,
-}: {
-  name: string
-  yes: number
-  total: number
-}): React.ReactElement {
+function SummaryBar({ name, yes, total }: { name: string; yes: number; total: number }): React.ReactElement {
   const pct = Math.round((yes / (total || 1)) * 100)
   const filled = Math.round(pct / 5)
   const empty = 20 - filled
@@ -52,7 +38,9 @@ function SummaryBar({
         {"  "}
         {name.padEnd(16)}
       </Text>
-      <Text>{String(yes).padStart(3)}/{total} </Text>
+      <Text>
+        {String(yes).padStart(3)}/{total}{" "}
+      </Text>
       <Text color={pct >= 90 ? "$success" : pct >= 70 ? "$warning" : "$error"}>{bar}</Text>
       <Text> {pct}%</Text>
     </Box>
@@ -171,13 +159,7 @@ export function CensusReport({
 /**
  * Render the census report to a string via silvery.
  */
-export async function renderReport(
-  data: CensusData,
-  opts?: { writtenFiles?: string[] },
-): Promise<string> {
+export async function renderReport(data: CensusData, opts?: { writtenFiles?: string[] }): Promise<string> {
   const width = process.stdout.columns || 120
-  return renderString(
-    React.createElement(CensusReport, { data, writtenFiles: opts?.writtenFiles }),
-    { width },
-  )
+  return renderString(React.createElement(CensusReport, { data, writtenFiles: opts?.writtenFiles }), { width })
 }
