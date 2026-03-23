@@ -1,6 +1,6 @@
 {
-  "backend": "vt100",
-  "version": "0.3.0",
+  "backend": "ghostty-native",
+  "version": "1.3.1",
   "generated": "2026-03-23T14:38:41.132Z",
   "results": {
     "cursor.move.absolute": true,
@@ -17,13 +17,13 @@
     "erase.screen.below": true,
     "erase.screen.all": true,
     "extensions.truecolor": true,
-    "extensions.kitty-keyboard": false,
+    "extensions.kitty-keyboard": true,
     "extensions.kitty-graphics": false,
     "extensions.sixel": false,
-    "extensions.osc8": false,
-    "extensions.reflow": false,
-    "extensions.semantic-prompts": false,
-    "extensions.osc2-title": true,
+    "extensions.osc8": true,
+    "extensions.reflow": true,
+    "extensions.semantic-prompts": true,
+    "extensions.osc2-title": false,
     "modes.alt-screen.enter": true,
     "modes.alt-screen.exit": true,
     "modes.bracketed-paste": true,
@@ -66,12 +66,9 @@
     "text.cr": true
   },
   "notes": {
-    "extensions.kitty-keyboard": "not supported",
     "extensions.kitty-graphics": "not supported",
     "extensions.sixel": "not supported",
-    "extensions.osc8": "not supported",
-    "extensions.reflow": "not supported",
-    "extensions.semantic-prompts": "not supported",
+    "extensions.osc2-title": "missing 'Test Title'",
     "sgr.blink": "not supported",
     "sgr.hidden": "not supported"
   }

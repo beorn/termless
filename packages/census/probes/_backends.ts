@@ -99,11 +99,11 @@ for (const name of allNames) {
     backends.push([name, factory])
     log.debug?.(`Added backend: ${name} (${entry.type})`)
   } catch {
-    log.debug?.("Skipping %s (import/init failed)", name)
+    log.debug?.(`Skipping ${name} (import/init failed)`)
   }
 }
 
-log.debug?.("Census will probe %d backends: %s", backends.length, backends.map(([n]) => n).join(", "))
+log.debug?.(`Census will probe ${backends.length} backends: ${backends.map(([n]) => n).join(", ")}`)
 
 if (backends.length === 0) {
   console.warn("Warning: No backends available for census")

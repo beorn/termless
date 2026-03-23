@@ -11,11 +11,11 @@
  */
 
 import { Command } from "commander"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
-import { parseVitestJson, fromSavedJson, toSavedJson } from "./parse.ts"
+import { parseVitestJson, fromPerBackendFiles } from "./parse.ts"
 import { renderReport } from "./report.tsx"
 
 const log = createLogger("census")
@@ -23,7 +23,6 @@ const log = createLogger("census")
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, "..", "..", "..")
 const RESULTS_DIR = join(__dirname, "..", "results")
-const CURRENT_JSON = join(RESULTS_DIR, "current.json")
 const MANIFEST_PATH = join(ROOT, "backends.json")
 
 // ── Commands ──
@@ -52,8 +51,7 @@ program
     await proc.exited
 
     if (stderr) {
-      // vitest sends progress to stderr — only log if debug
-      log.debug?.("vitest stderr: %s", stderr.slice(0, 500))
+      log.debug?.(`vitest stderr: ${stderr.slice(0, 500)}`)
     }
 
     if (!stdout.trim()) {
@@ -66,7 +64,7 @@ program
       json = JSON.parse(stdout)
     } catch {
       console.error("Error: failed to parse vitest JSON output")
-      log.debug?.("Raw output (first 500 chars): %s", stdout.slice(0, 500))
+      log.debug?.(`Raw output (first 500 chars): ${stdout.slice(0, 500)}`)
       process.exit(1)
     }
 
@@ -77,9 +75,9 @@ program
       process.exit(1)
     }
 
-    log.debug?.("Parsed %d backends, %d features", data.backendNames.length, data.featureIds.length)
+    log.debug?.(`Parsed ${data.backendNames.length} backends, ${data.featureIds.length} features`)
 
-    // Save results
+    // Save per-backend result files
     const writtenFiles = saveResults(data)
 
     // Render
@@ -91,15 +89,13 @@ program
   .command("report")
   .description("Display last saved census results")
   .action(async () => {
-    if (!existsSync(CURRENT_JSON)) {
+    const data = loadSavedResults()
+    if (!data) {
       console.error("No saved results. Run: bun census run")
       process.exit(1)
     }
 
-    const saved = JSON.parse(readFileSync(CURRENT_JSON, "utf-8"))
-    const data = fromSavedJson(saved)
-
-    log.debug?.("Loaded %d backends, %d features from %s", data.backendNames.length, data.featureIds.length, saved.generated)
+    log.debug?.(`Loaded ${data.backendNames.length} backends, ${data.featureIds.length} features`)
 
     const output = await renderReport(data)
     console.log(output)
@@ -109,13 +105,11 @@ program
   .command("list")
   .description("List probe categories with feature counts")
   .action(async () => {
-    if (!existsSync(CURRENT_JSON)) {
+    const data = loadSavedResults()
+    if (!data) {
       console.error("No saved results. Run: bun census run")
       process.exit(1)
     }
-
-    const saved = JSON.parse(readFileSync(CURRENT_JSON, "utf-8"))
-    const data = fromSavedJson(saved)
 
     console.log("\nProbe categories:\n")
     for (const [cat, ids] of data.categories) {
@@ -127,21 +121,48 @@ program
 // ── Default: run if no subcommand ──
 
 program.action(async () => {
-  // Default to "run" when called without subcommand
   await program.parseAsync(["node", "census", "run"])
 })
 
 // ── Helpers ──
 
+function loadSavedResults() {
+  if (!existsSync(RESULTS_DIR)) return null
+
+  const files = readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json"))
+  if (files.length === 0) return null
+
+  const perBackend: Array<{
+    backend: string
+    version: string
+    generated: string
+    results: Record<string, boolean>
+    notes?: Record<string, string>
+  }> = []
+
+  for (const file of files) {
+    try {
+      const data = JSON.parse(readFileSync(join(RESULTS_DIR, file), "utf-8"))
+      if (data.backend && data.results) {
+        perBackend.push(data)
+      }
+    } catch {
+      log.debug?.(`Failed to parse ${file}`)
+    }
+  }
+
+  if (perBackend.length === 0) return null
+
+  return fromPerBackendFiles(perBackend)
+}
+
 function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
   mkdirSync(RESULTS_DIR, { recursive: true })
 
-  const output = toSavedJson(data)
-  writeFileSync(CURRENT_JSON, JSON.stringify(output, null, 2))
+  const generated = new Date().toISOString()
+  const writtenFiles: string[] = []
 
-  const writtenFiles = [CURRENT_JSON]
-
-  // Per-backend result files with upstream versions
+  // Read manifest for upstream versions
   let manifest: { backends: Record<string, { upstreamVersion: string | null }> } | null = null
   try {
     manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf-8")) as typeof manifest
@@ -159,7 +180,7 @@ function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
     const perBackend = {
       backend: name,
       version,
-      generated: output.generated,
+      generated,
       results: Object.fromEntries(features),
       ...(backendNotes && backendNotes.size > 0 ? { notes: Object.fromEntries(backendNotes) } : {}),
     }
@@ -168,7 +189,7 @@ function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
     writtenFiles.push(filepath)
   }
 
-  log.debug?.("Saved %d result files", writtenFiles.length)
+  log.debug?.(`Saved ${writtenFiles.length} result files`)
   return writtenFiles
 }
 

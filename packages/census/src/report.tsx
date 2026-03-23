@@ -72,9 +72,13 @@ function SummarySection({ data }: { data: CensusData }): React.ReactElement {
   return <Box flexDirection="column">{bars}</Box>
 }
 
+// Column widths
+const FEATURE_COL = 30
+
 function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
-  // Build backend name header
-  const headerCells = data.backendNames.map((n) => n.slice(0, 8).padEnd(8)).join("  ")
+  // Backend column width — fit the longest name + 2 padding
+  const backendCol = Math.max(6, ...data.backendNames.map((n) => n.length)) + 2
+  const headerCells = data.backendNames.map((n) => n.padEnd(backendCol)).join("")
 
   const sections: React.ReactElement[] = []
 
@@ -87,19 +91,18 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
         const r = data.results.get(name)!.get(id)
         return r ? (
           <Text key={i} color="$success">
-            {"\u2713".padEnd(10)}
+            {"✓".padEnd(backendCol)}
           </Text>
         ) : (
           <Text key={i} color="$error">
-            {"\u2717".padEnd(10)}
+            {"✗".padEnd(backendCol)}
           </Text>
         )
       })
 
       rows.push(
         <Box key={id}>
-          <Text color="$muted">{"    "}</Text>
-          <Text>{suffix.padEnd(24)}</Text>
+          <Text>{("    " + suffix).padEnd(FEATURE_COL)}</Text>
           {cells}
         </Box>,
       )
@@ -108,8 +111,7 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
     sections.push(
       <Box key={cat} flexDirection="column" marginBottom={1}>
         <Box>
-          <Text color="$muted">{"  "}</Text>
-          <Text bold>{cat}:</Text>
+          <Text bold>{"  " + cat + ":"}</Text>
         </Box>
         {rows}
       </Box>,
@@ -120,8 +122,7 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
     <Box flexDirection="column" marginTop={1}>
       <Box marginBottom={1}>
         <Text bold color="$muted">
-          {"  "}
-          {"Feature".padEnd(28)}
+          {"  Feature".padEnd(FEATURE_COL)}
         </Text>
         <Text bold>{headerCells}</Text>
       </Box>

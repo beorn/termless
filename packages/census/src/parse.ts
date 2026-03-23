@@ -1,17 +1,80 @@
 /**
- * Census data parsing — extract backend/feature results from vitest JSON output.
+ * Census data parsing — extract backend/feature results from vitest JSON
+ * output or per-backend result files.
  */
 
 export interface CensusData {
   backendNames: string[]
   featureIds: string[]
-  /** backend → featureId → pass/fail */
+  /** backend -> featureId -> pass/fail */
   results: Map<string, Map<string, boolean>>
-  /** backend → featureId → failure message */
+  /** backend -> featureId -> failure message */
   notes: Map<string, Map<string, string>>
-  /** category → featureIds in that category */
+  /** category -> featureIds in that category */
   categories: Map<string, string[]>
 }
+
+/** Shape of a per-backend result JSON file. */
+export interface PerBackendFile {
+  backend: string
+  version: string
+  generated: string
+  results: Record<string, boolean>
+  notes?: Record<string, string>
+}
+
+// ── Shared helpers ──
+
+function buildCategories(featureIds: string[]): Map<string, string[]> {
+  const categories = new Map<string, string[]>()
+  for (const id of featureIds) {
+    const cat = id.split(".")[0]!
+    if (!categories.has(cat)) categories.set(cat, [])
+    categories.get(cat)!.push(id)
+  }
+  return categories
+}
+
+/**
+ * Transform raw vitest assertion messages into human-readable capability notes.
+ *
+ * "AssertionError: expected false to be true // Object.is equality\n    at ..."
+ * becomes: "not supported"
+ */
+function humanizeNote(raw: string): string {
+  // Take first line only (strip stack traces)
+  let msg = raw.split("\n")[0]!.trim()
+  // Strip error prefix and vitest suffix
+  msg = msg.replace(/^(AssertionError|Error|TypeError|RangeError):\s*/i, "")
+  msg = msg.replace(/\s*\/\/.*$/, "")
+
+  // Common boolean patterns
+  if (msg === "expected false to be true") return "not supported"
+  if (msg === "expected true to be false") return "unexpectedly enabled"
+
+  // "expected X to be Y" -> "got X, expected Y"
+  const toBeMatch = msg.match(/^expected (.+) to be (.+)$/)
+  if (toBeMatch) return `got ${toBeMatch[1]}, expected ${toBeMatch[2]}`
+
+  // "expected X to contain Y" -> "missing Y"
+  const containMatch = msg.match(/^expected .+ to contain (.+)$/)
+  if (containMatch) return `missing ${containMatch[1]}`
+
+  // "expected X not to be null" -> "no value returned"
+  if (/expected .+ not to be null/.test(msg)) return "no value returned"
+
+  return msg
+}
+
+function collectFeatureIds(results: Map<string, Map<string, boolean>>): string[] {
+  const allIds = new Set<string>()
+  for (const features of results.values()) {
+    for (const id of features.keys()) allIds.add(id)
+  }
+  return [...allIds].sort()
+}
+
+// ── From vitest JSON ──
 
 /**
  * Parse vitest JSON reporter output into structured census data.
@@ -38,93 +101,42 @@ export function parseVitestJson(json: any): CensusData {
         const failureMessages: string[] = test.failureMessages ?? []
         const failureText = failureMessages.join("; ").trim()
         if (failureText) {
-          backendNotes.set(id, failureText)
+          backendNotes.set(id, humanizeNote(failureText))
         }
       }
     }
   }
 
   const backendNames = [...results.keys()]
-
-  // Collect all feature IDs
-  const allIds = new Set<string>()
-  for (const features of results.values()) {
-    for (const id of features.keys()) allIds.add(id)
-  }
-  const featureIds = [...allIds].sort()
-
-  // Group by top-level category
-  const categories = new Map<string, string[]>()
-  for (const id of featureIds) {
-    const cat = id.split(".")[0]!
-    if (!categories.has(cat)) categories.set(cat, [])
-    categories.get(cat)!.push(id)
-  }
+  const featureIds = collectFeatureIds(results)
+  const categories = buildCategories(featureIds)
 
   return { backendNames, featureIds, results, notes, categories }
 }
 
+// ── From per-backend result files ──
+
 /**
- * Load census data from a saved current.json file.
+ * Aggregate census data from individual per-backend JSON result files.
  */
-export function fromSavedJson(saved: any): CensusData {
-  const backendNames: string[] = saved.backends ?? []
+export function fromPerBackendFiles(files: PerBackendFile[]): CensusData {
   const results = new Map<string, Map<string, boolean>>()
   const notes = new Map<string, Map<string, string>>()
+  const backendNames: string[] = []
 
-  for (const name of backendNames) {
-    const backendResults = saved.results?.[name] ?? {}
-    results.set(name, new Map(Object.entries(backendResults)))
+  for (const file of files) {
+    backendNames.push(file.backend)
+    results.set(file.backend, new Map(Object.entries(file.results)))
 
-    const backendNotes = saved.notes?.[name] ?? {}
-    if (Object.keys(backendNotes).length > 0) {
-      notes.set(name, new Map(Object.entries(backendNotes)))
+    if (file.notes && Object.keys(file.notes).length > 0) {
+      notes.set(file.backend, new Map(Object.entries(file.notes)))
     } else {
-      notes.set(name, new Map())
+      notes.set(file.backend, new Map())
     }
   }
 
-  const allIds = new Set<string>()
-  for (const features of results.values()) {
-    for (const id of features.keys()) allIds.add(id)
-  }
-  const featureIds = [...allIds].sort()
-
-  const categories = new Map<string, string[]>()
-  for (const id of featureIds) {
-    const cat = id.split(".")[0]!
-    if (!categories.has(cat)) categories.set(cat, [])
-    categories.get(cat)!.push(id)
-  }
+  const featureIds = collectFeatureIds(results)
+  const categories = buildCategories(featureIds)
 
   return { backendNames, featureIds, results, notes, categories }
-}
-
-/**
- * Serialize census data to the JSON format written to disk.
- */
-export function toSavedJson(data: CensusData): {
-  generated: string
-  backends: string[]
-  results: Record<string, Record<string, boolean>>
-  notes?: Record<string, Record<string, string>>
-} {
-  const resultsOutput: Record<string, Record<string, boolean>> = {}
-  const notesOutput: Record<string, Record<string, string>> = {}
-
-  for (const name of data.backendNames) {
-    const features = data.results.get(name)!
-    const backendNotes = data.notes.get(name)
-    resultsOutput[name] = Object.fromEntries(features)
-    if (backendNotes && backendNotes.size > 0) {
-      notesOutput[name] = Object.fromEntries(backendNotes)
-    }
-  }
-
-  return {
-    generated: new Date().toISOString(),
-    backends: data.backendNames,
-    results: resultsOutput,
-    ...(Object.keys(notesOutput).length > 0 ? { notes: notesOutput } : {}),
-  }
 }

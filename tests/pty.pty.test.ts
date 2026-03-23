@@ -8,6 +8,7 @@
 import { describe, test, expect } from "vitest"
 import { createTerminal } from "../src/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
+import "../packages/viterm/src/matchers.ts"
 
 // ── PTY availability check ──
 // Vitest runs in Node.js context. PTY requires node-pty on Node.js.

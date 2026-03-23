@@ -1,0 +1,13 @@
+{
+  "$comment": "Backend versions to probe. JS/WASM backends only — native backends require building each version from source.",
+  "backends": {
+    "xtermjs": {
+      "upstream": "@xterm/headless",
+      "versions": ["5.4.0", "5.5.0", "6.0.0"]
+    },
+    "ghostty": {
+      "upstream": "ghostty-web",
+      "versions": ["0.3.0", "0.4.0"]
+    }
+  }
+}
