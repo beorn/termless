@@ -129,7 +129,10 @@ function executeBatch(commands: BridgeCommand[]): unknown[] {
 
   const result = execFileSync(
     kitty,
-    ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(dirname(BRIDGE_SCRIPT))}); import bridge; bridge.main()`],
+    [
+      "+runpy",
+      `import sys; sys.path.insert(0, ${JSON.stringify(dirname(BRIDGE_SCRIPT))}); import bridge; bridge.main()`,
+    ],
     {
       input,
       encoding: "utf-8",

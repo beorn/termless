@@ -34,6 +34,7 @@ export default defineConfig({
       {
         text: "Links",
         items: [
+          { text: "Terminfo.dev", link: "https://terminfo.dev" },
           { text: "GitHub", link: "https://github.com/beorn/termless" },
           { text: "npm", link: "https://www.npmjs.com/package/termless" },
         ],
@@ -96,7 +97,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: "Released under the MIT License.",
+      message: 'Feature matrix at <a href="https://terminfo.dev">Terminfo.dev</a>',
       copyright: "Copyright © 2025-present",
     },
   },

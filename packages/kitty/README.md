@@ -7,6 +7,7 @@ Kitty backend for termless — uses [kitty's](https://github.com/kovidgoyal/kitt
 Unlike other native backends that compile a Rust crate into a `.node` binary, the kitty backend runs kitty's own Python-embedded C code via `kitty +runpy`. This is necessary because kitty's VT parser is deeply coupled to CPython (all data structures use `PyObject_HEAD`, callbacks use the Python C API, etc.).
 
 The architecture:
+
 1. **`build/bridge.py`** — A Python script that creates a headless kitty `Screen`, accepts JSON commands via stdin, and returns terminal state snapshots via stdout
 2. **`src/backend.ts`** — TypeScript wrapper that accumulates commands and replays them in a `kitty +runpy` subprocess when a query is needed
 
