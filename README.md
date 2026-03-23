@@ -341,7 +341,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 | Feature                   | Termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
 | ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
 | **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
-| **Multi-backend**         | ✅ 9 backends                            | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
+| **Multi-backend**         | ✅ 10 backends                           | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
 | **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |

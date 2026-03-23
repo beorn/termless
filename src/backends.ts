@@ -42,7 +42,7 @@ let _manifest: Manifest | null = null
 
 export function manifest(): Manifest {
   if (_manifest) return _manifest
-  const raw = JSON.parse(readFileSync(MANIFEST_PATH, "utf-8"))
+  const raw = JSON.parse(readFileSync(MANIFEST_PATH, "utf-8")) as any
   // Normalize: map upstreamVersion → version for cleaner access
   const backends: Record<string, BackendEntry> = {}
   for (const [name, entry] of Object.entries(raw.backends) as [string, any][]) {
@@ -343,7 +343,7 @@ function findPackageDir(packageName: string): string | null {
     for (let i = 0; i < 10; i++) {
       if (existsSync(join(dir, "package.json"))) {
         try {
-          const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8"))
+          const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")) as any
           if (pkg.name === packageName) return dir
         } catch {}
       }

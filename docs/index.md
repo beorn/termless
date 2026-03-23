@@ -17,7 +17,7 @@ features:
   - title: Terminal Internals
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
   - title: Cross-Terminal Conformance
-    details: "Run the same tests against 9 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
+    details: "Run the same tests against 10 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
   - title: Fast
     details: "Pure in-process terminal emulation. Typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses, no flakiness."
   - title: Composable Selectors

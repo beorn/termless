@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Census report generator — reads vitest JSON output from stdin,
- * prints a capability matrix, writes census/results/current.json
+ * prints a capability matrix, writes packages/census/results/current.json
  * and per-backend result files (e.g., xtermjs-5.5.0.json).
  */
 
@@ -10,7 +10,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const input = await Bun.stdin.text()
-const json = JSON.parse(input)
+const json = JSON.parse(input) as any
 
 // Parse vitest JSON → backend/feature results
 // Result is now simply boolean: true = pass, false = fail
@@ -112,9 +112,9 @@ const output = {
   ...(Object.keys(notesOutput).length > 0 ? { notes: notesOutput } : {}),
 }
 
-mkdirSync("census/results", { recursive: true })
-writeFileSync("census/results/current.json", JSON.stringify(output, null, 2))
-console.log(`\n  Wrote: census/results/current.json`)
+mkdirSync("packages/census/results", { recursive: true })
+writeFileSync("packages/census/results/current.json", JSON.stringify(output, null, 2))
+console.log(`\n  Wrote: packages/census/results/current.json`)
 
 // ── Per-backend result files ──
 // Read backends.json to get upstream versions for filenames.
@@ -122,7 +122,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const manifestPath = join(__dirname, "..", "..", "..", "backends.json")
 let manifest: { backends: Record<string, { upstreamVersion: string | null }> } | null = null
 try {
-  manifest = JSON.parse(readFileSync(manifestPath, "utf-8"))
+  manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as typeof manifest
 } catch {
   // If manifest can't be read, fall back to "latest" for all versions
 }
@@ -142,8 +142,8 @@ for (const name of backendNames) {
     ...(notes.size > 0 ? { notes: Object.fromEntries(notes) } : {}),
   }
 
-  writeFileSync(`census/results/${filename}`, JSON.stringify(perBackend, null, 2))
-  console.log(`  Wrote: census/results/${filename}`)
+  writeFileSync(`packages/census/results/${filename}`, JSON.stringify(perBackend, null, 2))
+  console.log(`  Wrote: packages/census/results/${filename}`)
 }
 
 console.log("")

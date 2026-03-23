@@ -35,7 +35,7 @@ describe("manifest", () => {
     expect(Object.keys(m.backends).length).toBeGreaterThan(0)
   })
 
-  test("manifest has all 9 backends", () => {
+  test("manifest has all 10 backends", () => {
     const m = manifest()
     const names = Object.keys(m.backends)
     expect(names).toEqual(
@@ -78,7 +78,7 @@ describe("manifest", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("enumeration", () => {
-  test("backends() returns all 9 names", () => {
+  test("backends() returns all 10 names", () => {
     const names = backends()
     expect(names).toHaveLength(10)
     expect(names).toContain("xtermjs")

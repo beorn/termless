@@ -151,7 +151,7 @@ export function registerUpdateCommand(program: Command): void {
           // Read the raw backends.json, update versions, write back
           const __dirname = dirname(fileURLToPath(import.meta.url))
           const manifestPath = join(__dirname, "..", "..", "..", "backends.json")
-          const raw = JSON.parse(readFileSync(manifestPath, "utf-8"))
+          const raw = JSON.parse(readFileSync(manifestPath, "utf-8")) as any
 
           for (const r of updatable) {
             if (raw.backends[r.name]) {

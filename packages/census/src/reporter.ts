@@ -43,7 +43,7 @@ export default class CensusReporter {
         this.walk(child, newPath, backends)
       }
     } else if (task.type === "test" && task.result) {
-      const backend = path.length >= 2 ? path[path.length - 2] : "unknown"
+      const backend = path.length >= 2 ? path[path.length - 2]! : "unknown"
       if (!backends.has(backend)) {
         backends.set(backend, { yes: 0, no: 0, partial: 0, total: 0 })
       }
