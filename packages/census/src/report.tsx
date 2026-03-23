@@ -46,6 +46,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
     return (
       <Box marginLeft={2}>
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
+        <Text>{"      "}</Text>
         <Text color="$muted">not installed</Text>
       </Box>
     )
@@ -55,6 +56,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
     return (
       <Box marginLeft={2}>
         <Box width={labelWidth}><Text color="$muted">{label}</Text></Box>
+        <Text>{"      "}</Text>
         <Text color="$muted">installed, not tested</Text>
       </Box>
     )
@@ -73,7 +75,7 @@ function BackendLine({ b, labelWidth }: { b: BackendStatus; labelWidth: number }
 }
 
 function SummarySection({ data }: { data: CensusData }): React.ReactElement {
-  const statuses: BackendStatus[] = allBackendNames().map((name) => {
+  const all: BackendStatus[] = allBackendNames().map((name) => {
     const e = entry(name)
     const installed = isReady(name)
     const tested = data.backendNames.includes(name)
@@ -89,7 +91,13 @@ function SummarySection({ data }: { data: CensusData }): React.ReactElement {
     return { name, type: e?.type ?? "unknown", installed, tested, yes, total }
   })
 
-  // Compute label width from longest "name (type)" string
+  // Sort: tested first, then installed-not-tested, then not installed
+  const statuses = [
+    ...all.filter((b) => b.tested),
+    ...all.filter((b) => b.installed && !b.tested),
+    ...all.filter((b) => !b.installed),
+  ]
+
   const labelWidth = Math.max(...statuses.map((b) => `${b.name} (${b.type})`.length)) + 2
 
   return (
@@ -117,11 +125,11 @@ function CategoryMatrix({ data }: { data: CensusData }): React.ReactElement {
       {/* Header row */}
       <Box marginBottom={1}>
         <Box width={featureWidth} marginLeft={2}>
-          <Text bold color="$muted">Feature</Text>
+          <Text bold color="$primary">Feature</Text>
         </Box>
         {data.backendNames.map((name) => (
           <Box key={name} width={colWidth} justifyContent="center">
-            <Text bold>{name}</Text>
+            <Text bold color="$primary">{name}</Text>
           </Box>
         ))}
       </Box>
