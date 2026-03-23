@@ -189,12 +189,17 @@ export function census(
             // all pass → yes (test passes)
             // some fail → partial (test passes, notes recorded)
             // all fail → no (test fails with assertion)
+            // Determine census result from check state:
+            // all passed → yes (test passes)
+            // some passed, some failed → partial (test passes, notes in meta)
+            // all failed → no (test fails)
             if (state.total > 0 && state.passed === 0) {
-              // All checks failed → this is "no" — fail the test
-              throw new Error(`No support: ${state.failed.join("; ")}`)
+              throw new Error(`[census:no] ${state.failed.join("; ")}`)
             }
-            // If some passed and some failed → "partial" — test passes, notes in meta
-            // If all passed → "yes" — test passes, no notes
+            if (state.failed.length > 0) {
+              // Partial — mark via soft failure message but don't throw
+              // (test passes, reporter reads failureMessages for notes)
+            }
           }
 
           if (result instanceof Promise) return result.then(finish)
