@@ -1,81 +1,72 @@
 {
-  "$comment": "Termless backend manifest. Maps backend names to packages and upstream versions. Do not edit manually — use scripts/roll-backend.ts to update upstream versions.",
+  "$comment": "Termless backend manifest. Upstream uses URI format: npm:<pkg>, crate:<name>, github:<org/repo>",
   "version": "0.3.0",
   "backends": {
     "xtermjs": {
       "package": "@termless/xtermjs",
-      "upstream": "@xterm/headless",
+      "upstream": "npm:@xterm/headless",
       "upstreamVersion": "5.5.0",
-      "description": "xterm.js terminal emulator (same engine as VS Code)",
       "type": "js",
       "default": true
     },
     "ghostty": {
       "package": "@termless/ghostty",
-      "upstream": "ghostty-web",
+      "upstream": "npm:ghostty-web",
       "upstreamVersion": "0.4.0",
-      "description": "Ghostty VT parser via WebAssembly",
       "type": "wasm",
       "default": true
     },
     "vt100": {
       "package": "@termless/vt100",
-      "upstream": "@termless/vt100",
+      "upstream": "npm:@termless/vt100",
       "upstreamVersion": "0.3.0",
-      "description": "Pure TypeScript VT100 emulator, zero dependencies",
       "type": "js",
       "default": true
     },
     "alacritty": {
       "package": "@termless/alacritty",
-      "upstream": "alacritty_terminal",
-      "upstreamVersion": "0.25.1",
-      "description": "Alacritty terminal via napi-rs Rust bindings",
+      "upstream": "crate:alacritty_terminal",
+      "upstreamVersion": "0.26.0",
       "type": "native",
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)"
     },
     "wezterm": {
       "package": "@termless/wezterm",
-      "upstream": "wezterm-term",
-      "upstreamVersion": "0.1.0",
-      "description": "WezTerm terminal via napi-rs Rust bindings",
+      "upstream": "crate:tattoy-wezterm-term",
+      "upstreamVersion": "0.1.0-fork.5",
       "type": "native",
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)"
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
-      "upstream": "peekaboo",
+      "upstream": "npm:peekaboo",
       "upstreamVersion": "0.7.0",
-      "description": "OS-level terminal automation (real app + screenshots)",
       "type": "os",
       "default": false,
       "platforms": ["darwin"]
     },
     "vt100-rust": {
       "package": "@termless/vt100-rust",
-      "upstream": "vt100 (Rust crate)",
+      "upstream": "crate:vt100",
       "upstreamVersion": "0.15.0",
-      "description": "Rust vt100 reference implementation via napi-rs",
       "type": "native",
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)"
     },
     "libvterm": {
       "package": "@termless/libvterm",
-      "upstream": "libvterm",
+      "upstream": "github:neovim/libvterm",
       "upstreamVersion": "0.3.0",
-      "description": "Neovim's VT parser via Emscripten WASM",
       "type": "wasm",
       "default": false,
       "requiresBuild": "Emscripten SDK (bash build/build.sh)"
     },
     "kitty": {
       "package": "@termless/kitty",
-      "upstream": "kitty",
+      "upstream": "github:kovidgoyal/kitty",
       "upstreamVersion": "0.40.0",
-      "description": "Kitty VT parser built from source (GPL-3.0 dependency)",
       "type": "native",
       "default": false,
       "requiresBuild": "C compiler + Python 3 + git (clones kitty GPL source)"

@@ -64,8 +64,7 @@ describe("manifest", () => {
     for (const [name, entry] of Object.entries(manifest.backends)) {
       expect(entry.package, `${name}.package`).toBeTypeOf("string")
       expect(entry.type, `${name}.type`).toMatch(/^(js|wasm|native|os)$/)
-      expect(entry.description, `${name}.description`).toBeTypeOf("string")
-      expect(entry.description.length, `${name}.description length`).toBeGreaterThan(0)
+      expect(entry.upstream, `${name}.upstream`).toBeTypeOf("string")
     }
   })
 

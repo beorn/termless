@@ -19,12 +19,9 @@ export function registerBackendsCommand(program: Command): void {
         const isDefault = defaults.has(s.name)
         const nameWithType = `${s.name} (${s.manifest.type})`
 
-        let upstream: string
-        if (!s.manifest.upstream) {
-          upstream = s.manifest.type === "os" ? "(OS automation)" : "(built-in)"
-        } else {
-          upstream = s.manifest.upstream
-        }
+        // Parse URI format: npm:pkg, crate:name, github:org/repo
+        const rawUpstream = s.manifest.upstream ?? ""
+        const upstream = rawUpstream.replace(/^(npm|crate|github):/, "")
         const version = s.manifest.upstreamVersion ?? ""
 
         let status: string
