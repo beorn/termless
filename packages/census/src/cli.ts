@@ -36,7 +36,8 @@ program
   .command("run")
   .description("Execute probes via vitest, show matrix, save results")
   .option("-f, --force", "Re-run all probes even if cached results are valid")
-  .action(async (opts: { force?: boolean }) => {
+  .option("-v, --verbose", "Show failure notes for each backend")
+  .action(async (opts: { force?: boolean; verbose?: boolean }) => {
     const hash = probeHash()
 
     // Check cache — skip if results exist and probe hash matches
@@ -46,6 +47,7 @@ program
         console.log(`\nCensus results are up to date (probe hash: ${hash}). Use --force to re-run.\n`)
         const output = await renderReport(cached)
         console.log(output)
+        if (opts.verbose) printNotes(cached)
         return
       }
     }
@@ -96,12 +98,15 @@ program
     // Render
     const output = await renderReport(data, { writtenFiles: writtenFiles.map(shortPath) })
     console.log(output)
+
+    if (opts.verbose) printNotes(data)
   })
 
 program
   .command("report")
   .description("Display last saved census results")
-  .action(async () => {
+  .option("-v, --verbose", "Show failure notes for each backend")
+  .action(async (opts: { verbose?: boolean }) => {
     const data = loadSavedResults()
     if (!data) {
       console.error("No saved results. Run: bun census run")
@@ -112,6 +117,7 @@ program
 
     const output = await renderReport(data)
     console.log(output)
+    if (opts.verbose) printNotes(data)
   })
 
 program
@@ -227,6 +233,24 @@ function loadSavedResults() {
   }
 
   return fromPerBackendFiles([...latest.values()])
+}
+
+/** Print failure notes for all backends. */
+function printNotes(data: ReturnType<typeof parseVitestJson>) {
+  let hasNotes = false
+  for (const name of data.backendNames) {
+    const backendNotes = data.notes.get(name)
+    if (!backendNotes || backendNotes.size === 0) continue
+    if (!hasNotes) {
+      console.log("\nNotes:\n")
+      hasNotes = true
+    }
+    console.log(`  ${name}:`)
+    for (const [feature, note] of backendNotes) {
+      console.log(`    ${feature.padEnd(28)} ${note}`)
+    }
+  }
+  if (hasNotes) console.log("")
 }
 
 /** Check if all cached results have the current probe hash. */
