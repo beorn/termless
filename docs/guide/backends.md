@@ -16,21 +16,25 @@ bunx termless doctor
 
 ## Capability Matrix
 
-| Capability              | xterm.js              | Ghostty           | vt100              | Alacritty                  | WezTerm                     | Peekaboo       | vt100-rust     | libvterm                 | Kitty                       |
-| ----------------------- | --------------------- | ----------------- | ------------------ | -------------------------- | --------------------------- | -------------- | -------------- | ------------------------ | --------------------------- |
-| **Truecolor (24-bit)**  | Yes                   | Yes               | Yes                | Yes                        | Yes                         | Yes            | Yes            | Yes                      | Yes                         |
-| **Kitty keyboard**      | No                    | Yes               | No                 | Yes                        | Yes                         | No             | No             | No                       | Yes                         |
-| **Kitty graphics**      | No                    | No                | No                 | No                         | No                          | No             | No             | No                       | Yes                         |
-| **Sixel**               | No                    | No                | No                 | No                         | Yes                         | No             | No             | No                       | No                          |
-| **OSC 8 hyperlinks**    | Yes                   | Yes               | No                 | Yes                        | Yes                         | Yes            | No             | No                       | Yes                         |
-| **Semantic prompts**    | No                    | No                | No                 | No                         | Yes                         | No             | No             | No                       | No                          |
-| **Unicode**             | 15.1                  | 15.1              | 15.1               | 15.1                       | 15.1                        | 15.1           | 15.1           | 15.1                     | 15.1                        |
-| **Reflow on resize**    | Yes                   | Yes               | No                 | Yes                        | Yes                         | Yes            | No             | No                       | Yes                         |
-| **Viewport scrolling**  | Yes                   | No                | Yes                | Yes                        | Yes                         | Yes            | Yes            | Yes                      | Yes                         |
-| **OS-level screenshot** | No                    | No                | No                 | No                         | No                          | Yes            | No             | No                       | No                          |
-| **Native deps**         | None                  | WASM              | None               | Rust (napi-rs)             | Rust (napi-rs)              | None           | Rust (napi-rs) | WASM (Emscripten)        | C (built from GPL source)   |
-| **Upstream**            | `npm:@xterm/headless` | `npm:ghostty-web` | _(self-contained)_ | `crate:alacritty_terminal` | `crate:tattoy-wezterm-term` | `npm:peekaboo` | `crate:vt100`  | `github:neovim/libvterm` | `github:kovidgoyal/kitty`   |
-| **Build requirement**   | None                  | None              | None               | Rust toolchain             | Rust toolchain              | None           | Rust toolchain | Emscripten SDK           | C compiler + Python 3 + git |
+| Capability              | xterm.js              | Ghostty           | vt100              | Alacritty                  | WezTerm                     | Peekaboo       | vt100-rust     | libvterm                 | Ghostty Native                  | Kitty                       |
+| ----------------------- | --------------------- | ----------------- | ------------------ | -------------------------- | --------------------------- | -------------- | -------------- | ------------------------ | ------------------------------- | --------------------------- |
+| **Truecolor (24-bit)**  | Yes                   | Yes               | Yes                | Yes                        | Yes                         | Yes            | Yes            | Yes                      | Yes                             | Yes                         |
+| **Kitty keyboard**      | No                    | Yes               | No                 | Yes                        | Yes                         | No             | No             | No                       | Yes                             | Yes                         |
+| **Kitty graphics**      | No                    | No                | No                 | No                         | No                          | No             | No             | No                       | No                              | Yes                         |
+| **Sixel**               | No                    | No                | No                 | No                         | Yes                         | No             | No             | No                       | No                              | No                          |
+| **OSC 8 hyperlinks**    | Yes                   | Yes               | No                 | Yes                        | Yes                         | Yes            | No             | No                       | Yes                             | Yes                         |
+| **Semantic prompts**    | No                    | No                | No                 | No                         | Yes                         | No             | No             | No                       | Yes                             | No                          |
+| **Unicode**             | 15.1                  | 15.1              | 15.1               | 15.1                       | 15.1                        | 15.1           | 15.1           | 15.1                     | 15.1                            | 15.1                        |
+| **Reflow on resize**    | Yes                   | Yes               | No                 | Yes                        | Yes                         | Yes            | No             | No                       | Yes                             | Yes                         |
+| **Viewport scrolling**  | Yes                   | No                | Yes                | Yes                        | Yes                         | Yes            | Yes            | Yes                      | Yes                             | Yes                         |
+| **OS-level screenshot** | No                    | No                | No                 | No                         | No                          | Yes            | No             | No                       | No                              | No                          |
+| **Native deps**         | None                  | WASM              | None               | Rust (napi-rs)             | Rust (napi-rs)              | None           | Rust (napi-rs) | WASM (Emscripten)        | Zig (napigen)                   | C (built from GPL source)   |
+| **Upstream**            | `npm:@xterm/headless` | `npm:ghostty-web` | _(self-contained)_ | `crate:alacritty_terminal` | `crate:tattoy-wezterm-term` | `npm:peekaboo` | `crate:vt100`  | `github:neovim/libvterm` | `github:ghostty-org/ghostty`    | `github:kovidgoyal/kitty`   |
+| **Build requirement**   | None                  | None              | None               | Rust toolchain             | Rust toolchain              | None           | Rust toolchain | Emscripten SDK           | Zig 0.15.2+                     | C compiler + Python 3 + git |
+
+::: tip Full Feature Matrix
+For a comprehensive, interactive capability matrix across all backends, visit **[terminfo.dev](https://terminfo.dev)** — powered by termless census probes.
+:::
 
 ## Backend Details
 
@@ -219,6 +223,29 @@ const term = createTerminal({ backend: createLibvtermBackend() })
 // By name (handles WASM init automatically)
 import { backend } from "@termless/core"
 const b = await backend("libvterm")
+const term = createTerminal({ backend: b })
+```
+
+### @termless/ghostty-native
+
+Native Ghostty backend using libghostty-vt via Zig N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
+
+- **Engine**: libghostty-vt 1.3.1 (Zig via napigen N-API)
+- **Upstream**: `github:ghostty-org/ghostty`
+- **Best for**: High-performance Ghostty conformance testing without WASM startup cost. Same parser fidelity as `@termless/ghostty` but faster.
+- **Limitations**: Requires Zig 0.15.2+ to build. Not available as prebuilt binaries.
+- **Install**: `bunx termless install ghostty-native` (requires Zig build)
+
+```typescript
+// Factory function (preferred — explicit, sync)
+import { createGhosttyNativeBackend } from "@termless/ghostty-native"
+const term = createTerminal({ backend: createGhosttyNativeBackend() })
+```
+
+```typescript
+// By name (async — handles native module loading)
+import { backend } from "@termless/core"
+const b = await backend("ghostty-native")
 const term = createTerminal({ backend: b })
 ```
 

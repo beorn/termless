@@ -2,7 +2,13 @@
 
 Termless backends wrap different terminal emulators, each with its own VT parser implementation. This document records the known behavioral divergences discovered through cross-backend testing.
 
+::: tip Full Feature Matrix
+For a comprehensive, interactive capability matrix across all backends, visit **[terminfo.dev](https://terminfo.dev)** — powered by termless census probes.
+:::
+
 ## Backends
+
+Termless supports [10 backends](/guide/backends), each wrapping a different terminal emulator. The divergences below were discovered through cross-backend testing of the three earliest backends:
 
 | Backend             | Emulator        | Implementation         | Reflow | Kitty Keyboard | OSC 8 |
 | ------------------- | --------------- | ---------------------- | ------ | -------------- | ----- |
@@ -11,6 +17,8 @@ Termless backends wrap different terminal emulators, each with its own VT parser
 | `@termless/vt100`   | Pure TypeScript | Zero native deps       | No     | No             | No    |
 
 xterm.js is the **reference backend** -- it has the widest adoption, passes the most conformance tests, and is what Silvery's test infrastructure (`createTermless()`) uses by default. Divergences from xterm.js are considered bugs in the other backend or in our ANSI output.
+
+For the full capability matrix across all 10 backends, see the [Backend Capabilities](/guide/backends) page or [terminfo.dev](https://terminfo.dev).
 
 ## Known Divergences
 

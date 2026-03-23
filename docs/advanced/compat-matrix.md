@@ -1,6 +1,6 @@
 # Cross-Backend Conformance
 
-Termless verifies that all backends (xterm.js, Ghostty, vt100) produce identical results for the same VT100/ECMA-48 input sequences. Differences between backends are bugs — this is how we find and fix them.
+Termless verifies that all [10 backends](/guide/backends) produce identical results for the same VT100/ECMA-48 input sequences. Differences between backends are bugs — this is how we find and fix them. For a comprehensive interactive feature matrix, see [terminfo.dev](https://terminfo.dev).
 
 ## Test Coverage
 

@@ -131,6 +131,8 @@ test("kitty keyboard protocol", () => {
 - **Reflow on resize**: Not all backends support text reflow when the terminal is resized
 - **Key encoding**: Modifier key encoding varies between backends
 
+For a comprehensive interactive feature matrix across all backends, visit [terminfo.dev](https://terminfo.dev).
+
 ## Selector Best Practices
 
 ### Use the narrowest region

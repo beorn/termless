@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Termless"
   text: "Headless terminal testing"
-  tagline: "Like Playwright, but for terminal apps. Write tests once, run against xterm.js, Ghostty, Alacritty, WezTerm, VT100, vt100-rust, libvterm, Kitty, or Peekaboo."
+  tagline: "Like Playwright, but for terminal apps. Write tests once, run against xterm.js, Ghostty, Ghostty Native, Alacritty, WezTerm, VT100, vt100-rust, libvterm, Kitty, or Peekaboo."
   actions:
     - theme: brand
       text: Get Started
@@ -172,6 +172,7 @@ Every backend wraps a real terminal emulator and implements the same interface â
 | **peekaboo**   | (OS automation)         | Tests against a real terminal app via OS accessibility APIs. macOS only.           | OS     |
 | **vt100-rust** | vt100 0.15 (Rust)       | Reference Rust implementation â€” cross-validates the TS vt100 backend.              | Native |
 | **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |
+| **ghostty-native** | libghostty-vt 1.3   | Native Ghostty via Zig N-API bindings. Same parser as ghostty, no WASM overhead.   | Native |
 | **kitty**      | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.       | Native |
 
 See [Backend Capabilities](/guide/backends) for the full feature matrix, per-backend details, and usage examples (factory function + string name).
@@ -181,7 +182,7 @@ See [Backend Capabilities](/guide/backends) for the full feature matrix, per-bac
 | Package                | Description                                                             |
 | ---------------------- | ----------------------------------------------------------------------- |
 | `@termless/core`       | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
-| `@termless/test`       | Vitest integration: 25+ matchers, fixtures, snapshot serializer         |
+| `@termless/test`       | Vitest integration: 21+ matchers, fixtures, snapshot serializer         |
 | `@termless/xtermjs`    | xterm.js backend via `@xterm/headless`                                  |
 | `@termless/ghostty`    | Ghostty backend via `ghostty-web` WASM                                  |
 | `@termless/vt100`      | Pure TypeScript VT100 emulator, zero native deps                        |
@@ -190,6 +191,7 @@ See [Backend Capabilities](/guide/backends) for the full feature matrix, per-bac
 | `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                      |
 | `@termless/vt100-rust` | Rust vt100 crate via napi-rs (reference implementation)                 |
 | `@termless/libvterm`   | neovim's libvterm via Emscripten WASM                                   |
+| `@termless/ghostty-native` | Native Ghostty backend via Zig N-API bindings (libghostty-vt)       |
 | `@termless/kitty`      | Kitty VT parser built from GPL source (not distributed)                 |
 | `@termless/cli`        | CLI tools + MCP server for AI agents                                    |
 
@@ -200,7 +202,7 @@ See [Backend Capabilities](/guide/backends) for the full feature matrix, per-bac
 | Speed                 | &lt;1ms/test (in-memory, no PTY)      | &lt;1ms/test          | ~100ms+/test   |
 | Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |
 | ANSI awareness        | Full (colors, bold, cursor)           | None                  | N/A            |
-| Multi-backend         | 9 terminal emulators                  | N/A                   | 3 browsers     |
+| Multi-backend         | 10 terminal emulators                 | N/A                   | 3 browsers     |
 | Protocol capabilities | Kitty, sixel, OSC 8, reflow           | None                  | N/A            |
 | Wide char support     | Cell-level width tracking             | Broken                | N/A            |
 | Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |

@@ -22,7 +22,7 @@ yarn add -D @termless/test
 
 :::
 
-- **@termless/test** -- Vitest integration (25+ matchers, fixtures, snapshot serializer). Installs `@termless/core` and `@termless/xtermjs` (xterm.js backend) as dependencies.
+- **@termless/test** -- Vitest integration (21+ matchers, fixtures, snapshot serializer). Installs `@termless/core` and `@termless/xtermjs` (xterm.js backend) as dependencies.
 
 ### Which Package Do I Need?
 

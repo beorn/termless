@@ -45,17 +45,18 @@ termless backends
 Example output:
 
 ```
-Backend              Upstream                   Version       Status
-───────────────────  ─────────────────────────  ────────────  ────────────────────
-xtermjs (js)         npm:@xterm/headless        5.5.0         installed (default)
-ghostty (wasm)       npm:ghostty-web            0.4.0         installed (default)
-vt100 (js)           npm:@termless/vt100        0.3.0         installed (default)
-alacritty (native)   crate:alacritty_terminal   0.26.0        installed
-wezterm (native)     crate:tattoy-wezterm-term  0.1.0-fork.5  installed
-peekaboo (os)        npm:peekaboo               0.7.0         installed
-vt100-rust (native)  crate:vt100                0.15.0        installed
-libvterm (wasm)      github:neovim/libvterm     0.3.0         installed
-kitty (native)       github:kovidgoyal/kitty    0.40.0        available
+Backend                Upstream                   Version       Status
+─────────────────────  ─────────────────────────  ────────────  ────────────────────
+xtermjs (js)           npm:@xterm/headless        5.5.0         installed (default)
+ghostty (wasm)         npm:ghostty-web            0.4.0         installed (default)
+vt100 (js)             npm:@termless/vt100        0.3.0         installed (default)
+alacritty (native)     crate:alacritty_terminal   0.26.0        installed
+wezterm (native)       crate:tattoy-wezterm-term  0.1.0-fork.5  installed
+peekaboo (os)          npm:peekaboo               0.7.0         installed
+vt100-rust (native)    crate:vt100                0.15.0        installed
+libvterm (wasm)        github:neovim/libvterm     0.3.0         installed
+ghostty-native (native) github:ghostty-org/ghostty 1.3.1        available
+kitty (native)         github:kovidgoyal/kitty    0.40.0        available
 ```
 
 ### `termless install`
@@ -87,6 +88,18 @@ Check installation health: verify installed backends load correctly, detect vers
 
 ```bash
 termless doctor
+```
+
+### `termless update`
+
+Check upstream registries (npm, crates.io, GitHub) for newer backend versions. Compares against the versions pinned in `backends.json`.
+
+```bash
+# Check for updates (dry run)
+termless update
+
+# Apply updates to backends.json
+termless update --apply
 ```
 
 ## `termless capture`

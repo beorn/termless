@@ -15,7 +15,7 @@ bunx termless backends                  # See what's available
 bunx termless install ghostty vt100     # Install specific backends
 ```
 
-See [Backend Capabilities](/guide/backends) for the full list of backends, their capabilities, and per-backend usage examples (factory function + string name).
+See [Backend Capabilities](/guide/backends) for the full list of backends, their capabilities, and per-backend usage examples. For a comprehensive interactive feature matrix, visit [terminfo.dev](https://terminfo.dev).
 
 ## Three Approaches
 
