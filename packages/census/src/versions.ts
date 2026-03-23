@@ -20,6 +20,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { dirname, join } from "node:path"
+import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import { createLogger } from "loggily"
@@ -33,7 +34,7 @@ const TERMLESS_ROOT = join(CENSUS_ROOT, "..", "..")
 const RESULTS_DIR = join(CENSUS_ROOT, "results")
 const PROBES_DIR = join(CENSUS_ROOT, "probes")
 const VERSIONS_PATH = join(CENSUS_ROOT, "versions.json")
-const CACHE_DIR = join(TERMLESS_ROOT, ".termless-cache", "census-versions")
+const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "termless", "backends")
 
 // ── Types ──
 

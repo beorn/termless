@@ -12,6 +12,7 @@
 
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import type { TerminalBackend, TerminalOptions, Terminal } from "./types.ts"
@@ -252,7 +253,7 @@ export async function createTerminalByName(
 // Version-pinned resolution
 // ═══════════════════════════════════════════════════════
 
-const CACHE_DIR = join(__dirname, "..", ".termless-cache", "versions")
+const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "termless", "backends")
 
 async function resolveVersioned(
   name: string,
