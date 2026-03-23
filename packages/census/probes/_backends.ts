@@ -196,6 +196,9 @@ export function census(
           const result = testFn(ctx)
 
           const finish = () => {
+            if (state.total === 0) {
+              throw new Error("[census:error] probe has no check() calls")
+            }
             const meta = vitestCtx.meta ?? ((vitestCtx as any).meta = {})
             meta.checks = state.total
             meta.passed = state.passed
