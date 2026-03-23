@@ -64,7 +64,7 @@ function BackendsView({ rows, version }: { rows: BackendRow[]; version: string }
       </Summary>
       {installedCount < totalCount && (
         <Box>
-          <Text color="$muted">Install more: npx termless install {"<name>"}</Text>
+          <Text color="$muted">Install more: bunx termless install {"<name>"}</Text>
         </Box>
       )}
     </Box>

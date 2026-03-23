@@ -112,9 +112,9 @@ export function registerUpdateCommand(program: Command): void {
           if (latest === null) {
             status = "? fetch failed"
           } else if (latest === current) {
-            status = "\u2713 up to date"
+            status = "✓ up to date"
           } else {
-            status = "\u2B06 update available"
+            status = "⬆ update available"
           }
 
           return { name, upstream, current, latest, status }
@@ -129,7 +129,7 @@ export function registerUpdateCommand(program: Command): void {
       // Header
       console.log(`  ${"Backend".padEnd(col1)}  ${"Current".padEnd(col2)}  ${"Latest".padEnd(col3)}  Status`)
       console.log(
-        `  ${"\u2500".repeat(col1)}  ${"\u2500".repeat(col2)}  ${"\u2500".repeat(col3)}  ${"\u2500".repeat(20)}`,
+        `  ${"─".repeat(col1)}  ${"─".repeat(col2)}  ${"─".repeat(col3)}  ${"─".repeat(20)}`,
       )
 
       // Rows

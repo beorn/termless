@@ -1,6 +1,10 @@
 /**
  * Census infrastructure — describeBackends() + vitest assertions.
  *
+ * Dynamically discovers all installed backends via the registry API
+ * instead of hardcoding imports. Peekaboo is excluded (OS automation,
+ * not a terminal emulator).
+ *
  * @example
  * ```typescript
  * describeBackends("sgr", (b) => {
@@ -14,73 +18,34 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest"
 import type { TerminalBackend } from "@termless/core"
+import { createLogger } from "loggily"
+import {
+  backends as allBackendNames,
+  isReady,
+  backend as resolveBackend,
+} from "../../../src/backends.ts"
 
-// ── Backend resolution (top-level await) ──
-// Direct imports — import.meta.resolve doesn't work in vitest's VM.
+const log = createLogger("census")
 
-const backends: [string, () => Promise<TerminalBackend>][] = []
+// ── Backend resolution (dynamic discovery) ──
+// Uses the registry to find all installed backends.
+// Peekaboo is excluded — it's OS automation, not a terminal emulator.
 
-// JS backends (always available)
-try {
-  const mod = await import("../../xtermjs/src/backend.ts")
-  mod.createXtermBackend()
-  backends.push(["xtermjs", async () => (await import("../../xtermjs/src/backend.ts")).createXtermBackend()])
-} catch {}
+const EXCLUDED = new Set(["peekaboo"])
 
-try {
-  const mod = await import("../../vt100/src/backend.ts")
-  mod.createVt100Backend()
-  backends.push(["vt100", async () => (await import("../../vt100/src/backend.ts")).createVt100Backend()])
-} catch {}
+const readyNames = allBackendNames().filter((name) => {
+  if (EXCLUDED.has(name)) return false
+  const ready = isReady(name)
+  if (!ready) log.debug("Skipping %s (not ready)", name)
+  return ready
+})
 
-// WASM backends — verify full init works before adding
-try {
-  const ghosttyMod = await import("../../ghostty/src/backend.ts")
-  const ghosttyInstance = await ghosttyMod.initGhostty()
-  // Verify it actually works
-  const testBackend = ghosttyMod.createGhosttyBackend(undefined, ghosttyInstance)
-  testBackend.init({ cols: 1, rows: 1 })
-  testBackend.destroy()
-  backends.push(["ghostty", async () => ghosttyMod.createGhosttyBackend(undefined, ghosttyInstance)])
-} catch {
-  // Ghostty WASM not available (common in vitest VM context)
-}
+log.debug("Census will probe %d backends: %s", readyNames.length, readyNames.join(", "))
 
-try {
-  const mod = await import("../../libvterm/src/backend.ts")
-  const b = mod.createLibvtermBackend()
-  b.init({ cols: 1, rows: 1 })
-  b.destroy()
-  backends.push(["libvterm", async () => (await import("../../libvterm/src/backend.ts")).createLibvtermBackend()])
-} catch {}
-
-// Native backends (require Rust builds)
-try {
-  const mod = await import("../../vt100-rust/src/backend.ts")
-  mod.loadVt100RustNative()
-  backends.push(["vt100-rust", async () => (await import("../../vt100-rust/src/backend.ts")).createVt100RustBackend()])
-} catch {}
-
-try {
-  const mod = await import("../../alacritty/src/backend.ts")
-  mod.loadAlacrittyNative()
-  backends.push(["alacritty", async () => (await import("../../alacritty/src/backend.ts")).createAlacrittyBackend()])
-} catch {}
-
-try {
-  const mod = await import("../../wezterm/src/backend.ts")
-  mod.loadWeztermNative()
-  backends.push(["wezterm", async () => (await import("../../wezterm/src/backend.ts")).createWeztermBackend()])
-} catch {}
-
-try {
-  const mod = await import("../../kitty/src/backend.ts")
-  mod.loadKittyNative()
-  backends.push(["kitty", async () => (await import("../../kitty/src/backend.ts")).createKittyBackend()])
-} catch {}
-
-// Peekaboo excluded — it's OS automation, not a terminal emulator.
-// Its capabilities depend on whichever real terminal app it's driving.
+const backends: [string, () => Promise<TerminalBackend>][] = readyNames.map((name) => [
+  name,
+  () => resolveBackend(name),
+])
 
 if (backends.length === 0) {
   console.warn("Warning: No backends available for census")

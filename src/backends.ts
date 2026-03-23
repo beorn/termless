@@ -94,6 +94,23 @@ function resolveModule(pkg: string, opts?: Partial<TerminalOptions>) {
   }
 }
 
+/** Run a backend's build/build.sh, falling back to nix if tools aren't in PATH. */
+function runBuildScript(pkgDir: string): void {
+  const buildScript = join(pkgDir, "build", "build.sh")
+  if (!existsSync(buildScript)) return
+  console.log(`  Building in ${pkgDir}...`)
+  try {
+    execSync(`bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
+  } catch {
+    const flakeDir = join(__dirname, "..")
+    if (existsSync(join(flakeDir, "flake.nix"))) {
+      execSync(`nix develop ${flakeDir} --command bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
+    } else {
+      throw new Error(`Build failed. Install dependencies or use the nix flake: nix develop`)
+    }
+  }
+}
+
 const backendTypes: Record<string, BackendType> = {
   js: {
     isReady: () => true,
@@ -107,68 +124,13 @@ const backendTypes: Record<string, BackendType> = {
       // WASM backends built from source need a .wasm file.
       return hasFilesWithExt(pkgDir, ".wasm", ["wasm", "build"]) || !existsSync(join(pkgDir, "build"))
     },
-    build: (pkgDir) => {
-      const buildScript = join(pkgDir, "build", "build.sh")
-      if (existsSync(buildScript)) {
-        console.log(`  Building WASM in ${pkgDir}...`)
-        try {
-          execSync("which emcc", { stdio: "pipe" })
-          execSync(`bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
-        } catch {
-          const flakeDir = join(__dirname, "..")
-          if (existsSync(join(flakeDir, "flake.nix"))) {
-            execSync(`nix develop ${flakeDir} --command bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
-          } else {
-            throw new Error("emcc not found. Install Emscripten or use the nix flake: nix develop")
-          }
-        }
-      }
-    },
+    build: (pkgDir) => runBuildScript(pkgDir),
     resolve: async (pkg, opts) => resolveModule(pkg, opts)(),
   },
 
   native: {
     isReady: (pkgDir) => hasFilesWithExt(pkgDir, ".node", ["build", "native"]),
-    build: (pkgDir) => {
-      const cargoDir = join(pkgDir, "native")
-      if (existsSync(join(cargoDir, "Cargo.toml"))) {
-        console.log(`  Building native module in ${pkgDir}...`)
-        // Use nix develop if cargo isn't in PATH
-        try {
-          execSync("which cargo", { stdio: "pipe" })
-          execSync("cargo build --release", { cwd: cargoDir, stdio: "inherit" })
-        } catch {
-          const flakeDir = join(__dirname, "..")
-          if (existsSync(join(flakeDir, "flake.nix"))) {
-            execSync(`nix develop ${flakeDir} --command cargo build --release`, { cwd: cargoDir, stdio: "inherit" })
-          } else {
-            throw new Error("cargo not found. Install Rust or use the nix flake: nix develop")
-          }
-        }
-        // Find and copy the built .dylib/.so to a .node file
-        const targetDir = join(cargoDir, "target", "release")
-        if (existsSync(targetDir)) {
-          for (const f of readdirSync(targetDir)) {
-            if (f.endsWith(".dylib") || (f.endsWith(".so") && f.startsWith("lib"))) {
-              const nodeName = f
-                .replace(/^lib/, "")
-                .replace(/\.dylib$/, ".node")
-                .replace(/\.so$/, ".node")
-              const { copyFileSync } = require("node:fs") as typeof import("node:fs")
-              copyFileSync(join(targetDir, f), join(pkgDir, nodeName))
-              console.log(`  Copied: ${nodeName}`)
-              break
-            }
-          }
-        }
-      }
-      // Fallback: check for build script
-      const buildScript = join(pkgDir, "build", "build.sh")
-      if (!hasFilesWithExt(pkgDir, ".node", ["build", "native"]) && existsSync(buildScript)) {
-        console.log(`  Building via build script in ${pkgDir}...`)
-        execSync(`bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
-      }
-    },
+    build: (pkgDir) => runBuildScript(pkgDir),
     resolve: async (pkg, opts) => resolveModule(pkg, opts)(),
   },
 

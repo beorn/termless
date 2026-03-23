@@ -115,7 +115,7 @@ export function registerInstallCommand(program: Command): void {
         for (const name of names) {
           if (!m.backends[name]) {
             await printComponent(
-              <StatusLine icon="\u2717" variant="error">
+              <StatusLine icon="✗" variant="error">
                 Unknown backend: {name}
               </StatusLine>,
             )
@@ -141,7 +141,7 @@ export function registerInstallCommand(program: Command): void {
         if (isReady(name)) {
           const upstreamVer = e.version ?? "latest"
           statusLines.push({
-            icon: "\u2713",
+            icon: "✓",
             variant: "success",
             text: `${name} already installed (${e.upstream ?? name} ${upstreamVer})`,
           })
@@ -150,9 +150,9 @@ export function registerInstallCommand(program: Command): void {
 
         if (e.platforms && !e.platforms.includes(platform)) {
           statusLines.push({
-            icon: "\u2717",
+            icon: "✗",
             variant: "error",
-            text: `${name} \u2014 not available on ${platform} (requires: ${e.platforms.join(", ")})`,
+            text: `${name} — not available on ${platform} (requires: ${e.platforms.join(", ")})`,
           })
           continue
         }
@@ -171,10 +171,18 @@ export function registerInstallCommand(program: Command): void {
           for (const name of needsBuild) {
             try {
               buildBackend(name)
-              statusLines.push({ icon: "\u2713", variant: "success", text: `${name} built` })
+              if (isReady(name)) {
+                statusLines.push({ icon: "✓", variant: "success", text: `${name} built` })
+              } else {
+                statusLines.push({
+                  icon: "✗",
+                  variant: "warning",
+                  text: `${name} build incomplete — not yet available`,
+                })
+              }
             } catch (e) {
               statusLines.push({
-                icon: "\u2717",
+                icon: "✗",
                 variant: "error",
                 text: `${name} build failed: ${e instanceof Error ? e.message : e}`,
               })
@@ -192,10 +200,10 @@ export function registerInstallCommand(program: Command): void {
 
       try {
         execSync(cmd, { stdio: "inherit" })
-        await printComponent(<ResultMessage icon="\u2713" variant="success" text={`Installed: ${toRun.join(", ")}`} />)
+        await printComponent(<ResultMessage icon="✓" variant="success" text={`Installed: ${toRun.join(", ")}`} />)
       } catch {
         await printComponent(
-          <ResultMessage icon="\u2717" variant="error" text={`Install failed. Run manually:\n  ${cmd}`} />,
+          <ResultMessage icon="✗" variant="error" text={`Install failed. Run manually:\n  ${cmd}`} />,
         )
         process.exitCode = 1
       }
@@ -224,7 +232,7 @@ export function registerUpgradeCommand(program: Command): void {
         for (const name of names) {
           if (!m.backends[name]) {
             await printComponent(
-              <StatusLine icon="\u2717" variant="error">
+              <StatusLine icon="✗" variant="error">
                 Unknown backend: {name}
               </StatusLine>,
             )
@@ -237,7 +245,7 @@ export function registerUpgradeCommand(program: Command): void {
         const notInstalled = names.filter((n) => !isReady(n))
         for (const name of notInstalled) {
           await printComponent(
-            <StatusLine icon="\u2717" variant="error">
+            <StatusLine icon="✗" variant="error">
               {name} is not installed (use `termless install {name}` first)
             </StatusLine>,
           )
@@ -257,12 +265,12 @@ export function registerUpgradeCommand(program: Command): void {
         const target = m.version
 
         if (installed === target) {
-          statusLines.push({ icon: "\u2713", variant: "success", text: `${name} ${installed} (up to date)` })
+          statusLines.push({ icon: "✓", variant: "success", text: `${name} ${installed} (up to date)` })
         } else {
           statusLines.push({
-            icon: "\u2191",
+            icon: "↑",
             variant: "warning",
-            text: `${name} ${installed ?? "unknown"} \u2192 ${target}`,
+            text: `${name} ${installed ?? "unknown"} → ${target}`,
           })
           toUpgrade.push(name)
         }
@@ -284,11 +292,11 @@ export function registerUpgradeCommand(program: Command): void {
       try {
         execSync(cmd, { stdio: "inherit" })
         await printComponent(
-          <ResultMessage icon="\u2713" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />,
+          <ResultMessage icon="✓" variant="success" text={`Upgraded: ${toUpgrade.join(", ")}`} />,
         )
       } catch {
         await printComponent(
-          <ResultMessage icon="\u2717" variant="error" text={`Upgrade failed. Run manually:\n  ${cmd}`} />,
+          <ResultMessage icon="✗" variant="error" text={`Upgrade failed. Run manually:\n  ${cmd}`} />,
         )
         process.exitCode = 1
       }

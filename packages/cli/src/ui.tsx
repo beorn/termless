@@ -64,7 +64,7 @@ export function BackendsTable({ rows }: { rows: BackendRow[] }): React.ReactElem
 
   const data = rows.map((r) => ({
     name: r.name + (r.isDefault ? " *" : ""),
-    status: r.installed ? `\u2713 ${r.installedVersion ?? "unknown"}` : "\u2717 not installed",
+    status: r.installed ? `✓ ${r.installedVersion ?? "unknown"}` : "✗ not installed",
     upstream: r.upstream,
     type: r.type,
   }))

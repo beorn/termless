@@ -56,7 +56,7 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "cli": "bun packages/cli/src/cli.ts",
-    "census": "bun vitest run --config vitest.census.ts --reporter json 2>/dev/null | bun packages/census/src/report.ts",
+    "census": "bun packages/census/src/cli.ts",
     "publish:all": "bun run publish:core && bun run publish:packages",
     "publish:core": "npm publish",
     "publish:packages": "for pkg in packages/core packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
@@ -70,6 +70,7 @@
     "@termless/wezterm": "workspace:*",
     "@types/bun": "^1.1.0",
     "@types/node": "^22.0.0",
+    "loggily": "workspace:*",
     "silvery": "workspace:*",
     "typescript": "^5.9.3",
     "vitepress": "^1.5.0",

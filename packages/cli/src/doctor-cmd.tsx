@@ -43,7 +43,7 @@ function DoctorResult({
 }): React.ReactElement {
   if (!installed) {
     return (
-      <StatusLine icon="\u2500" variant="muted">
+      <StatusLine icon="─" variant="muted">
         <Text>{name.padEnd(12)} not installed</Text>
       </StatusLine>
     )
@@ -54,7 +54,7 @@ function DoctorResult({
   if (healthy) {
     return (
       <Box flexDirection="column">
-        <StatusLine icon="\u2713" variant="success">
+        <StatusLine icon="✓" variant="success">
           <Text>
             {name.padEnd(12)} {verStr.padEnd(7)} {upstream}
           </Text>
@@ -62,7 +62,7 @@ function DoctorResult({
         {capabilities && (
           <Box marginLeft={4}>
             <Text color="$muted">
-              {"\u2192"} {capabilities}
+              {"→"} {capabilities}
             </Text>
           </Box>
         )}
@@ -72,7 +72,7 @@ function DoctorResult({
 
   return (
     <Box flexDirection="column">
-      <StatusLine icon="\u2717" variant="error">
+      <StatusLine icon="✗" variant="error">
         <Text>
           {name.padEnd(12)} {verStr.padEnd(7)} {upstream}
         </Text>
@@ -80,7 +80,7 @@ function DoctorResult({
       {error && (
         <Box marginLeft={4}>
           <Text color="$error">
-            {"\u2192"} Error: {error}
+            {"→"} Error: {error}
           </Text>
         </Box>
       )}
