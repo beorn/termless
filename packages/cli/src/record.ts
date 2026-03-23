@@ -7,6 +7,7 @@
  */
 
 import { createSessionManager } from "./session.ts"
+import { snapshotVisualState } from "../../../src/recording.ts"
 import { mkdir, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 
@@ -184,7 +185,7 @@ export async function recordCommand(opts: RecordOptions): Promise<void> {
 
     // Set up the capture loop
     const captureFrame = (): boolean => {
-      const currentText = terminal.getText()
+      const currentText = snapshotVisualState(terminal)
       if (hasFrameChanged(currentText, previousText)) {
         const svg = terminal.screenshotSvg()
         const timestamp = Date.now() - startTime
