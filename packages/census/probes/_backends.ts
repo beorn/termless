@@ -99,8 +99,9 @@ for (const name of allNames) {
 
     backends.push([name, factory])
     log.debug?.(`Added backend: ${name} (${entry.type})`)
-  } catch {
-    log.debug?.(`Skipping ${name} (import/init failed)`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(`Backend "${name}" is installed but failed to load: ${msg}`)
   }
 }
 
