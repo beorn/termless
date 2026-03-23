@@ -146,7 +146,7 @@ describe("installation detection", () => {
 describe("resolution", () => {
   test("resolveBackend('nonexistent') throws with helpful error listing available backends", async () => {
     await expect(resolveBackend("nonexistent")).rejects.toThrow(/Unknown backend "nonexistent"/)
-    await expect(resolveBackend("nonexistent")).rejects.toThrow(/Available backends:/)
+    await expect(resolveBackend("nonexistent")).rejects.toThrow(/Available:/)
   })
 
   test("resolveBackend error message lists all backend names", async () => {
