@@ -1,54 +1,46 @@
-import { describe, test, beforeAll, afterAll, beforeEach } from "vitest"
-import { backends, feed, support } from "./_backends.ts"
-import type { TerminalBackend } from "./_backends.ts"
+import { test } from "vitest"
+import { census, feed, expect } from "./_backends.ts"
 
-for (const [name, factory] of backends) {
-  describe(name, () => {
-    let b: TerminalBackend
-    beforeAll(() => { b = factory(); b.init({ cols: 80, rows: 24 }) })
-    afterAll(() => { b.destroy() })
-    beforeEach(() => { b.reset() })
-
-    describe("text", () => {
-      test("basic rendering", { meta: { id: "text-basic" } }, () => {
-        feed(b, "Hello")
-        support(b.getText().includes("Hello"))
-      })
-
-      test("newline (CR+LF)", { meta: { id: "text-newline" } }, () => {
-        feed(b, "A\r\nB")
-        support(b.getCell(0, 0).char === "A" && b.getCell(1, 0).char === "B")
-      })
-
-      test("line wrap", { meta: { id: "text-wrap" } }, () => {
-        feed(b, "X".repeat(85))
-        support(b.getCell(1, 0).char === "X")
-      })
-
-      test("tab stop", { meta: { id: "text-tab" } }, () => {
-        feed(b, "\tX")
-        support(b.getCell(0, 8).char === "X")
-      })
-
-      test("wide emoji", { meta: { id: "text-wide-emoji" } }, () => {
-        feed(b, "🎉")
-        support(b.getCell(0, 0).wide)
-      })
-
-      test("CJK wide char", { meta: { id: "text-cjk" } }, () => {
-        feed(b, "中")
-        support(b.getCell(0, 0).wide)
-      })
-
-      test("overwrite with CUP", { meta: { id: "text-overwrite" } }, () => {
-        feed(b, "AB\x1b[1GC")
-        support(b.getCell(0, 0).char === "C")
-      })
-
-      test("carriage return", { meta: { id: "text-cr" } }, () => {
-        feed(b, "AB\rC")
-        support(b.getCell(0, 0).char === "C" && b.getCell(0, 1).char === "B")
-      })
-    })
+census("text", {}, (b) => {
+  test("text-basic", { meta: { description: "Basic text rendering" } }, () => {
+    feed(b, "Hello")
+    expect(b.getText()).toContain("Hello")
   })
-}
+
+  test("text-newline", { meta: { description: "CR+LF newline" } }, () => {
+    feed(b, "A\r\nB")
+    expect(b.getCell(0, 0).char).toBe("A")
+    expect(b.getCell(1, 0).char).toBe("B")
+  })
+
+  test("text-wrap", { meta: { description: "Line wrap at right margin" } }, () => {
+    feed(b, "X".repeat(85))
+    expect(b.getCell(1, 0).char).toBe("X")
+  })
+
+  test("text-tab", { meta: { description: "Tab stop at column 8" } }, () => {
+    feed(b, "\tX")
+    expect(b.getCell(0, 8).char).toBe("X")
+  })
+
+  test("text-wide-emoji", { meta: { description: "Wide emoji character" } }, () => {
+    feed(b, "🎉")
+    expect(b.getCell(0, 0).wide).toBe(true)
+  })
+
+  test("text-cjk", { meta: { description: "CJK wide character" } }, () => {
+    feed(b, "中")
+    expect(b.getCell(0, 0).wide).toBe(true)
+  })
+
+  test("text-overwrite", { meta: { description: "Overwrite with cursor positioning" } }, () => {
+    feed(b, "AB\x1b[1GC")
+    expect(b.getCell(0, 0).char).toBe("C")
+  })
+
+  test("text-cr", { meta: { description: "Carriage return overwrites" } }, () => {
+    feed(b, "AB\rC")
+    expect(b.getCell(0, 0).char).toBe("C")
+    expect(b.getCell(0, 1).char).toBe("B")
+  })
+})

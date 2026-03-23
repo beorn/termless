@@ -1,54 +1,44 @@
-import { describe, test, beforeAll, afterAll, beforeEach } from "vitest"
-import { backends, feed, support } from "./_backends.ts"
-import type { TerminalBackend } from "./_backends.ts"
+import { test } from "vitest"
+import { census, feed, expect } from "./_backends.ts"
 
-for (const [name, factory] of backends) {
-  describe(name, () => {
-    let b: TerminalBackend
-    beforeAll(() => { b = factory(); b.init({ cols: 80, rows: 24 }) })
-    afterAll(() => { b.destroy() })
-    beforeEach(() => { b.reset() })
-
-    describe("modes", { meta: { spec: "ECMA-48 / DEC private modes" } }, () => {
-      test("alt screen enter", { meta: { id: "mode-alt-screen" } }, () => {
-        feed(b, "\x1b[?1049h")
-        support(b.getMode("altScreen"))
-      })
-
-      test("alt screen exit", { meta: { id: "mode-alt-screen-exit" } }, () => {
-        feed(b, "\x1b[?1049h\x1b[?1049l")
-        support(!b.getMode("altScreen"))
-      })
-
-      test("bracketed paste", { meta: { id: "mode-bracketed-paste" } }, () => {
-        feed(b, "\x1b[?2004h")
-        support(b.getMode("bracketedPaste"))
-      })
-
-      test("application cursor", { meta: { id: "mode-application-cursor" } }, () => {
-        feed(b, "\x1b[?1h")
-        support(b.getMode("applicationCursor"))
-      })
-
-      test("auto-wrap", { meta: { id: "mode-auto-wrap" } }, () => {
-        feed(b, "X".repeat(80) + "Y")
-        support(b.getCell(1, 0).char === "Y")
-      })
-
-      test("mouse tracking", { meta: { id: "mode-mouse-tracking" } }, () => {
-        feed(b, "\x1b[?1000h")
-        support(b.getMode("mouseTracking"))
-      })
-
-      test("focus tracking", { meta: { id: "mode-focus-tracking" } }, () => {
-        feed(b, "\x1b[?1004h")
-        support(b.getMode("focusTracking"))
-      })
-
-      test("reverse video", { meta: { id: "mode-reverse-video" } }, () => {
-        feed(b, "\x1b[?5h")
-        support(b.getMode("reverseVideo"))
-      })
-    })
+census("modes", { spec: "DEC private modes" }, (b) => {
+  test("mode-alt-screen", { meta: { description: "Alt screen enter" } }, () => {
+    feed(b, "\x1b[?1049h")
+    expect(b.getMode("altScreen")).toBe(true)
   })
-}
+
+  test("mode-alt-screen-exit", { meta: { description: "Alt screen exit" } }, () => {
+    feed(b, "\x1b[?1049h\x1b[?1049l")
+    expect(b.getMode("altScreen")).toBe(false)
+  })
+
+  test("mode-bracketed-paste", { meta: { description: "Bracketed paste mode" } }, () => {
+    feed(b, "\x1b[?2004h")
+    expect(b.getMode("bracketedPaste")).toBe(true)
+  })
+
+  test("mode-application-cursor", { meta: { description: "Application cursor keys" } }, () => {
+    feed(b, "\x1b[?1h")
+    expect(b.getMode("applicationCursor")).toBe(true)
+  })
+
+  test("mode-auto-wrap", { meta: { description: "Auto-wrap at right margin" } }, () => {
+    feed(b, "X".repeat(80) + "Y")
+    expect(b.getCell(1, 0).char).toBe("Y")
+  })
+
+  test("mode-mouse-tracking", { meta: { description: "Mouse tracking (X10)" } }, () => {
+    feed(b, "\x1b[?1000h")
+    expect(b.getMode("mouseTracking")).toBe(true)
+  })
+
+  test("mode-focus-tracking", { meta: { description: "Focus in/out events" } }, () => {
+    feed(b, "\x1b[?1004h")
+    expect(b.getMode("focusTracking")).toBe(true)
+  })
+
+  test("mode-reverse-video", { meta: { description: "Reverse video (DECSCNM)" } }, () => {
+    feed(b, "\x1b[?5h")
+    expect(b.getMode("reverseVideo")).toBe(true)
+  })
+})

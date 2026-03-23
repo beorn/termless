@@ -1,40 +1,38 @@
 /**
- * Shared backend loader for census probes.
+ * Census infrastructure — backend matrix + helpers.
  *
- * Resolves all available backends via top-level await. Each probe file
- * imports this module and iterates over the backends array.
+ * The census() function is the only thing probe files need. It handles
+ * the backend matrix, lifecycle (init/reset/destroy), and describe blocks.
  */
 
+import { describe, beforeAll, afterAll, beforeEach, expect as vitestExpect } from "vitest"
 import type { TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 import { createVt100Backend } from "@termless/vt100"
 
-export const backends: [string, () => TerminalBackend][] = [
+// ── Backend resolution (top-level await) ──
+
+const backends: [string, () => TerminalBackend][] = [
   ["xtermjs", () => createXtermBackend()],
   ["vt100", () => createVt100Backend()],
 ]
 
-// Optional: ghostty (requires WASM init)
 try {
   const mod = await import("@termless/ghostty")
   const ghostty = await mod.initGhostty()
   backends.push(["ghostty", () => mod.createGhosttyBackend(undefined, ghostty)])
-} catch {
-  // ghostty WASM not available
-}
+} catch {}
 
-// Optional: vt100-rust (requires native module)
 try {
   const mod = await import("../../vt100-rust/src/backend.ts")
   mod.loadVt100RustNative()
-  // Verify it actually works
   const b = mod.createVt100RustBackend()
   b.init({ cols: 1, rows: 1 })
   b.destroy()
   backends.push(["vt100-rust", () => mod.createVt100RustBackend()])
-} catch {
-  // vt100-rust native module not available
-}
+} catch {}
+
+// ── Helpers ──
 
 const enc = new TextEncoder()
 
@@ -43,29 +41,85 @@ export function feed(b: TerminalBackend, text: string): void {
   b.feed(enc.encode(text))
 }
 
-export { PartialSupport } from "../src/types.ts"
-export type { TerminalBackend } from "@termless/core"
+/**
+ * Attach a note to the current test result. The reporter includes this
+ * in the census output regardless of pass/fail.
+ */
+export function note(msg: string, level?: "partial" | "info"): void {
+  // getCurrentTest() may not be available, so we store on a thread-local-ish global
+  ;(globalThis as any).__census_note = msg
+  ;(globalThis as any).__census_level = level
+}
 
 /**
- * Assert feature support. Unifies yes/no/partial into one call.
+ * Mark the current test as partial support if condition is truthy.
+ * Call before the expect() that will fail — the reporter reads the
+ * level to distinguish partial from no.
+ */
+export function partial(condition: unknown, msg: string): void {
+  if (condition) note(msg, "partial")
+}
+
+export { PartialSupport } from "../src/types.ts"
+
+// ── Census runner ──
+
+/**
+ * Define a census probe suite. Runs the probes against all available backends.
+ *
+ * The callback receives a proxy that lazily accesses the backend — this is
+ * necessary because describe blocks run synchronously during collection,
+ * but the backend is only initialized in beforeAll.
  *
  * @example
  * ```typescript
- * support(cell.bold)                    // yes or no
- * support(cell.underline === "curly", { // yes, partial, or no
- *   partial: cell.underline,            // truthy → partial, falsy → no
- *   notes: "has underline but not curly"
+ * census("sgr", { spec: "ECMA-48 §8.3.117" }, (b) => {
+ *   test("sgr-bold", { meta: { description: "Bold" } }, () => {
+ *     feed(b, "\x1b[1mX")
+ *     expect(b.getCell(0, 0).bold).toBe(true)
+ *   })
  * })
  * ```
  */
-export function support(
-  condition: boolean,
-  opts?: { partial?: unknown; notes?: string },
+export function census(
+  category: string,
+  opts: { spec?: string },
+  fn: (b: TerminalBackend) => void,
 ): void {
-  if (condition) return // yes — pass
-  if (opts?.partial) throw new PartialSupport(opts.notes ?? String(opts.partial))
-  expect(condition).toBe(true) // no — fail
+  for (const [name, factory] of backends) {
+    describe(name, () => {
+      let _b: TerminalBackend
+
+      beforeAll(() => {
+        _b = factory()
+        _b.init({ cols: 80, rows: 24 })
+      })
+
+      afterAll(() => {
+        _b.destroy()
+      })
+
+      beforeEach(() => {
+        _b.reset()
+        ;(globalThis as any).__census_note = undefined
+        ;(globalThis as any).__census_level = undefined
+      })
+
+      // Proxy: lets fn() reference b during describe collection,
+      // but actual access happens inside test() callbacks (after beforeAll)
+      const proxy = new Proxy({} as TerminalBackend, {
+        get(_target, prop) {
+          return (_b as any)[prop]
+        },
+      })
+
+      describe(category, { meta: { spec: opts.spec } }, () => {
+        fn(proxy)
+      })
+    })
+  }
 }
 
-// Need expect for the fail case
-import { expect } from "vitest"
+// Re-export vitest's expect (probe files need it)
+export { vitestExpect as expect }
+export type { TerminalBackend }
