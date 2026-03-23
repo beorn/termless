@@ -1,7 +1,8 @@
 {
   "backend": "vt100",
   "version": "0.3.0",
-  "generated": "2026-03-23T18:02:15.184Z",
+  "generated": "2026-03-23T18:48:48.961Z",
+  "probeHash": "af3db1a705a3",
   "results": {
     "cursor.move.absolute": true,
     "cursor.move.home": true,

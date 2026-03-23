@@ -35,8 +35,23 @@ const program = new Command()
 program
   .command("run")
   .description("Execute probes via vitest, show matrix, save results")
-  .action(async () => {
+  .option("-f, --force", "Re-run all probes even if cached results are valid")
+  .action(async (opts: { force?: boolean }) => {
+    const hash = probeHash()
+
+    // Check cache — skip if results exist and probe hash matches
+    if (!opts.force) {
+      const cached = loadSavedResults()
+      if (cached && isCacheValid(hash)) {
+        console.log(`\nCensus results are up to date (probe hash: ${hash}). Use --force to re-run.\n`)
+        const output = await renderReport(cached)
+        console.log(output)
+        return
+      }
+    }
+
     log.debug?.("Spawning vitest with census config")
+    console.log(`\nRunning census probes (hash: ${hash})...\n`)
 
     const proc = Bun.spawn(["bun", "vitest", "run", "--config", "vitest.census.ts", "--reporter", "json"], {
       cwd: ROOT,
@@ -75,11 +90,11 @@ program
 
     log.debug?.(`Parsed ${data.backendNames.length} backends, ${data.featureIds.length} features`)
 
-    // Save per-backend result files
-    const writtenFiles = saveResults(data)
+    // Save per-backend result files (with probe hash for cache validation)
+    const writtenFiles = saveResults(data, hash)
 
     // Render
-    const output = await renderReport(data, { writtenFiles })
+    const output = await renderReport(data, { writtenFiles: writtenFiles.map(shortPath) })
     console.log(output)
   })
 
@@ -167,10 +182,10 @@ program
     console.log(probeHash())
   })
 
-// ── Default: run if no subcommand ──
+// ── Default: show help ──
 
-program.action(async () => {
-  await program.parseAsync(["node", "census", "run"])
+program.action(() => {
+  program.help()
 })
 
 // ── Helpers ──
@@ -214,7 +229,32 @@ function loadSavedResults() {
   return fromPerBackendFiles([...latest.values()])
 }
 
-function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
+/** Check if all cached results have the current probe hash. */
+function isCacheValid(currentHash: string): boolean {
+  if (!existsSync(RESULTS_DIR)) return false
+  const files = readdirSync(RESULTS_DIR).filter((f) => f.endsWith(".json"))
+  if (files.length === 0) return false
+  for (const file of files) {
+    try {
+      const data = JSON.parse(readFileSync(join(RESULTS_DIR, file), "utf-8"))
+      if (data.probeHash !== currentHash) return false
+    } catch {
+      return false
+    }
+  }
+  return true
+}
+
+/** Shorten a path for display: relative to CWD, or ~/... */
+function shortPath(p: string): string {
+  const cwd = process.cwd()
+  const home = process.env.HOME ?? ""
+  if (p.startsWith(cwd)) return p.slice(cwd.length + 1)
+  if (home && p.startsWith(home)) return "~" + p.slice(home.length)
+  return p
+}
+
+function saveResults(data: ReturnType<typeof parseVitestJson>, hash?: string): string[] {
   mkdirSync(RESULTS_DIR, { recursive: true })
 
   const generated = new Date().toISOString()
@@ -239,6 +279,7 @@ function saveResults(data: ReturnType<typeof parseVitestJson>): string[] {
       backend: name,
       version,
       generated,
+      ...(hash ? { probeHash: hash } : {}),
       results: Object.fromEntries(features),
       ...(backendNotes && backendNotes.size > 0 ? { notes: Object.fromEntries(backendNotes) } : {}),
     }
