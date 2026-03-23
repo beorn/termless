@@ -1,6 +1,6 @@
 /**
  * Registry subpath — discovery, resolution, health checks.
- * Import from "termless/registry" for these advanced APIs.
+ * Import from "termless/backends" for these advanced APIs.
  */
 export {
   loadManifest,
@@ -18,10 +18,5 @@ export {
   getInstallCommand,
   detectPackageManager,
   _resetManifestCache,
-} from "./registry.ts"
-export type {
-  BackendManifest,
-  BackendManifestEntry,
-  BackendStatus,
-  BackendHealthResult,
-} from "./registry.ts"
+} from "./backends.ts"
+export type { BackendManifest, BackendManifestEntry, BackendStatus, BackendHealthResult } from "./backends.ts"

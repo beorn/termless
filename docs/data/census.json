@@ -1,0 +1,1267 @@
+{
+  "generated": "2026-03-22T23:08:53.345Z",
+  "termlessVersion": "0.3.0",
+  "backends": {
+    "xtermjs": {
+      "name": "xtermjs",
+      "version": "5.x",
+      "engine": "@xterm/headless"
+    },
+    "vt100": {
+      "name": "vt100",
+      "version": "0.3.0",
+      "engine": "pure TypeScript"
+    },
+    "ghostty": {
+      "name": "ghostty",
+      "version": "1.x",
+      "engine": "ghostty-web WASM"
+    },
+    "vt100-rust": {
+      "name": "vt100-rust",
+      "version": "0.3.0",
+      "engine": "Rust vt100 crate (napi-rs)"
+    }
+  },
+  "features": [
+    {
+      "id": "sgr-bold",
+      "name": "Bold (SGR 1)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-faint",
+      "name": "Faint/Dim (SGR 2)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-italic",
+      "name": "Italic (SGR 3)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-underline-single",
+      "name": "Underline single (SGR 4)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-underline-double",
+      "name": "Underline double (SGR 21)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"double\")"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"double\")"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-underline-curly",
+      "name": "Underline curly (SGR 4:3)",
+      "category": "sgr",
+      "spec": "kitty undercurl extension",
+      "results": {
+        "xtermjs": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"curly\")"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"curly\")"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-underline-dotted",
+      "name": "Underline dotted (SGR 4:4)",
+      "category": "sgr",
+      "spec": "kitty undercurl extension",
+      "results": {
+        "xtermjs": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"dotted\")"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"dotted\")"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-underline-dashed",
+      "name": "Underline dashed (SGR 4:5)",
+      "category": "sgr",
+      "spec": "kitty undercurl extension",
+      "results": {
+        "xtermjs": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"dashed\")"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "partial",
+          "notes": "underline value: single (expected \"dashed\")"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-blink",
+      "name": "Blink (SGR 5)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "no"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-inverse",
+      "name": "Inverse/Reverse video (SGR 7)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-hidden",
+      "name": "Hidden/Invisible (SGR 8)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "no"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-strikethrough",
+      "name": "Strikethrough (SGR 9)",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "sgr-fg-256",
+      "name": "256-color foreground (SGR 38;5;N)",
+      "category": "sgr",
+      "spec": "xterm 256-color",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-fg-truecolor",
+      "name": "Truecolor foreground (SGR 38;2;R;G;B)",
+      "category": "sgr",
+      "spec": "ISO 8613-6 / xterm truecolor",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-bg-truecolor",
+      "name": "Truecolor background (SGR 48;2;R;G;B)",
+      "category": "sgr",
+      "spec": "ISO 8613-6 / xterm truecolor",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "sgr-reset",
+      "name": "SGR reset (SGR 0) clears all attributes",
+      "category": "sgr",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-cup",
+      "name": "Cursor position (CUP)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.22",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-home",
+      "name": "Cursor home (CUP with no args)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.22",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-forward",
+      "name": "Cursor forward (CUF)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.20",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-back",
+      "name": "Cursor back (CUB)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.18",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-down",
+      "name": "Cursor down (CUD)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.19",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-up",
+      "name": "Cursor up (CUU)",
+      "category": "cursor",
+      "spec": "ECMA-48 8.3.22",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-hide",
+      "name": "Cursor hide (DECTCEM reset)",
+      "category": "cursor",
+      "spec": "DEC VT220",
+      "results": {
+        "xtermjs": {
+          "support": "no",
+          "notes": "cursor still visible after hide sequence"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "no",
+          "notes": "cursor still visible after hide sequence"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "cursor-save-restore",
+      "name": "Cursor save/restore (DECSC/DECRC)",
+      "category": "cursor",
+      "spec": "DEC VT100",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-alt-screen",
+      "name": "Alternate screen buffer (DECSET 1049)",
+      "category": "mode",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-alt-screen-exit",
+      "name": "Alt screen exit restores state (DECRST 1049)",
+      "category": "mode",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-bracketed-paste",
+      "name": "Bracketed paste mode (DECSET 2004)",
+      "category": "mode",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-application-cursor",
+      "name": "Application cursor keys (DECSET 1)",
+      "category": "mode",
+      "spec": "DEC VT100",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-auto-wrap",
+      "name": "Auto-wrap at right margin (DECAWM)",
+      "category": "mode",
+      "spec": "DEC VT100",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-mouse-tracking",
+      "name": "Mouse tracking (DECSET 1000)",
+      "category": "mode",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "mode-focus-tracking",
+      "name": "Focus tracking (DECSET 1004)",
+      "category": "mode",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "mode-reverse-video",
+      "name": "Reverse video (DECSET 5)",
+      "category": "mode",
+      "spec": "DEC VT100",
+      "results": {
+        "xtermjs": {
+          "support": "no"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "scrollback-accumulate",
+      "name": "Scrollback accumulates beyond screen height",
+      "category": "scrollback",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no",
+          "notes": "totalLines=24, expected >24"
+        }
+      }
+    },
+    {
+      "id": "scrollback-alt-screen-none",
+      "name": "Alternate screen has separate scrollback",
+      "category": "scrollback",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "partial",
+          "notes": "scrollback totalLines unchanged after entering alt screen"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "partial",
+          "notes": "scrollback totalLines unchanged after entering alt screen"
+        }
+      }
+    },
+    {
+      "id": "scrollback-scroll-up",
+      "name": "Scroll up (SU / CSI S)",
+      "category": "scrollback",
+      "spec": "ECMA-48 8.3.147",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "scrollback-reverse-index",
+      "name": "Reverse index at top (RI / ESC M)",
+      "category": "scrollback",
+      "spec": "ECMA-48 8.3.112",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "scrollback-total-lines",
+      "name": "Total lines tracking in scrollback state",
+      "category": "scrollback",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no",
+          "notes": "totalLines=24, expected >=30"
+        }
+      }
+    },
+    {
+      "id": "text-basic",
+      "name": "Basic text output",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-newline",
+      "name": "Newline moves to next row",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes",
+          "notes": "LF without implicit CR (raw mode)"
+        },
+        "vt100": {
+          "support": "yes",
+          "notes": "LF without implicit CR (raw mode)"
+        },
+        "ghostty": {
+          "support": "yes",
+          "notes": "LF without implicit CR (raw mode)"
+        },
+        "vt100-rust": {
+          "support": "yes",
+          "notes": "LF without implicit CR (raw mode)"
+        }
+      }
+    },
+    {
+      "id": "text-cr-lf",
+      "name": "CR+LF line ending",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-wrap",
+      "name": "Text wraps at terminal width",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-tab",
+      "name": "Horizontal tab (HT) stops at column 8",
+      "category": "text",
+      "spec": "ECMA-48 8.3.60",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-wide-emoji",
+      "name": "Wide character handling (emoji)",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "partial",
+          "notes": "emoji rendered but wide flag not set"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-cjk",
+      "name": "Wide character handling (CJK)",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "text-overwrite",
+      "name": "Overwrite text by repositioning cursor",
+      "category": "text",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "erase-line-right",
+      "name": "Erase line from cursor right (EL 0)",
+      "category": "erase",
+      "spec": "ECMA-48 8.3.41",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "erase-line-left",
+      "name": "Erase line from cursor left (EL 1)",
+      "category": "erase",
+      "spec": "ECMA-48 8.3.41",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "erase-line-all",
+      "name": "Erase entire line (EL 2)",
+      "category": "erase",
+      "spec": "ECMA-48 8.3.41",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "erase-screen-below",
+      "name": "Erase screen below cursor (ED 0)",
+      "category": "erase",
+      "spec": "ECMA-48 8.3.39",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "erase-screen-all",
+      "name": "Erase entire screen (ED 2)",
+      "category": "erase",
+      "spec": "ECMA-48 8.3.39",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "ext-osc2-title",
+      "name": "Window title (OSC 2)",
+      "category": "extension",
+      "spec": "xterm",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "no",
+          "notes": "title not set"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "ext-kitty-keyboard",
+      "name": "Kitty keyboard protocol",
+      "category": "extension",
+      "spec": "kitty",
+      "results": {
+        "xtermjs": {
+          "support": "no"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "ext-kitty-graphics",
+      "name": "Kitty graphics protocol",
+      "category": "extension",
+      "spec": "kitty",
+      "results": {
+        "xtermjs": {
+          "support": "no"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "no"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "ext-sixel",
+      "name": "Sixel graphics",
+      "category": "extension",
+      "spec": "DEC VT340",
+      "results": {
+        "xtermjs": {
+          "support": "no"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "no"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "ext-osc8-capable",
+      "name": "OSC 8 hyperlinks",
+      "category": "extension",
+      "spec": "VTE / iTerm2",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "ext-reflow",
+      "name": "Text reflow on resize",
+      "category": "extension",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "ext-truecolor",
+      "name": "24-bit truecolor support",
+      "category": "extension",
+      "spec": "ISO 8613-6",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "ext-semantic-prompts",
+      "name": "Semantic prompt markers (OSC 133)",
+      "category": "extension",
+      "spec": "FinalTerm / shell integration",
+      "results": {
+        "xtermjs": {
+          "support": "no"
+        },
+        "vt100": {
+          "support": "no"
+        },
+        "ghostty": {
+          "support": "no"
+        },
+        "vt100-rust": {
+          "support": "no"
+        }
+      }
+    },
+    {
+      "id": "reset-sgr",
+      "name": "SGR reset clears bold, italic, inverse",
+      "category": "reset",
+      "spec": "ECMA-48 8.3.117",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "reset-ris",
+      "name": "Full reset (RIS / ESC c)",
+      "category": "reset",
+      "spec": "ECMA-48 8.3.105",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    },
+    {
+      "id": "reset-method",
+      "name": "Backend reset() method",
+      "category": "reset",
+      "results": {
+        "xtermjs": {
+          "support": "yes"
+        },
+        "vt100": {
+          "support": "yes"
+        },
+        "ghostty": {
+          "support": "yes"
+        },
+        "vt100-rust": {
+          "support": "yes"
+        }
+      }
+    }
+  ],
+  "stats": {
+    "totalProbes": 61,
+    "totalBackends": 4,
+    "totalYes": 194,
+    "totalNo": 39,
+    "totalPartial": 11,
+    "totalUnknown": 0
+  }
+}

@@ -44,7 +44,7 @@ import { afterEach, describe } from "vitest"
 import type { Terminal, TerminalCreateOptions } from "../../../src/types.ts"
 import { createTerminal } from "../../../src/index.ts"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
-import { resolveBackend, installedBackendNames } from "../../../src/registry.ts"
+import { resolveBackend, installedBackendNames } from "../../../src/backends.ts"
 
 // ═══════════════════════════════════════════════════════
 // Option types
@@ -112,9 +112,7 @@ export function createTestTerminal(options?: SyncTestTerminalOptions): Terminal 
  * expect(term.screen).toContainText("Hello")
  * ```
  */
-export async function createTestTerminalByName(
-  options: NamedTestTerminalOptions,
-): Promise<Terminal> {
+export async function createTestTerminalByName(options: NamedTestTerminalOptions): Promise<Terminal> {
   const backend = await resolveBackend(options.backendName)
   const terminal = createTerminal({ ...options, backend })
   activeFixtures.push(terminal)
@@ -152,9 +150,7 @@ export interface BackendCase {
  * }
  * ```
  */
-export async function backendCases(
-  filter?: string[],
-): Promise<BackendCase[]> {
+export async function backendCases(filter?: string[]): Promise<BackendCase[]> {
   const names = filter ?? installedBackendNames()
   const cases: BackendCase[] = []
 

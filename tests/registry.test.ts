@@ -21,7 +21,7 @@ import {
   checkAllHealth,
   getInstallCommand,
   getBackendStatus,
-} from "../src/registry.ts"
+} from "../src/backends.ts"
 import { createTerminal } from "../src/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createVt100Backend } from "../packages/vt100/src/backend.ts"

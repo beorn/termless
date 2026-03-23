@@ -15,7 +15,7 @@ import {
   getInstalledVersion,
   getInstallCommand,
   detectPackageManager,
-} from "../../../src/registry.ts"
+} from "../../../src/backends.ts"
 
 /** Show all other backends that weren't part of this install. */
 function showOtherBackends(installed: string[]): void {

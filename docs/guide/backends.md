@@ -16,19 +16,19 @@ bunx termless doctor
 
 ## Capability Matrix
 
-| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo | vt100-rust     | libvterm          | Kitty                      |
-| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- | -------------- | ----------------- | -------------------------- |
-| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                        |
-| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       | No             | No                | Yes                        |
-| **Kitty graphics**      | No       | No      | No    | No             | No             | No       | No             | No                | Yes                        |
-| **Sixel**               | No       | No      | No    | No             | Yes            | No       | No             | No                | No                         |
-| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                        |
-| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       | No             | No                | No                         |
-| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     | 15.1           | 15.1              | 15.1                       |
-| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                        |
-| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                        |
-| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      | No             | No                | No                         |
-| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     | Rust (napi-rs) | WASM (Emscripten) | C (built from GPL source)  |
+| Capability              | xterm.js | Ghostty | vt100 | Alacritty      | WezTerm        | Peekaboo | vt100-rust     | libvterm          | Kitty                       |
+| ----------------------- | -------- | ------- | ----- | -------------- | -------------- | -------- | -------------- | ----------------- | --------------------------- |
+| **Truecolor (24-bit)**  | Yes      | Yes     | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                         |
+| **Kitty keyboard**      | No       | Yes     | No    | Yes            | Yes            | No       | No             | No                | Yes                         |
+| **Kitty graphics**      | No       | No      | No    | No             | No             | No       | No             | No                | Yes                         |
+| **Sixel**               | No       | No      | No    | No             | Yes            | No       | No             | No                | No                          |
+| **OSC 8 hyperlinks**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                         |
+| **Semantic prompts**    | No       | No      | No    | No             | Yes            | No       | No             | No                | No                          |
+| **Unicode**             | 15.1     | 15.1    | 15.1  | 15.1           | 15.1           | 15.1     | 15.1           | 15.1              | 15.1                        |
+| **Reflow on resize**    | Yes      | Yes     | No    | Yes            | Yes            | Yes      | No             | No                | Yes                         |
+| **Viewport scrolling**  | Yes      | No      | Yes   | Yes            | Yes            | Yes      | Yes            | Yes               | Yes                         |
+| **OS-level screenshot** | No       | No      | No    | No             | No             | Yes      | No             | No                | No                          |
+| **Native deps**         | None     | WASM    | None  | Rust (napi-rs) | Rust (napi-rs) | None     | Rust (napi-rs) | WASM (Emscripten) | C (built from GPL source)   |
 | **Build requirement**   | None     | None    | None  | Rust toolchain | Rust toolchain | None     | Rust toolchain | Emscripten SDK    | C compiler + Python 3 + git |
 
 ## Backend Details

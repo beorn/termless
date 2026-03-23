@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander"
-import { loadManifest, getBackendStatus, checkBackendHealth } from "../../../src/registry.ts"
+import { loadManifest, getBackendStatus, checkBackendHealth } from "../../../src/backends.ts"
 
 export function registerDoctorCommand(program: Command): void {
   program

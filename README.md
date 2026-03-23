@@ -332,7 +332,7 @@ bun vitest run tests/cross-backend.test.ts
 | [@termless/peekaboo](packages/peekaboo)     | OS-level terminal automation (xterm.js + real app)                  |
 | [@termless/vt100-rust](packages/vt100-rust) | Rust vt100 crate via napi-rs (reference implementation)             |
 | [@termless/libvterm](packages/libvterm)     | neovim's libvterm via Emscripten WASM                               |
-| [@termless/kitty](packages/kitty)           | Kitty VT parser built from GPL source (not distributed)            |
+| [@termless/kitty](packages/kitty)           | Kitty VT parser built from GPL source (not distributed)             |
 | [@termless/test](packages/viterm)           | Vitest matchers, fixtures, and snapshot serializer                  |
 | [@termless/cli](packages/cli)               | CLI (`termless capture`) + MCP server (`termless mcp`)              |
 

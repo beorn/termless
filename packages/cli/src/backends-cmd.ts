@@ -3,7 +3,7 @@
  */
 
 import type { Command } from "commander"
-import { loadManifest, getBackendStatus, defaultBackendNames } from "../../../src/registry.ts"
+import { loadManifest, getBackendStatus, defaultBackendNames } from "../../../src/backends.ts"
 
 export function registerBackendsCommand(program: Command): void {
   program
