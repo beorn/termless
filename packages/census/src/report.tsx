@@ -8,7 +8,7 @@ import React from "react"
 import { renderString } from "silvery"
 import { Box, Text } from "silvery"
 import type { CensusData } from "./parse.ts"
-import { backends as allBackendNames, isReady, entry } from "../../../src/backends.ts"
+import { backends as allBackendNames, isReady, entry } from "@termless/core"
 
 // ── Types ──
 

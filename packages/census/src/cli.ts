@@ -20,7 +20,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "loggily"
 import { parseVitestJson, fromPerBackendFiles, type CensusData } from "./parse.ts"
-import { manifest, backends as allBackendNames, isReady, entry } from "../../../src/backends.ts"
+import { manifest, backends as allBackendNames, isReady, entry } from "@termless/core"
 import { renderReport } from "./report.tsx"
 import { runVersionedCensus, probeHash, loadVersionsCatalog } from "./versions.ts"
 

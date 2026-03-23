@@ -19,8 +19,8 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "vitest"
 import type { TerminalBackend } from "@termless/core"
+import { manifest } from "@termless/core"
 import { createLogger } from "loggily"
-import { manifest } from "../../../src/backends.ts"
 
 const log = createLogger("census")
 

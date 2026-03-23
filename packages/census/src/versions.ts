@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import { createLogger } from "loggily"
 import { parseVitestJson } from "./parse.ts"
-import { ensureCachedVersion } from "../../../src/backends.ts"
+import { ensureCachedVersion } from "@termless/core"
 
 const log = createLogger("census")
 
