@@ -33,21 +33,21 @@ bun run typecheck
 
 ## Packages
 
-| Package               | What it does                                                    |
-| --------------------- | --------------------------------------------------------------- |
-| `termless` (root)     | Core types, Terminal API, PTY, SVG/PNG screenshots, key mapping |
-| `@termless/xtermjs`   | xterm.js backend using @xterm/headless                          |
-| `@termless/ghostty`   | Ghostty backend (ghostty-web WASM)                              |
-| `@termless/vt100`     | Pure TypeScript VT100 emulator (zero native deps)               |
-| `@termless/alacritty` | Alacritty backend (alacritty_terminal via napi-rs)              |
-| `@termless/wezterm`   | WezTerm backend (wezterm-term via napi-rs)                      |
-| `@termless/peekaboo`  | OS-level terminal automation (xterm.js + real app)              |
-| `@termless/vt100-rust`| Rust vt100 crate via napi-rs (reference implementation)         |
-| `@termless/libvterm`  | neovim's libvterm via Emscripten WASM                           |
-| `@termless/ghostty-native` | Native Ghostty via Zig N-API bindings (libghostty-vt)      |
-| `@termless/kitty`     | Kitty VT parser built from GPL source (not distributed)        |
-| `@termless/test`      | Vitest matchers, fixtures, and snapshot serializer              |
-| `@termless/cli`       | CLI tool and MCP server                                         |
+| Package                    | What it does                                                    |
+| -------------------------- | --------------------------------------------------------------- |
+| `termless` (root)          | Core types, Terminal API, PTY, SVG/PNG screenshots, key mapping |
+| `@termless/xtermjs`        | xterm.js backend using @xterm/headless                          |
+| `@termless/ghostty`        | Ghostty backend (ghostty-web WASM)                              |
+| `@termless/vt100`          | Pure TypeScript VT100 emulator (zero native deps)               |
+| `@termless/alacritty`      | Alacritty backend (alacritty_terminal via napi-rs)              |
+| `@termless/wezterm`        | WezTerm backend (wezterm-term via napi-rs)                      |
+| `@termless/peekaboo`       | OS-level terminal automation (xterm.js + real app)              |
+| `@termless/vt100-rust`     | Rust vt100 crate via napi-rs (reference implementation)         |
+| `@termless/libvterm`       | neovim's libvterm via Emscripten WASM                           |
+| `@termless/ghostty-native` | Native Ghostty via Zig N-API bindings (libghostty-vt)           |
+| `@termless/kitty`          | Kitty VT parser built from GPL source (not distributed)         |
+| `@termless/test`           | Vitest matchers, fixtures, and snapshot serializer              |
+| `@termless/cli`            | CLI tool and MCP server                                         |
 
 ## Submitting Changes
 

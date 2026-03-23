@@ -94,7 +94,7 @@ export function loadAlacrittyNative(): NativeModule {
     //   termless-alacritty-native.linux-x64-gnu.node
     //   etc.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    nativeModule = require("../native/termless-alacritty-native.node") as NativeModule
+    nativeModule = require("../termless-alacritty-native.node") as NativeModule
     return nativeModule
   } catch {
     throw new Error(

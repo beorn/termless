@@ -4,7 +4,7 @@ Assessment of where Termless can augment or replace silvery's virtual buffer tes
 
 ## Current State
 
-Silvery has ~170 test files. The primary testing approach is virtual buffer testing via `createRenderer` from `@silvery/term/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
+Silvery has ~170 test files. The primary testing approach is virtual buffer testing via `createRenderer` from `@silvery/ag-term/testing`, which renders React components to an in-memory `TerminalBuffer` and asserts against plain text (`app.text`) or buffer cells (`app.term.cell(x, y)`).
 
 5 files already use Termless:
 

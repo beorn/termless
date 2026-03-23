@@ -54,7 +54,7 @@ yarn add -D @termless/test
 import { test, expect } from "vitest"
 import { createTestTerminal } from "@termless/test"
 
-// ANSI helpers — real apps use @silvery/term or @silvery/ansi, these are just for test data
+// ANSI helpers — real apps use @silvery/ag-term or @silvery/ansi, these are just for test data
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`
 const GREEN = (s: string) => `\x1b[38;2;0;255;0m${s}\x1b[0m`
 
@@ -162,38 +162,38 @@ const term = createTerminal({ backend: b })
 
 Every backend wraps a real terminal emulator and implements the same interface — write once, test everywhere:
 
-| Backend        | Engine                  | Highlights                                                                         | Type   |
-| -------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------ |
-| **xtermjs**    | @xterm/headless 5.5     | VS Code's terminal. Most mature, zero native deps.                                 | JS     |
-| **ghostty**    | ghostty-web 0.4         | Modern GPU-accelerated parser. Best standards compliance, Kitty keyboard protocol. | WASM   |
-| **vt100**      | (built-in)              | Pure TypeScript, zero dependencies. Fastest backend, ideal for CI.                 | JS     |
-| **alacritty**  | alacritty_terminal 0.26 | Rust parser via napi-rs. Strong reflow behavior.                                   | Native |
-| **wezterm**    | tattoy-wezterm-term     | Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.       | Native |
-| **peekaboo**   | (OS automation)         | Tests against a real terminal app via OS accessibility APIs. macOS only.           | OS     |
-| **vt100-rust** | vt100 0.15 (Rust)       | Reference Rust implementation — cross-validates the TS vt100 backend.              | Native |
-| **libvterm**   | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |
-| **ghostty-native** | libghostty-vt 1.3   | Native Ghostty via Zig N-API bindings. Same parser as ghostty, no WASM overhead.   | Native |
-| **kitty**      | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.       | Native |
+| Backend            | Engine                  | Highlights                                                                         | Type   |
+| ------------------ | ----------------------- | ---------------------------------------------------------------------------------- | ------ |
+| **xtermjs**        | @xterm/headless 5.5     | VS Code's terminal. Most mature, zero native deps.                                 | JS     |
+| **ghostty**        | ghostty-web 0.4         | Modern GPU-accelerated parser. Best standards compliance, Kitty keyboard protocol. | WASM   |
+| **vt100**          | (built-in)              | Pure TypeScript, zero dependencies. Fastest backend, ideal for CI.                 | JS     |
+| **alacritty**      | alacritty_terminal 0.26 | Rust parser via napi-rs. Strong reflow behavior.                                   | Native |
+| **wezterm**        | tattoy-wezterm-term     | Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.       | Native |
+| **peekaboo**       | (OS automation)         | Tests against a real terminal app via OS accessibility APIs. macOS only.           | OS     |
+| **vt100-rust**     | vt100 0.15 (Rust)       | Reference Rust implementation — cross-validates the TS vt100 backend.              | Native |
+| **libvterm**       | libvterm (neovim)       | Neovim's C VT parser via WASM. Different implementation = different bugs found.    | WASM   |
+| **ghostty-native** | libghostty-vt 1.3       | Native Ghostty via Zig N-API bindings. Same parser as ghostty, no WASM overhead.   | Native |
+| **kitty**          | kitty (C, GPL source)   | Kitty's parser built from source. Only backend with Kitty graphics protocol.       | Native |
 
 See [Backend Capabilities](/guide/backends) for the full feature matrix, per-backend details, and usage examples (factory function + string name).
 
 ## Packages
 
-| Package                | Description                                                             |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `@termless/core`       | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
-| `@termless/test`       | Vitest integration: 21+ matchers, fixtures, snapshot serializer         |
-| `@termless/xtermjs`    | xterm.js backend via `@xterm/headless`                                  |
-| `@termless/ghostty`    | Ghostty backend via `ghostty-web` WASM                                  |
-| `@termless/vt100`      | Pure TypeScript VT100 emulator, zero native deps                        |
-| `@termless/alacritty`  | Alacritty backend via `alacritty_terminal` (napi-rs)                    |
-| `@termless/wezterm`    | WezTerm backend via `wezterm-term` (napi-rs)                            |
-| `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                      |
-| `@termless/vt100-rust` | Rust vt100 crate via napi-rs (reference implementation)                 |
-| `@termless/libvterm`   | neovim's libvterm via Emscripten WASM                                   |
-| `@termless/ghostty-native` | Native Ghostty backend via Zig N-API bindings (libghostty-vt)       |
-| `@termless/kitty`      | Kitty VT parser built from GPL source (not distributed)                 |
-| `@termless/cli`        | CLI tools + MCP server for AI agents                                    |
+| Package                    | Description                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `@termless/core`           | Core: Terminal API, PTY, SVG/PNG screenshots, key mapping, region views |
+| `@termless/test`           | Vitest integration: 21+ matchers, fixtures, snapshot serializer         |
+| `@termless/xtermjs`        | xterm.js backend via `@xterm/headless`                                  |
+| `@termless/ghostty`        | Ghostty backend via `ghostty-web` WASM                                  |
+| `@termless/vt100`          | Pure TypeScript VT100 emulator, zero native deps                        |
+| `@termless/alacritty`      | Alacritty backend via `alacritty_terminal` (napi-rs)                    |
+| `@termless/wezterm`        | WezTerm backend via `wezterm-term` (napi-rs)                            |
+| `@termless/peekaboo`       | OS-level terminal automation (xterm.js + real app)                      |
+| `@termless/vt100-rust`     | Rust vt100 crate via napi-rs (reference implementation)                 |
+| `@termless/libvterm`       | neovim's libvterm via Emscripten WASM                                   |
+| `@termless/ghostty-native` | Native Ghostty backend via Zig N-API bindings (libghostty-vt)           |
+| `@termless/kitty`          | Kitty VT parser built from GPL source (not distributed)                 |
+| `@termless/cli`            | CLI tools + MCP server for AI agents                                    |
 
 ## How It Compares
 
