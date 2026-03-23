@@ -1,14 +1,16 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::sync::Arc;
+use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    CellAttributes, CursorPosition, Terminal, TerminalConfiguration, TerminalSize,
+    color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize,
 };
 
 // ═══════════════════════════════════════════════════════
 // Minimal config for headless use
 // ═══════════════════════════════════════════════════════
 
+#[derive(Debug)]
 struct HeadlessConfig {
     scrollback: usize,
 }
@@ -20,6 +22,10 @@ impl TerminalConfiguration for HeadlessConfig {
 
     fn enable_kitty_keyboard(&self) -> bool {
         true
+    }
+
+    fn color_palette(&self) -> ColorPalette {
+        ColorPalette::default()
     }
 }
 
@@ -72,6 +78,14 @@ pub struct WeztermTerminal {
     cols: usize,
     rows: usize,
     title: String,
+    // Tracked modes that lack public getters in this wezterm-term version.
+    // Defaults match wezterm-term's TerminalState initialization.
+    auto_wrap: bool,
+    application_cursor_keys: bool,
+    application_keypad: bool,
+    focus_tracking: bool,
+    origin_mode: bool,
+    insert_mode: bool,
 }
 
 #[napi]
@@ -104,12 +118,22 @@ impl WeztermTerminal {
             cols,
             rows,
             title: String::new(),
+            auto_wrap: true,              // wezterm defaults to true
+            application_cursor_keys: false,
+            application_keypad: false,
+            focus_tracking: false,
+            origin_mode: false,
+            insert_mode: false,
         }
     }
 
     #[napi]
     pub fn feed(&mut self, data: Buffer) {
-        self.term.advance_bytes(data.as_ref());
+        let bytes = data.as_ref();
+        // Scan for DEC private mode set/reset sequences before feeding to
+        // the terminal, so we can track modes that lack public getters.
+        self.scan_dec_modes(bytes);
+        self.term.advance_bytes(bytes);
         // Capture title from terminal state
         self.title = self.term.get_title().to_string();
     }
@@ -133,33 +157,38 @@ impl WeztermTerminal {
         // Feed RIS escape sequence
         self.term.advance_bytes(b"\x1bc");
         self.title.clear();
+        // Restore tracked mode defaults (matching wezterm-term DECSTR behavior)
+        self.auto_wrap = true;
+        self.application_cursor_keys = false;
+        self.application_keypad = false;
+        self.focus_tracking = false;
+        self.origin_mode = false;
+        self.insert_mode = false;
     }
 
     #[napi]
     pub fn get_text(&self) -> String {
         let screen = self.term.screen();
-        let mut lines = Vec::new();
+        let mut lines_out = Vec::new();
 
-        // Scrollback lines
-        let scrollback_rows = screen.scrollback_rows();
-        for offset in 0..scrollback_rows {
-            let phys_row = offset;
-            let line = &screen.lines[phys_row];
-            lines.push(line_to_string(line, self.cols));
-        }
+        // Total lines includes scrollback + visible
+        let total_lines = screen.scrollback_rows();
+        let visible_rows = screen.physical_rows;
+        let scrollback_count = total_lines.saturating_sub(visible_rows);
 
-        // Visible screen lines
-        for row in 0..self.rows {
-            let phys_row = scrollback_rows + row;
-            if phys_row < screen.lines.len() {
-                let line = &screen.lines[phys_row];
-                lines.push(line_to_string(line, self.cols));
-            } else {
-                lines.push(String::new());
+        // Iterate over all physical lines using the public API
+        screen.for_each_phys_line(|idx, line| {
+            if idx < scrollback_count + visible_rows {
+                lines_out.push(line_to_string(line, self.cols));
             }
+        });
+
+        // Pad with empty lines if we have fewer than expected
+        while lines_out.len() < scrollback_count + self.rows {
+            lines_out.push(String::new());
         }
 
-        lines.join("\n")
+        lines_out.join("\n")
     }
 
     #[napi]
@@ -171,15 +200,23 @@ impl WeztermTerminal {
         end_col: i32,
     ) -> String {
         let screen = self.term.screen();
-        let scrollback_rows = screen.scrollback_rows();
+        let total_lines = screen.scrollback_rows();
+        let visible_rows = screen.physical_rows;
+        let scrollback_count = total_lines.saturating_sub(visible_rows);
         let mut parts = Vec::new();
 
+        // Collect lines from the screen using for_each_phys_line
+        let mut all_lines: Vec<tattoy_wezterm_term::Line> = Vec::new();
+        screen.for_each_phys_line(|_idx, line| {
+            all_lines.push(line.clone());
+        });
+
         for row in start_row..=end_row {
-            let phys = scrollback_rows as i32 + row;
-            if phys < 0 || phys >= screen.lines.len() as i32 {
+            let phys = scrollback_count as i32 + row;
+            if phys < 0 || phys >= all_lines.len() as i32 {
                 continue;
             }
-            let line = &screen.lines[phys as usize];
+            let line = &all_lines[phys as usize];
             let col_start = if row == start_row {
                 start_col as usize
             } else {
@@ -193,8 +230,7 @@ impl WeztermTerminal {
 
             let mut text = String::new();
             for col in col_start..col_end.min(line.len()) {
-                let cell = line.get_cell(col);
-                if let Some(cell) = cell {
+                if let Some(cell) = line.get_cell(col) {
                     text.push_str(cell.str());
                 }
             }
@@ -207,14 +243,22 @@ impl WeztermTerminal {
     #[napi]
     pub fn get_cell(&self, row: u32, col: u32) -> NapiCell {
         let screen = self.term.screen();
-        let scrollback_rows = screen.scrollback_rows();
-        let phys = scrollback_rows + row as usize;
+        let total_lines = screen.scrollback_rows();
+        let visible_rows = screen.physical_rows;
+        let scrollback_count = total_lines.saturating_sub(visible_rows);
+        let phys = scrollback_count + row as usize;
 
-        if phys >= screen.lines.len() || col as usize >= self.cols {
+        if phys >= total_lines || col as usize >= self.cols {
             return empty_cell();
         }
 
-        let line = &screen.lines[phys];
+        // Use lines_in_phys_range to get the specific line
+        let lines = screen.lines_in_phys_range(phys..phys + 1);
+        if lines.is_empty() {
+            return empty_cell();
+        }
+
+        let line = &lines[0];
         match line.get_cell(col as usize) {
             Some(cell) => convert_cell(cell),
             None => empty_cell(),
@@ -224,14 +268,21 @@ impl WeztermTerminal {
     #[napi]
     pub fn get_line(&self, row: u32) -> Vec<NapiCell> {
         let screen = self.term.screen();
-        let scrollback_rows = screen.scrollback_rows();
-        let phys = scrollback_rows + row as usize;
+        let total_lines = screen.scrollback_rows();
+        let visible_rows = screen.physical_rows;
+        let scrollback_count = total_lines.saturating_sub(visible_rows);
+        let phys = scrollback_count + row as usize;
 
-        if phys >= screen.lines.len() {
+        if phys >= total_lines {
             return (0..self.cols).map(|_| empty_cell()).collect();
         }
 
-        let line = &screen.lines[phys];
+        let lines = screen.lines_in_phys_range(phys..phys + 1);
+        if lines.is_empty() {
+            return (0..self.cols).map(|_| empty_cell()).collect();
+        }
+
+        let line = &lines[0];
         (0..self.cols)
             .map(|col| match line.get_cell(col) {
                 Some(cell) => convert_cell(cell),
@@ -242,12 +293,22 @@ impl WeztermTerminal {
 
     #[napi]
     pub fn get_cursor(&self) -> NapiCursor {
-        let cursor = &self.term.cursor;
+        let cursor = self.term.cursor_pos();
+        let visible = cursor.visibility == CursorVisibility::Visible;
+        let style = match cursor.shape {
+            CursorShape::Default
+            | CursorShape::BlinkingBlock
+            | CursorShape::SteadyBlock => "block",
+            CursorShape::BlinkingUnderline
+            | CursorShape::SteadyUnderline => "underline",
+            CursorShape::BlinkingBar
+            | CursorShape::SteadyBar => "beam",
+        };
         NapiCursor {
             x: cursor.x as u32,
             y: cursor.y as u32,
-            visible: true, // TODO: track DECTCEM state
-            style: "block".to_string(),
+            visible,
+            style: style.to_string(),
         }
     }
 
@@ -260,20 +321,19 @@ impl WeztermTerminal {
     pub fn get_mode(&self, mode: String) -> bool {
         match mode.as_str() {
             "altScreen" => self.term.is_alt_screen_active(),
-            "cursorVisible" => true, // TODO: track DECTCEM
-            "bracketedPaste" => self.term.bracketed_paste,
-            "applicationCursor" => self.term.application_cursor_keys,
-            "applicationKeypad" => self.term.dec_ansi_mode,
-            "autoWrap" => self.term.dec_auto_wrap,
-            "mouseTracking" => {
-                self.term.mouse_tracking
-                    || self.term.button_event_mouse
-                    || self.term.any_event_mouse
+            "cursorVisible" => {
+                self.term.cursor_pos().visibility
+                    == CursorVisibility::Visible
             }
-            "focusTracking" => self.term.focus_tracking,
-            "originMode" => self.term.dec_origin_mode,
-            "insertMode" => self.term.insert,
-            "reverseVideo" => self.term.reverse_video_mode,
+            "bracketedPaste" => self.term.bracketed_paste_enabled(),
+            "applicationCursor" => self.application_cursor_keys,
+            "applicationKeypad" => self.application_keypad,
+            "autoWrap" => self.auto_wrap,
+            "mouseTracking" => self.term.is_mouse_grabbed(),
+            "focusTracking" => self.focus_tracking,
+            "originMode" => self.origin_mode,
+            "insertMode" => self.insert_mode,
+            "reverseVideo" => self.term.get_reverse_video(),
             _ => false,
         }
     }
@@ -288,14 +348,82 @@ impl WeztermTerminal {
         let screen = self.term.screen();
         NapiScrollback {
             viewport_offset: 0, // Headless mode, no viewport scroll state
-            total_lines: (screen.scrollback_rows() + self.rows) as u32,
+            total_lines: screen.scrollback_rows() as u32,
             screen_lines: self.rows as u32,
         }
     }
 
     #[napi]
     pub fn scroll_viewport(&mut self, _delta: i32) {
-        // No-op in headless mode — no viewport scroll position to track
+        // No-op in headless mode -- no viewport scroll position to track
+    }
+
+    /// Scan raw bytes for CSI sequences that control terminal modes
+    /// lacking public getters in wezterm-term. Handles:
+    /// - CSI ? <n> h/l  (DECSET/DECRST for DEC private modes)
+    /// - CSI <n> h/l    (SM/RM for ANSI modes, e.g. insert mode)
+    /// - ESC c           (RIS -- full reset)
+    fn scan_dec_modes(&mut self, data: &[u8]) {
+        let mut i = 0;
+        while i < data.len() {
+            if data[i] == 0x1b && i + 1 < data.len() && data[i + 1] == b'[' {
+                i += 2;
+                let is_private = i < data.len() && data[i] == b'?';
+                if is_private {
+                    i += 1;
+                }
+                // Parse digits
+                let start = i;
+                while i < data.len() && data[i].is_ascii_digit() {
+                    i += 1;
+                }
+                if i > start && i < data.len() {
+                    let code_str = std::str::from_utf8(&data[start..i]).unwrap_or("");
+                    if let Ok(code) = code_str.parse::<u32>() {
+                        let set = data[i] == b'h';
+                        let reset = data[i] == b'l';
+                        if set || reset {
+                            if is_private {
+                                self.apply_dec_mode(code, set);
+                            } else {
+                                self.apply_ansi_mode(code, set);
+                            }
+                        }
+                    }
+                }
+            } else if data[i] == 0x1b && i + 1 < data.len() && data[i + 1] == b'c' {
+                // RIS (full reset) -- restore defaults
+                self.auto_wrap = true;
+                self.application_cursor_keys = false;
+                self.application_keypad = false;
+                self.focus_tracking = false;
+                self.origin_mode = false;
+                self.insert_mode = false;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Apply a DEC private mode set/reset to tracked state.
+    fn apply_dec_mode(&mut self, code: u32, set: bool) {
+        match code {
+            1 => self.application_cursor_keys = set,   // DECCKM
+            6 => self.origin_mode = set,                // DECOM
+            7 => self.auto_wrap = set,                  // DECAWM
+            66 => self.application_keypad = set,        // DECNKM
+            1004 => self.focus_tracking = set,          // Focus tracking
+            _ => {}
+        }
+    }
+
+    /// Apply an ANSI mode set/reset (SM/RM without ? prefix).
+    fn apply_ansi_mode(&mut self, code: u32, set: bool) {
+        match code {
+            4 => self.insert_mode = set, // IRM (Insert/Replace Mode)
+            _ => {}
+        }
     }
 }
 
@@ -341,7 +469,12 @@ fn empty_cell() -> NapiCell {
     }
 }
 
-fn convert_cell(cell: &tattoy_wezterm_term::CellRef) -> NapiCell {
+/// Convert an SrgbaTuple (f32 0.0-1.0 range) to a u8 (0-255 range)
+fn srgba_to_u8(v: f32) -> u8 {
+    (v * 255.0).round().clamp(0.0, 255.0) as u8
+}
+
+fn convert_cell(cell: tattoy_wezterm_term::CellRef) -> NapiCell {
     let attrs = cell.attrs();
     let text = cell.str().to_string();
 
@@ -350,12 +483,13 @@ fn convert_cell(cell: &tattoy_wezterm_term::CellRef) -> NapiCell {
         tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
         tattoy_wezterm_term::color::ColorAttribute::TrueColorWithDefaultFallback(c)
         | tattoy_wezterm_term::color::ColorAttribute::TrueColorWithPaletteFallback(c, _) => {
-            let (r, g, b, _) = c.to_tuple_rgba();
-            (r, g, b, false)
+            let rgba: tattoy_wezterm_term::color::SrgbaTuple = c.into();
+            let (r, g, b, _) = rgba.to_tuple_rgba();
+            (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b), false)
         }
         tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => {
             // Return palette index; TypeScript side maps to RGB
-            (idx, 0, 0, false) // Simplified — full palette mapping in TS
+            (idx, 0, 0, false) // Simplified -- full palette mapping in TS
         }
     };
 
@@ -364,8 +498,9 @@ fn convert_cell(cell: &tattoy_wezterm_term::CellRef) -> NapiCell {
         tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
         tattoy_wezterm_term::color::ColorAttribute::TrueColorWithDefaultFallback(c)
         | tattoy_wezterm_term::color::ColorAttribute::TrueColorWithPaletteFallback(c, _) => {
-            let (r, g, b, _) = c.to_tuple_rgba();
-            (r, g, b, false)
+            let rgba: tattoy_wezterm_term::color::SrgbaTuple = c.into();
+            let (r, g, b, _) = rgba.to_tuple_rgba();
+            (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b), false)
         }
         tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => {
             (idx, 0, 0, false)
