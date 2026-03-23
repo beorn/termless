@@ -92,19 +92,100 @@ export function _resetManifestCache(): void {
 // ═══════════════════════════════════════════════════════
 
 /**
- * Check if a backend package is importable.
- * Uses import.meta.resolve which checks module resolution without loading.
+ * Check if a backend is installed AND usable.
+ *
+ * For backends without requiresBuild: checks if the npm package resolves.
+ * For backends with requiresBuild: also checks if the build artifacts exist
+ * by looking for .node files (native) or .js/.wasm files (wasm builds)
+ * in the package directory.
  */
 export function isBackendInstalled(name: string): boolean {
   const manifest = loadManifest()
   const entry = manifest.backends[name]
   if (!entry) return false
+
   try {
-    import.meta.resolve(entry.package)
-    return true
+    const resolved = import.meta.resolve(entry.package)
+
+    // No build step required — package resolution is sufficient
+    if (!entry.requiresBuild) return true
+
+    // Has build step — check for build artifacts
+    const resolvedPath = fileURLToPath(resolved)
+    const pkgDir = findPackageDir(resolvedPath, entry.package)
+    if (!pkgDir) return false
+
+    return hasBuildArtifacts(pkgDir, entry.type)
   } catch {
     return false
   }
+}
+
+/** Walk up from a resolved path to find the package root. */
+function findPackageDir(resolvedPath: string, packageName: string): string | null {
+  let dir = dirname(resolvedPath)
+  for (let i = 0; i < 10; i++) {
+    const pkgJsonPath = join(dir, "package.json")
+    if (existsSync(pkgJsonPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf-8"))
+        if (pkg.name === packageName) return dir
+      } catch {}
+    }
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+/** Check if a package has build artifacts (generic — no hardcoded names). */
+function hasBuildArtifacts(pkgDir: string, type: string): boolean {
+  if (type === "native") {
+    // Look for any .node file in the package directory (top-level or native/)
+    return globNode(pkgDir)
+  }
+  if (type === "wasm") {
+    // Look for any .wasm file in the package directory
+    return globWasm(pkgDir)
+  }
+  return true
+}
+
+function globNode(dir: string): boolean {
+  try {
+    const { readdirSync } = require("node:fs") as typeof import("node:fs")
+    // Check top-level
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith(".node")) return true
+    }
+    // Check build/ and native/ subdirs
+    for (const sub of ["build", "native"]) {
+      const subDir = join(dir, sub)
+      if (existsSync(subDir)) {
+        for (const f of readdirSync(subDir)) {
+          if (f.endsWith(".node")) return true
+        }
+      }
+    }
+  } catch {}
+  return false
+}
+
+function globWasm(dir: string): boolean {
+  try {
+    const { readdirSync } = require("node:fs") as typeof import("node:fs")
+    // Check wasm/ and build/ subdirs
+    for (const sub of ["wasm", "build"]) {
+      const subDir = join(dir, sub)
+      if (existsSync(subDir)) {
+        for (const f of readdirSync(subDir)) {
+          if (f.endsWith(".wasm") || (f.endsWith(".js") && f.includes("wasm"))) return true
+        }
+      }
+    }
+  } catch {}
+  return false
 }
 
 /**

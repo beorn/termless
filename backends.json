@@ -68,7 +68,8 @@
       "upstreamVersion": "0.3.0",
       "description": "Neovim's VT parser via Emscripten WASM",
       "type": "wasm",
-      "default": false
+      "default": false,
+      "requiresBuild": "Emscripten SDK (bash build/build.sh)"
     },
     "kitty": {
       "package": "@termless/kitty",
