@@ -11,7 +11,8 @@
       "label": "xterm.js",
       "description": "The most widely used web terminal emulator. Powers VS Code's terminal.",
       "url": "https://xtermjs.org",
-      "caveat": "Headless mode doesn't expose cursor visibility or underline variants"
+      "caveat": "Headless mode doesn't expose cursor visibility or underline variants",
+      "slug": "xterm-js"
     },
     "ghostty": {
       "package": "@termless/ghostty",
@@ -21,7 +22,8 @@
       "default": true,
       "label": "Ghostty (WASM)",
       "description": "Mitchell Hashimoto's GPU-accelerated terminal via WASM.",
-      "url": "https://ghostty.org"
+      "url": "https://ghostty.org",
+      "slug": "ghostty-wasm"
     },
     "vt100": {
       "package": "@termless/vt100",
@@ -30,7 +32,8 @@
       "type": "js",
       "default": true,
       "label": "vt100",
-      "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend."
+      "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend.",
+      "slug": "vt100"
     },
     "alacritty": {
       "package": "@termless/alacritty",
@@ -41,7 +44,8 @@
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "Alacritty",
       "description": "Rust-based GPU-accelerated terminal. Strong reflow behavior.",
-      "url": "https://alacritty.org"
+      "url": "https://alacritty.org",
+      "slug": "alacritty"
     },
     "wezterm": {
       "package": "@termless/wezterm",
@@ -52,7 +56,8 @@
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "WezTerm",
       "description": "Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.",
-      "url": "https://wezfurlong.org/wezterm"
+      "url": "https://wezfurlong.org/wezterm",
+      "slug": "wezterm"
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
@@ -60,9 +65,12 @@
       "upstreamVersion": "0.7.0",
       "type": "os",
       "default": false,
-      "platforms": ["darwin"],
+      "platforms": [
+        "darwin"
+      ],
       "label": "Peekaboo",
-      "description": "Tests against a real terminal app via OS accessibility APIs. macOS only."
+      "description": "Tests against a real terminal app via OS accessibility APIs. macOS only.",
+      "slug": "peekaboo"
     },
     "vt100-rust": {
       "package": "@termless/vt100-rust",
@@ -74,7 +82,8 @@
       "label": "vt100-rust",
       "description": "Reference Rust VT100 implementation.",
       "url": "https://crates.io/crates/vt100",
-      "caveat": "Doesn't expose scrollback beyond screen height"
+      "caveat": "Doesn't expose scrollback beyond screen height",
+      "slug": "vt100-rust"
     },
     "libvterm": {
       "package": "@termless/libvterm",
@@ -85,7 +94,8 @@
       "requiresBuild": "Emscripten SDK (bash build/build.sh)",
       "label": "libvterm",
       "description": "Neovim's C VT parser compiled to WASM.",
-      "url": "https://github.com/neovim/libvterm"
+      "url": "https://github.com/neovim/libvterm",
+      "slug": "libvterm"
     },
     "ghostty-native": {
       "package": "@termless/ghostty-native",
@@ -96,7 +106,8 @@
       "requiresBuild": "Zig 0.15.2+ (via nix)",
       "label": "Ghostty",
       "description": "Native Ghostty via Zig N-API bindings. Full API access, no WASM overhead.",
-      "url": "https://ghostty.org"
+      "url": "https://ghostty.org",
+      "slug": "ghostty"
     },
     "kitty": {
       "package": "@termless/kitty",
@@ -107,7 +118,8 @@
       "requiresBuild": "kitty terminal installed (brew install --cask kitty)",
       "label": "Kitty",
       "description": "Kitty's VT parser via Python subprocess bridge. Only backend with Kitty graphics.",
-      "url": "https://sw.kovidgoyal.net/kitty"
+      "url": "https://sw.kovidgoyal.net/kitty",
+      "slug": "kitty"
     }
   }
 }
