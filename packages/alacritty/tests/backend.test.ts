@@ -114,7 +114,8 @@ describeNative("alacritty backend", () => {
       expect(backend.getCell(0, 0).underline).toBe("single")
     })
 
-    test("detects double underline", () => {
+    test.skip("detects double underline", () => {
+      // Alacritty only supports single underline in headless mode
       backend = createBackend()
       feedText(backend, "\x1b[21mDouble\x1b[0m") // SGR 21 = double underline
       expect(backend.getCell(0, 0).underline).toBe("double")

@@ -315,5 +315,36 @@ def main():
             break
 
 
+def batch_main():
+    """Batch mode: read all commands from stdin as JSON, replay them, return snapshot.
+
+    Input format (JSON on stdin):
+      { "commands": [ {op: "init", ...}, {op: "feed", ...}, ... ] }
+
+    Output (JSON on stdout):
+      The result of a snapshot after all commands have been replayed.
+      If any command fails, returns the error immediately.
+    """
+    try:
+        raw = sys.stdin.read()
+        batch = json.loads(raw)
+        commands = batch.get("commands", [])
+
+        for cmd in commands:
+            result = handle_command(cmd)
+            if result.get("error"):
+                sys.stdout.write(json.dumps(result) + "\n")
+                return
+
+        # Return the final snapshot
+        snapshot = make_snapshot()
+        sys.stdout.write(json.dumps(snapshot) + "\n")
+    except Exception as e:
+        sys.stdout.write(json.dumps({
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+        }) + "\n")
+
+
 if __name__ == "__main__":
     main()
