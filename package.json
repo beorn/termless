@@ -64,14 +64,14 @@
     "@termless/peekaboo": "workspace:*",
     "@termless/vt100-rust": "workspace:*",
     "@termless/wezterm": "workspace:*",
-    "@types/bun": "^1.1.0",
-    "@types/node": "^22.0.0",
+    "@types/bun": "^1.3.11",
+    "@types/node": "^22.19.15",
     "loggily": "^0.4.0",
     "silvery": "^0.4.2",
     "typescript": "^5.9.3",
-    "vitepress": "^1.5.0",
-    "vitepress-plugin-llms": "^1.0.0",
-    "vitest": "^4.0.0"
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-llms": "^1.12.0",
+    "vitest": "^4.1.1"
   },
   "peerDependencies": {
     "node-pty": ">=1.0.0"
