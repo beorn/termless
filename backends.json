@@ -94,7 +94,7 @@
       "type": "native",
       "default": false,
       "requiresBuild": "Zig 0.15.2+ (via nix)",
-      "label": "Ghostty Native",
+      "label": "Ghostty",
       "description": "Native Ghostty via Zig N-API bindings. Full API access, no WASM overhead.",
       "url": "https://ghostty.org"
     },
