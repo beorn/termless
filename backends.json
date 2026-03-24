@@ -9,10 +9,17 @@
       "type": "js",
       "default": true,
       "label": "xterm.js",
-      "description": "The most widely used web terminal emulator. Powers VS Code's terminal.",
+      "slug": "xterm-js",
       "url": "https://xtermjs.org",
+      "description": "@xterm/headless — JS-only, no DOM rendering.",
       "caveat": "Headless mode doesn't expose cursor visibility or underline variants",
-      "slug": "xterm-js"
+      "terminal": {
+        "name": "xterm.js",
+        "description": "The most widely used terminal emulator component for web applications. Powers VS Code's integrated terminal, Hyper, and many web-based IDEs. Created by SourceLair, maintained by Microsoft.",
+        "url": "https://xtermjs.org",
+        "repo": "https://github.com/xtermjs/xterm.js",
+        "author": "SourceLair / Microsoft"
+      }
     },
     "ghostty": {
       "package": "@termless/ghostty",
@@ -21,9 +28,16 @@
       "type": "wasm",
       "default": true,
       "label": "Ghostty (WASM)",
-      "description": "Mitchell Hashimoto's GPU-accelerated terminal via WASM.",
+      "slug": "ghostty-wasm",
       "url": "https://ghostty.org",
-      "slug": "ghostty-wasm"
+      "description": "ghostty-web WASM build — runs in any JS runtime.",
+      "terminal": {
+        "name": "Ghostty",
+        "description": "A fast, feature-rich, and cross-platform terminal emulator by Mitchell Hashimoto (co-founder of HashiCorp). Written in Zig, GPU-accelerated via Metal/OpenGL/Vulkan. Known for excellent standards compliance and the Kitty keyboard protocol.",
+        "url": "https://ghostty.org",
+        "repo": "https://github.com/ghostty-org/ghostty",
+        "author": "Mitchell Hashimoto"
+      }
     },
     "vt100": {
       "package": "@termless/vt100",
@@ -32,8 +46,14 @@
       "type": "js",
       "default": true,
       "label": "vt100",
+      "slug": "vt100",
       "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend.",
-      "slug": "vt100"
+      "terminal": {
+        "name": "vt100.js",
+        "description": "A pure TypeScript VT100 terminal emulator with zero dependencies. Built for Termless as the default testing backend — fast, lightweight, and runs anywhere. Not a real terminal application but a standalone emulator library.",
+        "url": "https://www.npmjs.com/package/vt100.js",
+        "repo": "https://github.com/beorn/vt100"
+      }
     },
     "alacritty": {
       "package": "@termless/alacritty",
@@ -43,9 +63,16 @@
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "Alacritty",
-      "description": "Rust-based GPU-accelerated terminal. Strong reflow behavior.",
+      "slug": "alacritty",
       "url": "https://alacritty.org",
-      "slug": "alacritty"
+      "description": "alacritty_terminal Rust crate via napi-rs.",
+      "terminal": {
+        "name": "Alacritty",
+        "description": "A cross-platform, GPU-accelerated terminal emulator focused on simplicity and performance. Written in Rust. One of the first GPU-rendered terminals, known for its speed and minimal resource usage. No tabs or splits by design — pairs with tmux or a tiling window manager.",
+        "url": "https://alacritty.org",
+        "repo": "https://github.com/alacritty/alacritty",
+        "author": "Joe Wilm"
+      }
     },
     "wezterm": {
       "package": "@termless/wezterm",
@@ -55,9 +82,16 @@
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "WezTerm",
-      "description": "Broadest protocol support: sixel graphics, semantic prompts, Kitty keyboard.",
+      "slug": "wezterm",
       "url": "https://wezfurlong.org/wezterm",
-      "slug": "wezterm"
+      "description": "wezterm-term Rust crate via napi-rs.",
+      "terminal": {
+        "name": "WezTerm",
+        "description": "A GPU-accelerated cross-platform terminal emulator and multiplexer by Wez Furlong. Written in Rust. Has the broadest protocol support of any terminal — sixel graphics, semantic prompts, Kitty keyboard protocol, ligatures, and built-in multiplexing. Highly configurable via Lua.",
+        "url": "https://wezfurlong.org/wezterm",
+        "repo": "https://github.com/wez/wezterm",
+        "author": "Wez Furlong"
+      }
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
@@ -65,12 +99,10 @@
       "upstreamVersion": "0.7.0",
       "type": "os",
       "default": false,
-      "platforms": [
-        "darwin"
-      ],
+      "platforms": ["darwin"],
       "label": "Peekaboo",
-      "description": "Tests against a real terminal app via OS accessibility APIs. macOS only.",
-      "slug": "peekaboo"
+      "slug": "peekaboo",
+      "description": "OS-level terminal automation via accessibility APIs. macOS only."
     },
     "vt100-rust": {
       "package": "@termless/vt100-rust",
@@ -80,10 +112,17 @@
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)",
       "label": "vt100-rust",
-      "description": "Reference Rust VT100 implementation.",
+      "slug": "vt100-rust",
       "url": "https://crates.io/crates/vt100",
+      "description": "Rust vt100 crate via napi-rs.",
       "caveat": "Doesn't expose scrollback beyond screen height",
-      "slug": "vt100-rust"
+      "terminal": {
+        "name": "vt100 (Rust)",
+        "description": "A Rust implementation of a VT100 terminal emulator. Used as a reference implementation to cross-validate the TypeScript vt100.js backend. Not a standalone terminal application.",
+        "url": "https://crates.io/crates/vt100",
+        "repo": "https://github.com/doy/vt100-rust",
+        "author": "Jesse Luehrs"
+      }
     },
     "libvterm": {
       "package": "@termless/libvterm",
@@ -93,9 +132,16 @@
       "default": false,
       "requiresBuild": "Emscripten SDK (bash build/build.sh)",
       "label": "libvterm",
-      "description": "Neovim's C VT parser compiled to WASM.",
+      "slug": "libvterm",
       "url": "https://github.com/neovim/libvterm",
-      "slug": "libvterm"
+      "description": "Neovim's C VT parser compiled to WASM via Emscripten.",
+      "terminal": {
+        "name": "libvterm",
+        "description": "A C library for VT terminal emulation, maintained as part of the Neovim project. Originally by Paul Evans for Pangoterm. Used by Neovim's built-in terminal (:terminal). A different C implementation from xterm helps catch parser bugs through diversity.",
+        "url": "https://github.com/neovim/libvterm",
+        "repo": "https://github.com/neovim/libvterm",
+        "author": "Paul Evans / Neovim"
+      }
     },
     "ghostty-native": {
       "package": "@termless/ghostty-native",
@@ -105,9 +151,16 @@
       "default": false,
       "requiresBuild": "Zig 0.15.2+ (via nix)",
       "label": "Ghostty",
-      "description": "Native Ghostty via Zig N-API bindings. Full API access, no WASM overhead.",
+      "slug": "ghostty",
       "url": "https://ghostty.org",
-      "slug": "ghostty"
+      "description": "Native Ghostty via Zig N-API bindings (napigen). Full API access.",
+      "terminal": {
+        "name": "Ghostty",
+        "description": "A fast, feature-rich, and cross-platform terminal emulator by Mitchell Hashimoto (co-founder of HashiCorp). Written in Zig, GPU-accelerated via Metal/OpenGL/Vulkan. Known for excellent standards compliance and the Kitty keyboard protocol.",
+        "url": "https://ghostty.org",
+        "repo": "https://github.com/ghostty-org/ghostty",
+        "author": "Mitchell Hashimoto"
+      }
     },
     "kitty": {
       "package": "@termless/kitty",
@@ -117,9 +170,16 @@
       "default": false,
       "requiresBuild": "kitty terminal installed (brew install --cask kitty)",
       "label": "Kitty",
-      "description": "Kitty's VT parser via Python subprocess bridge. Only backend with Kitty graphics.",
+      "slug": "kitty",
       "url": "https://sw.kovidgoyal.net/kitty",
-      "slug": "kitty"
+      "description": "Kitty's VT parser via Python subprocess bridge (kitty +runpy).",
+      "terminal": {
+        "name": "Kitty",
+        "description": "A fast, feature-rich, GPU-based terminal emulator by Kovid Goyal. Written in C and Python. Pioneer of the Kitty keyboard protocol and Kitty graphics protocol (inline image display). Known for its extensive extension system and kitten plugins. GPL-3.0 licensed.",
+        "url": "https://sw.kovidgoyal.net/kitty",
+        "repo": "https://github.com/kovidgoyal/kitty",
+        "author": "Kovid Goyal"
+      }
     }
   }
 }

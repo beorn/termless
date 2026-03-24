@@ -34,6 +34,13 @@ export interface BackendEntry {
   url?: string
   caveat?: string
   slug?: string
+  terminal?: {
+    name: string
+    description: string
+    url?: string
+    repo?: string
+    author?: string
+  }
 }
 
 export interface Manifest {
@@ -64,6 +71,7 @@ export function manifest(): Manifest {
       url: entry.url,
       caveat: entry.caveat,
       slug: entry.slug,
+      terminal: entry.terminal,
     }
   }
   _manifest = { version: raw.version, backends }
