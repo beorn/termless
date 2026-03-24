@@ -322,7 +322,7 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     version: "1.3.1",
     truecolor: true,
     kittyKeyboard: true,
-    kittyGraphics: false,
+    kittyGraphics: true,
     sixel: false,
     osc8Hyperlinks: true,
     semanticPrompts: true,
