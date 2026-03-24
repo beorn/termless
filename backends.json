@@ -16,6 +16,7 @@
       "terminal": {
         "name": "xterm.js",
         "description": "The most widely used terminal emulator component for web applications. Powers VS Code's integrated terminal, Hyper, and many web-based IDEs. Created by SourceLair, maintained by Microsoft.",
+        "body": "xterm.js is the dominant terminal emulator component for the web, powering VS Code's integrated terminal, Hyper, and dozens of web-based IDEs and cloud shells. Created by SourceLair and now maintained by Microsoft, it provides a full-featured terminal frontend that runs entirely in the browser or as a headless library for server-side use.\n\nThe project consists of a core terminal engine with a modular addon system for features like WebGL rendering, search, image support (sixel/iip), Unicode handling, and ligatures. The @xterm/headless package strips out all DOM dependencies, making it suitable for server-side terminal emulation and automated testing — this is the package Termless uses as a backend.\n\nxterm.js follows the xterm control sequence specification closely, with broad support for SGR attributes, cursor control, alternate screen, mouse tracking, and bracketed paste. Its widespread adoption in VS Code means it receives continuous testing against real-world terminal applications, making it one of the most battle-tested terminal implementations available.",
         "url": "https://xtermjs.org",
         "repo": "https://github.com/xtermjs/xterm.js",
         "author": "SourceLair / Microsoft"
@@ -34,6 +35,7 @@
       "terminal": {
         "name": "Ghostty",
         "description": "A fast, feature-rich, and cross-platform terminal emulator by Mitchell Hashimoto (co-founder of HashiCorp). Written in Zig, GPU-accelerated via Metal/OpenGL/Vulkan. Known for excellent standards compliance and the Kitty keyboard protocol.",
+        "body": "Ghostty is a terminal emulator built from scratch in Zig by Mitchell Hashimoto, co-founder of HashiCorp (Vagrant, Terraform, Vault). It uses GPU-accelerated rendering via platform-native APIs — Metal on macOS, OpenGL/Vulkan on Linux — achieving consistent frame rates even with heavy terminal output.\n\nWhat sets Ghostty apart is its focus on standards compliance. The terminal parser is meticulously implemented against the VT specification, and the project maintains an extensive conformance test suite. Ghostty supports the Kitty keyboard protocol, Kitty graphics protocol, sixel graphics, OSC 8 hyperlinks, and semantic prompt markers. It was open-sourced under the MIT license after an extended private beta period.\n\nGhostty also provides a standalone terminal emulation library (libghostty) that can be embedded in other applications. The ghostty-web WASM build compiles this library for use in any JavaScript runtime, which is what Termless uses as a backend — giving test suites access to the same parser that powers the full Ghostty application.",
         "url": "https://ghostty.org",
         "repo": "https://github.com/ghostty-org/ghostty",
         "author": "Mitchell Hashimoto"
@@ -51,6 +53,7 @@
       "terminal": {
         "name": "vt100.js",
         "description": "A pure TypeScript VT100 terminal emulator with zero dependencies. Built for Termless as the default testing backend — fast, lightweight, and runs anywhere. Not a real terminal application but a standalone emulator library.",
+        "body": "vt100.js is a pure TypeScript terminal emulator with zero runtime dependencies. It implements the VT100/VT220/xterm control sequence specification entirely in TypeScript, making it the fastest Termless backend since there is no WASM initialization, native binding overhead, or cross-language marshalling.\n\nUnlike the other backends, vt100.js is not derived from a standalone terminal application — it was built specifically for programmatic terminal emulation and testing. This makes it ideal as the default backend for Termless test suites: it starts instantly, runs on any JavaScript runtime (Bun, Node.js, Deno, browsers), and produces deterministic results with no platform-specific behavior.\n\nvt100.js covers SGR attributes (including truecolor), cursor control, alternate screen, scrollback, mouse tracking, bracketed paste, and Unicode width handling. It serves as one leg of a cross-validation triangle with the Rust vt100 crate and xterm.js — discrepancies between backends surface parser bugs in any implementation.",
         "url": "https://www.npmjs.com/package/vt100.js",
         "repo": "https://github.com/beorn/vt100"
       }
@@ -69,6 +72,7 @@
       "terminal": {
         "name": "Alacritty",
         "description": "A cross-platform, GPU-accelerated terminal emulator focused on simplicity and performance. Written in Rust. One of the first GPU-rendered terminals, known for its speed and minimal resource usage. No tabs or splits by design — pairs with tmux or a tiling window manager.",
+        "body": "Alacritty is a cross-platform terminal emulator written in Rust, created by Joe Wilm. It was one of the first terminals to use GPU-accelerated rendering via OpenGL, achieving significantly lower latency and higher throughput than traditional CPU-rendered terminals. The project demonstrated that terminal emulators could benefit from the same GPU techniques used in games and browsers.\n\nAlacritty takes a deliberately minimalist approach: no tabs, no splits, no built-in multiplexing. The philosophy is that a terminal emulator should do one thing well — render terminal output fast — and leave multiplexing to purpose-built tools like tmux, Zellij, or a tiling window manager. Configuration is done via a TOML file with hot-reloading.\n\nThe Termless backend uses the alacritty_terminal crate, which is the terminal emulation engine extracted from the Alacritty application. This crate handles VT parsing, grid management, and scrollback independently of the GUI — making it suitable for headless use via napi-rs bindings.",
         "url": "https://alacritty.org",
         "repo": "https://github.com/alacritty/alacritty",
         "author": "Joe Wilm"
@@ -88,6 +92,7 @@
       "terminal": {
         "name": "WezTerm",
         "description": "A GPU-accelerated cross-platform terminal emulator and multiplexer by Wez Furlong. Written in Rust. Has the broadest protocol support of any terminal — sixel graphics, semantic prompts, Kitty keyboard protocol, ligatures, and built-in multiplexing. Highly configurable via Lua.",
+        "body": "WezTerm is a GPU-accelerated terminal emulator and multiplexer written in Rust by Wez Furlong. It combines the functionality of a terminal emulator with built-in multiplexing (tabs, panes, workspaces), eliminating the need for tmux in many workflows. Configuration is done entirely in Lua, giving users a full programming language for keybindings, appearance, and behavior.\n\nWezTerm has the broadest protocol support of any terminal emulator. It implements sixel and iTerm2 inline image protocols, the Kitty keyboard protocol, Kitty graphics protocol, OSC 8 hyperlinks, semantic prompt markers (OSC 133), and text reflow on resize. It also supports ligatures, truecolor, and font fallback chains. This comprehensive coverage makes it a valuable reference implementation for terminal feature testing.\n\nThe Termless backend uses the wezterm-term crate (via a community fork, tattoy-wezterm-term), which contains WezTerm's terminal emulation engine independent of its GUI. The crate handles VT parsing, grid state, scrollback, and all protocol support — exposed to JavaScript via napi-rs bindings for headless testing.",
         "url": "https://wezfurlong.org/wezterm",
         "repo": "https://github.com/wez/wezterm",
         "author": "Wez Furlong"
@@ -119,6 +124,7 @@
       "terminal": {
         "name": "vt100 (Rust)",
         "description": "A Rust implementation of a VT100 terminal emulator. Used as a reference implementation to cross-validate the TypeScript vt100.js backend. Not a standalone terminal application.",
+        "body": "The vt100 Rust crate is a terminal emulator library by Jesse Luehrs (doy). It provides a complete VT100/xterm parser and terminal state machine in pure Rust, designed for programmatic use rather than as a standalone terminal application. It is used by several Rust TUI testing frameworks and terminal recording tools.\n\nThe crate implements SGR attributes, cursor control, alternate screen, scrollback, and various DEC private modes. Its parser is based on the VT500-series specification and handles the full range of C0/C1 control codes, CSI sequences, OSC sequences, and DCS sequences. The implementation prioritizes correctness and has an extensive test suite.\n\nIn Termless, the vt100 Rust crate serves as a cross-validation reference alongside vt100.js and xterm.js. Running the same escape sequences through three independent implementations — one in TypeScript, one in Rust, and one in C++ — reveals parser bugs that would be invisible when testing against a single backend. The crate is exposed to JavaScript via napi-rs bindings.",
         "url": "https://crates.io/crates/vt100",
         "repo": "https://github.com/doy/vt100-rust",
         "author": "Jesse Luehrs"
@@ -138,6 +144,7 @@
       "terminal": {
         "name": "libvterm",
         "description": "A C library for VT terminal emulation, maintained as part of the Neovim project. Originally by Paul Evans for Pangoterm. Used by Neovim's built-in terminal (:terminal). A different C implementation from xterm helps catch parser bugs through diversity.",
+        "body": "libvterm is a C library for VT terminal emulation, originally written by Paul Evans for his Pangoterm terminal emulator. It is now maintained as part of the Neovim project, where it powers the built-in :terminal feature. The library provides a clean C API for parsing terminal escape sequences and maintaining terminal grid state.\n\nlibvterm implements a state machine parser that handles CSI, OSC, DCS, and APC sequences, along with full SGR attribute support, cursor control, scrollback regions, and DEC private modes. Its design separates the parser (byte stream to events) from the screen (events to grid state), making it possible to use just the parser for applications that manage their own grid.\n\nAs a Termless backend, libvterm is compiled to WebAssembly via Emscripten, allowing it to run in any JavaScript runtime. Having a C-based parser alongside TypeScript (vt100.js), Rust (vt100 crate), and C++ (xterm.js) implementations provides valuable diversity — each implementation was written independently against the VT specification, so disagreements between them reliably surface bugs.",
         "url": "https://github.com/neovim/libvterm",
         "repo": "https://github.com/neovim/libvterm",
         "author": "Paul Evans / Neovim"
@@ -157,6 +164,7 @@
       "terminal": {
         "name": "Ghostty",
         "description": "A fast, feature-rich, and cross-platform terminal emulator by Mitchell Hashimoto (co-founder of HashiCorp). Written in Zig, GPU-accelerated via Metal/OpenGL/Vulkan. Known for excellent standards compliance and the Kitty keyboard protocol.",
+        "body": "Ghostty is a terminal emulator built from scratch in Zig by Mitchell Hashimoto, co-founder of HashiCorp (Vagrant, Terraform, Vault). It uses GPU-accelerated rendering via platform-native APIs — Metal on macOS, OpenGL/Vulkan on Linux — achieving consistent frame rates even with heavy terminal output.\n\nWhat sets Ghostty apart is its focus on standards compliance. The terminal parser is meticulously implemented against the VT specification, and the project maintains an extensive conformance test suite. Ghostty supports the Kitty keyboard protocol, Kitty graphics protocol, sixel graphics, OSC 8 hyperlinks, and semantic prompt markers. It was open-sourced under the MIT license after an extended private beta period.\n\nGhostty also provides a standalone terminal emulation library (libghostty) that can be embedded in other applications. The ghostty-web WASM build compiles this library for use in any JavaScript runtime, which is what Termless uses as a backend — giving test suites access to the same parser that powers the full Ghostty application.",
         "url": "https://ghostty.org",
         "repo": "https://github.com/ghostty-org/ghostty",
         "author": "Mitchell Hashimoto"
@@ -176,6 +184,7 @@
       "terminal": {
         "name": "Kitty",
         "description": "A fast, feature-rich, GPU-based terminal emulator by Kovid Goyal. Written in C and Python. Pioneer of the Kitty keyboard protocol and Kitty graphics protocol (inline image display). Known for its extensive extension system and kitten plugins. GPL-3.0 licensed.",
+        "body": "Kitty is a GPU-accelerated terminal emulator created by Kovid Goyal (also the creator of Calibre, the e-book manager). Written in C for performance-critical rendering and Python for configuration and extensions, Kitty uses OpenGL for GPU-rendered text with features like ligature support, emoji rendering, and Unicode 15+ compliance.\n\nKitty is the originator of two widely-adopted terminal protocols. The Kitty keyboard protocol provides unambiguous key reporting that distinguishes key-down from key-up, reports modifier combinations precisely, and handles keys that traditional terminals cannot represent. The Kitty graphics protocol enables inline image display in the terminal using a chunked transfer mechanism. Both protocols have been adopted by Ghostty, WezTerm, foot, and other modern terminals.\n\nThe terminal is extended through \"kittens\" — small Python programs that run inside Kitty and have access to its API. Built-in kittens include diff (side-by-side file diffs), icat (image display), SSH (with automatic shell integration), and unicode_input. Kitty is licensed under GPL-3.0. The Termless backend uses Kitty's VT parser extracted from the C source and accessed via a Python subprocess bridge.",
         "url": "https://sw.kovidgoyal.net/kitty",
         "repo": "https://github.com/kovidgoyal/kitty",
         "author": "Kovid Goyal"

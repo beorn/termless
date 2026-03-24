@@ -37,6 +37,7 @@ export interface BackendEntry {
   terminal?: {
     name: string
     description: string
+    body?: string
     url?: string
     repo?: string
     author?: string
