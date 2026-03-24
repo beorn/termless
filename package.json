@@ -55,7 +55,7 @@
     "publish:all": "bun run publish:core && bun run publish:packages",
     "prepublishOnly": "bun run build",
     "publish:core": "npm publish",
-    "publish:packages": "for pkg in packages/core packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
+    "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust; do (cd $pkg && npm publish); done"
   },
   "devDependencies": {
     "@termless/alacritty": "workspace:*",
