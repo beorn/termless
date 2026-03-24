@@ -25,8 +25,8 @@ import type {
   RGB,
 } from "../../../src/types.ts"
 import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
-import { execFileSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { execFileSync, spawn, type ChildProcess } from "node:child_process"
+import { existsSync, readSync, writeSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -120,42 +120,106 @@ const __kittyDir = dirname(dirname(fileURLToPath(import.meta.url)))
 const BRIDGE_SCRIPT = join(__kittyDir, "build", "bridge.py")
 
 /**
- * Execute a batch of commands against the kitty bridge in a single
- * subprocess invocation. Returns the array of responses (one per command).
+ * Persistent kitty bridge process. Spawned once, kept alive across queries.
+ * Commands are sent via stdin; responses read synchronously from stdout fd.
  */
-function executeBatch(commands: BridgeCommand[]): unknown[] {
-  const kitty = findKitty()
-  const input = commands.map((c) => JSON.stringify(c)).join("\n") + "\n"
+interface BridgeProcess {
+  child: ChildProcess
+  /** File descriptor for reading stdout synchronously */
+  stdoutFd: number
+  /** Leftover bytes from previous reads (partial line buffering) */
+  readBuffer: string
+}
 
-  const result = execFileSync(
+function spawnBridge(): BridgeProcess {
+  const kitty = findKitty()
+  const child = spawn(
     kitty,
     [
       "+runpy",
       `import sys; sys.path.insert(0, ${JSON.stringify(dirname(BRIDGE_SCRIPT))}); import bridge; bridge.main()`,
     ],
     {
-      input,
-      encoding: "utf-8",
-      timeout: 30000,
-      maxBuffer: 64 * 1024 * 1024, // 64MB
+      stdio: ["pipe", "pipe", "pipe"],
     },
   )
 
-  // Parse responses (first line is {ready:true}, then one per command)
-  const lines = result.trim().split("\n")
-  const responses: unknown[] = []
-  for (const line of lines) {
-    if (!line.trim()) continue
-    try {
-      const parsed = JSON.parse(line)
-      if (parsed.ready) continue // skip ready signal
-      responses.push(parsed)
-    } catch {
-      // skip unparseable lines
-    }
-  }
+  // Get the raw fd for synchronous reads.
+  // child.stdout is a Readable stream wrapping an fd — we need the raw fd.
+  const stdoutFd = (child.stdout as unknown as { fd: number }).fd
 
-  return responses
+  // Pause the stream so Node.js doesn't consume data via the event loop
+  child.stdout!.pause()
+
+  return { child, stdoutFd, readBuffer: "" }
+}
+
+/**
+ * Read a complete line (newline-terminated) from the bridge's stdout fd.
+ * Blocks synchronously until a full line is available.
+ */
+function readLine(bridge: BridgeProcess): string {
+  const buf = Buffer.alloc(65536)
+
+  while (true) {
+    // Check if we already have a complete line in the buffer
+    const nlIndex = bridge.readBuffer.indexOf("\n")
+    if (nlIndex !== -1) {
+      const line = bridge.readBuffer.slice(0, nlIndex)
+      bridge.readBuffer = bridge.readBuffer.slice(nlIndex + 1)
+      return line
+    }
+
+    // Read more data from the fd (blocks until data available)
+    const bytesRead = readSync(bridge.stdoutFd, buf)
+    if (bytesRead === 0) {
+      throw new Error("Kitty bridge process closed stdout unexpectedly")
+    }
+    bridge.readBuffer += buf.toString("utf-8", 0, bytesRead)
+  }
+}
+
+/**
+ * Send a single command to the bridge and wait for its response.
+ */
+function sendCommand(bridge: BridgeProcess, cmd: BridgeCommand, _timeoutMs = 30000): unknown {
+  const data = JSON.stringify(cmd) + "\n"
+  const stdinFd = (bridge.child.stdin as unknown as { fd: number }).fd
+  writeSync(stdinFd, data)
+  const line = readLine(bridge)
+  try {
+    return JSON.parse(line)
+  } catch {
+    throw new Error(`Kitty bridge returned unparseable response: ${line}`)
+  }
+}
+
+/**
+ * Wait for the bridge's ready signal.
+ */
+function waitForReady(bridge: BridgeProcess): void {
+  const line = readLine(bridge)
+  try {
+    const parsed = JSON.parse(line)
+    if (!parsed.ready) {
+      throw new Error(`Expected ready signal, got: ${line}`)
+    }
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      throw new Error(`Kitty bridge ready signal unparseable: ${line}`)
+    }
+    throw e
+  }
+}
+
+function killBridge(bridge: BridgeProcess | null): void {
+  if (!bridge) return
+  try {
+    bridge.child.stdin?.end()
+    bridge.child.kill()
+  } catch {
+    // already dead
+  }
 }
 
 // ===============================================================
@@ -225,13 +289,12 @@ export function isKittyAvailable(): boolean {
 /**
  * Create a kitty backend for termless.
  *
- * Uses kitty's VT parser via a Python subprocess bridge. Each mutation
- * (feed, resize, reset) replays the full command history in a fresh kitty
- * subprocess and caches the resulting terminal snapshot. Queries (getCell,
- * getCursor, etc.) are served from the cached snapshot.
+ * Uses kitty's VT parser via a persistent Python subprocess bridge. The bridge
+ * process is spawned once in init() and kept alive across all mutations and
+ * queries, communicating via stdin/stdout JSON-RPC. This avoids replaying the
+ * full command history in a fresh subprocess on every query.
  *
  * This ensures exact kitty behavior without requiring native module compilation.
- * The tradeoff is ~15ms per mutation call (subprocess overhead).
  *
  * @param opts - Optional terminal dimensions for eager initialization
  */
@@ -241,10 +304,10 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   let scrollbackLimit = 1000
   let initialized = false
 
-  // Command log — replayed in each subprocess invocation
-  const commandLog: BridgeCommand[] = []
+  // Persistent bridge process — spawned once, kept alive across queries
+  let bridge: BridgeProcess | null = null
 
-  // Cached snapshot from last replay
+  // Cached snapshot from last query
   let snapshot: BridgeSnapshot | null = null
 
   function ensureInit(): void {
@@ -255,46 +318,56 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     snapshot = null
   }
 
+  /**
+   * Send a mutation command to the persistent bridge process.
+   * The command is applied immediately — no replay needed.
+   */
+  function sendMutation(cmd: BridgeCommand): void {
+    if (!bridge) throw new Error("kitty bridge process not running")
+    const response = sendCommand(bridge, cmd) as { ok?: boolean; error?: string; traceback?: string }
+    if (response.error) {
+      throw new Error(`Kitty bridge error: ${response.error}\n${response.traceback ?? ""}`)
+    }
+  }
+
   function ensureSnapshot(): BridgeSnapshot {
     ensureInit()
     if (snapshot) return snapshot
 
-    // Replay entire command history
-    const commands: BridgeCommand[] = [
-      { op: "init", cols, rows, scrollbackLimit },
-      ...commandLog,
-      { op: "snapshot" },
-      { op: "quit" },
-    ]
+    if (!bridge) throw new Error("kitty bridge process not running")
 
-    const responses = executeBatch(commands)
-
-    // Find the snapshot response (has cells array)
-    const snapshotResponse = responses.find(
-      (r): r is BridgeSnapshot => r != null && typeof r === "object" && "cells" in (r as object),
-    )
-    if (!snapshotResponse) {
-      // Check for errors in any response
-      const errorResponse = responses.find((r) => r != null && typeof r === "object" && "error" in (r as object)) as
-        | { error: string; traceback?: string }
-        | undefined
-      if (errorResponse) {
-        throw new Error(`Kitty bridge error: ${errorResponse.error}\n${errorResponse.traceback ?? ""}`)
-      }
+    const response = sendCommand(bridge, { op: "snapshot" }) as BridgeSnapshot & {
+      error?: string
+      traceback?: string
+    }
+    if (response.error) {
+      throw new Error(`Kitty bridge error: ${response.error}\n${response.traceback ?? ""}`)
+    }
+    if (!("cells" in response)) {
       throw new Error("Kitty bridge returned no snapshot")
     }
 
-    snapshot = snapshotResponse
+    snapshot = response
     return snapshot
   }
 
   function init(options: TerminalOptions): void {
+    // Kill any existing bridge process
+    killBridge(bridge)
+    bridge = null
+
     cols = options.cols
     rows = options.rows
     scrollbackLimit = options.scrollbackLimit ?? 1000
+
+    // Spawn persistent bridge process
+    bridge = spawnBridge()
+    waitForReady(bridge)
+
+    // Initialize the terminal in the bridge
+    sendMutation({ op: "init", cols, rows, scrollbackLimit })
     initialized = true
-    commandLog.length = 0
-    invalidateSnapshot()
+    snapshot = null
   }
 
   // Eagerly init if opts provided
@@ -307,14 +380,22 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   }
 
   function destroy(): void {
+    if (bridge) {
+      try {
+        sendCommand(bridge, { op: "quit" }, 5000)
+      } catch {
+        // process may already be dead
+      }
+      killBridge(bridge)
+      bridge = null
+    }
     initialized = false
-    commandLog.length = 0
     snapshot = null
   }
 
   function feed(data: Uint8Array): void {
     ensureInit()
-    commandLog.push({ op: "feed", data: Buffer.from(data).toString("base64") })
+    sendMutation({ op: "feed", data: Buffer.from(data).toString("base64") })
     invalidateSnapshot()
   }
 
@@ -322,16 +403,13 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     ensureInit()
     cols = newCols
     rows = newRows
-    commandLog.push({ op: "resize", cols: newCols, rows: newRows })
+    sendMutation({ op: "resize", cols: newCols, rows: newRows })
     invalidateSnapshot()
   }
 
   function reset(): void {
     ensureInit()
-    // Reset clears all terminal state, so we can discard the command log
-    // and start fresh — no need to replay everything before the reset
-    commandLog.length = 0
-    commandLog.push({ op: "reset" })
+    sendMutation({ op: "reset" })
     invalidateSnapshot()
   }
 
@@ -410,7 +488,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function scrollViewport(delta: number): void {
     ensureInit()
-    commandLog.push({ op: "scroll", delta })
+    sendMutation({ op: "scroll", delta })
     invalidateSnapshot()
   }
 

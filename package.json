@@ -30,38 +30,20 @@
     "packages/*"
   ],
   "files": [
-    "dist",
-    "backends.json",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
+    "src",
+    "backends.json"
   ],
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./registry": {
-      "types": "./dist/backends-advanced.d.ts",
-      "default": "./dist/backends-advanced.js"
-    },
-    "./svg": {
-      "types": "./dist/svg.d.ts",
-      "default": "./dist/svg.js"
-    },
-    "./png": {
-      "types": "./dist/png.d.ts",
-      "default": "./dist/png.js"
-    }
+    ".": "./src/index.ts",
+    "./registry": "./src/backends-advanced.ts",
+    "./svg": "./src/svg.ts",
+    "./png": "./src/png.ts"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ci": "bun vitest run",
@@ -104,6 +86,6 @@
   },
   "engines": {
     "bun": ">=1.0.0",
-    "node": ">=18"
+    "node": ">=23.6.0"
   }
 }
