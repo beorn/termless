@@ -30,24 +30,38 @@
     "packages/*"
   ],
   "files": [
-    "src",
+    "dist",
     "backends.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "type": "module",
-  "module": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./registry": "./src/backends-advanced.ts",
-    "./svg": "./src/svg.ts",
-    "./png": "./src/png.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./registry": {
+      "types": "./dist/backends-advanced.d.ts",
+      "default": "./dist/backends-advanced.js"
+    },
+    "./svg": {
+      "types": "./dist/svg.d.ts",
+      "default": "./dist/svg.js"
+    },
+    "./png": {
+      "types": "./dist/png.d.ts",
+      "default": "./dist/png.js"
+    }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ci": "bun vitest run",
@@ -57,6 +71,7 @@
     "docs:preview": "vitepress preview docs",
     "cli": "bun packages/cli/src/cli.ts",
     "publish:all": "bun run publish:core && bun run publish:packages",
+    "prepublishOnly": "bun run build",
     "publish:core": "npm publish",
     "publish:packages": "for pkg in packages/core packages/xtermjs packages/ghostty packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm; do (cd $pkg && npm publish); done"
   },
