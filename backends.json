@@ -44,7 +44,7 @@
     "vt100": {
       "package": "@termless/vt100",
       "upstream": "npm:vt100.js",
-      "upstreamVersion": "0.1.0",
+      "upstreamVersion": "0.2.1",
       "type": "js",
       "default": true,
       "label": "vt100",
@@ -55,7 +55,24 @@
         "description": "A pure TypeScript VT100 terminal emulator with zero dependencies. Built for Termless as the default testing backend — fast, lightweight, and runs anywhere. Not a real terminal application but a standalone emulator library.",
         "body": "vt100.js is a pure TypeScript terminal emulator with zero runtime dependencies. It implements the VT100/VT220/xterm control sequence specification entirely in TypeScript, making it the fastest Termless backend since there is no WASM initialization, native binding overhead, or cross-language marshalling.\n\nUnlike the other backends, vt100.js is not derived from a standalone terminal application — it was built specifically for programmatic terminal emulation and testing. This makes it ideal as the default backend for Termless test suites: it starts instantly, runs on any JavaScript runtime (Bun, Node.js, Deno, browsers), and produces deterministic results with no platform-specific behavior.\n\nvt100.js covers SGR attributes (including truecolor), cursor control, alternate screen, scrollback, mouse tracking, bracketed paste, and Unicode width handling. It serves as one leg of a cross-validation triangle with the Rust vt100 crate and xterm.js — discrepancies between backends surface parser bugs in any implementation.",
         "url": "https://www.npmjs.com/package/vt100.js",
-        "repo": "https://github.com/beorn/vt100"
+        "repo": "https://github.com/beorn/vterm"
+      }
+    },
+    "vterm": {
+      "package": "@termless/vterm",
+      "upstream": "npm:vterm.js",
+      "upstreamVersion": "0.1.0",
+      "type": "js",
+      "default": false,
+      "label": "vterm",
+      "slug": "vterm",
+      "description": "Full-featured TypeScript terminal emulator with complete VT standards coverage.",
+      "terminal": {
+        "name": "vterm.js",
+        "description": "A full-featured TypeScript terminal emulator targeting 100% coverage of the terminfo.dev feature matrix. Built for Termless as the comprehensive testing backend — supports every SGR attribute, cursor shape, DEC private mode, OSC/DCS sequence, device attribute responses, and Unicode rendering.",
+        "body": "vterm.js is a comprehensive terminal emulator library targeting 100% coverage of the terminfo.dev feature matrix. It implements every SGR attribute (including blink, overline, underline color), all cursor shapes (DECSCUSR), every DEC private mode, OSC 8 hyperlinks, device attribute responses (DA1/DA2/DSR/DECRPM), DEC Special Graphics character sets, synchronized output, and full Unicode width handling.\n\nUnlike vt100.js (which covers ~90% of real-world terminal usage), vterm.js aims for complete VT/ECMA-48/xterm standards coverage. It's designed as a reference implementation for testing terminal applications against the full specification, making it valuable for cross-validation alongside vt100.js and other backends.\n\nvterm.js is pure TypeScript with zero dependencies, runs on any JavaScript runtime (Bun, Node.js, Deno, browsers), and provides an onResponse callback for DA1/DA2/DSR queries — enabling bidirectional terminal communication testing.",
+        "url": "https://www.npmjs.com/package/vterm.js",
+        "repo": "https://github.com/beorn/vterm"
       }
     },
     "alacritty": {

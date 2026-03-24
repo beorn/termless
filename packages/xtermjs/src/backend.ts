@@ -187,7 +187,50 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return parts.join("\n")
   }
 
-  function convertCell(bufCell: import("@xterm/headless").IBufferCell | undefined): Cell {
+  // Map xterm.js internal underlineStyle enum to our string values
+  const UNDERLINE_STYLES: Record<number, Cell["underline"]> = {
+    1: "single",
+    2: "double",
+    3: "curly",
+    4: "dotted",
+    5: "dashed",
+  }
+
+  /**
+   * Read extended attributes from xterm.js internal line data.
+   * The public IBufferCell API only exposes isUnderline (boolean),
+   * but the internal _extendedAttrs stores the actual underline style and color.
+   */
+  function getExtendedAttrs(row: number, col: number): { underlineStyle?: number; underlineColor?: RGB | null } {
+    const t = ensureTerm()
+    try {
+      const internalLine = (t as any)._core.buffer.lines.get(row + t.buffer.active.baseY)
+      if (!internalLine?._extendedAttrs) return {}
+      const ext = internalLine._extendedAttrs[col]
+      if (!ext) return {}
+
+      const style = ext.underlineStyle as number | undefined
+      let color: RGB | null = null
+      // Use the underlineColor getter which returns the raw 0xRRGGBB value
+      const rawColor = ext.underlineColor as number | undefined
+      if (rawColor && rawColor !== 0) {
+        color = {
+          r: (rawColor >> 16) & 0xff,
+          g: (rawColor >> 8) & 0xff,
+          b: rawColor & 0xff,
+        }
+      }
+      return { underlineStyle: style, underlineColor: color ?? undefined }
+    } catch {
+      return {}
+    }
+  }
+
+  // Note: cursor visibility (DECTCEM) and reverse video (DECSCNM) are handled
+  // by the renderer in xterm.js and are not stored in headless mode.
+  // These remain as genuine headless limitations.
+
+  function convertCell(bufCell: import("@xterm/headless").IBufferCell | undefined, row?: number, col?: number): Cell {
     if (!bufCell) {
       return {
         char: "",
@@ -224,6 +267,17 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       bg = paletteToRgb(bufCell.getBgColor())
     }
 
+    // Read extended attributes for accurate underline style
+    let underline: Cell["underline"] = false
+    let underlineColor: RGB | null = null
+    if (bufCell.isUnderline() !== 0 && row !== undefined && col !== undefined) {
+      const ext = getExtendedAttrs(row, col)
+      underline = (ext.underlineStyle ? UNDERLINE_STYLES[ext.underlineStyle] : "single") ?? "single"
+      underlineColor = ext.underlineColor ?? null
+    } else if (bufCell.isUnderline() !== 0) {
+      underline = "single"
+    }
+
     return {
       char: bufCell.getChars(),
       fg,
@@ -231,8 +285,8 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       bold: bufCell.isBold() !== 0,
       dim: bufCell.isDim() !== 0,
       italic: bufCell.isItalic() !== 0,
-      underline: bufCell.isUnderline() !== 0 ? "single" : false,
-      underlineColor: null,
+      underline,
+      underlineColor,
       strikethrough: bufCell.isStrikethrough() !== 0,
       inverse: bufCell.isInverse() !== 0,
       blink: bufCell.isBlink() !== 0,
@@ -265,15 +319,16 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
         hyperlink: null,
       }
     }
-    return convertCell(line.getCell(col))
+    return convertCell(line.getCell(col), row, col)
   }
 
   function getLine(row: number): Cell[] {
     const t = ensureTerm()
     const cols = t.cols
     const cells: Cell[] = []
+    const line = t.buffer.active.getLine(row)
     for (let col = 0; col < cols; col++) {
-      cells.push(getCell(row, col))
+      cells.push(line ? convertCell(line.getCell(col), row, col) : getCell(row, col))
     }
     return cells
   }
@@ -293,7 +348,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return {
       x: t.buffer.active.cursorX,
       y: t.buffer.active.cursorY,
-      visible: true, // headless xterm doesn't easily expose DECTCEM state
+      visible: true, // DECTCEM not available in headless mode
       style: "block", // default — headless doesn't expose cursor style
     }
   }

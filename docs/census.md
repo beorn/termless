@@ -2,46 +2,30 @@
 
 <div style="text-align: center; padding: 2em 0;">
   <h2 style="font-size: 1.8em; margin-bottom: 0.5em;">
-    <a href="https://terminfo.dev" style="text-decoration: none;">Terminfo.dev →</a>
+    <a href="https://terminfo.dev" style="text-decoration: none;">Terminfo.dev &rarr;</a>
   </h2>
   <p style="font-size: 1.1em; color: var(--vp-c-text-2);">
     Can your terminal do that?<br/>
-    Feature support tables for terminal emulators.
+    Interactive feature support matrix for terminal emulators.
   </p>
 </div>
 
-**[Terminfo.dev](https://terminfo.dev)** is a "caniuse.com for terminals" — an interactive matrix showing which terminal features are supported by each backend, powered by automated Termless census probes.
+## What Is the Census?
 
-## What It Tests
+The terminal census is an automated test suite that probes headless terminal backends for feature support — SGR styling, cursor movement, modes, scrollback, text handling, erase operations, and protocol extensions. Each probe writes escape sequences and inspects the resulting terminal state to determine whether a feature works correctly.
 
-61+ features across 10 backends:
+Census probes and their results are maintained in the **[terminfo.dev](https://github.com/beorn/terminfo.dev)** repository. Visit **[terminfo.dev](https://terminfo.dev)** for the full interactive matrix with hover tooltips, category filters, and backend comparison.
 
-- **SGR styling** — bold, italic, underline (5 variants), colors (256 + truecolor), strikethrough, blink
-- **Cursor** — absolute/relative movement, save/restore, visibility, home
-- **Modes** — alternate screen, bracketed paste, mouse tracking, focus tracking, auto-wrap
-- **Text** — wrapping, wide characters (CJK, emoji), tabs, overwrite
-- **Scrollback** — accumulation, scroll regions, reverse index
-- **Erase** — line erase (left/right/all), screen erase (below/all)
-- **Extensions** — Kitty keyboard/graphics, sixel, OSC 8 hyperlinks, OSC 2 title, semantic prompts, text reflow
-- **Reset** — SGR reset, full terminal reset (RIS)
+## How It Works
 
-## Backends
+1. **Probes** — small functions that write ANSI/VT sequences to a backend and assert on terminal state (cell attributes, cursor position, mode flags, scrollback).
+2. **Backends** — headless terminal emulator libraries (JS, Rust, C, WASM) implementing the `TerminalBackend` interface from `@termless/core`.
+3. **Matrix** — results are aggregated into a feature x backend grid. Each cell is *yes*, *no*, or *partial* (with notes explaining the gap).
 
-| Backend | Type | Engine |
-|---------|------|--------|
-| xterm.js | JS (headless) | @xterm/headless |
-| vt100 | JS | Pure TypeScript ([vt100.js](https://www.npmjs.com/package/vt100.js)) |
-| Ghostty Native | Native (Zig) | libghostty-vt |
-| Alacritty | Native (Rust) | alacritty_terminal |
-| WezTerm | Native (Rust) | tattoy-wezterm-term |
-| vt100-rust | Native (Rust) | vt100 crate |
-| Kitty | Subprocess | kitty via Python bridge |
-| libvterm | WASM (C) | neovim/libvterm |
+The census uses Termless backends to run probes, but the probe definitions and result data live in terminfo.dev.
 
-::: tip
-These test headless library implementations, not the terminal applications themselves. A backend scoring lower doesn't mean the real terminal is less capable — it may just not expose all features through its headless API. See [Terminfo.dev](https://terminfo.dev) for details.
-:::
+## Relationship to Termless
 
-## View the Matrix
+Termless provides the **backend abstraction layer** that makes the census possible — a uniform `TerminalBackend` interface across xterm.js, Ghostty, vt100, Alacritty, WezTerm, and others. The census was originally part of the Termless repo but has moved to [terminfo.dev](https://github.com/beorn/terminfo.dev) as a standalone project.
 
-Visit **[terminfo.dev](https://terminfo.dev)** for the full interactive matrix with hover tooltips, category filters, and backend comparison.
+For backend capabilities relevant to **testing** (as opposed to the broader terminal feature matrix), see [Backend Capabilities](/guide/backends) and [Cross-Backend Conformance](/advanced/compat-matrix).

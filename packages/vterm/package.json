@@ -1,7 +1,7 @@
 {
-  "name": "@termless/vt100",
+  "name": "@termless/vterm",
   "version": "0.3.0",
-  "description": "Pure TypeScript VT100 backend for termless — zero-dependency terminal emulator for TUI testing",
+  "description": "Full-featured vterm.js backend for termless — modern terminal emulator with complete VT standards coverage",
   "keywords": [
     "ansi-parser",
     "ecma-48",
@@ -11,8 +11,7 @@
     "terminal-testing",
     "tui",
     "typescript",
-    "vt100",
-    "zero-dependency"
+    "vterm"
   ],
   "homepage": "https://termless.dev/",
   "bugs": {
@@ -23,7 +22,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/beorn/termless.git",
-    "directory": "packages/vt100"
+    "directory": "packages/vterm"
   },
   "files": [
     "src"
@@ -37,7 +36,7 @@
     "access": "public"
   },
   "dependencies": {
-    "vt100.js": "^0.2.1"
+    "vterm.js": "^0.1.0"
   },
   "peerDependencies": {
     "@termless/core": "*"
