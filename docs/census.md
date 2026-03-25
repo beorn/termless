@@ -20,7 +20,7 @@ Census probes and their results are maintained in the **[terminfo.dev](https://g
 
 1. **Probes** — small functions that write ANSI/VT sequences to a backend and assert on terminal state (cell attributes, cursor position, mode flags, scrollback).
 2. **Backends** — headless terminal emulator libraries (JS, Rust, C, WASM) implementing the `TerminalBackend` interface from `@termless/core`.
-3. **Matrix** — results are aggregated into a feature x backend grid. Each cell is *yes*, *no*, or *partial* (with notes explaining the gap).
+3. **Matrix** — results are aggregated into a feature x backend grid. Each cell is _yes_, _no_, or _partial_ (with notes explaining the gap).
 
 The census uses Termless backends to run probes, but the probe definitions and result data live in terminfo.dev.
 

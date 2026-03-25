@@ -20,7 +20,7 @@ These existing Termless tests all share the same pattern: take ANSI output from 
 
 ### Category 1: Output Phase / ANSI Generation (HIGH VALUE)
 
-**Files:** `output.test.ts`, `output-diff-fuzz.test.tsx`, `output-truecolor-diff.test.tsx`, `output-emoji-incremental.test.tsx`, `output-emoji-replay.test.ts`, `output-wide-char-fuzz.test.tsx`, `pipeline.test.ts`, `pipeline/content-phase-clear.test.tsx`, `pipeline/content-phase-scroll-incremental.test.tsx`, `pipeline/cursor-inverse-clear.test.tsx`, `pipeline/virtual-text-dirty-flags.test.tsx`
+**Files:** `output.test.ts`, `output-diff-fuzz.test.tsx`, `output-truecolor-diff.test.tsx`, `output-emoji-incremental.test.tsx`, `output-emoji-replay.test.ts`, `output-wide-char-fuzz.test.tsx`, `pipeline.test.ts`, `pipeline/render-phase-clear.test.tsx`, `pipeline/render-phase-scroll-incremental.test.tsx`, `pipeline/cursor-inverse-clear.test.tsx`, `pipeline/virtual-text-dirty-flags.test.tsx`
 
 **Current approach:** Most tests inspect raw ANSI strings (checking for specific escape sequences) or use `replayAnsiWithStyles` (silvery's own ANSI replay function). The fuzz tests compare incremental vs fresh render via `replayAnsiWithStyles`.
 
