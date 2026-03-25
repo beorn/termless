@@ -185,15 +185,15 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "vterm",
-    version: "0.1.0",
+    version: "0.2.0",
     truecolor: true,
-    kittyKeyboard: false,
-    kittyGraphics: false,
-    sixel: false,
+    kittyKeyboard: true,
+    kittyGraphics: true,
+    sixel: true,
     osc8Hyperlinks: true,
-    semanticPrompts: false,
+    semanticPrompts: true,
     unicode: "15.1",
-    reflow: false,
+    reflow: true,
     extensions: new Set(),
   }
 

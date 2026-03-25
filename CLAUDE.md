@@ -23,6 +23,7 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 | `@termless/xtermjs`    | xterm.js backend (@xterm/headless)                                         | Bun + Node.js | Active                 |
 | `@termless/ghostty`    | Ghostty backend (ghostty-web WASM)                                         | Bun + Node.js | Active                 |
 | `@termless/vt100`      | Pure TypeScript VT100 emulator (zero native deps)                          | Bun + Node.js | Active                 |
+| `@termless/vterm`      | Full-featured vterm.js backend (100% terminfo.dev coverage)                | Bun + Node.js | Active                 |
 | `@termless/alacritty`  | Alacritty backend (alacritty_terminal via napi-rs)                         | Bun + Node.js | Needs Rust build       |
 | `@termless/wezterm`    | WezTerm backend (wezterm-term via napi-rs)                                 | Bun + Node.js | Needs Rust build       |
 | `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                         | Bun + Node.js | Active (macOS)         |
@@ -36,7 +37,7 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 
 - **PTY support** (`spawnPty` / `terminal.spawn()`) uses Bun's native PTY on Bun, and `node-pty` on Node.js. On Node.js, install `node-pty` as a peer dependency: `npm install node-pty`.
 - **Peekaboo** uses OS automation (osascript, screencapture) — macOS only on both runtimes.
-- **Pure backends** (xtermjs, ghostty, vt100) have zero runtime-specific dependencies and work on both Bun and Node.js.
+- **Pure backends** (xtermjs, ghostty, vt100, vterm) have zero runtime-specific dependencies and work on both Bun and Node.js.
 - **napi-rs backends** (alacritty, wezterm, vt100-rust) load native `.node` binaries — work on any runtime that supports N-API.
 - **WASM backends** (ghostty, libvterm) require async initialization to load the WASM module.
 
@@ -47,7 +48,8 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
   └── @termless/core (TerminalBackend interface + PTY + SVG/PNG + region views)
         ├── @termless/xtermjs (@xterm/headless)
         ├── @termless/ghostty (ghostty-web WASM)
-        ├── @termless/vt100 (pure TypeScript)
+        ├── @termless/vt100 (pure TypeScript — VT100-era)
+        ├── @termless/vterm (pure TypeScript — full standards)
         ├── @termless/alacritty (Rust napi-rs)
         ├── @termless/wezterm (Rust napi-rs)
         ├── @termless/vt100-rust (Rust napi-rs)
