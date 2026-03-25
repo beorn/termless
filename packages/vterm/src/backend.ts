@@ -50,15 +50,12 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       cols: options.cols,
       rows: options.rows,
       scrollbackLimit: options.scrollbackLimit ?? 1000,
-    })
-  }
-
-  // Eagerly init if opts provided
-  if (opts) {
-    init({
-      cols: opts.cols ?? DEFAULT_COLS,
-      rows: opts.rows ?? DEFAULT_ROWS,
-      scrollbackLimit: opts.scrollbackLimit,
+      onResponse: (data: string) => {
+        // Forward DA1/DA2/DSR responses to the terminal layer
+        if (backend.onResponse) {
+          backend.onResponse(new TextEncoder().encode(data))
+        }
+      },
     })
   }
 
@@ -200,7 +197,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
-  return {
+  const backend: TerminalBackend = {
     name: "vterm",
     init,
     destroy,
@@ -220,4 +217,15 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  // Eagerly init if opts provided
+  if (opts) {
+    backend.init({
+      cols: opts.cols ?? DEFAULT_COLS,
+      rows: opts.rows ?? DEFAULT_ROWS,
+      scrollbackLimit: opts.scrollbackLimit,
+    })
+  }
+
+  return backend
 }
