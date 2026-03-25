@@ -411,11 +411,12 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
-  // TODO: Wire onResponse — requires extending the Python bridge (bridge.py) to capture
-  // DA1/DA2/DSR responses from kitty's VT parser and include them in the snapshot JSON.
-  // The response data would need to be read after each feed command and forwarded here.
+  // TODO: Python bridge doesn't capture DA1/DA2/DSR responses yet.
+  // Requires extending bridge.py to capture responses from kitty's VT parser
+  // and include them in the snapshot JSON. The response data would need to be
+  // read after each feed command and forwarded here.
 
-  return {
+  const backend: TerminalBackend = {
     name: "kitty",
     init,
     destroy,
@@ -435,4 +436,6 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  return backend
 }

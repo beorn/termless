@@ -303,12 +303,12 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     extensions: new Set(),
   }
 
-  // TODO: Wire onResponse — requires capturing write-back data in the Rust native module.
+  // TODO: Native module doesn't capture DA1/DA2/DSR responses yet.
   // The wezterm-term Terminal is constructed with Box::new(Vec::new()) as a sink writer.
   // Need to replace that with a shared buffer (Arc<Mutex<Vec<u8>>>), then expose a
   // readResponse() napi method that drains the buffer and returns the bytes.
 
-  return {
+  const backend: TerminalBackend = {
     name: "wezterm",
     init,
     destroy,
@@ -328,4 +328,6 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  return backend
 }
