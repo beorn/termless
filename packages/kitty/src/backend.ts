@@ -233,10 +233,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
     const result = execFileSync(
       kitty,
-      [
-        "+runpy",
-        `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); import bridge; bridge.batch_main()`,
-      ],
+      ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); import bridge; bridge.batch_main()`],
       {
         input,
         timeout: 30000,
@@ -252,7 +249,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
     let parsed: BridgeSnapshot & { error?: string; traceback?: string }
     try {
-      parsed = JSON.parse(trimmed)
+      parsed = JSON.parse(trimmed) as BridgeSnapshot & { error?: string; traceback?: string }
     } catch {
       throw new Error(`Kitty bridge returned unparseable response: ${trimmed.slice(0, 200)}`)
     }
@@ -335,8 +332,8 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
       const colStart = row === startRow ? startCol : 0
       const colEnd = row === endRow ? endCol : cols
       let line = ""
-      for (let col = colStart; col < colEnd && col < cellRow.length; col++) {
-        const text = cellRow[col].text
+      for (let col = colStart; col < colEnd && col < cellRow!.length; col++) {
+        const text = cellRow![col]!.text
         line += text || " "
       }
       lines.push(line.trimEnd())
@@ -346,10 +343,10 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function getCell(row: number, col: number): Cell {
     const s = ensureSnapshot()
-    if (row >= s.cells.length || col >= s.cells[row].length) {
+    if (row >= s.cells.length || col >= s.cells[row]!.length) {
       return EMPTY_CELL
     }
-    return convertBridgeCell(s.cells[row][col])
+    return convertBridgeCell(s.cells[row]![col]!)
   }
 
   function getLine(row: number): Cell[] {
@@ -357,7 +354,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     if (row >= s.cells.length) {
       return Array.from({ length: cols }, () => EMPTY_CELL)
     }
-    return s.cells[row].map(convertBridgeCell)
+    return s.cells[row]!.map(convertBridgeCell)
   }
 
   function getLines(): Cell[][] {

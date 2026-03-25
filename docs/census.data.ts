@@ -46,9 +46,9 @@ export default {
     const perBackend: BackendResult[] = []
     for (const file of files) {
       try {
-        const raw = JSON.parse(readFileSync(join(resultsDir, file), "utf-8"))
+        const raw = JSON.parse(readFileSync(join(resultsDir, file), "utf-8")) as Record<string, unknown>
         if (raw.backend && raw.results) {
-          perBackend.push(raw)
+          perBackend.push(raw as unknown as BackendResult)
         }
       } catch {
         // skip malformed files

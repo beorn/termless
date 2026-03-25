@@ -363,7 +363,7 @@ export function getInstalledVersion(packageName: string): string | null {
   const dir = findPackageDir(packageName)
   if (!dir) return null
   try {
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8"))
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")) as Record<string, any>
     return pkg.version ?? null
   } catch {
     return null
