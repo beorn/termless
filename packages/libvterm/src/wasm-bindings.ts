@@ -15,6 +15,7 @@ export interface LibvtermModule {
   vterm_free(vt: number): void
   vterm_set_size(vt: number, rows: number, cols: number): void
   vterm_input_write(vt: number, bytes: number, len: number): number
+  vterm_output_read(vt: number, buf: number, len: number): number
   vterm_obtain_screen(vt: number): number
   vterm_obtain_state(vt: number): number
   vterm_screen_reset(screen: number, hard: number): void
@@ -62,6 +63,7 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.vterm_free = cwrap("vterm_free", null, ["number"])
     module.vterm_set_size = cwrap("vterm_set_size", null, ["number", "number", "number"])
     module.vterm_input_write = cwrap("vterm_input_write", "number", ["number", "number", "number"])
+    module.vterm_output_read = cwrap("vterm_output_read", "number", ["number", "number", "number"])
     module.vterm_obtain_screen = cwrap("vterm_obtain_screen", "number", ["number"])
     module.vterm_obtain_state = cwrap("vterm_obtain_state", "number", ["number"])
     module.vterm_screen_reset = cwrap("vterm_screen_reset", null, ["number", "number"])

@@ -85,6 +85,10 @@ interface NativeModule {
   getScrollback(handle: NativeTerminalHandle): NativeScrollback
   scrollViewport(handle: NativeTerminalHandle, delta: number): void
   getDefaultColors(handle: NativeTerminalHandle): NativeColors
+  /** Check if the terminal has pending response data. Returns false if not available. */
+  hasResponse?(handle: NativeTerminalHandle): boolean
+  /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
+  readResponse?(handle: NativeTerminalHandle): string | null
 }
 
 // ═══════════════════════════════════════════════════════
@@ -231,7 +235,18 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
 
   function feed(data: Uint8Array): void {
     const native = loadGhosttyNative()
-    native.feed(ensureHandle(), data)
+    const h = ensureHandle()
+    native.feed(h, data)
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    if (backend.onResponse && native.hasResponse && native.readResponse) {
+      while (native.hasResponse(h)) {
+        const response = native.readResponse(h)
+        if (response) {
+          backend.onResponse(new TextEncoder().encode(response))
+        }
+      }
+    }
   }
 
   function resize(cols: number, rows: number): void {
@@ -331,10 +346,14 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     extensions: new Set(),
   }
 
-  // TODO: Native module doesn't capture DA1/DA2/DSR responses yet.
+  // TODO(native): Wire DA1/DA2/DSR response capture in main.zig.
   // The Zig side uses ReadonlyStream which doesn't capture write-back data.
-  // Need to switch to a writable stream or add a response buffer in main.zig,
-  // then expose hasResponse/readResponse functions via napigen.
+  // Steps:
+  //   1. Replace ReadonlyStream with a full Stream that captures terminal output
+  //      (or add a separate response buffer to TerminalHandle)
+  //   2. Accumulate response bytes written by the terminal into the buffer
+  //   3. Expose hasResponse(handle) and readResponse(handle) via napigen
+  // The TS side is already wired — it calls hasResponse/readResponse after each feed().
 
   const backend: TerminalBackend = {
     name: "ghostty-native",

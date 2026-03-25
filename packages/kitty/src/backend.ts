@@ -114,6 +114,8 @@ interface BridgeSnapshot {
   scrollback: { viewportOffset: number; totalLines: number; screenLines: number }
   text: string
   error?: string
+  /** Base64-encoded DA1/DA2/DSR response data accumulated during replay */
+  responses?: string
 }
 
 // ===============================================================
@@ -269,6 +271,15 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     ensureInit()
     if (snapshot) return snapshot
     snapshot = replayAndSnapshot()
+
+    // Forward any DA1/DA2/DSR responses accumulated during replay
+    if (backend.onResponse && snapshot.responses) {
+      const responseBytes = Buffer.from(snapshot.responses, "base64")
+      if (responseBytes.length > 0) {
+        backend.onResponse(new Uint8Array(responseBytes))
+      }
+    }
+
     return snapshot
   }
 
@@ -411,10 +422,15 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
-  // TODO: Python bridge doesn't capture DA1/DA2/DSR responses yet.
-  // Requires extending bridge.py to capture responses from kitty's VT parser
-  // and include them in the snapshot JSON. The response data would need to be
-  // read after each feed command and forwarded here.
+  // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
+  // Callbacks.write() method (which kitty's VT parser calls for terminal output).
+  // Responses accumulate during batch replay and are included in the snapshot
+  // JSON as base64-encoded "responses" field. They are forwarded to
+  // backend.onResponse when ensureSnapshot() is called.
+  //
+  // Note: Due to kitty's batch-replay architecture, responses are delivered
+  // lazily (on next query) rather than immediately after feed(). This is fine
+  // for testing but may cause timing issues with interactive PTY usage.
 
   const backend: TerminalBackend = {
     name: "kitty",

@@ -65,6 +65,8 @@ interface NativeAlacrittyTerminal {
   getScrollback(): number[] // [viewportOffset, totalLines, screenLines]
   scrollViewport(delta: number): void
   destroy(): void
+  /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
+  readResponse?(): Buffer | null
 }
 
 interface NativeModule {
@@ -202,6 +204,14 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     t.feed(Buffer.from(data))
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    if (backend.onResponse && t.readResponse) {
+      const response = t.readResponse()
+      if (response && response.length > 0) {
+        backend.onResponse(new Uint8Array(response))
+      }
+    }
   }
 
   function resize(cols: number, rows: number): void {
@@ -295,10 +305,14 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     extensions: new Set(),
   }
 
-  // TODO: Native module doesn't capture DA1/DA2/DSR responses yet.
+  // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
   // The alacritty_terminal Processor generates responses via the Term's writer,
-  // but the EventProxy doesn't capture them. Need to add a response buffer
-  // in lib.rs (e.g., Arc<Mutex<Vec<u8>>>) and expose a readResponse() napi method.
+  // but the EventProxy doesn't capture them. Steps:
+  //   1. Add `response_buf: Arc<Mutex<Vec<u8>>>` to EventProxy
+  //   2. Implement io::Write for EventProxy, writing to response_buf
+  //   3. Pass EventProxy as the writer to Processor::advance()
+  //   4. Add #[napi] pub fn read_response(&self) -> Option<Buffer> that drains response_buf
+  // The TS side is already wired — it calls readResponse() after each feed().
 
   const backend: TerminalBackend = {
     name: "alacritty",

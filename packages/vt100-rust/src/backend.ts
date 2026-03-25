@@ -73,6 +73,8 @@ interface Vt100RustTerminal {
   getTitle(): string
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
+  /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
+  readResponse?(): Buffer | null
 }
 
 interface NativeModule {
@@ -211,6 +213,14 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     t.feed(Buffer.from(data))
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    if (backend.onResponse && t.readResponse) {
+      const response = t.readResponse()
+      if (response && response.length > 0) {
+        backend.onResponse(new Uint8Array(response))
+      }
+    }
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -299,7 +309,15 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     extensions: new Set(),
   }
 
-  return {
+  // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
+  // The doy/vt100 crate doesn't generate terminal responses (DA1/DA2/DSR).
+  // It's a pure VT parser without a response generation mechanism.
+  // If the crate adds response support in the future, steps would be:
+  //   1. Capture output from the parser into a buffer
+  //   2. Add #[napi] pub fn read_response(&self) -> Option<Buffer> that drains it
+  // The TS side is already wired — it calls readResponse() after each feed().
+
+  const backend: TerminalBackend = {
     name: "vt100-rust",
     init,
     destroy,
@@ -319,4 +337,6 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  return backend
 }

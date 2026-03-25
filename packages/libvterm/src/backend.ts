@@ -177,6 +177,20 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
     // Free the temporary buffer
     m._free(ptr)
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer.
+    // libvterm buffers output internally; vterm_output_read drains it.
+    if (backend.onResponse) {
+      const outBufLen = 1024
+      const outBuf = m._malloc(outBufLen)
+      const bytesRead = m.vterm_output_read(vt, outBuf, outBufLen)
+      if (bytesRead > 0) {
+        const responseData = new Uint8Array(bytesRead)
+        responseData.set(m.HEAPU8.subarray(outBuf, outBuf + bytesRead))
+        backend.onResponse(responseData)
+      }
+      m._free(outBuf)
+    }
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -353,7 +367,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     extensions: new Set<string>(),
   }
 
-  return {
+  const backend: TerminalBackend = {
     name: "libvterm",
     init,
     destroy,
@@ -373,6 +387,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  return backend
 }
 
 /** Create an empty cell with default values. */

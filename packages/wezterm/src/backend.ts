@@ -73,6 +73,8 @@ interface WeztermTerminal {
   getTitle(): string
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
+  /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
+  readResponse?(): Buffer | null
 }
 
 interface NativeModule {
@@ -212,6 +214,14 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     t.feed(Buffer.from(data))
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    if (backend.onResponse && t.readResponse) {
+      const response = t.readResponse()
+      if (response && response.length > 0) {
+        backend.onResponse(new Uint8Array(response))
+      }
+    }
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -303,10 +313,14 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     extensions: new Set(),
   }
 
-  // TODO: Native module doesn't capture DA1/DA2/DSR responses yet.
+  // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
   // The wezterm-term Terminal is constructed with Box::new(Vec::new()) as a sink writer.
-  // Need to replace that with a shared buffer (Arc<Mutex<Vec<u8>>>), then expose a
-  // readResponse() napi method that drains the buffer and returns the bytes.
+  // Steps:
+  //   1. Create a SharedWriter struct wrapping Arc<Mutex<Vec<u8>>> that implements io::Write
+  //   2. Pass SharedWriter to Terminal::new() instead of Box::new(Vec::new())
+  //   3. Store the Arc<Mutex<Vec<u8>>> in WeztermTerminal
+  //   4. Add #[napi] pub fn read_response(&self) -> Option<Buffer> that drains the buffer
+  // The TS side is already wired — it calls readResponse() after each feed().
 
   const backend: TerminalBackend = {
     name: "wezterm",
