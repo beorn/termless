@@ -295,6 +295,11 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     extensions: new Set(),
   }
 
+  // TODO: Wire onResponse — requires capturing write-back data in the Rust native module.
+  // The alacritty_terminal Processor generates DA1/DA2/DSR responses via the Term's
+  // writer, but the EventProxy doesn't capture them. Need to add a response buffer
+  // in lib.rs (e.g., Arc<Mutex<Vec<u8>>>) and expose a readResponse() napi method.
+
   return {
     name: "alacritty",
     init,

@@ -123,6 +123,13 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     term.onTitleChange((t) => {
       title = t
     })
+
+    // Forward DA1/DA2/DSR responses to the terminal layer
+    term.onData((data) => {
+      if (backend.onResponse) {
+        backend.onResponse(new TextEncoder().encode(data))
+      }
+    })
   }
 
   // Eagerly init if opts provided
@@ -414,7 +421,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
-  return {
+  const backend: TerminalBackend = {
     name: "xterm",
     init,
     destroy,
@@ -434,4 +441,6 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     encodeKey: encodeKeyToAnsi,
     capabilities,
   }
+
+  return backend
 }

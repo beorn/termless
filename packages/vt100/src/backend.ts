@@ -193,6 +193,10 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
+  // TODO: Wire onResponse — requires adding DA1/DA2/DSR response generation to vt100.js.
+  // The vt100.js library is a minimal VT100-era parser that doesn't generate responses.
+  // The sister library vterm.js already supports this via its onResponse callback.
+
   return {
     name: "vt100",
     init,

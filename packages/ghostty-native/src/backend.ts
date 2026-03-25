@@ -331,6 +331,11 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     extensions: new Set(),
   }
 
+  // TODO: Wire onResponse — requires adding response reading to the Zig native module.
+  // The Zig side uses ReadonlyStream which doesn't capture DA1/DA2/DSR responses.
+  // Need to switch to a writable stream or add a response buffer in main.zig,
+  // then expose hasResponse/readResponse functions via napigen.
+
   return {
     name: "ghostty-native",
     init,

@@ -316,6 +316,16 @@ export function createGhosttyBackend(
       t.write(data)
       t.update() // Sync render state
     })
+
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    if (backend.onResponse) {
+      while (t.hasResponse()) {
+        const response = t.readResponse()
+        if (response) {
+          backend.onResponse(new TextEncoder().encode(response))
+        }
+      }
+    }
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -557,7 +567,7 @@ export function createGhosttyBackend(
     warnings.length = 0
   }
 
-  return {
+  const backend: TerminalBackend & WarningExtension = {
     name: "ghostty",
     init,
     destroy,
@@ -579,4 +589,6 @@ export function createGhosttyBackend(
     getWarnings,
     clearWarnings,
   }
+
+  return backend
 }
