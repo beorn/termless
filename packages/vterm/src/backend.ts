@@ -186,14 +186,38 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   const capabilities: TerminalCapabilities = {
     name: "vterm",
     version: "0.2.0",
+
+    // Genuinely implemented: parses RGB values, stores on cells, resolves palette
     truecolor: true,
+
+    // Protocol-level support: full push/pop/query state machine (CSI > u / < u / ? u).
+    // Flags are stored and queryable; actual key encoding uses them in the host layer
+    // (encodeKeyToAnsi reads the mode from the backend).
     kittyKeyboard: true,
+
+    // Protocol-level support: parses APC G sequences, responds to queries with OK.
+    // Does not store or render image data — there's no pixel framebuffer in a headless
+    // emulator. The handshake works, so apps that probe before sending images get a
+    // truthful "I accept this protocol" answer.
     kittyGraphics: true,
+
+    // Parses sixel DCS sequences and preserves raw data via getSixelImages().
+    // A host (GUI renderer, test harness) can consume the stored data. No pixel
+    // decoding is done — that's the host's job. DA1 reports attribute 4 (sixel)
+    // so applications that check before sending sixel data will proceed correctly.
     sixel: true,
+
+    // Genuinely implemented: stores URL on cell attributes via OSC 8
     osc8Hyperlinks: true,
+
+    // Genuinely implemented: stores zone markers (prompt/command/output) from OSC 133/633
     semanticPrompts: true,
+
     unicode: "15.1",
+
+    // Genuinely implemented: full reflow algorithm with soft-wrap tracking on resize
     reflow: true,
+
     extensions: new Set(),
   }
 
