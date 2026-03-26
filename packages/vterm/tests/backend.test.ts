@@ -611,7 +611,10 @@ describe("createVtermBackend", () => {
     expect(backend.capabilities.osc8Hyperlinks).toBe(true)
     expect(backend.capabilities.reflow).toBe(true)
     expect(backend.capabilities.extensions).toBeInstanceOf(Set)
-    expect(backend.capabilities.extensions.size).toBe(0)
+    expect(backend.capabilities.extensions.has("osc52")).toBe(true)
+    expect(backend.capabilities.extensions.has("osc7")).toBe(true)
+    expect(backend.capabilities.extensions.has("iterm2Images")).toBe(true)
+    expect(backend.capabilities.extensions.has("modifyOtherKeys")).toBe(true)
     backend.destroy()
   })
 

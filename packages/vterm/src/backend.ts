@@ -218,7 +218,15 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // Genuinely implemented: full reflow algorithm with soft-wrap tracking on resize
     reflow: true,
 
-    extensions: new Set(),
+    extensions: new Set([
+      "osc52", // Clipboard read/write via OSC 52
+      "osc7", // CWD reporting via OSC 7
+      "osc9", // Desktop notifications via OSC 9
+      "osc10", // Foreground color query via OSC 10
+      "osc11", // Background color query via OSC 11
+      "iterm2Images", // iTerm2 inline images (OSC 1337 File=)
+      "modifyOtherKeys", // CSI > 4 ; Pm m keyboard mode
+    ]),
   }
 
   const backend: TerminalBackend = {
