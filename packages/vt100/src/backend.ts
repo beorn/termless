@@ -32,9 +32,10 @@ const DEFAULT_ROWS = 24
  * the Rust vt100 crate. It parses ANSI/VT100 escape sequences and
  * maintains an in-memory screen representation with per-cell attributes.
  *
- * Supports: SGR (16/256/truecolor), cursor movement, erase commands,
- * scroll regions, alternate screen, bracketed paste, mouse tracking,
- * OSC title, and more.
+ * Supports: SGR (8 standard colors, bold, underline, blink, reverse, hidden),
+ * cursor movement, erase commands, scroll regions, DA1/DSR responses,
+ * OSC title, and more. No truecolor, no 256 colors, no wide chars — use
+ * vterm.js for those.
  */
 export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let screen: Screen | null = null
@@ -49,6 +50,11 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
       cols: options.cols,
       rows: options.rows,
       scrollbackLimit: options.scrollbackLimit ?? 1000,
+      onResponse: (data: string) => {
+        if (backend.onResponse) {
+          backend.onResponse(new TextEncoder().encode(data))
+        }
+      },
     })
   }
 
@@ -85,11 +91,6 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     return ensureScreen().getTextRange(startRow, startCol, endRow, endCol)
   }
 
-  /** Map vt100 screen underline ("none"|"single"|...) to Cell underline (false|"single"|...) */
-  function mapUnderline(u: import("vt100.js").UnderlineStyle): Cell["underline"] {
-    return u === "none" ? false : u
-  }
-
   function getCell(row: number, col: number): Cell {
     const sc = ensureScreen().getCell(row, col)
     return {
@@ -97,15 +98,15 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
       fg: sc.fg,
       bg: sc.bg,
       bold: sc.bold,
-      dim: sc.faint,
-      italic: sc.italic,
-      underline: mapUnderline(sc.underline),
+      dim: false,
+      italic: false,
+      underline: sc.underline ? "single" : false,
       underlineColor: null,
-      strikethrough: sc.strikethrough,
+      strikethrough: false,
       inverse: sc.inverse,
-      blink: false,
-      hidden: false,
-      wide: sc.wide,
+      blink: sc.blink,
+      hidden: sc.hidden,
+      wide: false,
       continuation: false,
       hyperlink: null,
     }
@@ -119,15 +120,15 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
         fg: sc.fg,
         bg: sc.bg,
         bold: sc.bold,
-        dim: sc.faint,
-        italic: sc.italic,
-        underline: mapUnderline(sc.underline),
+        dim: false,
+        italic: false,
+        underline: sc.underline ? ("single" as const) : false,
         underlineColor: null,
-        strikethrough: sc.strikethrough,
+        strikethrough: false,
         inverse: sc.inverse,
-        blink: false,
-        hidden: false,
-        wide: sc.wide,
+        blink: sc.blink,
+        hidden: sc.hidden,
+        wide: false,
         continuation: false,
         hyperlink: null,
       }))
@@ -182,20 +183,16 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
   const capabilities: TerminalCapabilities = {
     name: "vt100",
     version: "0.1.0",
-    truecolor: true,
+    truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,
     sixel: false,
     osc8Hyperlinks: false,
     semanticPrompts: false,
-    unicode: "15.1",
-    reflow: false, // No reflow support in pure TS implementation
+    unicode: "1.0",
+    reflow: false,
     extensions: new Set(),
   }
-
-  // TODO: vt100.js is a minimal VT100-era parser that doesn't generate DA1/DA2/DSR responses.
-  // The sister library vterm.js supports this via its onResponse callback.
-  // When response generation is added to vt100.js, wire it here like vterm does.
 
   const backend: TerminalBackend = {
     name: "vt100",

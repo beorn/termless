@@ -161,7 +161,10 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("italic", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[3mI\x1b[0mN")
-      compareCells(ts, rust, 0, 0, "italic I")
+      // vt100.js is a VT100-era emulator — no italic support
+      // Rust crate is modern — supports italic
+      expect(ts.getCell(0, 0).italic).toBe(false) // VT100 doesn't have italic
+      expect(rust.getCell(0, 0).italic).toBe(true)
       compareCells(ts, rust, 0, 1, "normal N")
     })
 
@@ -175,13 +178,12 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("strikethrough", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[9mS\x1b[0mN")
-      // Known difference: vt100 Rust crate doesn't expose strikethrough
-      // TS vt100 correctly reports strikethrough=true, Rust always returns false
+      // Neither exposes strikethrough: vt100.js removed it (VT100-era), Rust crate doesn't expose it
       const tsCell = ts.getCell(0, 0)
       const rustCell = rust.getCell(0, 0)
       expect(cellChar(tsCell)).toBe(cellChar(rustCell))
-      expect(tsCell.strikethrough).toBe(true) // TS correctly detects it
-      expect(rustCell.strikethrough).toBe(false) // Rust crate limitation
+      expect(tsCell.strikethrough).toBe(false)
+      expect(rustCell.strikethrough).toBe(false)
       compareCells(ts, rust, 0, 1, "normal N")
     })
 
@@ -202,19 +204,29 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("truecolor foreground", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[38;2;255;128;0mR\x1b[0m")
-      compareCells(ts, rust, 0, 0, "truecolor fg")
+      // vt100.js is VT100-era — silently ignores truecolor SGR
+      expect(ts.getCell(0, 0).fg).toBeNull()
+      expect(rust.getCell(0, 0).fg).toEqual({ r: 255, g: 128, b: 0 })
     })
 
     test("truecolor background", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[48;2;0;128;255mB\x1b[0m")
-      compareCells(ts, rust, 0, 0, "truecolor bg")
+      expect(ts.getCell(0, 0).bg).toBeNull()
+      expect(rust.getCell(0, 0).bg).toEqual({ r: 0, g: 128, b: 255 })
     })
 
     test("combined bold+italic+truecolor", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[1;3;38;2;255;0;0mX\x1b[0m")
-      compareCells(ts, rust, 0, 0, "combined styles")
+      // vt100.js: only bold survives (italic + truecolor ignored)
+      expect(ts.getCell(0, 0).bold).toBe(true)
+      expect(ts.getCell(0, 0).italic).toBe(false)
+      expect(ts.getCell(0, 0).fg).toBeNull()
+      // Rust: all three apply
+      expect(rust.getCell(0, 0).bold).toBe(true)
+      expect(rust.getCell(0, 0).italic).toBe(true)
+      expect(rust.getCell(0, 0).fg).toEqual({ r: 255, g: 0, b: 0 })
     })
 
     test("SGR 0 resets all styles", () => {
@@ -255,17 +267,21 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
   describe("modes", () => {
     test("alt screen toggle", () => {
       const { ts, rust } = init()
-      expect(ts.getMode("altScreen")).toBe(rust.getMode("altScreen"))
+      // vt100.js is VT100-era — no alt screen support
       feedBoth(ts, rust, "\x1b[?1049h")
-      expect(ts.getMode("altScreen")).toBe(rust.getMode("altScreen"))
+      expect(ts.getMode("altScreen")).toBe(false) // VT100: ignored
+      expect(rust.getMode("altScreen")).toBe(true) // Rust: supported
       feedBoth(ts, rust, "\x1b[?1049l")
-      expect(ts.getMode("altScreen")).toBe(rust.getMode("altScreen"))
+      expect(ts.getMode("altScreen")).toBe(false)
+      expect(rust.getMode("altScreen")).toBe(false)
     })
 
     test("bracketed paste", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[?2004h")
-      expect(ts.getMode("bracketedPaste")).toBe(rust.getMode("bracketedPaste"))
+      // vt100.js is VT100-era — no bracketed paste
+      expect(ts.getMode("bracketedPaste")).toBe(false) // VT100: ignored
+      expect(rust.getMode("bracketedPaste")).toBe(true) // Rust: supported
     })
   })
 

@@ -85,66 +85,50 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("256-color mode detection", () => {
+  test("256-color sequences are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 38;5;208 = 256-color orange foreground (index 208)
+    // SGR 38;5;208 — vt100.js ignores extended colors
     backend.feed(new TextEncoder().encode("\x1b[38;5;208mX\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("X")
-    expect(cell.fg).not.toBeNull()
-    // Index 208 = 6x6x6 cube: r=5, g=3, b=0 -> (0xff, 0x87, 0x00)
-    expect(cell.fg!.r).toBe(0xff)
-    expect(cell.fg!.g).toBe(0x87)
-    expect(cell.fg!.b).toBe(0x00)
+    // fg should be null since 256-color is not supported
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
-  test("truecolor (24-bit) detection", () => {
+  test("truecolor sequences are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 38;2;171;205;239 = true color foreground
+    // SGR 38;2;R;G;B — vt100.js ignores truecolor
     backend.feed(new TextEncoder().encode("\x1b[38;2;171;205;239mT\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("T")
-    expect(cell.fg).not.toBeNull()
-    expect(cell.fg!.r).toBe(171)
-    expect(cell.fg!.g).toBe(205)
-    expect(cell.fg!.b).toBe(239)
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
-  test("bright foreground colors (90-97)", () => {
+  test("bright foreground colors (90-97) are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 91 = bright red foreground (ANSI color 9)
+    // SGR 91 — vt100.js only supports standard 30-37
     backend.feed(new TextEncoder().encode("\x1b[91mR\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.fg).not.toBeNull()
-    expect(cell.fg!.r).toBe(0xff)
-    expect(cell.fg!.g).toBe(0x00)
-    expect(cell.fg!.b).toBe(0x00)
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
-  test("256-color background", () => {
+  test("256-color background is silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 48;5;21 = 256-color blue background (index 21)
+    // SGR 48;5;21 — vt100.js ignores extended colors
     backend.feed(new TextEncoder().encode("\x1b[48;5;21mB\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.bg).not.toBeNull()
-    // Index 21 = 6x6x6 cube: r=0, g=0, b=5 -> (0x00, 0x00, 0xff)
-    expect(cell.bg!.r).toBe(0x00)
-    expect(cell.bg!.g).toBe(0x00)
-    expect(cell.bg!.b).toBe(0xff)
+    expect(cell.bg).toBeNull()
     backend.destroy()
   })
 
-  test("truecolor background", () => {
+  test("truecolor background is silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[48;2;100;150;200mB\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.bg).not.toBeNull()
-    expect(cell.bg!.r).toBe(100)
-    expect(cell.bg!.g).toBe(150)
-    expect(cell.bg!.b).toBe(200)
+    expect(cell.bg).toBeNull()
     backend.destroy()
   })
 
@@ -163,11 +147,11 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("italic attribute detection", () => {
+  test("italic is always false (not supported in VT100)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[3mitalic\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.italic).toBe(true)
+    expect(cell.italic).toBe(false)
     backend.destroy()
   })
 
@@ -179,19 +163,19 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("strikethrough attribute detection", () => {
+  test("strikethrough is always false (not supported in VT100)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[9mstruck\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.strikethrough).toBe(true)
+    expect(cell.strikethrough).toBe(false)
     backend.destroy()
   })
 
-  test("faint/dim attribute detection", () => {
+  test("faint/dim is always false (not supported in VT100)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[2mdim\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.dim).toBe(true)
+    expect(cell.dim).toBe(false)
     backend.destroy()
   })
 
@@ -249,32 +233,28 @@ describe("createVt100Backend", () => {
 
   // ── Modes ──
 
-  test("alt screen mode detection", () => {
+  test("alt screen mode is not supported (always false)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.getMode("altScreen")).toBe(false)
-    // Enter alt screen
+    // Sequence silently ignored
     backend.feed(new TextEncoder().encode("\x1b[?1049h"))
-    expect(backend.getMode("altScreen")).toBe(true)
-    // Leave alt screen
-    backend.feed(new TextEncoder().encode("\x1b[?1049l"))
     expect(backend.getMode("altScreen")).toBe(false)
     backend.destroy()
   })
 
-  test("bracketed paste mode detection", () => {
+  test("bracketed paste mode is not supported (always false)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.getMode("bracketedPaste")).toBe(false)
     backend.feed(new TextEncoder().encode("\x1b[?2004h"))
-    expect(backend.getMode("bracketedPaste")).toBe(true)
+    expect(backend.getMode("bracketedPaste")).toBe(false)
     backend.destroy()
   })
 
-  test("mouse tracking mode detection", () => {
+  test("mouse tracking mode is not supported (always false)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.getMode("mouseTracking")).toBe(false)
-    // Enable VT200 mouse tracking
     backend.feed(new TextEncoder().encode("\x1b[?1000h"))
-    expect(backend.getMode("mouseTracking")).toBe(true)
+    expect(backend.getMode("mouseTracking")).toBe(false)
     backend.destroy()
   })
 
@@ -338,17 +318,13 @@ describe("createVt100Backend", () => {
 
   // ── Wide characters ──
 
-  test("feed wide characters (CJK), getCell() has wide=true", () => {
+  test("wide is always false (VT100 is ASCII + DEC special graphics)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // CJK character (Chinese "big")
+    // CJK character — vt100.js treats all chars as single-width
     backend.feed(new TextEncoder().encode("\u5927"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("\u5927")
-    expect(cell.wide).toBe(true)
-    // Spacer cell after wide character
-    const spacer = backend.getCell(0, 1)
-    expect(spacer.char).toBe("")
-    expect(spacer.wide).toBe(false)
+    expect(cell.wide).toBe(false)
     backend.destroy()
   })
 
@@ -473,7 +449,7 @@ describe("createVt100Backend", () => {
   test("capabilities are correctly set", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.capabilities.name).toBe("vt100")
-    expect(backend.capabilities.truecolor).toBe(true)
+    expect(backend.capabilities.truecolor).toBe(false)
     expect(backend.capabilities.kittyKeyboard).toBe(false)
     expect(backend.capabilities.kittyGraphics).toBe(false)
     expect(backend.capabilities.sixel).toBe(false)
@@ -514,7 +490,10 @@ describe("createVt100Backend", () => {
     expect(cell.italic).toBe(false)
     expect(cell.underline).toBe(false)
     expect(cell.strikethrough).toBe(false)
+    expect(cell.dim).toBe(false)
     expect(cell.inverse).toBe(false)
+    expect(cell.blink).toBe(false)
+    expect(cell.hidden).toBe(false)
     expect(cell.wide).toBe(false)
     backend.destroy()
   })
@@ -569,21 +548,14 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  // ── Alternate screen buffer ──
+  // ── Alternate screen buffer (not supported in VT100) ──
 
-  test("alternate screen preserves main screen content", () => {
+  test("alternate screen sequences are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("main content"))
-    // Enter alt screen
+    // Alt screen sequences are ignored — content stays on screen
     backend.feed(new TextEncoder().encode("\x1b[?1049h"))
-    expect(backend.getText()).not.toContain("main content")
-    // Write to alt screen
-    backend.feed(new TextEncoder().encode("alt content"))
-    expect(backend.getText()).toContain("alt content")
-    // Leave alt screen
-    backend.feed(new TextEncoder().encode("\x1b[?1049l"))
     expect(backend.getText()).toContain("main content")
-    expect(backend.getText()).not.toContain("alt content")
     backend.destroy()
   })
 
