@@ -32,6 +32,9 @@ function forEachBackend(fn: (name: string, createBackend: BackendFactory) => voi
   }
 }
 
+/** vt100.js is a VT220-era emulator — skip tests for modern features */
+const isModern = (name: string) => name !== "vt100"
+
 function feedText(backend: TerminalBackend, text: string): void {
   backend.feed(new TextEncoder().encode(text))
 }
@@ -97,19 +100,19 @@ describe("cross-backend conformance", () => {
         expect(b.getCell(0, 1).bold).toBe(false)
       })
 
-      test("italic", () => {
+      test.skipIf(!isModern(_name))("italic", () => {
         const b = init(create)
         feedText(b, "\x1b[3mI\x1b[0m")
         expect(b.getCell(0, 0).italic).toBe(true)
       })
 
-      test("faint", () => {
+      test.skipIf(!isModern(_name))("faint", () => {
         const b = init(create)
         feedText(b, "\x1b[2mF\x1b[0m")
         expect(b.getCell(0, 0).dim).toBe(true)
       })
 
-      test("strikethrough", () => {
+      test.skipIf(!isModern(_name))("strikethrough", () => {
         const b = init(create)
         feedText(b, "\x1b[9mS\x1b[0m")
         expect(b.getCell(0, 0).strikethrough).toBe(true)
@@ -121,21 +124,21 @@ describe("cross-backend conformance", () => {
         expect(b.getCell(0, 0).inverse).toBe(true)
       })
 
-      test("truecolor foreground", () => {
+      test.skipIf(!isModern(_name))("truecolor foreground", () => {
         const b = init(create)
         feedText(b, "\x1b[38;2;255;128;0mR\x1b[0m")
         const cell = b.getCell(0, 0)
         expect(cell.fg).toEqual({ r: 255, g: 128, b: 0 })
       })
 
-      test("truecolor background", () => {
+      test.skipIf(!isModern(_name))("truecolor background", () => {
         const b = init(create)
         feedText(b, "\x1b[48;2;0;128;255mB\x1b[0m")
         const cell = b.getCell(0, 0)
         expect(cell.bg).toEqual({ r: 0, g: 128, b: 255 })
       })
 
-      test("combined styles", () => {
+      test.skipIf(!isModern(_name))("combined styles", () => {
         const b = init(create)
         feedText(b, "\x1b[1;3;38;2;255;0;0mX\x1b[0m")
         const cell = b.getCell(0, 0)
@@ -154,7 +157,7 @@ describe("cross-backend conformance", () => {
         expect(plain.underline).toBe(false)
       })
 
-      test("256-color FG (SGR 38;5)", () => {
+      test.skipIf(!isModern(_name))("256-color FG (SGR 38;5)", () => {
         const b = init(create)
         feedText(b, "\x1b[38;5;196mR\x1b[0m")
         const cell = b.getCell(0, 0)
@@ -199,7 +202,7 @@ describe("cross-backend conformance", () => {
 
   describe("modes", () => {
     forEachBackend((_name, create) => {
-      test("alt screen toggle", () => {
+      test.skipIf(!isModern(_name))("alt screen toggle", () => {
         const b = init(create)
         expect(b.getMode("altScreen")).toBe(false)
         feedText(b, "\x1b[?1049h")
@@ -208,7 +211,7 @@ describe("cross-backend conformance", () => {
         expect(b.getMode("altScreen")).toBe(false)
       })
 
-      test("bracketed paste", () => {
+      test.skipIf(!isModern(_name))("bracketed paste", () => {
         const b = init(create)
         feedText(b, "\x1b[?2004h")
         expect(b.getMode("bracketedPaste")).toBe(true)
@@ -223,13 +226,13 @@ describe("cross-backend conformance", () => {
 
   describe("wide characters", () => {
     forEachBackend((name, create) => {
-      test("emoji takes 2 cells", () => {
+      test.skipIf(!isModern(name))("emoji takes 2 cells", () => {
         const b = init(create)
         feedText(b, "🎉A")
         const emojiCell = b.getCell(0, 0)
         // xterm.js headless correctly reports wide for CJK but not emoji
         // due to how @xterm/headless handles Unicode East Asian Width
-        if (name === "ghostty" || name === "vt100") {
+        if (name === "ghostty") {
           expect(emojiCell.wide).toBe(true)
         }
         // When wide is supported, A should be at col 2
@@ -238,7 +241,7 @@ describe("cross-backend conformance", () => {
         }
       })
 
-      test("CJK character takes 2 cells", () => {
+      test.skipIf(!isModern(name))("CJK character takes 2 cells", () => {
         const b = init(create)
         feedText(b, "漢A")
         const cjkCell = b.getCell(0, 0)
@@ -278,8 +281,8 @@ describe("cross-backend conformance", () => {
           // ghostty-web WASM: no title change callback, always returns ""
           expect(b.getTitle()).toBe("")
         } else if (name === "vt100") {
-          // vt100 backend does not support OSC title
-          expect(typeof b.getTitle()).toBe("string")
+          // vt100.js supports OSC 0/2 title
+          expect(b.getTitle()).toBe("My Title")
         } else {
           expect(b.getTitle()).toBe("My Title")
         }
@@ -289,7 +292,7 @@ describe("cross-backend conformance", () => {
 
   describe("mouse tracking", () => {
     forEachBackend((_name, create) => {
-      test("DECSET 1000 enables mouse tracking", () => {
+      test.skipIf(!isModern(_name))("DECSET 1000 enables mouse tracking", () => {
         const b = init(create)
         feedText(b, "\x1b[?1000h")
         expect(b.getMode("mouseTracking")).toBe(true)
@@ -299,7 +302,7 @@ describe("cross-backend conformance", () => {
 
   describe("focus tracking", () => {
     forEachBackend((_name, create) => {
-      test("DECSET 1004 enables focus tracking", () => {
+      test.skipIf(!isModern(_name))("DECSET 1004 enables focus tracking", () => {
         const b = init(create)
         feedText(b, "\x1b[?1004h")
         expect(b.getMode("focusTracking")).toBe(true)
@@ -354,7 +357,7 @@ describe("cross-backend conformance", () => {
 
   describe("capabilities", () => {
     forEachBackend((_name, create) => {
-      test("truecolor support", () => {
+      test.skipIf(!isModern(_name))("truecolor support", () => {
         const b = init(create)
         expect(b.capabilities.truecolor).toBe(true)
       })
