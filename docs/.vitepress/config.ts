@@ -15,7 +15,10 @@ export default defineConfig({
     "Headless terminal testing — like Playwright, but for terminal apps. Write tests once, run against any backend.",
   base: "/",
 
-  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
+    ["script", { defer: "", src: "https://static.cloudflareinsights.com/beacon.min.js", "data-cf-beacon": '{"token": "f8fcb4e438a34026a53adc961ef0968c"}' }],
+  ],
 
   themeConfig: {
     logo: "/logo.svg",
