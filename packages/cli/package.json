@@ -41,6 +41,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@resvg/resvg-js": "^2.6.0",
+    "@silvery/commander": "^0.1.0",
     "commander": "^13.0.0",
     "zod": "^3.24.0"
   },

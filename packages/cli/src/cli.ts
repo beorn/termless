@@ -24,7 +24,7 @@
  * ```
  */
 
-import { Command } from "commander"
+import { Command, uint } from "@silvery/commander"
 import { createSessionManager } from "./session.ts"
 import { registerBackendsCommand } from "./backends-cmd.tsx"
 import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.tsx"
@@ -46,13 +46,11 @@ program
   .option("--wait-for <text>", "Wait for text before pressing keys (default: any content)")
   .option("--screenshot <path>", "Save screenshot to path (SVG or PNG, detected from extension)")
   .option("--text", "Print terminal text to stdout")
-  .option("--cols <n>", "Terminal columns", "120")
-  .option("--rows <n>", "Terminal rows", "40")
-  .option("--timeout <ms>", "Wait timeout in ms", "5000")
+  .option("--cols <n>", "Terminal columns", uint, 120)
+  .option("--rows <n>", "Terminal rows", uint, 40)
+  .option("--timeout <ms>", "Wait timeout in ms", uint, 5000)
   .action(async (opts) => {
-    const cols = Number.parseInt(opts.cols, 10)
-    const rows = Number.parseInt(opts.rows, 10)
-    const timeout = Number.parseInt(opts.timeout, 10)
+    const { cols, rows, timeout } = opts
     const command = opts.command.split(/\s+/)
 
     const manager = createSessionManager()
@@ -105,9 +103,9 @@ program
   .command("record")
   .description("Record a terminal session as SVG frames or HTML slideshow")
   .requiredOption("--command <cmd>", "Command to run (split on spaces)")
-  .option("--cols <n>", "Terminal columns", "120")
-  .option("--rows <n>", "Terminal rows", "40")
-  .option("--interval <ms>", "Capture interval in ms", "100")
+  .option("--cols <n>", "Terminal columns", uint, 120)
+  .option("--rows <n>", "Terminal rows", uint, 40)
+  .option("--interval <ms>", "Capture interval in ms", uint, 100)
   .option("--duration <seconds>", "Stop after N seconds")
   .option("--output-dir <path>", "Output directory or file path", "./termless-recording/")
   .option("--format <type>", "Output format: frames or html", "frames")
@@ -115,9 +113,9 @@ program
     const { recordCommand } = await import("./record.ts")
     await recordCommand({
       command: opts.command.split(/\s+/),
-      cols: Number.parseInt(opts.cols, 10),
-      rows: Number.parseInt(opts.rows, 10),
-      interval: Number.parseInt(opts.interval, 10),
+      cols: opts.cols,
+      rows: opts.rows,
+      interval: opts.interval,
       duration: opts.duration ? Number.parseFloat(opts.duration) : null,
       outputDir: opts.outputDir,
       format: opts.format as "frames" | "html",
