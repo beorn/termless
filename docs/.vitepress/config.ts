@@ -48,6 +48,9 @@ export default defineConfig({
     const title = pageData.title || "Termless"
     const description =
       pageData.description || "Headless terminal testing for every backend"
+    const cleanPath = pageData.relativePath
+      .replace(/\.md$/, ".html")
+      .replace(/index\.html$/, "")
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(
       ["meta", { property: "og:title", content: title }],
@@ -56,17 +59,46 @@ export default defineConfig({
         "meta",
         {
           property: "og:url",
-          content: `https://termless.dev/${pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")}`,
+          content: `https://termless.dev/${cleanPath}`,
         },
       ],
       [
         "link",
         {
           rel: "canonical",
-          href: `https://termless.dev/${pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")}`,
+          href: `https://termless.dev/${cleanPath}`,
         },
       ],
     )
+
+    // JSON-LD BreadcrumbList
+    const segments = cleanPath.replace(/\.html$/, "").split("/").filter(Boolean)
+    if (segments.length > 0) {
+      const breadcrumbItems = [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://termless.dev/" },
+      ]
+      for (let i = 0; i < segments.length; i++) {
+        const path = segments.slice(0, i + 1).join("/")
+        const name = segments[i]
+          .replace(/-/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+        breadcrumbItems.push({
+          "@type": "ListItem",
+          position: i + 2,
+          name: pageData.title && i === segments.length - 1 ? pageData.title : name,
+          item: `https://termless.dev/${path}`,
+        })
+      }
+      pageData.frontmatter.head.push([
+        "script",
+        { type: "application/ld+json" },
+        JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumbItems,
+        }),
+      ])
+    }
   },
 
   themeConfig: {
