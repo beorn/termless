@@ -21,7 +21,19 @@ export default defineConfig({
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Termless" }],
+    ["meta", { property: "og:image", content: "https://termless.dev/og-image.png" }],
     ["meta", { name: "twitter:card", content: "summary" }],
+    [
+      "script",
+      { type: "application/ld+json" },
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "Termless",
+        url: "https://termless.dev",
+        description: "Headless terminal testing for every backend",
+      }),
+    ],
     [
       "script",
       {
@@ -45,6 +57,13 @@ export default defineConfig({
         {
           property: "og:url",
           content: `https://termless.dev/${pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")}`,
+        },
+      ],
+      [
+        "link",
+        {
+          rel: "canonical",
+          href: `https://termless.dev/${pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")}`,
         },
       ],
     )
