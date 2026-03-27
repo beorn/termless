@@ -15,8 +15,13 @@ export default defineConfig({
     "Headless terminal testing — like Playwright, but for terminal apps. Write tests once, run against any backend.",
   base: "/",
 
+  sitemap: { hostname: "https://termless.dev" },
+
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:site_name", content: "Termless" }],
+    ["meta", { name: "twitter:card", content: "summary" }],
     [
       "script",
       {
@@ -26,6 +31,24 @@ export default defineConfig({
       },
     ],
   ],
+
+  transformPageData(pageData) {
+    const title = pageData.title || "Termless"
+    const description =
+      pageData.description || "Headless terminal testing for every backend"
+    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head.push(
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: description }],
+      [
+        "meta",
+        {
+          property: "og:url",
+          content: `https://termless.dev/${pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")}`,
+        },
+      ],
+    )
+  },
 
   themeConfig: {
     logo: "/logo.svg",
