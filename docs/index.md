@@ -28,6 +28,24 @@ features:
     details: "Spawn real processes, send keypresses, wait for output. Test your actual TUI application end-to-end against any backend."
 ---
 
+<div class="problem-summary">
+  <p>Terminal apps are hard to test. Unlike web apps with a DOM to inspect, terminal apps render invisible escape sequences to a byte stream. Tools like <code>expect</code> and <code>pexpect</code> match on raw text — they can't tell you what color a character is, whether the cursor is visible, or if the terminal is in alternate screen mode. <strong>Termless gives you a real terminal emulator in-process</strong> with full access to cells, colors, cursor, and modes. Write tests like you would for a web app. <a href="/why">Learn more</a></p>
+</div>
+
+<style>
+.problem-summary {
+  max-width: 720px;
+  margin: 0 auto 2em;
+  padding: 16px 20px;
+  background: var(--vp-c-bg-soft);
+  border-radius: 8px;
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+.problem-summary p { margin: 0; }
+</style>
+
 ## Quick Start
 
 ::: code-group
