@@ -17,10 +17,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ matrix.bun-version }}
-      - uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 3.1.51
       - run: bun install
-      - run: cd packages/libvterm && bash build/build.sh
       - run: bun vitest run
       - run: bun run typecheck
