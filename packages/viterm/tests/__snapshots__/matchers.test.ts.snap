@@ -23,3 +23,10 @@ exports[`snapshot matchers > toMatchTerminalSnapshot with custom name > my-snaps
  1│Hello World
  2│Line 2     "
 `;
+
+exports[`snapshot matchers toMatchTerminalSnapshot with custom name: my-snapshot 1`] = `
+"# terminal 11x2 | cursor (5,0) visible block
+──────────────────────────────────────────────────
+ 1│Hello World
+ 2│Line 2     "
+`;

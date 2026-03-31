@@ -178,7 +178,7 @@ export default defineConfig({
 
     footer: {
       message: 'Results at <a href="https://terminfo.dev">terminfo.dev</a> · Tests TUIs built with <a href="https://silvery.dev">Silvery</a>',
-      copyright: 'Built by <a href="https://beorn.codes">Bjorn Stabell</a>'
+      copyright: 'Built by <a href="https://beorn.codes">Bjørn Stabell</a>'
     },
   },
 })
