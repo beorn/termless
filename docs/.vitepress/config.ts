@@ -21,7 +21,7 @@ export default defineConfig({
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Termless" }],
-    ["meta", { property: "og:image", content: "https://termless.dev/og-image.png" }],
+    ["meta", { property: "og:image", content: "https://termless.dev/og-image.svg" }],
     ["meta", { name: "twitter:card", content: "summary" }],
     [
       "script",
@@ -46,11 +46,8 @@ export default defineConfig({
 
   transformPageData(pageData) {
     const title = pageData.title || "Termless"
-    const description =
-      pageData.description || "Headless terminal testing for every backend"
-    const cleanPath = pageData.relativePath
-      .replace(/\.md$/, ".html")
-      .replace(/index\.html$/, "")
+    const description = pageData.description || "Headless terminal testing for every backend"
+    const cleanPath = pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(
       ["meta", { property: "og:title", content: title }],
@@ -72,16 +69,15 @@ export default defineConfig({
     )
 
     // JSON-LD BreadcrumbList
-    const segments = cleanPath.replace(/\.html$/, "").split("/").filter(Boolean)
+    const segments = cleanPath
+      .replace(/\.html$/, "")
+      .split("/")
+      .filter(Boolean)
     if (segments.length > 0) {
-      const breadcrumbItems = [
-        { "@type": "ListItem", position: 1, name: "Home", item: "https://termless.dev/" },
-      ]
+      const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: "Home", item: "https://termless.dev/" }]
       for (let i = 0; i < segments.length; i++) {
         const path = segments.slice(0, i + 1).join("/")
-        const name = segments[i]
-          .replace(/-/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase())
+        const name = segments[i].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
         breadcrumbItems.push({
           "@type": "ListItem",
           position: i + 2,
