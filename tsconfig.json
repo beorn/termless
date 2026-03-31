@@ -17,5 +17,5 @@
     "lib": ["ESNext"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"],
-  "exclude": ["packages/cli/**", "tests/cross-backend.test.ts"]
+  "exclude": ["packages/cli/**", "packages/libvterm/**", "tests/cross-backend.test.ts"]
 }
