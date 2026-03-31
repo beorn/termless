@@ -228,11 +228,14 @@ See [Backend Capabilities](/guide/backends) for the full feature matrix, per-bac
 
 ## See Also
 
-Termless is part of the [Silvery](https://silvery.dev) ecosystem — libraries for building and testing modern terminal UIs:
+Termless is part of the terminal tools ecosystem:
 
-- **[Silvery](https://silvery.dev)** -- React framework for terminal UIs (layout feedback, incremental rendering, 23+ components)
-- **[Flexily](https://beorn.github.io/flexily)** -- Pure JS flexbox layout engine (Yoga-compatible, 2.5x faster, zero WASM)
-- **[Loggily](https://beorn.github.io/loggily)** -- Debug + structured logging + tracing in one library
+- **[vterm.js](https://github.com/beorn/vterm)** — full-featured terminal emulator (161/161 features on [terminfo.dev](https://terminfo.dev)), included as `@termless/vterm`
+- **[vt100.js](https://github.com/beorn/vterm/tree/main/packages/vt100)** — VT220-era baseline emulator, included as `@termless/vt100`
+- **[terminfo.dev](https://terminfo.dev)** — terminal feature compatibility database, powered by Termless
+- **[Silvery](https://silvery.dev)** — React framework for terminal UIs (30+ components, incremental rendering)
+- **[Flexily](https://beorn.codes/flexily)** — pure JS flexbox layout engine (Yoga-compatible, zero WASM)
+- **[Loggily](https://beorn.codes/loggily)** — debug + structured logging + tracing in one library
 
 <style>
 :root {
