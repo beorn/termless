@@ -55,33 +55,26 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  // ── Colors ──
+  // ── Colors (VT100 is monochrome — colors are silently ignored) ──
 
-  test("feed ANSI color codes, getCell() has correct fg color", () => {
+  test("color codes are silently ignored (VT100 is monochrome)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 31 = red foreground (ANSI color 1)
+    // SGR 31 = red foreground — VT100 ignores this
     backend.feed(new TextEncoder().encode("\x1b[31mR\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("R")
-    expect(cell.fg).not.toBeNull()
-    // ANSI color 1 = { r: 0x80, g: 0, b: 0 }
-    expect(cell.fg!.r).toBe(0x80)
-    expect(cell.fg!.g).toBe(0)
-    expect(cell.fg!.b).toBe(0)
+    // fg should be null since VT100 is monochrome
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
-  test("feed text with background color, getCell() has correct bg", () => {
+  test("background color codes are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 42 = green background (ANSI color 2)
+    // SGR 42 = green background — VT100 ignores this
     backend.feed(new TextEncoder().encode("\x1b[42mG\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("G")
-    expect(cell.bg).not.toBeNull()
-    // ANSI color 2 = { r: 0, g: 0x80, b: 0 }
-    expect(cell.bg!.r).toBe(0)
-    expect(cell.bg!.g).toBe(0x80)
-    expect(cell.bg!.b).toBe(0)
+    expect(cell.bg).toBeNull()
     backend.destroy()
   })
 
@@ -498,17 +491,18 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  // ── Combined attributes ──
+  // ── Combined attributes (VT100 is monochrome — colors ignored) ──
 
-  test("combined bold + color attributes", () => {
+  test("combined bold + underline attributes (no colors in VT100)", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // Bold + red foreground
-    backend.feed(new TextEncoder().encode("\x1b[1;31mX\x1b[0m"))
+    // Bold + color code (color is ignored in VT100)
+    backend.feed(new TextEncoder().encode("\x1b[1;4mX\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("X")
     expect(cell.bold).toBe(true)
-    expect(cell.fg).not.toBeNull()
-    expect(cell.fg!.r).toBe(0x80)
+    expect(cell.underline).toBe("single")
+    // Color is ignored in VT100
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
@@ -913,205 +907,25 @@ describe("createVt100Backend", () => {
     })
   })
 
-  // ── Insert/delete characters ──
+  // ── ICH/DCH/IL/DL (VT102/VT220 features — silently ignored) ──
 
-  describe("insert/delete characters", () => {
-    test("DCH deletes characters at cursor position", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 3 })
-      backend.feed(new TextEncoder().encode("ABCDE"))
+  test("ICH/DCH/IL/DL are silently ignored (VT100 has no insert/delete)", () => {
+    const backend = createVt100Backend({ cols: 10, rows: 3 })
+    backend.feed(new TextEncoder().encode("ABCDE"))
 
-      // Move cursor to col 1 (B)
-      backend.feed(new TextEncoder().encode("\x1b[1;2H"))
-      // Delete 2 characters (CSI 2 P)
-      backend.feed(new TextEncoder().encode("\x1b[2P"))
+    // Move cursor to col 1
+    backend.feed(new TextEncoder().encode("\x1b[1;2H"))
 
-      // Row should now be: A D E _ _ ...
-      const line = backend.getLine(0)
-      expect(line[0]!.char).toBe("A")
-      expect(line[1]!.char).toBe("D")
-      expect(line[2]!.char).toBe("E")
-      // Remaining should be blank
-      expect(line[3]!.char).toBe("")
-      expect(line[4]!.char).toBe("")
-      backend.destroy()
-    })
-
-    test("ICH inserts blank characters at cursor position", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 3 })
-      backend.feed(new TextEncoder().encode("ABCDE"))
-
-      // Move cursor to col 2 (C)
-      backend.feed(new TextEncoder().encode("\x1b[1;3H"))
-      // Insert 2 blank characters (CSI 2 @)
-      backend.feed(new TextEncoder().encode("\x1b[2@"))
-
-      // Row should now be: A B _ _ C D E _ _ _
-      const line = backend.getLine(0)
-      expect(line[0]!.char).toBe("A")
-      expect(line[1]!.char).toBe("B")
-      expect(line[2]!.char).toBe("") // inserted blank
-      expect(line[3]!.char).toBe("") // inserted blank
-      expect(line[4]!.char).toBe("C")
-      expect(line[5]!.char).toBe("D")
-      expect(line[6]!.char).toBe("E")
-      backend.destroy()
-    })
-
-    test("DCH at end of line deletes remaining chars", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 3 })
-      backend.feed(new TextEncoder().encode("ABCDE"))
-      // Move to col 3 (D)
-      backend.feed(new TextEncoder().encode("\x1b[1;4H"))
-      // Delete 5 chars (more than remaining)
-      backend.feed(new TextEncoder().encode("\x1b[5P"))
-      const line = backend.getLine(0)
-      expect(line[0]!.char).toBe("A")
-      expect(line[1]!.char).toBe("B")
-      expect(line[2]!.char).toBe("C")
-      // D and E should be gone, replaced by blanks
-      expect(line[3]!.char).toBe("")
-      backend.destroy()
-    })
-
-    test("ICH shifts characters off the right edge", () => {
-      const backend = createVt100Backend({ cols: 5, rows: 1 })
-      backend.feed(new TextEncoder().encode("ABCDE"))
-      // Move to col 0
-      backend.feed(new TextEncoder().encode("\x1b[1;1H"))
-      // Insert 2 blanks
-      backend.feed(new TextEncoder().encode("\x1b[2@"))
-      // Row should be: _ _ A B C (D and E pushed off)
-      const line = backend.getLine(0)
-      expect(line[0]!.char).toBe("")
-      expect(line[1]!.char).toBe("")
-      expect(line[2]!.char).toBe("A")
-      expect(line[3]!.char).toBe("B")
-      expect(line[4]!.char).toBe("C")
-      backend.destroy()
-    })
-  })
-
-  // ── Insert/delete lines ──
-
-  describe("insert/delete lines", () => {
-    test("IL inserts a blank line at cursor, pushes content down", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 5 })
-      const enc = (s: string) => new TextEncoder().encode(s)
-
-      backend.feed(enc("LINE0\r\n"))
-      backend.feed(enc("LINE1\r\n"))
-      backend.feed(enc("LINE2\r\n"))
-      backend.feed(enc("LINE3\r\n"))
-      backend.feed(enc("LINE4"))
-
-      // Move cursor to row 1
-      backend.feed(enc("\x1b[2;1H"))
-      // Insert 1 line (CSI L)
-      backend.feed(enc("\x1b[L"))
-
-      // Row 0 should still be LINE0
-      const line0 = backend.getLine(0)
-      expect(line0[0]!.char).toBe("L")
-      expect(line0[1]!.char).toBe("I")
-      expect(line0[2]!.char).toBe("N")
-      expect(line0[3]!.char).toBe("E")
-      expect(line0[4]!.char).toBe("0")
-
-      // Row 1 should be blank (inserted)
-      const line1 = backend.getLine(1)
-      expect(line1[0]!.char).toBe("")
-
-      // Row 2 should now have LINE1 (pushed down from row 1)
-      const line2 = backend.getLine(2)
-      expect(line2[0]!.char).toBe("L")
-      expect(line2[1]!.char).toBe("I")
-      expect(line2[2]!.char).toBe("N")
-      expect(line2[3]!.char).toBe("E")
-      expect(line2[4]!.char).toBe("1")
-      backend.destroy()
-    })
-
-    test("DL deletes line at cursor, pulls content up", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 5 })
-      const enc = (s: string) => new TextEncoder().encode(s)
-
-      backend.feed(enc("LINE0\r\n"))
-      backend.feed(enc("LINE1\r\n"))
-      backend.feed(enc("LINE2\r\n"))
-      backend.feed(enc("LINE3\r\n"))
-      backend.feed(enc("LINE4"))
-
-      // Move cursor to row 1
-      backend.feed(enc("\x1b[2;1H"))
-      // Delete 1 line (CSI M)
-      backend.feed(enc("\x1b[M"))
-
-      // Row 0 should still be LINE0
-      const line0 = backend.getLine(0)
-      expect(line0[0]!.char).toBe("L")
-      expect(line0[4]!.char).toBe("0")
-
-      // Row 1 should now have LINE2 (pulled up)
-      const line1 = backend.getLine(1)
-      expect(line1[0]!.char).toBe("L")
-      expect(line1[4]!.char).toBe("2")
-
-      // Last row should be blank (new row pushed in from bottom)
-      const lastLine = backend.getLine(4)
-      expect(lastLine[0]!.char).toBe("")
-      backend.destroy()
-    })
-
-    test("IL with count inserts multiple lines", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 5 })
-      const enc = (s: string) => new TextEncoder().encode(s)
-
-      backend.feed(enc("LINE0\r\n"))
-      backend.feed(enc("LINE1\r\n"))
-      backend.feed(enc("LINE2\r\n"))
-      backend.feed(enc("LINE3\r\n"))
-      backend.feed(enc("LINE4"))
-
-      // Move to row 1, insert 2 lines
-      backend.feed(enc("\x1b[2;1H"))
-      backend.feed(enc("\x1b[2L"))
-
-      // Row 0: LINE0 (unchanged)
-      expect(backend.getLine(0)[4]!.char).toBe("0")
-      // Row 1: blank (inserted)
-      expect(backend.getLine(1)[0]!.char).toBe("")
-      // Row 2: blank (inserted)
-      expect(backend.getLine(2)[0]!.char).toBe("")
-      // Row 3: LINE1 (pushed down from row 1)
-      expect(backend.getLine(3)[4]!.char).toBe("1")
-      backend.destroy()
-    })
-
-    test("DL with count deletes multiple lines", () => {
-      const backend = createVt100Backend({ cols: 10, rows: 5 })
-      const enc = (s: string) => new TextEncoder().encode(s)
-
-      backend.feed(enc("LINE0\r\n"))
-      backend.feed(enc("LINE1\r\n"))
-      backend.feed(enc("LINE2\r\n"))
-      backend.feed(enc("LINE3\r\n"))
-      backend.feed(enc("LINE4"))
-
-      // Move to row 1, delete 2 lines
-      backend.feed(enc("\x1b[2;1H"))
-      backend.feed(enc("\x1b[2M"))
-
-      // Row 0: LINE0 (unchanged)
-      expect(backend.getLine(0)[4]!.char).toBe("0")
-      // Row 1: LINE3 (pulled up past deleted LINE1 and LINE2)
-      expect(backend.getLine(1)[4]!.char).toBe("3")
-      // Row 2: LINE4 (pulled up)
-      expect(backend.getLine(2)[4]!.char).toBe("4")
-      // Row 3 and 4: blank
-      expect(backend.getLine(3)[0]!.char).toBe("")
-      expect(backend.getLine(4)[0]!.char).toBe("")
-      backend.destroy()
-    })
+    // DCH (CSI P) — should be ignored
+    backend.feed(new TextEncoder().encode("\x1b[2P"))
+    // Text should be unchanged
+    const line = backend.getLine(0)
+    expect(line[0]!.char).toBe("A")
+    expect(line[1]!.char).toBe("B")
+    expect(line[2]!.char).toBe("C")
+    expect(line[3]!.char).toBe("D")
+    expect(line[4]!.char).toBe("E")
+    backend.destroy()
   })
 
   // ── scrollViewport() ──
@@ -1274,17 +1088,13 @@ describe("createVt100Backend", () => {
 
     test("incomplete CSI sequence followed by text", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
-      // Start a CSI but then feed a regular printable (which is the final byte)
-      backend.feed(new TextEncoder().encode("\x1b[m"))
-      // ESC [ m is actually a valid SGR reset — but let's test with truly incomplete:
       // Feed CSI with just params, then a final byte in a separate feed
-      backend.feed(new TextEncoder().encode("\x1b[31"))
+      backend.feed(new TextEncoder().encode("\x1b[1"))
       // Now the parser is in CSI state waiting for final byte
-      backend.feed(new TextEncoder().encode("mRedText\x1b[0m"))
+      backend.feed(new TextEncoder().encode("mBoldText\x1b[0m"))
       const cell = backend.getCell(0, 0)
-      expect(cell.char).toBe("R")
-      expect(cell.fg).not.toBeNull()
-      expect(cell.fg!.r).toBe(0x80)
+      expect(cell.char).toBe("B")
+      expect(cell.bold).toBe(true)
       backend.destroy()
     })
 
