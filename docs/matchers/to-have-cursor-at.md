@@ -5,6 +5,13 @@ description: Assert that the terminal cursor is at a specific position
 
 # toHaveCursorAt
 
+::: warning Deprecated
+Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+```typescript
+expect(term).toHaveCursor({ x: 5, y: 2 })
+```
+:::
+
 Assert that the terminal cursor is at the given column and row.
 
 ## Signature
@@ -52,5 +59,6 @@ expect(term).not.toHaveCursorAt(0, 0)
 
 ## See Also
 
+- [toHaveCursor](/matchers/to-have-cursor) - composable cursor matcher (preferred)
 - [toHaveCursorVisible](/matchers/to-have-cursor-visible) - cursor visibility
 - [toHaveCursorStyle](/matchers/to-have-cursor-style) - cursor shape

@@ -5,6 +5,13 @@ description: Assert that a terminal cell has underline styling with optional sty
 
 # toHaveUnderline
 
+::: warning Deprecated
+Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+```typescript
+expect(term.cell(0, 0)).toHaveAttrs({ underline: true })
+```
+:::
+
 Assert that a cell has underline styling. Optionally check for a specific underline style.
 
 ## Signature
@@ -54,6 +61,7 @@ expect(term.cell(0, 0)).not.toHaveUnderline()
 
 ## See Also
 
+- [toHaveAttrs](/matchers/to-have-attrs) - composable attribute matcher (preferred)
 - [toBeBold](/matchers/to-be-bold) - bold styling
 - [toBeItalic](/matchers/to-be-italic) - italic styling
 - [toBeStrikethrough](/matchers/to-be-strikethrough) - strikethrough styling

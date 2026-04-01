@@ -5,6 +5,13 @@ description: Assert that the terminal cursor is visible
 
 # toHaveCursorVisible
 
+::: warning Deprecated
+Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+```typescript
+expect(term).toHaveCursor({ visible: true })
+```
+:::
+
 Assert that the terminal cursor is visible.
 
 ## Signature
@@ -42,6 +49,7 @@ expect(term).not.toHaveCursorVisible()
 
 ## See Also
 
+- [toHaveCursor](/matchers/to-have-cursor) - composable cursor matcher (preferred)
 - [toHaveCursorHidden](/matchers/to-have-cursor-hidden) - assert cursor is hidden
 - [toHaveCursorAt](/matchers/to-have-cursor-at) - cursor position
 - [toHaveCursorStyle](/matchers/to-have-cursor-style) - cursor shape

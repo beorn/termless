@@ -5,6 +5,13 @@ description: Assert that the terminal cursor has a specific shape
 
 # toHaveCursorStyle
 
+::: warning Deprecated
+Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+```typescript
+expect(term).toHaveCursor({ style: "block" })
+```
+:::
+
 Assert that the terminal cursor has a specific style (shape).
 
 ## Signature
@@ -48,5 +55,6 @@ await expect(term).toHaveCursorStyle("beam", { timeout: 5000 })
 
 ## See Also
 
+- [toHaveCursor](/matchers/to-have-cursor) - composable cursor matcher (preferred)
 - [toHaveCursorAt](/matchers/to-have-cursor-at) - cursor position
 - [toHaveCursorVisible](/matchers/to-have-cursor-visible) - cursor visibility

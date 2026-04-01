@@ -5,6 +5,13 @@ description: Assert that a terminal cell has a specific foreground color
 
 # toHaveFg
 
+::: warning Deprecated
+Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+```typescript
+expect(term.cell(0, 0)).toHaveAttrs({ fg: "#ff0000" })
+```
+:::
+
 Assert that a cell has a specific foreground color. Accepts hex strings or RGB objects.
 
 ## Signature
@@ -48,6 +55,7 @@ expect(term.cell(0, 0)).not.toHaveFg("#000000")
 
 ## See Also
 
+- [toHaveAttrs](/matchers/to-have-attrs) - composable attribute matcher (preferred)
 - [toHaveBg](/matchers/to-have-bg) - background color assertion
 - [toBeBold](/matchers/to-be-bold) - bold (which may affect color brightness)
 - [toBeInverse](/matchers/to-be-inverse) - inverse swaps fg/bg
