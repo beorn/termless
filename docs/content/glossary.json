@@ -62,6 +62,83 @@
   },
 
   {
+    "term": "feed",
+    "href": "/api/terminal",
+    "tooltip": "Send raw data to the terminal backend — the core input method for writing escape sequences and text"
+  },
+  {
+    "term": "spawn",
+    "href": "/api/terminal",
+    "tooltip": "Launch a process with a PTY — test real CLI apps with stdin/stdout connected to the terminal"
+  },
+  {
+    "term": "press",
+    "href": "/api/terminal",
+    "tooltip": "Simulate a keypress — arrows, Enter, Ctrl+C, function keys, and modifier combinations"
+  },
+  {
+    "term": "resize",
+    "href": "/api/terminal",
+    "tooltip": "Change terminal dimensions — triggers reflow and SIGWINCH for testing responsive behavior"
+  },
+  {
+    "term": "close",
+    "href": "/api/terminal",
+    "tooltip": "Gracefully shut down the terminal — kills PTY process, cleans up resources"
+  },
+  {
+    "term": "find",
+    "href": "/api/terminal",
+    "tooltip": "Search for text in the terminal output — returns position (row, col) of first match or null"
+  },
+  {
+    "term": "findAll",
+    "href": "/api/terminal",
+    "tooltip": "Search for all regex matches in terminal output — returns array of positions"
+  },
+  {
+    "term": "screenshotSvg",
+    "href": "/guide/screenshots",
+    "tooltip": "Capture terminal state as SVG — text-based, diffable, with colors and styling preserved"
+  },
+  {
+    "term": "screenshotPng",
+    "href": "/guide/screenshots",
+    "tooltip": "Capture terminal state as PNG image — pixel-perfect rendering for visual regression testing"
+  },
+  {
+    "term": "click",
+    "href": "/api/terminal",
+    "tooltip": "Simulate a mouse click at terminal coordinates — sends mouse tracking escape sequences"
+  },
+  {
+    "term": "dblclick",
+    "href": "/api/terminal",
+    "tooltip": "Simulate a double-click at terminal coordinates — two clicks with configurable delay"
+  },
+
+  {
+    "term": "createXtermBackend",
+    "href": "/guide/backends",
+    "tooltip": "Factory for the xterm.js backend — the most widely used JavaScript terminal emulator"
+  },
+  {
+    "term": "createVtermBackend",
+    "href": "/guide/backends",
+    "tooltip": "Factory for the vterm.js backend — full-featured TypeScript emulator with 100% terminfo.dev coverage"
+  },
+  {
+    "term": "createGhosttyBackend",
+    "href": "/guide/backends",
+    "tooltip": "Factory for the Ghostty WASM backend — GPU-quality terminal emulation in headless mode"
+  },
+  {
+    "term": "createVt100Backend",
+    "href": "/guide/backends",
+    "tooltip": "Factory for the vt100.js backend — lightweight pure TypeScript VT100/VT220 emulator"
+  },
+
+  {
     "term": "toContainText",
     "href": "/api/matchers",
     "tooltip": "Vitest matcher — asserts a terminal region contains the expected text"
@@ -127,20 +204,24 @@
   {
     "term": "viewport",
     "href": "/guide/terminal-model",
-    "tooltip": "The visible portion of the terminal — rows × cols currently displayed"
+    "tooltip": "The visible portion of the terminal — rows x cols currently displayed"
   },
   {
     "term": "screen buffer",
     "href": "/guide/terminal-model",
-    "tooltip": "The active terminal grid — rows × cols of cells with text and attributes"
+    "tooltip": "The active terminal grid — rows x cols of cells with text and attributes"
   },
   {
     "term": "pseudo-terminal",
-    "tooltip": "OS-level interface (PTY) that emulates a real terminal — enables running CLI apps in tests"
+    "href": "https://en.wikipedia.org/wiki/Pseudoterminal",
+    "tooltip": "OS-level interface (PTY) that emulates a real terminal — enables running CLI apps in tests",
+    "external": true
   },
   {
     "term": "bracketed paste",
-    "tooltip": "Terminal mode where pasted text is wrapped in escape sequences — prevents paste injection"
+    "href": "https://terminfo.dev/modes/decset-2004-bracketed-paste",
+    "tooltip": "Terminal mode where pasted text is wrapped in escape sequences — prevents paste injection",
+    "external": true
   },
   {
     "term": "region selectors",
@@ -154,14 +235,163 @@
   },
   {
     "term": "lazy views",
+    "href": "/api/terminal",
     "tooltip": "Termless views recompute on every access — always reflect current terminal state, never stale"
   },
 
   {
-    "term": "vterm.js",
-    "tooltip": "Full-featured modern terminal emulator in pure TypeScript — 100% terminfo.dev feature coverage"
+    "term": "ED",
+    "tooltip": "Erase in Display — clear part of the screen (below cursor, above cursor, or entire screen)",
+    "href": "https://terminfo.dev/erase",
+    "external": true
   },
-  { "term": "xterm.js", "tooltip": "Popular browser-based terminal emulator — most widely used JavaScript terminal" },
+  {
+    "term": "ED2",
+    "tooltip": "Erase entire screen — CSI 2 J clears all visible cells without affecting scrollback",
+    "href": "https://terminfo.dev/erase",
+    "external": true
+  },
+  {
+    "term": "ED3",
+    "tooltip": "Erase screen + scrollback — CSI 3 J clears visible screen and the entire scrollback buffer",
+    "href": "https://terminfo.dev/erase",
+    "external": true
+  },
+  {
+    "term": "CUP",
+    "tooltip": "Cursor Position — CSI row;col H moves cursor to an absolute position on screen",
+    "href": "https://terminfo.dev/cursor/cup-cursor-position",
+    "external": true
+  },
+  {
+    "term": "CUB",
+    "tooltip": "Cursor Back — move cursor left N columns",
+    "href": "https://terminfo.dev/cursor",
+    "external": true
+  },
+  {
+    "term": "CUF",
+    "tooltip": "Cursor Forward — move cursor right N columns",
+    "href": "https://terminfo.dev/cursor",
+    "external": true
+  },
+  {
+    "term": "CUU",
+    "tooltip": "Cursor Up — move cursor up N rows",
+    "href": "https://terminfo.dev/cursor",
+    "external": true
+  },
+  {
+    "term": "CUD",
+    "tooltip": "Cursor Down — move cursor down N rows",
+    "href": "https://terminfo.dev/cursor",
+    "external": true
+  },
+  {
+    "term": "DECSTBM",
+    "tooltip": "DEC Set Top and Bottom Margins — defines the scroll region for independent scrolling",
+    "href": "https://terminfo.dev/scrollback",
+    "external": true
+  },
+  {
+    "term": "DECTCEM",
+    "tooltip": "DEC Text Cursor Enable Mode — DEC private mode ?25 to show or hide the text cursor",
+    "href": "https://terminfo.dev/cursor/dectcem-hide-cursor",
+    "external": true
+  },
+  {
+    "term": "DECSC",
+    "tooltip": "DEC Save Cursor — save cursor position and attributes for later restoration with DECRC",
+    "href": "https://terminfo.dev/cursor/decsc-save-restore-cursor",
+    "external": true
+  },
+  {
+    "term": "DECSCUSR",
+    "tooltip": "DEC Set Cursor Style — set cursor shape: block, underline, or bar; blinking or steady",
+    "href": "https://terminfo.dev/cursor/decscusr-cursor-shape",
+    "external": true
+  },
+  {
+    "term": "EL",
+    "tooltip": "Erase in Line — clear part of the current line (right of cursor, left, or entire line)",
+    "href": "https://terminfo.dev/erase",
+    "external": true
+  },
+  {
+    "term": "ICH",
+    "tooltip": "Insert Character — insert blank characters at cursor, shifting existing characters right",
+    "href": "https://terminfo.dev/editing",
+    "external": true
+  },
+  {
+    "term": "DCH",
+    "tooltip": "Delete Character — delete characters at cursor, shifting remaining characters left",
+    "href": "https://terminfo.dev/editing",
+    "external": true
+  },
+  {
+    "term": "IL",
+    "tooltip": "Insert Lines — insert blank lines at cursor position, pushing existing lines down",
+    "href": "https://terminfo.dev/editing",
+    "external": true
+  },
+  {
+    "term": "DL",
+    "tooltip": "Delete Lines — delete lines at cursor position, pulling lines up from below",
+    "href": "https://terminfo.dev/editing",
+    "external": true
+  },
+  {
+    "term": "SU",
+    "tooltip": "Scroll Up — scroll the display up N lines, new blank lines at the bottom",
+    "href": "https://terminfo.dev/scrollback",
+    "external": true
+  },
+  {
+    "term": "SD",
+    "tooltip": "Scroll Down — scroll the display down N lines, new blank lines at the top",
+    "href": "https://terminfo.dev/scrollback",
+    "external": true
+  },
+  {
+    "term": "RIS",
+    "tooltip": "Reset to Initial State — full terminal reset of cursor, modes, scroll regions, and colors",
+    "href": "https://terminfo.dev/reset",
+    "external": true
+  },
+  {
+    "term": "DA1",
+    "tooltip": "Primary Device Attributes — query the terminal for its type and supported features",
+    "href": "https://terminfo.dev/device/da1-primary-device-attributes",
+    "external": true
+  },
+  {
+    "term": "DSR",
+    "tooltip": "Device Status Report — query the terminal for status, most commonly cursor position (DSR 6)",
+    "href": "https://terminfo.dev/device/dsr-5-device-status-report",
+    "external": true
+  },
+  {
+    "term": "OSC 8",
+    "tooltip": "Clickable hyperlinks in terminal output — text between OSC 8 markers becomes a link",
+    "href": "https://terminfo.dev/extensions/osc-8-hyperlinks",
+    "external": true
+  },
+  {
+    "term": "OSC 52",
+    "tooltip": "Clipboard access — read/write the system clipboard from terminal applications",
+    "href": "https://terminfo.dev/extensions/osc-52-clipboard",
+    "external": true
+  },
+
+  {
+    "term": "vterm.js",
+    "href": "https://www.npmjs.com/package/vterm.js",
+    "tooltip": "Full-featured modern terminal emulator in pure TypeScript — 100% terminfo.dev feature coverage",
+    "external": true
+  },
+  { "term": "xterm.js", "href": "https://xtermjs.org", "tooltip": "Popular browser-based terminal emulator — most widely used JavaScript terminal", "external": true },
+  { "term": "Ghostty", "href": "https://ghostty.org", "tooltip": "GPU-accelerated terminal emulator by Mitchell Hashimoto — available as WASM backend", "external": true },
 
   {
     "term": "Silvery",
@@ -177,24 +407,80 @@
   },
   {
     "term": "Vitest",
-    "tooltip": "Modern testing framework powered by Vite — Termless matchers integrate as Vitest custom matchers"
+    "href": "https://vitest.dev",
+    "tooltip": "Modern testing framework powered by Vite — Termless matchers integrate as Vitest custom matchers",
+    "external": true
   },
   {
     "term": "SGR",
-    "tooltip": "Select Graphic Rendition — ANSI escape codes for text styling (bold, colors, underline)"
+    "href": "https://terminfo.dev/sgr",
+    "tooltip": "Select Graphic Rendition — ANSI escape codes for text styling (bold, colors, underline)",
+    "external": true
   },
-  { "term": "CSI", "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands" },
+  { "term": "CSI", "href": "https://terminfo.dev/fundamentals/anatomy", "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands", "external": true },
   {
     "term": "OSC",
-    "tooltip": "Operating System Command — terminal escape sequences for titles, hyperlinks, clipboard"
+    "href": "https://terminfo.dev/osc",
+    "tooltip": "Operating System Command — terminal escape sequences for titles, hyperlinks, clipboard",
+    "external": true
+  },
+  {
+    "term": "DCS",
+    "href": "https://terminfo.dev/standards",
+    "tooltip": "Device Control String — escape sequences for device-specific data (Sixel graphics, DECRQSS)",
+    "external": true
   },
   {
     "term": "ECMA-48",
-    "tooltip": "International standard defining terminal control functions — basis of ANSI escape codes"
+    "href": "https://terminfo.dev/ecma-48",
+    "tooltip": "International standard defining terminal control functions — basis of ANSI escape codes",
+    "external": true
   },
   {
     "term": "Kitty keyboard protocol",
-    "tooltip": "Modern keyboard input protocol with key release events, modifiers, and Unicode"
+    "href": "https://terminfo.dev/extensions/kitty-keyboard-protocol",
+    "tooltip": "Modern keyboard input protocol with key release events, modifiers, and Unicode",
+    "external": true
+  },
+  {
+    "term": "truecolor",
+    "href": "https://terminfo.dev/sgr/38-2-truecolor-fg",
+    "tooltip": "24-bit RGB color support via ESC[38;2;R;G;Bm — 16 million colors",
+    "external": true
+  },
+  {
+    "term": "wide character",
+    "tooltip": "A character occupying two terminal columns — CJK ideographs and most emoji",
+    "href": "https://terminfo.dev/unicode",
+    "external": true
+  },
+  {
+    "term": "grapheme cluster",
+    "tooltip": "What humans see as a single character — may be multiple Unicode codepoints (e.g., emoji with ZWJ)",
+    "href": "https://terminfo.dev/unicode",
+    "external": true
+  },
+  {
+    "term": "synchronized output",
+    "tooltip": "Buffer all output between start/end markers and paint as one frame — eliminates flicker",
+    "href": "https://terminfo.dev/modes",
+    "external": true
+  },
+  {
+    "term": "mouse tracking",
+    "tooltip": "Terminal reports mouse clicks, movement, and scroll events to the application",
+    "href": "https://terminfo.dev/modes",
+    "external": true
+  },
+  {
+    "term": "focus reporting",
+    "tooltip": "Terminal notifies the app when the window gains or loses focus",
+    "href": "https://terminfo.dev/modes",
+    "external": true
+  },
+  {
+    "term": "raw mode",
+    "tooltip": "TTY mode where every byte is delivered immediately — no echo, no line editing, no signals"
   },
 
   {
@@ -215,5 +501,21 @@
     "term": "backend registry",
     "href": "/guide/backends",
     "tooltip": "Name-based backend resolution system — async loading of backends by string identifier"
+  },
+  {
+    "term": "diffBuffers",
+    "tooltip": "Compare two terminal buffers cell-by-cell — returns only changed cells for efficient diffing"
+  },
+  {
+    "term": "startRecording",
+    "tooltip": "Record a terminal session — captures all input/output for later replay"
+  },
+  {
+    "term": "replayRecording",
+    "tooltip": "Replay a previously recorded terminal session — reproduce interactions deterministically"
+  },
+  {
+    "term": "createMockTimer",
+    "tooltip": "Deterministic timer for tests — advance time manually, fire callbacks synchronously"
   }
 ]
