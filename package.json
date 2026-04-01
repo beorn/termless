@@ -58,7 +58,7 @@
     "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust; do (cd $pkg && npm publish); done"
   },
   "devDependencies": {
-    "@bearly/vitepress-enrich": "^0.1.0",
+    "@bearly/vitepress-enrich": "^0.2.0",
     "@termless/alacritty": "workspace:*",
     "@termless/kitty": "workspace:*",
     "@termless/libvterm": "workspace:*",
