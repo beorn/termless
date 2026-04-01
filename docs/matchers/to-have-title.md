@@ -15,9 +15,9 @@ expect(term).toHaveTitle(title: string, options?: { timeout?: number })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `title` | `string` | Expected terminal title |
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
+| `title`           | `string` | Expected terminal title                     |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -35,11 +35,11 @@ expect(term).not.toHaveTitle("untitled")
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## Notes
 

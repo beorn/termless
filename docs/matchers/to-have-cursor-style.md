@@ -15,10 +15,10 @@ expect(term).toHaveCursorStyle(style: CursorStyle, options?: { timeout?: number 
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `style` | `CursorStyle` | Expected cursor style |
-| `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
+| Parameter         | Type          | Description                                 |
+| ----------------- | ------------- | ------------------------------------------- |
+| `style`           | `CursorStyle` | Expected cursor style                       |
+| `options.timeout` | `number`      | Auto-retry timeout in ms (Playwright-style) |
 
 `CursorStyle`: `"block"` | `"underline"` | `"beam"`
 
@@ -40,11 +40,11 @@ await expect(term).toHaveCursorStyle("beam", { timeout: 5000 })
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## See Also
 

@@ -46,16 +46,20 @@ import {
   assertHasUnderline,
   assertHasFg,
   assertHasBg,
+  assertHaveAttrs,
   assertCursorAt,
   assertCursorStyle,
   assertCursorVisible,
   assertCursorHidden,
+  assertHaveCursor,
   assertInMode,
   assertTitle,
   assertScrollbackLines,
   assertAtBottomOfScrollback,
   assertClipboardText,
   type AssertionResult,
+  type CellAttrs,
+  type CursorProps,
 } from "../../../src/assertions.ts"
 
 // =============================================================================
@@ -126,21 +130,40 @@ declare module "vitest" {
     toHaveText(text: string, options?: RetryOptions): void
     toMatchLines(lines: string[], options?: RetryOptions): void
 
-    // Cell Style (CellView)
+    // Cell Style — composable (CellView)
+    toHaveAttrs(attrs: CellAttrs): void
+
+    // Cell Style — individual (CellView)
+    /** @deprecated Use toHaveAttrs({ bold: true }) */
     toBeBold(): void
+    /** @deprecated Use toHaveAttrs({ italic: true }) */
     toBeItalic(): void
+    /** @deprecated Use toHaveAttrs({ dim: true }) */
     toBeDim(): void
+    /** @deprecated Use toHaveAttrs({ strikethrough: true }) */
     toBeStrikethrough(): void
+    /** @deprecated Use toHaveAttrs({ inverse: true }) */
     toBeInverse(): void
+    /** @deprecated Use toHaveAttrs({ wide: true }) */
     toBeWide(): void
+    /** @deprecated Use toHaveAttrs({ underline: true }) or toHaveAttrs({ underline: "curly" }) */
     toHaveUnderline(style?: UnderlineStyle): void
+    /** @deprecated Use toHaveAttrs({ fg: color }) */
     toHaveFg(color: string | RGB): void
+    /** @deprecated Use toHaveAttrs({ bg: color }) */
     toHaveBg(color: string | RGB): void
 
-    // Terminal (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    // Cursor — composable (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    toHaveCursor(props: CursorProps, options?: RetryOptions): void
+
+    // Cursor — individual (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    /** @deprecated Use toHaveCursor({ x, y }) */
     toHaveCursorAt(x: number, y: number, options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ style }) */
     toHaveCursorStyle(style: CursorStyle, options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ visible: true }) */
     toHaveCursorVisible(options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ visible: false }) */
     toHaveCursorHidden(options?: RetryOptions): void
     toBeInMode(mode: TerminalMode, options?: RetryOptions): void
     toHaveTitle(title: string, options?: RetryOptions): void
@@ -210,55 +233,61 @@ export const terminalMatchers = {
 
   // ── Cell Style Matchers (CellView) ──
 
-  /** Assert cell is bold. */
+  /** Assert multiple cell attributes at once. Only specified fields are checked. */
+  toHaveAttrs(received: unknown, attrs: CellAttrs) {
+    assertCellView(received, "toHaveAttrs")
+    return toMatcherResult(assertHaveAttrs(received, attrs))
+  },
+
+  /** @deprecated Use toHaveAttrs({ bold: true }) */
   toBeBold(received: unknown) {
     assertCellView(received, "toBeBold")
     return toMatcherResult(assertIsBold(received))
   },
 
-  /** Assert cell is italic. */
+  /** @deprecated Use toHaveAttrs({ italic: true }) */
   toBeItalic(received: unknown) {
     assertCellView(received, "toBeItalic")
     return toMatcherResult(assertIsItalic(received))
   },
 
-  /** Assert cell is dim. */
+  /** @deprecated Use toHaveAttrs({ dim: true }) */
   toBeDim(received: unknown) {
     assertCellView(received, "toBeDim")
     return toMatcherResult(assertIsDim(received))
   },
 
-  /** Assert cell has strikethrough. */
+  /** @deprecated Use toHaveAttrs({ strikethrough: true }) */
   toBeStrikethrough(received: unknown) {
     assertCellView(received, "toBeStrikethrough")
     return toMatcherResult(assertIsStrikethrough(received))
   },
 
-  /** Assert cell has inverse video. */
+  /** @deprecated Use toHaveAttrs({ inverse: true }) */
   toBeInverse(received: unknown) {
     assertCellView(received, "toBeInverse")
     return toMatcherResult(assertIsInverse(received))
   },
 
-  /** Assert cell is wide (double-width character). */
+  /** @deprecated Use toHaveAttrs({ wide: true }) */
   toBeWide(received: unknown) {
     assertCellView(received, "toBeWide")
     return toMatcherResult(assertIsWide(received))
   },
 
-  /** Assert cell has underline. Optionally check specific style. */
+  /** @deprecated Use toHaveAttrs({ underline: true }) or toHaveAttrs({ underline: "curly" }) */
   toHaveUnderline(received: unknown, style?: UnderlineStyle) {
     assertCellView(received, "toHaveUnderline")
     return toMatcherResult(assertHasUnderline(received, style))
   },
 
-  /** Assert cell foreground color. Accepts hex string or {r,g,b}. */
+  /** @deprecated Use toHaveAttrs({ fg: color }) */
   toHaveFg(received: unknown, color: string | RGB) {
     assertCellView(received, "toHaveFg")
     return toMatcherResult(assertHasFg(received, color))
   },
 
-  /** Assert cell background color. Accepts hex string or {r,g,b}. */
+  /** @deprecated Use toHaveAttrs({ bg: color }) */
   toHaveBg(received: unknown, color: string | RGB) {
     assertCellView(received, "toHaveBg")
     return toMatcherResult(assertHasBg(received, color))
@@ -266,25 +295,31 @@ export const terminalMatchers = {
 
   // ── Terminal Matchers (TerminalReadable) ──
 
-  /** Assert cursor is at the given position. Auto-retries when { timeout } is passed. */
+  /** Assert multiple cursor properties at once. Auto-retries when { timeout } is passed. */
+  toHaveCursor(received: unknown, props: CursorProps, options?: RetryOptions) {
+    assertTerminalReadable(received, "toHaveCursor")
+    return maybeRetry(() => assertHaveCursor(received, props), options?.timeout)
+  },
+
+  /** @deprecated Use toHaveCursor({ x, y }) */
   toHaveCursorAt(received: unknown, x: number, y: number, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorAt")
     return maybeRetry(() => assertCursorAt(received, x, y), options?.timeout)
   },
 
-  /** Assert cursor has a specific style (block, underline, beam). Auto-retries when { timeout } is passed. */
+  /** @deprecated Use toHaveCursor({ style }) */
   toHaveCursorStyle(received: unknown, style: CursorStyle, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorStyle")
     return maybeRetry(() => assertCursorStyle(received, style), options?.timeout)
   },
 
-  /** Assert cursor is visible. Auto-retries when { timeout } is passed. */
+  /** @deprecated Use toHaveCursor({ visible: true }) */
   toHaveCursorVisible(received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorVisible")
     return maybeRetry(() => assertCursorVisible(received), options?.timeout)
   },
 
-  /** Assert cursor is hidden. Auto-retries when { timeout } is passed. */
+  /** @deprecated Use toHaveCursor({ visible: false }) */
   toHaveCursorHidden(received: unknown, options?: RetryOptions) {
     assertTerminalReadable(received, "toHaveCursorHidden")
     return maybeRetry(() => assertCursorHidden(received), options?.timeout)

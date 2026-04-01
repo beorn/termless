@@ -15,8 +15,8 @@ expect(term).toHaveCursorHidden(options?: { timeout?: number })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -34,11 +34,11 @@ expect(term).not.toHaveCursorHidden()
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## Notes
 

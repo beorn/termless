@@ -15,9 +15,9 @@ expect(region).toContainText(text: string, options?: { timeout?: number })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `text` | `string` | The substring to search for |
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
+| `text`            | `string` | The substring to search for                 |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -41,13 +41,13 @@ expect(term.screen).not.toContainText("Error")
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.screen` | Yes |
-| `term.scrollback` | Yes |
-| `term.row(n)` | Yes |
-| `term.range(r1, c1, r2, c2)` | Yes |
-| `term.cell(r, c)` | No (use [toHaveText](/matchers/to-have-text)) |
+| Region                       | Supported                                     |
+| ---------------------------- | --------------------------------------------- |
+| `term.screen`                | Yes                                           |
+| `term.scrollback`            | Yes                                           |
+| `term.row(n)`                | Yes                                           |
+| `term.range(r1, c1, r2, c2)` | Yes                                           |
+| `term.cell(r, c)`            | No (use [toHaveText](/matchers/to-have-text)) |
 
 ## Notes
 

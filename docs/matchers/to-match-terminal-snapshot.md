@@ -15,8 +15,8 @@ expect(term).toMatchTerminalSnapshot(options?: { name?: string })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter      | Type     | Description            |
+| -------------- | -------- | ---------------------- |
 | `options.name` | `string` | Optional snapshot name |
 
 ## Usage
@@ -43,11 +43,11 @@ The snapshot includes a header with terminal dimensions and cursor state, follow
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## Notes
 

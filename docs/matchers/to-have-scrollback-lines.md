@@ -15,9 +15,9 @@ expect(term).toHaveScrollbackLines(n: number, options?: { timeout?: number })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `n` | `number` | Expected number of scrollback lines |
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
+| `n`               | `number` | Expected number of scrollback lines         |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -35,11 +35,11 @@ expect(term).not.toHaveScrollbackLines(0)
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## See Also
 

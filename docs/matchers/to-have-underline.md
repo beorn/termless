@@ -15,9 +15,9 @@ expect(cell).toHaveUnderline(style?: UnderlineStyle)
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `style` | `UnderlineStyle` | Optional specific style to check |
+| Parameter | Type             | Description                      |
+| --------- | ---------------- | -------------------------------- |
+| `style`   | `UnderlineStyle` | Optional specific style to check |
 
 `UnderlineStyle`: `"single"` | `"double"` | `"curly"` | `"dotted"` | `"dashed"`
 
@@ -29,7 +29,7 @@ expect(term.cell(0, 0)).toHaveUnderline()
 
 // Specific underline style
 expect(term.cell(0, 0)).toHaveUnderline("single")
-expect(term.cell(0, 0)).toHaveUnderline("curly")   // spell-check style
+expect(term.cell(0, 0)).toHaveUnderline("curly") // spell-check style
 expect(term.cell(0, 0)).toHaveUnderline("double")
 expect(term.cell(0, 0)).toHaveUnderline("dotted")
 expect(term.cell(0, 0)).toHaveUnderline("dashed")
@@ -40,11 +40,11 @@ expect(term.cell(0, 0)).not.toHaveUnderline()
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.cell(r, c)` | Yes |
-| `term.screen` | No |
-| `term.row(n)` | No |
+| Region            | Supported |
+| ----------------- | --------- |
+| `term.cell(r, c)` | Yes       |
+| `term.screen`     | No        |
+| `term.row(n)`     | No        |
 
 ## Notes
 

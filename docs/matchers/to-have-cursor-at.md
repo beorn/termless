@@ -15,10 +15,10 @@ expect(term).toHaveCursorAt(x: number, y: number, options?: { timeout?: number }
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `x` | `number` | Column (0-based) |
-| `y` | `number` | Row (0-based) |
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
+| `x`               | `number` | Column (0-based)                            |
+| `y`               | `number` | Row (0-based)                               |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -39,11 +39,11 @@ expect(term).not.toHaveCursorAt(0, 0)
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## Notes
 

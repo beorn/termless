@@ -8,12 +8,12 @@ No. Termless runs entirely headless with in-process terminal emulators. There is
 
 **Start with the default.** `@termless/test` ships with xterm.js, which covers most testing needs. If you need higher fidelity:
 
-| Backend | When to use it |
-|---------|---------------|
-| **xterm.js** (default) | General-purpose testing. Ships with `@termless/test`. |
-| **vterm.js** | Full standards compliance. 100% [terminfo.dev](https://terminfo.dev) coverage. Best for conformance testing. |
-| **Ghostty** | Test against Ghostty's VT parser specifically. |
-| **vt100** | Zero native dependencies. Pure TypeScript. Good for environments where WASM or native modules are problematic. |
+| Backend                | When to use it                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **xterm.js** (default) | General-purpose testing. Ships with `@termless/test`.                                                          |
+| **vterm.js**           | Full standards compliance. 100% [terminfo.dev](https://terminfo.dev) coverage. Best for conformance testing.   |
+| **Ghostty**            | Test against Ghostty's VT parser specifically.                                                                 |
+| **vt100**              | Zero native dependencies. Pure TypeScript. Good for environments where WASM or native modules are problematic. |
 
 See [Backend Capabilities](/guide/backends) for a full feature comparison.
 
@@ -22,7 +22,7 @@ See [Backend Capabilities](/guide/backends) for a full feature comparison.
 Yes. Termless spawns any process via PTY -- it doesn't care what language the app is written in. If it runs in a terminal, Termless can test it:
 
 ```typescript
-await term.spawn(["./my-go-app"])         // Go (Bubbletea, etc.)
+await term.spawn(["./my-go-app"]) // Go (Bubbletea, etc.)
 await term.spawn(["./target/release/app"]) // Rust (Ratatui, etc.)
 await term.spawn(["python", "-m", "myapp"]) // Python (Textual, etc.)
 ```
@@ -126,9 +126,9 @@ See [Multi-Backend Testing](/guide/multi-backend) for patterns and strategies.
 Yes. Send SGR mouse events with `click()` and `dblclick()`:
 
 ```typescript
-term.click(10, 5)                      // Single click at column 10, row 5
-await term.dblclick(10, 5)             // Double-click
-term.click(10, 5, { ctrl: true })      // Ctrl+click
+term.click(10, 5) // Single click at column 10, row 5
+await term.dblclick(10, 5) // Double-click
+term.click(10, 5, { ctrl: true }) // Ctrl+click
 ```
 
 The target app must enable mouse tracking for these events to be received. See [Best Practices](/guide/best-practices#mouse-interaction) for details.

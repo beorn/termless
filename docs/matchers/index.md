@@ -5,11 +5,18 @@ description: Complete reference for all Termless Vitest matchers
 
 # Matcher Reference
 
-Termless provides 22 custom Vitest matchers for terminal assertions. All matchers support `.not` negation.
+Termless provides 24 custom Vitest matchers for terminal assertions. All matchers support `.not` negation.
 
 ```typescript
 import "@termless/test/matchers" // Auto-registers all matchers
 ```
+
+## Composable Matchers
+
+Assert multiple properties at once with partial matching. These are the recommended API.
+
+- [toHaveAttrs](/matchers/to-have-attrs) - Assert cell attributes (bold, italic, fg, bg, etc.)
+- [toHaveCursor](/matchers/to-have-cursor) - Assert cursor properties (position, visibility, style)
 
 ## Text Matchers
 
@@ -19,9 +26,9 @@ Work on `RegionView` (screen, scrollback, row, range).
 - [toHaveText](/matchers/to-have-text) - Assert exact text match (after trimming)
 - [toMatchLines](/matchers/to-match-lines) - Assert multi-line content
 
-## Style Matchers
+## Style Matchers <Badge type="info" text="prefer toHaveAttrs" />
 
-Work on `CellView` via `term.cell(row, col)`.
+Work on `CellView` via `term.cell(row, col)`. Prefer [toHaveAttrs](/matchers/to-have-attrs) for new code.
 
 - [toBeBold](/matchers/to-be-bold) - Assert bold styling
 - [toBeItalic](/matchers/to-be-italic) - Assert italic styling
@@ -33,9 +40,9 @@ Work on `CellView` via `term.cell(row, col)`.
 - [toHaveFg](/matchers/to-have-fg) - Assert foreground color
 - [toHaveBg](/matchers/to-have-bg) - Assert background color
 
-## Cursor Matchers
+## Cursor Matchers <Badge type="info" text="prefer toHaveCursor" />
 
-Work on `TerminalReadable` (the terminal itself).
+Work on `TerminalReadable` (the terminal itself). Prefer [toHaveCursor](/matchers/to-have-cursor) for new code.
 
 - [toHaveCursorAt](/matchers/to-have-cursor-at) - Assert cursor position
 - [toHaveCursorStyle](/matchers/to-have-cursor-style) - Assert cursor shape

@@ -25,11 +25,11 @@ expect(term.cell(0, 0)).not.toBeWide()
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.cell(r, c)` | Yes |
-| `term.screen` | No |
-| `term.row(n)` | No |
+| Region            | Supported |
+| ----------------- | --------- |
+| `term.cell(r, c)` | Yes       |
+| `term.screen`     | No        |
+| `term.row(n)`     | No        |
 
 ## Notes
 

@@ -36,7 +36,7 @@ export { parseKey, keyToAnsi } from "./key-mapping.ts"
 export { encodeKeyToAnsi } from "./key-encoding.ts"
 export { createCellView, createRegionView, createRowView } from "./views.ts"
 export { termlessMatchers } from "./jest-matchers.ts"
-export type { AssertionResult } from "./assertions.ts"
+export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"
 
 // Visual diff
 export { diffBuffers } from "./diff.ts"

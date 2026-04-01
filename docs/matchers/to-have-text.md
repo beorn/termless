@@ -15,9 +15,9 @@ expect(region).toHaveText(text: string, options?: { timeout?: number })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `text` | `string` | The exact text to match |
+| Parameter         | Type     | Description                                 |
+| ----------------- | -------- | ------------------------------------------- |
+| `text`            | `string` | The exact text to match                     |
 | `options.timeout` | `number` | Auto-retry timeout in ms (Playwright-style) |
 
 ## Usage
@@ -38,13 +38,13 @@ expect(term.row(0)).not.toHaveText("Loading...")
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.screen` | Yes |
-| `term.scrollback` | Yes |
-| `term.row(n)` | Yes |
-| `term.range(r1, c1, r2, c2)` | Yes |
-| `term.cell(r, c)` | No |
+| Region                       | Supported |
+| ---------------------------- | --------- |
+| `term.screen`                | Yes       |
+| `term.scrollback`            | Yes       |
+| `term.row(n)`                | Yes       |
+| `term.range(r1, c1, r2, c2)` | Yes       |
+| `term.cell(r, c)`            | No        |
 
 ## Notes
 

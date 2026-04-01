@@ -275,6 +275,77 @@ export function assertHasBg(cell: CellView, color: string | RGB): AssertionResul
 }
 
 // ═══════════════════════════════════════════════════════
+// Composable Cell Assertion (CellView)
+// ═══════════════════════════════════════════════════════
+
+/** Partial cell attributes for composable matching. */
+export interface CellAttrs {
+  bold?: boolean
+  italic?: boolean
+  dim?: boolean
+  strikethrough?: boolean
+  inverse?: boolean
+  wide?: boolean
+  /** `true` matches any underline style; a string matches a specific style. */
+  underline?: UnderlineStyle | boolean
+  fg?: string | RGB
+  bg?: string | RGB
+}
+
+/** Assert multiple cell attributes at once. Only specified fields are checked. */
+export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResult {
+  const loc = cellLocation(cell)
+  const details: string[] = []
+  let allMatch = true
+
+  const check = (label: string, expected: unknown, actual: unknown, pass: boolean) => {
+    if (pass) {
+      details.push(`  ${label}: matched`)
+    } else {
+      details.push(`  ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
+      allMatch = false
+    }
+  }
+
+  if (attrs.bold !== undefined) check("bold", attrs.bold, cell.bold, cell.bold === attrs.bold)
+  if (attrs.italic !== undefined) check("italic", attrs.italic, cell.italic, cell.italic === attrs.italic)
+  if (attrs.dim !== undefined) check("dim", attrs.dim, cell.dim, cell.dim === attrs.dim)
+  if (attrs.strikethrough !== undefined)
+    check("strikethrough", attrs.strikethrough, cell.strikethrough, cell.strikethrough === attrs.strikethrough)
+  if (attrs.inverse !== undefined) check("inverse", attrs.inverse, cell.inverse, cell.inverse === attrs.inverse)
+  if (attrs.wide !== undefined) check("wide", attrs.wide, cell.wide, cell.wide === attrs.wide)
+
+  if (attrs.underline !== undefined) {
+    if (attrs.underline === true) {
+      const hasUnderline = cell.underline !== false
+      check("underline", true, cell.underline, hasUnderline)
+    } else {
+      check("underline", attrs.underline, cell.underline, cell.underline === attrs.underline)
+    }
+  }
+
+  if (attrs.fg !== undefined) {
+    const expected = parseColor(attrs.fg)
+    const pass = colorsMatch(cell.fg, expected)
+    check("fg", formatRgb(expected), formatRgb(cell.fg), pass)
+  }
+
+  if (attrs.bg !== undefined) {
+    const expected = parseColor(attrs.bg)
+    const pass = colorsMatch(cell.bg, expected)
+    check("bg", formatRgb(expected), formatRgb(cell.bg), pass)
+  }
+
+  const attrsStr = JSON.stringify(attrs)
+  return {
+    pass: allMatch,
+    message: allMatch
+      ? `Expected ${loc} not to have attrs ${attrsStr}`
+      : `Expected ${loc} to have attrs ${attrsStr}\n${details.join("\n")}`,
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // Terminal Assertions (TerminalReadable)
 // ═══════════════════════════════════════════════════════
 
@@ -341,6 +412,65 @@ export function assertCursorHidden(term: TerminalReadable): AssertionResult {
   return {
     pass: !cursor.visible,
     message: !cursor.visible ? `Expected cursor not to be hidden` : `Expected cursor to be hidden`,
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Composable Cursor Assertion (TerminalReadable)
+// ═══════════════════════════════════════════════════════
+
+/** Partial cursor properties for composable matching. */
+export interface CursorProps {
+  x?: number
+  y?: number
+  visible?: boolean
+  style?: CursorStyle
+}
+
+/** Assert multiple cursor properties at once. Only specified fields are checked. */
+export function assertHaveCursor(term: TerminalReadable, props: CursorProps): AssertionResult {
+  const cursor = term.getCursor()
+  const details: string[] = []
+  let allMatch = true
+
+  const check = (label: string, expected: unknown, actual: unknown, pass: boolean) => {
+    if (pass) {
+      details.push(`  ${label}: matched`)
+    } else {
+      details.push(`  ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
+      allMatch = false
+    }
+  }
+
+  if (props.x !== undefined) check("x", props.x, cursor.x, cursor.x === props.x)
+  if (props.y !== undefined) check("y", props.y, cursor.y, cursor.y === props.y)
+
+  if (props.visible !== undefined) {
+    if (cursor.visible === null) {
+      details.push(
+        `  visible: expected ${JSON.stringify(props.visible)}, but backend does not report cursor visibility (null)`,
+      )
+      allMatch = false
+    } else {
+      check("visible", props.visible, cursor.visible, cursor.visible === props.visible)
+    }
+  }
+
+  if (props.style !== undefined) {
+    if (cursor.style === null) {
+      details.push(`  style: expected ${JSON.stringify(props.style)}, but backend does not report cursor style (null)`)
+      allMatch = false
+    } else {
+      check("style", props.style, cursor.style, cursor.style === props.style)
+    }
+  }
+
+  const propsStr = JSON.stringify(props)
+  return {
+    pass: allMatch,
+    message: allMatch
+      ? `Expected terminal not to have cursor ${propsStr}`
+      : `Expected terminal to have cursor ${propsStr}\n${details.join("\n")}`,
   }
 }
 

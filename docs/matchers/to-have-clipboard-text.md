@@ -15,9 +15,9 @@ expect(term).toHaveClipboardText(text: string)
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `text` | `string` | Expected clipboard text |
+| Parameter | Type     | Description             |
+| --------- | -------- | ----------------------- |
+| `text`    | `string` | Expected clipboard text |
 
 ## Usage
 
@@ -31,11 +31,11 @@ expect(term).not.toHaveClipboardText("wrong text")
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (Terminal with clipboardWrites) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                                 | Supported |
+| -------------------------------------- | --------- |
+| `term` (Terminal with clipboardWrites) | Yes       |
+| `term.screen`                          | No        |
+| `term.cell(r, c)`                      | No        |
 
 ## Notes
 

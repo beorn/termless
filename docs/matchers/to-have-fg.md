@@ -15,9 +15,9 @@ expect(cell).toHaveFg(color: string | RGB)
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `color` | `string \| RGB` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
+| Parameter | Type            | Description                                    |
+| --------- | --------------- | ---------------------------------------------- |
+| `color`   | `string \| RGB` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
 
 ## Usage
 
@@ -34,11 +34,11 @@ expect(term.cell(0, 0)).not.toHaveFg("#000000")
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.cell(r, c)` | Yes |
-| `term.screen` | No |
-| `term.row(n)` | No |
+| Region            | Supported |
+| ----------------- | --------- |
+| `term.cell(r, c)` | Yes       |
+| `term.screen`     | No        |
+| `term.row(n)`     | No        |
 
 ## Notes
 

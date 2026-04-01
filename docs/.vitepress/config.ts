@@ -1,6 +1,12 @@
 import { defineConfig } from "vitepress"
 import llmstxt from "vitepress-plugin-llms"
-import { glossaryPlugin, seoHead, seoTransformPageData, validateGlossary, loadTerminalGlossary } from "@bearly/vitepress-enrich"
+import {
+  glossaryPlugin,
+  seoHead,
+  seoTransformPageData,
+  validateGlossary,
+  loadTerminalGlossary,
+} from "@bearly/vitepress-enrich"
 import siteGlossary from "../content/glossary.json"
 
 // Site-specific terms + shared terminal vocabulary from terminfo.dev
@@ -127,6 +133,8 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: "Overview", link: "/matchers/" },
+          { text: "toHaveAttrs", link: "/matchers/to-have-attrs" },
+          { text: "toHaveCursor", link: "/matchers/to-have-cursor" },
           { text: "toContainText", link: "/matchers/to-contain-text" },
           { text: "toHaveText", link: "/matchers/to-have-text" },
           { text: "toMatchLines", link: "/matchers/to-match-lines" },

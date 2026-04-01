@@ -25,11 +25,11 @@ expect(term.cell(0, 5)).not.toBeDim()
 
 ## Accepts
 
-| Region | Supported |
-|--------|-----------|
-| `term.cell(r, c)` | Yes |
-| `term.screen` | No |
-| `term.row(n)` | No |
+| Region            | Supported |
+| ----------------- | --------- |
+| `term.cell(r, c)` | Yes       |
+| `term.screen`     | No        |
+| `term.row(n)`     | No        |
 
 ## Notes
 

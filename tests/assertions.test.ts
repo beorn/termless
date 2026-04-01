@@ -29,10 +29,12 @@ import {
   assertHasUnderline,
   assertHasFg,
   assertHasBg,
+  assertHaveAttrs,
   assertCursorAt,
   assertCursorStyle,
   assertCursorVisible,
   assertCursorHidden,
+  assertHaveCursor,
   assertInMode,
   assertTitle,
   assertScrollbackLines,
@@ -637,6 +639,219 @@ describe("assertAtBottomOfScrollback", () => {
     const result = assertAtBottomOfScrollback(term)
     expect(result.pass).toBe(false)
     expect(result.message).toContain("10")
+  })
+})
+
+// =============================================================================
+// Composable Cell Assertion: assertHaveAttrs
+// =============================================================================
+
+describe("assertHaveAttrs", () => {
+  test("passes with single matching attr", () => {
+    const result = assertHaveAttrs(mockCell({ bold: true }), { bold: true })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails with single non-matching attr", () => {
+    const result = assertHaveAttrs(mockCell({ bold: false }), { bold: true })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("bold")
+    expect(result.message).toContain("expected true")
+    expect(result.message).toContain("got false")
+  })
+
+  test("passes with multiple matching attrs", () => {
+    const result = assertHaveAttrs(mockCell({ bold: true, italic: true, fg: { r: 255, g: 0, b: 0 } }), {
+      bold: true,
+      italic: true,
+      fg: "#ff0000",
+    })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails when one of multiple attrs mismatches", () => {
+    const result = assertHaveAttrs(mockCell({ bold: true, italic: false }), { bold: true, italic: true })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("bold")
+    expect(result.message).toContain("matched")
+    expect(result.message).toContain("italic")
+    expect(result.message).toContain("expected true")
+  })
+
+  test("checks all boolean attrs", () => {
+    const cell = mockCell({
+      bold: true,
+      italic: true,
+      dim: true,
+      strikethrough: true,
+      inverse: true,
+      wide: true,
+    })
+    const result = assertHaveAttrs(cell, {
+      bold: true,
+      italic: true,
+      dim: true,
+      strikethrough: true,
+      inverse: true,
+      wide: true,
+    })
+    expect(result.pass).toBe(true)
+  })
+
+  test("underline: true matches any underline style", () => {
+    const result = assertHaveAttrs(mockCell({ underline: "curly" }), { underline: true })
+    expect(result.pass).toBe(true)
+  })
+
+  test("underline: true fails when no underline", () => {
+    const result = assertHaveAttrs(mockCell({ underline: false }), { underline: true })
+    expect(result.pass).toBe(false)
+  })
+
+  test("underline: specific style matches exactly", () => {
+    const result = assertHaveAttrs(mockCell({ underline: "double" }), { underline: "double" })
+    expect(result.pass).toBe(true)
+  })
+
+  test("underline: specific style fails on different style", () => {
+    const result = assertHaveAttrs(mockCell({ underline: "single" }), { underline: "curly" })
+    expect(result.pass).toBe(false)
+  })
+
+  test("underline: false matches no underline", () => {
+    const result = assertHaveAttrs(mockCell({ underline: false }), { underline: false })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fg with hex string", () => {
+    const result = assertHaveAttrs(mockCell({ fg: { r: 255, g: 0, b: 0 } }), { fg: "#ff0000" })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fg with RGB object", () => {
+    const result = assertHaveAttrs(mockCell({ fg: { r: 0, g: 255, b: 0 } }), { fg: { r: 0, g: 255, b: 0 } })
+    expect(result.pass).toBe(true)
+  })
+
+  test("bg with hex string", () => {
+    const result = assertHaveAttrs(mockCell({ bg: { r: 0, g: 0, b: 255 } }), { bg: "#0000ff" })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fg fails when null", () => {
+    const result = assertHaveAttrs(mockCell({ fg: null }), { fg: "#ff0000" })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("fg")
+    expect(result.message).toContain("null")
+  })
+
+  test("only checks specified fields (partial matching)", () => {
+    // Cell has bold=false, italic=false, etc. but we only check bold=false
+    const result = assertHaveAttrs(mockCell(), { bold: false })
+    expect(result.pass).toBe(true)
+  })
+
+  test("negation message for pass=true", () => {
+    const result = assertHaveAttrs(mockCell({ bold: true }), { bold: true })
+    expect(result.pass).toBe(true)
+    expect(result.message).toContain("not to have attrs")
+  })
+})
+
+// =============================================================================
+// Composable Cursor Assertion: assertHaveCursor
+// =============================================================================
+
+describe("assertHaveCursor", () => {
+  test("passes with matching position", () => {
+    const term = createMockTerminal({ cursor: { x: 5, y: 10 } })
+    const result = assertHaveCursor(term, { x: 5, y: 10 })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails with wrong position", () => {
+    const term = createMockTerminal({ cursor: { x: 5, y: 10 } })
+    const result = assertHaveCursor(term, { x: 0, y: 0 })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("x")
+    expect(result.message).toContain("expected 0")
+    expect(result.message).toContain("got 5")
+  })
+
+  test("passes with visible: true", () => {
+    const term = createMockTerminal({ cursor: { visible: true } })
+    const result = assertHaveCursor(term, { visible: true })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails with visible mismatch", () => {
+    const term = createMockTerminal({ cursor: { visible: false } })
+    const result = assertHaveCursor(term, { visible: true })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("visible")
+  })
+
+  test("passes with matching style", () => {
+    const term = createMockTerminal({ cursor: { style: "beam" } })
+    const result = assertHaveCursor(term, { style: "beam" })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails with wrong style", () => {
+    const term = createMockTerminal({ cursor: { style: "block" } })
+    const result = assertHaveCursor(term, { style: "beam" })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("style")
+    expect(result.message).toContain("beam")
+    expect(result.message).toContain("block")
+  })
+
+  test("passes with all properties matching", () => {
+    const term = createMockTerminal({ cursor: { x: 3, y: 7, visible: true, style: "underline" } })
+    const result = assertHaveCursor(term, { x: 3, y: 7, visible: true, style: "underline" })
+    expect(result.pass).toBe(true)
+  })
+
+  test("fails when one of multiple properties mismatches", () => {
+    const term = createMockTerminal({ cursor: { x: 3, y: 7, visible: true, style: "block" } })
+    const result = assertHaveCursor(term, { x: 3, y: 7, visible: true, style: "beam" })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("x")
+    expect(result.message).toContain("matched")
+    expect(result.message).toContain("style")
+    expect(result.message).toContain("beam")
+  })
+
+  test("only checks specified fields (partial matching)", () => {
+    const term = createMockTerminal({ cursor: { x: 99, y: 99 } })
+    const result = assertHaveCursor(term, { visible: true })
+    expect(result.pass).toBe(true)
+  })
+
+  test("handles null visible from backend", () => {
+    // createMockTerminal uses ?? which coalesces null, so build a terminal with null visible directly
+    const term = createMockTerminal()
+    const origGetCursor = term.getCursor.bind(term)
+    term.getCursor = () => ({ ...origGetCursor(), visible: null })
+    const result = assertHaveCursor(term, { visible: true })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("null")
+  })
+
+  test("handles null style from backend", () => {
+    const term = createMockTerminal()
+    const origGetCursor = term.getCursor.bind(term)
+    term.getCursor = () => ({ ...origGetCursor(), style: null })
+    const result = assertHaveCursor(term, { style: "block" })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain("null")
+  })
+
+  test("negation message for pass=true", () => {
+    const term = createMockTerminal({ cursor: { x: 0, y: 0 } })
+    const result = assertHaveCursor(term, { x: 0, y: 0 })
+    expect(result.pass).toBe(true)
+    expect(result.message).toContain("not to have cursor")
   })
 })
 

@@ -15,9 +15,9 @@ expect(term).toMatchSvgSnapshot(options?: { name?: string; theme?: SvgTheme })
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `options.name` | `string` | Optional snapshot name |
+| Parameter       | Type       | Description            |
+| --------------- | ---------- | ---------------------- |
+| `options.name`  | `string`   | Optional snapshot name |
 | `options.theme` | `SvgTheme` | SVG color theme to use |
 
 ## Usage
@@ -35,11 +35,11 @@ expect(term).toMatchSvgSnapshot({ theme: myTheme })
 
 ## Accepts
 
-| Target | Supported |
-|--------|-----------|
-| `term` (TerminalReadable) | Yes |
-| `term.screen` | No |
-| `term.cell(r, c)` | No |
+| Target                    | Supported |
+| ------------------------- | --------- |
+| `term` (TerminalReadable) | Yes       |
+| `term.screen`             | No        |
+| `term.cell(r, c)`         | No        |
 
 ## Notes
 
