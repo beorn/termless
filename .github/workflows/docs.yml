@@ -29,7 +29,7 @@ jobs:
 
       - run: bun install
 
-      - run: bun run docs:build
+      - run: bunx --bun vitepress build docs
 
       - uses: actions/upload-pages-artifact@v3
         with:
