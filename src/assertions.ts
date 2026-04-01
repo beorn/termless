@@ -43,7 +43,11 @@ export function isCellView(value: unknown): value is CellView {
 }
 
 export function isTerminalReadable(value: unknown): value is TerminalReadable {
-  return value !== null && typeof value === "object" && "getCell" in value && "getCursor" in value && "getMode" in value
+  if (value === null || value === undefined) return false
+  // Accept both objects and functions — Proxy-based wrappers (silvery Term)
+  // use a function target for callability, so typeof returns "function"
+  if (typeof value !== "object" && typeof value !== "function") return false
+  return "getCell" in value && "getCursor" in value && "getMode" in value
 }
 
 // ═══════════════════════════════════════════════════════
