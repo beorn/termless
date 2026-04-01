@@ -37,7 +37,7 @@
     "access": "public"
   },
   "dependencies": {
-    "vt100.js": "^0.2.1"
+    "vt100.js": "^0.3.0"
   },
   "peerDependencies": {
     "@termless/core": "*"
