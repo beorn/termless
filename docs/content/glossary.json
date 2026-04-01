@@ -221,12 +221,6 @@
     "external": true
   },
   {
-    "term": "bracketed paste",
-    "href": "https://terminfo.dev/modes/decset-2004-bracketed-paste",
-    "tooltip": "Terminal mode where pasted text is wrapped in escape sequences — prevents paste injection",
-    "external": true
-  },
-  {
     "term": "region selectors",
     "href": "/api/terminal",
     "tooltip": "The WHERE part of Termless — term.screen, term.row(n), term.cell(r,c), term.range(...)"
@@ -242,12 +236,6 @@
     "tooltip": "Termless views recompute on every access — always reflect current terminal state, never stale"
   },
   {
-    "term": "ED",
-    "tooltip": "Erase in Display — clear part of the screen (below cursor, above cursor, or entire screen)",
-    "href": "https://terminfo.dev/erase",
-    "external": true
-  },
-  {
     "term": "ED2",
     "tooltip": "Erase entire screen — CSI 2 J clears all visible cells without affecting scrollback",
     "href": "https://terminfo.dev/erase",
@@ -257,132 +245,6 @@
     "term": "ED3",
     "tooltip": "Erase screen + scrollback — CSI 3 J clears visible screen and the entire scrollback buffer",
     "href": "https://terminfo.dev/erase",
-    "external": true
-  },
-  {
-    "term": "CUP",
-    "tooltip": "Cursor Position — CSI row;col H moves cursor to an absolute position on screen",
-    "href": "https://terminfo.dev/cursor/cup-cursor-position",
-    "external": true
-  },
-  {
-    "term": "CUB",
-    "tooltip": "Cursor Back — move cursor left N columns",
-    "href": "https://terminfo.dev/cursor/cub-cursor-back",
-    "external": true
-  },
-  {
-    "term": "CUF",
-    "tooltip": "Cursor Forward — move cursor right N columns",
-    "href": "https://terminfo.dev/cursor/cuf-cursor-forward",
-    "external": true
-  },
-  {
-    "term": "CUU",
-    "tooltip": "Cursor Up — move cursor up N rows",
-    "href": "https://terminfo.dev/cursor/cuu-cursor-up",
-    "external": true
-  },
-  {
-    "term": "CUD",
-    "tooltip": "Cursor Down — move cursor down N rows",
-    "href": "https://terminfo.dev/cursor/cud-cursor-down",
-    "external": true
-  },
-  {
-    "term": "DECSTBM",
-    "tooltip": "DEC Set Top and Bottom Margins — defines the scroll region for independent scrolling",
-    "href": "https://terminfo.dev/scrollback/decstbm-scroll-region",
-    "external": true
-  },
-  {
-    "term": "DECTCEM",
-    "tooltip": "DEC Text Cursor Enable Mode — DEC private mode ?25 to show or hide the text cursor",
-    "href": "https://terminfo.dev/cursor/dectcem-hide-cursor",
-    "external": true
-  },
-  {
-    "term": "DECSC",
-    "tooltip": "DEC Save Cursor — save cursor position and attributes for later restoration with DECRC",
-    "href": "https://terminfo.dev/cursor/decsc-save-restore-cursor",
-    "external": true
-  },
-  {
-    "term": "DECSCUSR",
-    "tooltip": "DEC Set Cursor Style — set cursor shape: block, underline, or bar; blinking or steady",
-    "href": "https://terminfo.dev/cursor/decscusr-cursor-shape",
-    "external": true
-  },
-  {
-    "term": "EL",
-    "tooltip": "Erase in Line — clear part of the current line (right of cursor, left, or entire line)",
-    "href": "https://terminfo.dev/erase/el-0-erase-to-eol",
-    "external": true
-  },
-  {
-    "term": "ICH",
-    "tooltip": "Insert Character — insert blank characters at cursor, shifting existing characters right",
-    "href": "https://terminfo.dev/editing/ich-insert-characters",
-    "external": true
-  },
-  {
-    "term": "DCH",
-    "tooltip": "Delete Character — delete characters at cursor, shifting remaining characters left",
-    "href": "https://terminfo.dev/editing/dch-delete-characters",
-    "external": true
-  },
-  {
-    "term": "IL",
-    "tooltip": "Insert Lines — insert blank lines at cursor position, pushing existing lines down",
-    "href": "https://terminfo.dev/editing/il-insert-lines",
-    "external": true
-  },
-  {
-    "term": "DL",
-    "tooltip": "Delete Lines — delete lines at cursor position, pulling lines up from below",
-    "href": "https://terminfo.dev/editing/dl-delete-lines",
-    "external": true
-  },
-  {
-    "term": "SU",
-    "tooltip": "Scroll Up — scroll the display up N lines, new blank lines at the bottom",
-    "href": "https://terminfo.dev/scrollback/su-scroll-up",
-    "external": true
-  },
-  {
-    "term": "SD",
-    "tooltip": "Scroll Down — scroll the display down N lines, new blank lines at the top",
-    "href": "https://terminfo.dev/scrollback/sd-scroll-down",
-    "external": true
-  },
-  {
-    "term": "RIS",
-    "tooltip": "Reset to Initial State — full terminal reset of cursor, modes, scroll regions, and colors",
-    "href": "https://terminfo.dev/reset/ris-full-reset",
-    "external": true
-  },
-  {
-    "term": "DA1",
-    "tooltip": "Primary Device Attributes — query the terminal for its type and supported features",
-    "href": "https://terminfo.dev/device/da1-primary-device-attributes",
-    "external": true
-  },
-  {
-    "term": "DSR",
-    "tooltip": "Device Status Report — query the terminal for status, most commonly cursor position (DSR 6)",
-    "href": "https://terminfo.dev/device/dsr-5-device-status-report",
-    "external": true
-  },
-  {
-    "term": "OSC 8",
-    "tooltip": "Clickable hyperlinks in terminal output — text between OSC 8 markers becomes a link",
-    "href": "https://terminfo.dev/extensions/osc-8-hyperlinks",
-    "external": true
-  },
-  {
-    "term": "OSC 52",
-    "tooltip": "Clipboard access — read/write the system clipboard from terminal applications",
-    "href": "https://terminfo.dev/extensions/osc-52-clipboard",
     "external": true
   },
   {
@@ -419,78 +281,6 @@
     "term": "Vitest",
     "href": "https://vitest.dev",
     "tooltip": "Modern testing framework powered by Vite — Termless matchers integrate as Vitest custom matchers",
-    "external": true
-  },
-  {
-    "term": "SGR",
-    "href": "https://terminfo.dev/sgr",
-    "tooltip": "Select Graphic Rendition — ANSI escape codes for text styling (bold, colors, underline)",
-    "external": true
-  },
-  {
-    "term": "CSI",
-    "href": "https://terminfo.dev/fundamentals/anatomy",
-    "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands",
-    "external": true
-  },
-  {
-    "term": "OSC",
-    "href": "https://terminfo.dev/osc",
-    "tooltip": "Operating System Command — terminal escape sequences for titles, hyperlinks, clipboard",
-    "external": true
-  },
-  {
-    "term": "DCS",
-    "href": "https://terminfo.dev/fundamentals/anatomy",
-    "tooltip": "Device Control String — escape sequences for device-specific data (Sixel graphics, DECRQSS)",
-    "external": true
-  },
-  {
-    "term": "ECMA-48",
-    "href": "https://terminfo.dev/ecma-48",
-    "tooltip": "International standard defining terminal control functions — basis of ANSI escape codes",
-    "external": true
-  },
-  {
-    "term": "Kitty keyboard protocol",
-    "href": "https://terminfo.dev/extensions/kitty-keyboard-protocol",
-    "tooltip": "Modern keyboard input protocol with key release events, modifiers, and Unicode",
-    "external": true
-  },
-  {
-    "term": "truecolor",
-    "href": "https://terminfo.dev/sgr/38-2-truecolor-fg",
-    "tooltip": "24-bit RGB color support via ESC[38;2;R;G;Bm — 16 million colors",
-    "external": true
-  },
-  {
-    "term": "wide character",
-    "tooltip": "A character occupying two terminal columns — CJK ideographs and most emoji",
-    "href": "https://terminfo.dev/unicode",
-    "external": true
-  },
-  {
-    "term": "grapheme cluster",
-    "tooltip": "What humans see as a single character — may be multiple Unicode codepoints (e.g., emoji with ZWJ)",
-    "href": "https://terminfo.dev/unicode",
-    "external": true
-  },
-  {
-    "term": "synchronized output",
-    "tooltip": "Buffer all output between start/end markers and paint as one frame — eliminates flicker",
-    "href": "https://terminfo.dev/modes",
-    "external": true
-  },
-  {
-    "term": "mouse tracking",
-    "tooltip": "Terminal reports mouse clicks, movement, and scroll events to the application",
-    "href": "https://terminfo.dev/modes",
-    "external": true
-  },
-  {
-    "term": "focus reporting",
-    "tooltip": "Terminal notifies the app when the window gains or loses focus",
-    "href": "https://terminfo.dev/modes",
     "external": true
   },
   {
