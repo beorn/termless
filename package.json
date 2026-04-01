@@ -67,12 +67,14 @@
     "@termless/wezterm": "workspace:*",
     "@types/bun": "^1.3.11",
     "@types/node": "^22.19.15",
+    "@vue/server-renderer": "^3.5.31",
     "loggily": "^0.4.0",
     "silvery": "^0.4.2",
     "typescript": "^5.9.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-llms": "^1.12.0",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.1",
+    "vue": "^3.5.31"
   },
   "peerDependencies": {
     "node-pty": ">=1.0.0"
