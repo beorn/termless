@@ -7,9 +7,11 @@ description: Assert that a terminal cell has inverse (reverse video) styling
 
 ::: warning Deprecated
 Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+
 ```typescript
 expect(term.cell(0, 0)).toHaveAttrs({ inverse: true })
 ```
+
 :::
 
 Assert that a cell has inverse video (foreground and background colors swapped).

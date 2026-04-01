@@ -7,9 +7,11 @@ description: Assert that a terminal cell has a specific foreground color
 
 ::: warning Deprecated
 Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+
 ```typescript
 expect(term.cell(0, 0)).toHaveAttrs({ fg: "#ff0000" })
 ```
+
 :::
 
 Assert that a cell has a specific foreground color. Accepts hex strings or RGB objects.

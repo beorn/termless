@@ -7,9 +7,11 @@ description: Assert that the terminal cursor has a specific shape
 
 ::: warning Deprecated
 Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+
 ```typescript
 expect(term).toHaveCursor({ style: "block" })
 ```
+
 :::
 
 Assert that the terminal cursor has a specific style (shape).

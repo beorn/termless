@@ -7,9 +7,11 @@ description: Assert that a terminal cell contains a double-width character
 
 ::: warning Deprecated
 Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+
 ```typescript
 expect(term.cell(0, 0)).toHaveAttrs({ wide: true })
 ```
+
 :::
 
 Assert that a cell contains a double-width (wide) character, such as CJK characters or certain emoji.

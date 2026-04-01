@@ -7,9 +7,11 @@ description: Assert that a terminal cell has strikethrough styling
 
 ::: warning Deprecated
 Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+
 ```typescript
 expect(term.cell(0, 0)).toHaveAttrs({ strikethrough: true })
 ```
+
 :::
 
 Assert that a cell has strikethrough (crossed-out) styling.

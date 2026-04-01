@@ -7,9 +7,11 @@ description: Assert that the terminal cursor is hidden
 
 ::: warning Deprecated
 Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+
 ```typescript
 expect(term).toHaveCursor({ visible: false })
 ```
+
 :::
 
 Assert that the terminal cursor is hidden.

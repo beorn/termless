@@ -7,9 +7,11 @@ description: Assert that the terminal cursor is at a specific position
 
 ::: warning Deprecated
 Prefer [toHaveCursor](/matchers/to-have-cursor) which checks multiple cursor properties at once:
+
 ```typescript
 expect(term).toHaveCursor({ x: 5, y: 2 })
 ```
+
 :::
 
 Assert that the terminal cursor is at the given column and row.

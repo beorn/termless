@@ -7,9 +7,11 @@ description: Assert that a terminal cell has underline styling with optional sty
 
 ::: warning Deprecated
 Prefer [toHaveAttrs](/matchers/to-have-attrs) which checks multiple attributes at once:
+
 ```typescript
 expect(term.cell(0, 0)).toHaveAttrs({ underline: true })
 ```
+
 :::
 
 Assert that a cell has underline styling. Optionally check for a specific underline style.
