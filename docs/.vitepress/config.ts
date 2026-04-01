@@ -19,6 +19,9 @@ export default defineConfig({
         // Auto-generates llms.txt and llms-full.txt at build time
       }),
     ],
+    ssr: {
+      noExternal: ["@bearly/vitepress-enrich"],
+    },
   },
 
   title: "Termless",

@@ -36,7 +36,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "vt220.js": "^0.1.0"
   },
   "peerDependencies": {
