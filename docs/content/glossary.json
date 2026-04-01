@@ -44,7 +44,6 @@
     "href": "/api/cell",
     "tooltip": "Terminal mode flags — alternate screen, bracketed paste, mouse tracking, etc."
   },
-
   {
     "term": "RegionView",
     "href": "/api/terminal",
@@ -60,7 +59,6 @@
     "href": "/api/terminal",
     "tooltip": "A row with positional context — row number and cellAt(col) access"
   },
-
   {
     "term": "feed",
     "href": "/api/terminal",
@@ -116,7 +114,6 @@
     "href": "/api/terminal",
     "tooltip": "Simulate a double-click at terminal coordinates — two clicks with configurable delay"
   },
-
   {
     "term": "createXtermBackend",
     "href": "/guide/backends",
@@ -137,7 +134,6 @@
     "href": "/guide/backends",
     "tooltip": "Factory for the vt100.js backend — lightweight pure TypeScript VT100/VT220 emulator"
   },
-
   {
     "term": "toContainText",
     "href": "/api/matchers",
@@ -153,8 +149,16 @@
     "href": "/api/matchers",
     "tooltip": "Vitest matcher — asserts multi-line content matches expected lines"
   },
-  { "term": "toBeBold", "href": "/api/matchers", "tooltip": "Vitest matcher — asserts a cell has bold styling" },
-  { "term": "toBeItalic", "href": "/api/matchers", "tooltip": "Vitest matcher — asserts a cell has italic styling" },
+  {
+    "term": "toBeBold",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a cell has bold styling"
+  },
+  {
+    "term": "toBeItalic",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a cell has italic styling"
+  },
   {
     "term": "toHaveFg",
     "href": "/api/matchers",
@@ -190,7 +194,6 @@
     "href": "/api/matchers",
     "tooltip": "Vitest matcher — asserts the terminal title matches the expected string"
   },
-
   {
     "term": "alternate screen",
     "href": "/guide/terminal-model",
@@ -238,7 +241,6 @@
     "href": "/api/terminal",
     "tooltip": "Termless views recompute on every access — always reflect current terminal state, never stale"
   },
-
   {
     "term": "ED",
     "tooltip": "Erase in Display — clear part of the screen (below cursor, above cursor, or entire screen)",
@@ -266,31 +268,31 @@
   {
     "term": "CUB",
     "tooltip": "Cursor Back — move cursor left N columns",
-    "href": "https://terminfo.dev/cursor",
+    "href": "https://terminfo.dev/cursor/cub-cursor-back",
     "external": true
   },
   {
     "term": "CUF",
     "tooltip": "Cursor Forward — move cursor right N columns",
-    "href": "https://terminfo.dev/cursor",
+    "href": "https://terminfo.dev/cursor/cuf-cursor-forward",
     "external": true
   },
   {
     "term": "CUU",
     "tooltip": "Cursor Up — move cursor up N rows",
-    "href": "https://terminfo.dev/cursor",
+    "href": "https://terminfo.dev/cursor/cuu-cursor-up",
     "external": true
   },
   {
     "term": "CUD",
     "tooltip": "Cursor Down — move cursor down N rows",
-    "href": "https://terminfo.dev/cursor",
+    "href": "https://terminfo.dev/cursor/cud-cursor-down",
     "external": true
   },
   {
     "term": "DECSTBM",
     "tooltip": "DEC Set Top and Bottom Margins — defines the scroll region for independent scrolling",
-    "href": "https://terminfo.dev/scrollback",
+    "href": "https://terminfo.dev/scrollback/decstbm-scroll-region",
     "external": true
   },
   {
@@ -314,49 +316,49 @@
   {
     "term": "EL",
     "tooltip": "Erase in Line — clear part of the current line (right of cursor, left, or entire line)",
-    "href": "https://terminfo.dev/erase",
+    "href": "https://terminfo.dev/erase/el-0-erase-to-eol",
     "external": true
   },
   {
     "term": "ICH",
     "tooltip": "Insert Character — insert blank characters at cursor, shifting existing characters right",
-    "href": "https://terminfo.dev/editing",
+    "href": "https://terminfo.dev/editing/ich-insert-characters",
     "external": true
   },
   {
     "term": "DCH",
     "tooltip": "Delete Character — delete characters at cursor, shifting remaining characters left",
-    "href": "https://terminfo.dev/editing",
+    "href": "https://terminfo.dev/editing/dch-delete-characters",
     "external": true
   },
   {
     "term": "IL",
     "tooltip": "Insert Lines — insert blank lines at cursor position, pushing existing lines down",
-    "href": "https://terminfo.dev/editing",
+    "href": "https://terminfo.dev/editing/il-insert-lines",
     "external": true
   },
   {
     "term": "DL",
     "tooltip": "Delete Lines — delete lines at cursor position, pulling lines up from below",
-    "href": "https://terminfo.dev/editing",
+    "href": "https://terminfo.dev/editing/dl-delete-lines",
     "external": true
   },
   {
     "term": "SU",
     "tooltip": "Scroll Up — scroll the display up N lines, new blank lines at the bottom",
-    "href": "https://terminfo.dev/scrollback",
+    "href": "https://terminfo.dev/scrollback/su-scroll-up",
     "external": true
   },
   {
     "term": "SD",
     "tooltip": "Scroll Down — scroll the display down N lines, new blank lines at the top",
-    "href": "https://terminfo.dev/scrollback",
+    "href": "https://terminfo.dev/scrollback/sd-scroll-down",
     "external": true
   },
   {
     "term": "RIS",
     "tooltip": "Reset to Initial State — full terminal reset of cursor, modes, scroll regions, and colors",
-    "href": "https://terminfo.dev/reset",
+    "href": "https://terminfo.dev/reset/ris-full-reset",
     "external": true
   },
   {
@@ -383,16 +385,24 @@
     "href": "https://terminfo.dev/extensions/osc-52-clipboard",
     "external": true
   },
-
   {
     "term": "vterm.js",
     "href": "https://www.npmjs.com/package/vterm.js",
     "tooltip": "Full-featured modern terminal emulator in pure TypeScript — 100% terminfo.dev feature coverage",
     "external": true
   },
-  { "term": "xterm.js", "href": "https://xtermjs.org", "tooltip": "Popular browser-based terminal emulator — most widely used JavaScript terminal", "external": true },
-  { "term": "Ghostty", "href": "https://ghostty.org", "tooltip": "GPU-accelerated terminal emulator by Mitchell Hashimoto — available as WASM backend", "external": true },
-
+  {
+    "term": "xterm.js",
+    "href": "https://xtermjs.org",
+    "tooltip": "Popular browser-based terminal emulator — most widely used JavaScript terminal",
+    "external": true
+  },
+  {
+    "term": "Ghostty",
+    "href": "https://ghostty.org",
+    "tooltip": "GPU-accelerated terminal emulator by Mitchell Hashimoto — available as WASM backend",
+    "external": true
+  },
   {
     "term": "Silvery",
     "href": "https://silvery.dev",
@@ -417,7 +427,12 @@
     "tooltip": "Select Graphic Rendition — ANSI escape codes for text styling (bold, colors, underline)",
     "external": true
   },
-  { "term": "CSI", "href": "https://terminfo.dev/fundamentals/anatomy", "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands", "external": true },
+  {
+    "term": "CSI",
+    "href": "https://terminfo.dev/fundamentals/anatomy",
+    "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands",
+    "external": true
+  },
   {
     "term": "OSC",
     "href": "https://terminfo.dev/osc",
@@ -426,7 +441,7 @@
   },
   {
     "term": "DCS",
-    "href": "https://terminfo.dev/standards",
+    "href": "https://terminfo.dev/fundamentals/anatomy",
     "tooltip": "Device Control String — escape sequences for device-specific data (Sixel graphics, DECRQSS)",
     "external": true
   },
@@ -482,7 +497,6 @@
     "term": "raw mode",
     "tooltip": "TTY mode where every byte is delivered immediately — no echo, no line editing, no signals"
   },
-
   {
     "term": "multi-backend testing",
     "href": "/guide/multi-backend",
