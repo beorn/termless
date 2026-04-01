@@ -1,5 +1,16 @@
 import { defineConfig } from "vitepress"
 import llmstxt from "vitepress-plugin-llms"
+import { glossaryPlugin, seoHead, seoTransformPageData, validateGlossary } from "@bearly/vitepress-enrich"
+import glossary from "../content/glossary.json"
+
+const seoOptions = {
+  hostname: "https://termless.dev",
+  siteName: "Termless",
+  description: "Headless terminal testing for every backend",
+  ogImage: "https://termless.dev/og-image.svg",
+  author: "Bjørn Stabell",
+  codeRepository: "https://github.com/beorn/termless",
+}
 
 export default defineConfig({
   vite: {
@@ -14,26 +25,19 @@ export default defineConfig({
   description:
     "Headless terminal testing — like Playwright, but for terminal apps. Write tests once, run against any backend.",
   base: "/",
+  lastUpdated: true,
 
   sitemap: { hostname: "https://termless.dev" },
 
+  markdown: {
+    config(md) {
+      md.use(glossaryPlugin, { entities: glossary })
+    },
+  },
+
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
-    ["meta", { property: "og:type", content: "website" }],
-    ["meta", { property: "og:site_name", content: "Termless" }],
-    ["meta", { property: "og:image", content: "https://termless.dev/og-image.svg" }],
-    ["meta", { name: "twitter:card", content: "summary" }],
-    [
-      "script",
-      { type: "application/ld+json" },
-      JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: "Termless",
-        url: "https://termless.dev",
-        description: "Headless terminal testing for every backend",
-      }),
-    ],
+    ...seoHead(seoOptions),
     [
       "script",
       {
@@ -44,57 +48,10 @@ export default defineConfig({
     ],
   ],
 
-  transformPageData(pageData) {
-    const title = pageData.title || "Termless"
-    const description = pageData.description || "Headless terminal testing for every backend"
-    const cleanPath = pageData.relativePath.replace(/\.md$/, ".html").replace(/index\.html$/, "")
-    pageData.frontmatter.head ??= []
-    pageData.frontmatter.head.push(
-      ["meta", { property: "og:title", content: title }],
-      ["meta", { property: "og:description", content: description }],
-      [
-        "meta",
-        {
-          property: "og:url",
-          content: `https://termless.dev/${cleanPath}`,
-        },
-      ],
-      [
-        "link",
-        {
-          rel: "canonical",
-          href: `https://termless.dev/${cleanPath}`,
-        },
-      ],
-    )
+  transformPageData: seoTransformPageData(seoOptions),
 
-    // JSON-LD BreadcrumbList
-    const segments = cleanPath
-      .replace(/\.html$/, "")
-      .split("/")
-      .filter(Boolean)
-    if (segments.length > 0) {
-      const breadcrumbItems = [{ "@type": "ListItem", position: 1, name: "Home", item: "https://termless.dev/" }]
-      for (let i = 0; i < segments.length; i++) {
-        const path = segments.slice(0, i + 1).join("/")
-        const name = segments[i].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-        breadcrumbItems.push({
-          "@type": "ListItem",
-          position: i + 2,
-          name: pageData.title && i === segments.length - 1 ? pageData.title : name,
-          item: `https://termless.dev/${path}`,
-        })
-      }
-      pageData.frontmatter.head.push([
-        "script",
-        { type: "application/ld+json" },
-        JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: breadcrumbItems,
-        }),
-      ])
-    }
+  buildEnd(siteConfig) {
+    validateGlossary(glossary, siteConfig)
   },
 
   themeConfig: {
@@ -160,10 +117,49 @@ export default defineConfig({
         ],
       },
       {
+        text: "Matcher Reference",
+        collapsed: true,
+        items: [
+          { text: "Overview", link: "/matchers/" },
+          { text: "toContainText", link: "/matchers/to-contain-text" },
+          { text: "toHaveText", link: "/matchers/to-have-text" },
+          { text: "toMatchLines", link: "/matchers/to-match-lines" },
+          { text: "toBeBold", link: "/matchers/to-be-bold" },
+          { text: "toBeItalic", link: "/matchers/to-be-italic" },
+          { text: "toBeDim", link: "/matchers/to-be-dim" },
+          { text: "toBeStrikethrough", link: "/matchers/to-be-strikethrough" },
+          { text: "toBeInverse", link: "/matchers/to-be-inverse" },
+          { text: "toBeWide", link: "/matchers/to-be-wide" },
+          { text: "toHaveUnderline", link: "/matchers/to-have-underline" },
+          { text: "toHaveFg", link: "/matchers/to-have-fg" },
+          { text: "toHaveBg", link: "/matchers/to-have-bg" },
+          { text: "toHaveCursorAt", link: "/matchers/to-have-cursor-at" },
+          { text: "toHaveCursorStyle", link: "/matchers/to-have-cursor-style" },
+          { text: "toHaveCursorVisible", link: "/matchers/to-have-cursor-visible" },
+          { text: "toHaveCursorHidden", link: "/matchers/to-have-cursor-hidden" },
+          { text: "toBeInMode", link: "/matchers/to-be-in-mode" },
+          { text: "toHaveTitle", link: "/matchers/to-have-title" },
+          { text: "toHaveScrollbackLines", link: "/matchers/to-have-scrollback-lines" },
+          { text: "toBeAtBottomOfScrollback", link: "/matchers/to-be-at-bottom-of-scrollback" },
+          { text: "toHaveClipboardText", link: "/matchers/to-have-clipboard-text" },
+          { text: "toMatchTerminalSnapshot", link: "/matchers/to-match-terminal-snapshot" },
+          { text: "toMatchSvgSnapshot", link: "/matchers/to-match-svg-snapshot" },
+        ],
+      },
+      {
         text: "Advanced",
         items: [
           { text: "Silvery Integration", link: "/advanced/silvery-integration" },
           { text: "Emulator Differences", link: "/emulator-differences" },
+        ],
+      },
+      {
+        text: "More",
+        items: [
+          { text: "Recipes", link: "/guide/recipes" },
+          { text: "FAQ", link: "/guide/faq" },
+          { text: "Comparison", link: "/guide/comparison" },
+          { text: "Why Termless?", link: "/why" },
         ],
       },
     ],
@@ -177,8 +173,9 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Results at <a href="https://terminfo.dev">terminfo.dev</a> · Tests TUIs built with <a href="https://silvery.dev">Silvery</a>',
-      copyright: 'Built by <a href="https://beorn.codes">Bjørn Stabell</a>'
+      message:
+        'Results at <a href="https://terminfo.dev">terminfo.dev</a> · Tests TUIs built with <a href="https://silvery.dev">Silvery</a>',
+      copyright: 'Built by <a href="https://beorn.codes">Bjørn Stabell</a>',
     },
   },
 })

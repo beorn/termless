@@ -44,7 +44,7 @@ interface TerminalOptions {
 
 ## TerminalCapabilities
 
-Describes what features a backend supports:
+Describes what features a backend supports. Terminal capability data across real terminals is maintained at [terminfo.dev](https://terminfo.dev).
 
 ```typescript
 interface TerminalCapabilities {

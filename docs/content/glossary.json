@@ -1,0 +1,219 @@
+[
+  {
+    "term": "createTerminal",
+    "href": "/api/terminal",
+    "tooltip": "Factory function that creates a Terminal instance from a backend + optional PTY"
+  },
+  {
+    "term": "createTestTerminal",
+    "href": "/guide/writing-tests",
+    "tooltip": "Convenience factory for tests — creates a terminal with a backend and default dimensions"
+  },
+  {
+    "term": "describeBackends",
+    "href": "/guide/multi-backend",
+    "tooltip": "Run the same test suite against multiple backends — cross-compatibility testing"
+  },
+  {
+    "term": "Terminal",
+    "href": "/api/terminal",
+    "tooltip": "High-level API: backend + PTY + search + screenshots + region selectors"
+  },
+  {
+    "term": "TerminalBackend",
+    "href": "/api/backend",
+    "tooltip": "Interface that all backends implement — ~18 methods for terminal I/O"
+  },
+  {
+    "term": "TerminalReadable",
+    "href": "/api/backend",
+    "tooltip": "Read-only terminal interface — getText, getCell, getCursor, getMode, getScrollback"
+  },
+  {
+    "term": "Cell",
+    "href": "/api/cell",
+    "tooltip": "Single terminal cell with text content, foreground/background colors, and style flags"
+  },
+  {
+    "term": "CursorState",
+    "href": "/api/cell",
+    "tooltip": "Cursor position and visibility — row, col, visible, shape"
+  },
+  {
+    "term": "TerminalMode",
+    "href": "/api/cell",
+    "tooltip": "Terminal mode flags — alternate screen, bracketed paste, mouse tracking, etc."
+  },
+
+  {
+    "term": "RegionView",
+    "href": "/api/terminal",
+    "tooltip": "Lazy region selector — recomputes on every access for live terminal state"
+  },
+  {
+    "term": "CellView",
+    "href": "/api/terminal",
+    "tooltip": "Single cell with positional context — row, col, fg, bg, bold, italic"
+  },
+  {
+    "term": "RowView",
+    "href": "/api/terminal",
+    "tooltip": "A row with positional context — row number and cellAt(col) access"
+  },
+
+  {
+    "term": "toContainText",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a terminal region contains the expected text"
+  },
+  {
+    "term": "toHaveText",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts exact text match on a terminal region"
+  },
+  {
+    "term": "toMatchLines",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts multi-line content matches expected lines"
+  },
+  { "term": "toBeBold", "href": "/api/matchers", "tooltip": "Vitest matcher — asserts a cell has bold styling" },
+  { "term": "toBeItalic", "href": "/api/matchers", "tooltip": "Vitest matcher — asserts a cell has italic styling" },
+  {
+    "term": "toHaveFg",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a cell has the expected foreground color"
+  },
+  {
+    "term": "toHaveBg",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a cell has the expected background color"
+  },
+  {
+    "term": "toHaveCursorAt",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts the cursor is at the expected row and column"
+  },
+  {
+    "term": "toHaveMode",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts a terminal mode is enabled (e.g., alternate screen)"
+  },
+  {
+    "term": "toMatchScreenshot",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — visual regression testing via SVG/PNG screenshot comparison"
+  },
+  {
+    "term": "toMatchTerminalSnapshot",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — text-based terminal snapshot testing"
+  },
+  {
+    "term": "toHaveTitle",
+    "href": "/api/matchers",
+    "tooltip": "Vitest matcher — asserts the terminal title matches the expected string"
+  },
+
+  {
+    "term": "alternate screen",
+    "href": "/guide/terminal-model",
+    "tooltip": "Secondary terminal buffer used by fullscreen apps — preserves main scrollback"
+  },
+  {
+    "term": "scrollback buffer",
+    "href": "/guide/terminal-model",
+    "tooltip": "Lines that have scrolled above the visible viewport — terminal history"
+  },
+  {
+    "term": "viewport",
+    "href": "/guide/terminal-model",
+    "tooltip": "The visible portion of the terminal — rows × cols currently displayed"
+  },
+  {
+    "term": "screen buffer",
+    "href": "/guide/terminal-model",
+    "tooltip": "The active terminal grid — rows × cols of cells with text and attributes"
+  },
+  {
+    "term": "pseudo-terminal",
+    "tooltip": "OS-level interface (PTY) that emulates a real terminal — enables running CLI apps in tests"
+  },
+  {
+    "term": "bracketed paste",
+    "tooltip": "Terminal mode where pasted text is wrapped in escape sequences — prevents paste injection"
+  },
+  {
+    "term": "region selectors",
+    "href": "/api/terminal",
+    "tooltip": "The WHERE part of Termless — term.screen, term.row(n), term.cell(r,c), term.range(...)"
+  },
+  {
+    "term": "auto-retry",
+    "href": "/guide/writing-tests",
+    "tooltip": "Playwright-style polling — matchers accept { timeout } for automatic retry until assertion passes"
+  },
+  {
+    "term": "lazy views",
+    "tooltip": "Termless views recompute on every access — always reflect current terminal state, never stale"
+  },
+
+  {
+    "term": "vterm.js",
+    "tooltip": "Full-featured modern terminal emulator in pure TypeScript — 100% terminfo.dev feature coverage"
+  },
+  { "term": "xterm.js", "tooltip": "Popular browser-based terminal emulator — most widely used JavaScript terminal" },
+
+  {
+    "term": "Silvery",
+    "href": "https://silvery.dev",
+    "tooltip": "React TUI framework for modern terminal apps — uses Termless for testing",
+    "external": true
+  },
+  {
+    "term": "terminfo.dev",
+    "href": "https://terminfo.dev",
+    "tooltip": "Terminal feature compatibility database — powered by Termless probe results",
+    "external": true
+  },
+  {
+    "term": "Vitest",
+    "tooltip": "Modern testing framework powered by Vite — Termless matchers integrate as Vitest custom matchers"
+  },
+  {
+    "term": "SGR",
+    "tooltip": "Select Graphic Rendition — ANSI escape codes for text styling (bold, colors, underline)"
+  },
+  { "term": "CSI", "tooltip": "Control Sequence Introducer (ESC[) — prefix for most ANSI terminal commands" },
+  {
+    "term": "OSC",
+    "tooltip": "Operating System Command — terminal escape sequences for titles, hyperlinks, clipboard"
+  },
+  {
+    "term": "ECMA-48",
+    "tooltip": "International standard defining terminal control functions — basis of ANSI escape codes"
+  },
+  {
+    "term": "Kitty keyboard protocol",
+    "tooltip": "Modern keyboard input protocol with key release events, modifiers, and Unicode"
+  },
+
+  {
+    "term": "multi-backend testing",
+    "href": "/guide/multi-backend",
+    "tooltip": "Running the same test suite against multiple terminal backends to verify cross-compatibility"
+  },
+  {
+    "term": "headless testing",
+    "tooltip": "Running terminal tests without a visible terminal window — in-process emulation"
+  },
+  {
+    "term": "screenshot testing",
+    "href": "/guide/screenshots",
+    "tooltip": "Visual regression testing via SVG/PNG snapshots of terminal output"
+  },
+  {
+    "term": "backend registry",
+    "href": "/guide/backends",
+    "tooltip": "Name-based backend resolution system — async loading of backends by string identifier"
+  }
+]

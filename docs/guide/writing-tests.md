@@ -117,7 +117,7 @@ expect(term).toBeInMode("mouseTracking")
 expect(term).toBeInMode("applicationCursor")
 ```
 
-Available modes: `altScreen`, `cursorVisible`, `bracketedPaste`, `applicationCursor`, `applicationKeypad`, `autoWrap`, `mouseTracking`, `focusTracking`, `originMode`, `insertMode`, `reverseVideo`.
+Available modes: `altScreen`, `cursorVisible`, `bracketedPaste`, `applicationCursor`, `applicationKeypad`, `autoWrap`, `mouseTracking`, `focusTracking`, `originMode`, `insertMode`, `reverseVideo`. See [terminfo.dev](https://terminfo.dev) for which terminals support which features.
 
 ### Title Matcher
 

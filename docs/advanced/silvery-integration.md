@@ -1,6 +1,6 @@
 # Silvery Test Leverage Plan: Termless Opportunities
 
-Assessment of where Termless can augment or replace silvery's virtual buffer tests.
+Assessment of where Termless can augment or replace [Silvery](https://silvery.dev)'s virtual buffer tests.
 
 ## Current State
 

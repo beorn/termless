@@ -18,17 +18,17 @@ Existing tools like `expect` and `pexpect` match on raw text output, which is fr
 
 ## How It's Different from expect/pexpect
 
-| | expect/pexpect | Termless |
-|---|---|---|
-| Matching | Regex on raw byte stream | Structured access to cells, colors, cursor, modes |
-| Speed | Spawns processes, waits for output | In-process emulation, typically < 1ms per test |
-| Cross-terminal | Tests one terminal | Tests against 10+ backends |
-| What you can assert | Text appeared in output | Cell attributes, cursor position, scrollback, terminal modes |
-| Flakiness | Timing-dependent | Deterministic (no I/O, no subprocesses) |
+|                     | expect/pexpect                     | Termless                                                     |
+| ------------------- | ---------------------------------- | ------------------------------------------------------------ |
+| Matching            | Regex on raw byte stream           | Structured access to cells, colors, cursor, modes            |
+| Speed               | Spawns processes, waits for output | In-process emulation, typically < 1ms per test               |
+| Cross-terminal      | Tests one terminal                 | Tests against 10+ backends                                   |
+| What you can assert | Text appeared in output            | Cell attributes, cursor position, scrollback, terminal modes |
+| Flakiness           | Timing-dependent                   | Deterministic (no I/O, no subprocesses)                      |
 
 ## Who It's For
 
-- **TUI developers** building apps with React (Silvery/Ink), Go (Bubbletea), Rust (Ratatui), or Python (Textual)
+- **TUI developers** building apps with React ([Silvery](https://silvery.dev)/Ink), Go (Bubbletea), Rust (Ratatui), or Python (Textual)
 - **Terminal emulator authors** validating VT/ECMA-48/xterm compliance
 - **CLI tool authors** who want visual regression tests beyond string matching
 - **QA engineers** testing terminal-based workflows
