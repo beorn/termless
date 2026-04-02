@@ -24,12 +24,29 @@
 import type { Command } from "@silvery/commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { createSessionManager } from "./session.ts"
+
+// =============================================================================
+// Font detection
+// =============================================================================
+
+/** Try to detect the terminal's font from config files */
+function detectTerminalFont(): string | undefined {
+  // Ghostty
+  const ghosttyConfig = `${process.env.HOME}/.config/ghostty/config`
+  if (existsSync(ghosttyConfig)) {
+    const content = readFileSync(ghosttyConfig, "utf-8")
+    const match = content.match(/^font-family\s*=\s*(.+)$/m)
+    if (match) return match[1]!.trim()
+  }
+  // TODO: add iTerm2, Alacritty, WezTerm, Kitty detection
+  return undefined
+}
 
 // =============================================================================
 // Key-to-tape mapping
@@ -189,6 +206,8 @@ async function interactiveRecord(
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
   const wantImages = hasImageOutput(outputPaths)
+  const termFont = detectTerminalFont()
+  const svgOpts = termFont ? { fontFamily: `'${termFont}', monospace` } : undefined
 
   const cmdLabel = cmd.join(" ")
 
@@ -260,7 +279,7 @@ async function interactiveRecord(
       if (!headlessTerminal) return
       const currentText = headlessTerminal.getText()
       if (currentText !== lastFrameText) {
-        let svg = headlessTerminal.screenshotSvg()
+        let svg = headlessTerminal.screenshotSvg(svgOpts)
         if (showKeys && currentKeystrokeLabel) {
           svg = overlayKeystroke(svg, currentKeystrokeLabel)
         }
@@ -328,7 +347,7 @@ async function interactiveRecord(
   if (headlessTerminal) {
     const finalText = headlessTerminal.getText()
     if (finalText !== lastFrameText) {
-      const svg = headlessTerminal.screenshotSvg()
+      const svg = headlessTerminal.screenshotSvg(svgOpts)
       animationFrames.push({ svg, duration: 100 })
     }
   }

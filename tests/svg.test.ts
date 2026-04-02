@@ -255,9 +255,9 @@ describe("screenshotSvg", () => {
   test("SVG dimensions match cols*cellWidth x rows*cellHeight", () => {
     const term = createMockReadable(["abcde", "fghij"])
     const svg = screenshotSvg(term)
-    // 5 cols * 13.2 = 66, 2 rows * 28 = 56
-    expect(svg).toContain(`width="66"`)
-    expect(svg).toContain(`height="56"`)
+    // 5 cols * 9.6 = 48, 2 rows * 20 = 40
+    expect(svg).toContain(`width="48"`)
+    expect(svg).toContain(`height="40"`)
   })
 
   test("underline cell gets text-decoration underline", () => {
@@ -291,7 +291,7 @@ describe("screenshotSvg", () => {
     const svg = screenshotSvg(term)
     // Beam: width=2, full height
     expect(svg).toContain(`width="2"`)
-    expect(svg).toContain(`height="28"`)
+    expect(svg).toContain(`height="20"`)
     expect(svg).toContain(`fill="#aeafad"`)
   })
 
@@ -300,8 +300,8 @@ describe("screenshotSvg", () => {
       cursor: { x: 1, y: 0, visible: true, style: "underline" },
     })
     const svg = screenshotSvg(term)
-    // Underline: height=2 at bottom of cell (y = 0*28 + 28 - 2 = 26)
-    expect(svg).toContain(`y="26"`)
+    // Underline: height=2 at bottom of cell (y = 0*20 + 20 - 2 = 18)
+    expect(svg).toContain(`y="18"`)
     expect(svg).toContain(`height="2"`)
     expect(svg).toContain(`fill="#aeafad"`)
   })
