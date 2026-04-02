@@ -137,14 +137,14 @@ termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.png
 termless capture --command "ls -la" --wait-for "total" --text
 
 # Screenshot a TUI app after navigation (SVG)
-termless capture --command "bun km view /path" \
+termless capture --command "bun run app" \
   --keys "j,j,Enter" \
-  --screenshot /tmp/km.svg
+  --screenshot /tmp/app.svg
 
 # Screenshot as PNG (detected from .png extension)
-termless capture --command "bun km view /path" \
+termless capture --command "bun run app" \
   --keys "j,j,Enter" \
-  --screenshot /tmp/km.png
+  --screenshot /tmp/app.png
 
 # Wide terminal with long timeout
 termless capture --command "htop" \
@@ -170,7 +170,7 @@ Record a terminal session as SVG frames or an HTML slideshow.
 
 ```bash
 termless record --command "htop" --duration 5 --format frames
-termless record --command "bun km view /path" --format html --output-dir ./demo.html
+termless record --command "bun run app" --format html --output-dir ./demo.html
 ```
 
 ### Options

@@ -37,7 +37,7 @@ A terminal maintains a buffer of character cells organized in rows and columns.
 Two separate buffers, not regions within one:
 
 - **Normal mode** (default): Primary buffer. Output scrolls, scrollback accumulates above the screen. Used by shells, build tools, inline CLI.
-- **Alt mode** (`\x1b[?1049h`): Separate clean `rows × cols` buffer, no scrollback. Used by fullscreen apps (vim, htop, km). Entering saves normal buffer; exiting restores it.
+- **Alt mode** (`\x1b[?1049h`): Separate clean `rows × cols` buffer, no scrollback. Used by fullscreen apps (vim, htop, TUI dashboards). Entering saves normal buffer; exiting restores it.
 
 | Region     | Normal mode              | Alt mode          |
 | ---------- | ------------------------ | ----------------- |
@@ -77,7 +77,7 @@ All modern terminals implement the same underlying buffer model (normal + altern
 | **Contour**          | viewport       | scrollback               | alternate        | Modern terminal with DEC 2026 sync support.                         |
 | **Windows Terminal** | viewport       | scrollback               | alternate screen | Uses ConPTY + its own VT parser.                                    |
 
-### Silvery (km) — UI framework layer
+### Silvery — UI framework layer
 
 Silvery operates at a higher level (React component tree → rendered cells), not terminal emulation:
 
