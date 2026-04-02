@@ -25,7 +25,7 @@ import type { Command } from "commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
-import { dirname, resolve, join } from "node:path"
+import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { createSessionManager } from "./session.ts"
@@ -34,9 +34,59 @@ import { createSessionManager } from "./session.ts"
 // Key-to-tape mapping
 // =============================================================================
 
-/** Map raw bytes to .tape commands. Returns null if unmappable (raw data). */
-function bytesToTapeCommand(bytes: Uint8Array): string | null {
+/** Sentinel value indicating a terminal protocol response that should be filtered. */
+export const SKIP = "__SKIP__"
+
+/**
+ * Check if bytes are a terminal protocol response that should be stripped.
+ *
+ * These are terminal → app responses that get captured during interactive
+ * recording but shouldn't appear in .tape files:
+ * - Kitty keyboard protocol: \x1b[?Nu, \x1b[N;...u
+ * - OSC 4 palette queries: \x1b]4;N;rgb:...
+ * - Focus events: \x1b[I, \x1b[O
+ * - Device attribute responses: \x1b[?...c, \x1b[>...c
+ * - Mouse report sequences: \x1b[<...M, \x1b[<...m
+ * - DSR (Device Status Report) responses: \x1b[N;NR
+ * - Mode report responses: \x1b[?...;...$y
+ */
+export function isTerminalResponse(bytes: Uint8Array, str: string): boolean {
+  // Must start with ESC
+  if (bytes.length < 2 || bytes[0] !== 0x1b) return false
+
+  // Kitty keyboard protocol: \x1b[?Nu or \x1b[N;...u (ends with 'u')
+  if (str.startsWith("\x1b[") && str.endsWith("u")) return true
+
+  // Focus events: \x1b[I (focus in) and \x1b[O (focus out)
+  if (str === "\x1b[I" || str === "\x1b[O") return true
+
+  // Device attribute responses: \x1b[?...c (DA1) and \x1b[>...c (DA2)
+  if (str.startsWith("\x1b[?") && str.endsWith("c")) return true
+  if (str.startsWith("\x1b[>") && str.endsWith("c")) return true
+
+  // Mouse report sequences: \x1b[<...M or \x1b[<...m (SGR mouse)
+  if (str.startsWith("\x1b[<") && (str.endsWith("M") || str.endsWith("m"))) return true
+
+  // OSC responses: \x1b]... terminated by BEL (\x07) or ST (\x1b\\)
+  if (str.startsWith("\x1b]")) return true
+
+  // DSR responses: \x1b[N;NR (cursor position report)
+  if (/^\x1b\[\d+;\d+R$/.test(str)) return true
+
+  // Mode report: \x1b[?...;...$y (DECRPM)
+  if (str.startsWith("\x1b[?") && str.endsWith("$y")) return true
+
+  return false
+}
+
+/** Map raw bytes to .tape commands. Returns null if unmappable (raw data), SKIP for terminal responses. */
+export function bytesToTapeCommand(bytes: Uint8Array, raw = false): string | typeof SKIP | null {
   const str = new TextDecoder().decode(bytes)
+
+  // Filter terminal protocol responses unless --raw mode
+  if (!raw && isTerminalResponse(bytes, str)) {
+    return SKIP
+  }
 
   // Single printable character — accumulate for Type command
   if (bytes.length === 1) {
@@ -70,7 +120,7 @@ function bytesToTapeCommand(bytes: Uint8Array): string | null {
 }
 
 /** Convert recorded events to .tape format string */
-function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell: string): string {
+export function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell: string, raw = false): string {
   const lines: string[] = []
   lines.push(`Set Shell "${shell}"`)
   lines.push("")
@@ -100,8 +150,11 @@ function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell:
     }
     lastTime = event.time
 
-    const cmd = bytesToTapeCommand(event.bytes)
-    if (cmd === null) {
+    const cmd = bytesToTapeCommand(event.bytes, raw)
+    if (cmd === SKIP) {
+      // Terminal protocol response — skip entirely
+      continue
+    } else if (cmd === null) {
       // Printable character — accumulate into Type
       const ch = new TextDecoder().decode(event.bytes)
       pendingType += ch
@@ -120,16 +173,24 @@ function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell:
 // Interactive recording
 // =============================================================================
 
+/** Check if any output path has an image extension */
+function hasImageOutput(paths: string[]): boolean {
+  return paths.some((p) => /\.(gif|svg|png|apng)$/i.test(p))
+}
+
 async function interactiveRecord(
   command: string[] | undefined,
-  opts: { output?: string[]; cols: number; rows: number },
+  opts: { output?: string[]; cols: number; rows: number; raw?: boolean },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
   const cmd = command ?? [shell]
   const outputPaths = opts.output ?? []
+  const raw = opts.raw ?? false
+  const wantImages = hasImageOutput(outputPaths)
 
   console.error(`Recording: ${cmd.join(" ")}`)
   console.error(`Output: ${outputPaths.join(", ") || "stdout"}`)
+  if (wantImages) console.error("Image output enabled — capturing frames via headless terminal")
   console.error("Exit the command to stop recording.\n")
 
   const { spawnPty } = await import("../../../src/pty.ts")
@@ -137,6 +198,19 @@ async function interactiveRecord(
   const inputEvents: Array<{ time: number; bytes: Uint8Array }> = []
   const outputEvents: Array<{ time: number; data: string }> = []
   const startTime = Date.now()
+
+  // If image output is requested, create a headless terminal that mirrors PTY output
+  let headlessTerminal: import("../../../src/types.ts").Terminal | null = null
+  const animationFrames: import("../../../src/animation/types.ts").AnimationFrame[] = []
+  let frameTimer: ReturnType<typeof setInterval> | null = null
+  let lastFrameText = ""
+
+  if (wantImages) {
+    const { createTerminal } = await import("../../../src/terminal.ts")
+    const { backend } = await import("../../../src/backends.ts")
+    const b = await backend("vterm")
+    headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
+  }
 
   // Spawn with real PTY — capture output AND forward to terminal
   const pty = spawnPty({
@@ -148,8 +222,34 @@ async function interactiveRecord(
       outputEvents.push({ time: Date.now() - startTime, data: new TextDecoder().decode(data) })
       // Forward to real terminal
       process.stdout.write(data)
+      // Feed into headless terminal for image capture
+      if (headlessTerminal) {
+        headlessTerminal.feed(new TextDecoder().decode(data))
+      }
     },
   })
+
+  // Start frame capture timer for image output
+  if (headlessTerminal) {
+    const captureInterval = 100 // ms
+    let lastCaptureTime = Date.now()
+
+    frameTimer = setInterval(() => {
+      if (!headlessTerminal) return
+      const currentText = headlessTerminal.getText()
+      if (currentText !== lastFrameText) {
+        const svg = headlessTerminal.screenshotSvg()
+        const now = Date.now()
+        // Set duration of previous frame
+        if (animationFrames.length > 0) {
+          animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
+        }
+        animationFrames.push({ svg, duration: captureInterval })
+        lastFrameText = currentText
+        lastCaptureTime = now
+      }
+    }, captureInterval)
+  }
 
   // Intercept stdin in raw mode, forward to PTY, record keystrokes
   if (process.stdin.isTTY) {
@@ -179,31 +279,46 @@ async function interactiveRecord(
   })
 
   // Cleanup
+  if (frameTimer) clearInterval(frameTimer)
   process.stdin.removeListener("data", stdinHandler)
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false)
   }
   process.stdin.pause()
 
+  // Capture final frame if headless terminal has changed
+  if (headlessTerminal) {
+    const finalText = headlessTerminal.getText()
+    if (finalText !== lastFrameText) {
+      const svg = headlessTerminal.screenshotSvg()
+      animationFrames.push({ svg, duration: 100 })
+    }
+  }
+
   const duration = (Date.now() - startTime) / 1000
 
   // Write to output files (or stdout)
   if (outputPaths.length === 0) {
     // No -o: output .tape to stdout
-    process.stdout.write(eventsToTape(inputEvents, cmd.join(" ")))
+    process.stdout.write(eventsToTape(inputEvents, cmd.join(" "), raw))
   } else {
     for (const path of outputPaths) {
-      if (path.endsWith(".cast")) {
+      if (/\.(gif|svg|png|apng)$/i.test(path)) {
+        // Image output — render animation frames
+        await writeImageOutput(path, animationFrames)
+      } else if (path.endsWith(".cast")) {
         // asciicast v2 format — JSON-lines with output events
         const lines: string[] = []
-        lines.push(JSON.stringify({
-          version: 2,
-          width: opts.cols,
-          height: opts.rows,
-          timestamp: Math.floor(Date.now() / 1000),
-          duration,
-          env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
-        }))
+        lines.push(
+          JSON.stringify({
+            version: 2,
+            width: opts.cols,
+            height: opts.rows,
+            timestamp: Math.floor(Date.now() / 1000),
+            duration,
+            env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
+          }),
+        )
         for (const event of outputEvents) {
           lines.push(JSON.stringify([event.time / 1000, "o", event.data]))
         }
@@ -218,18 +333,69 @@ async function interactiveRecord(
           return ta - tb
         })
         writeFileSync(path, [header, ...events].join("\n") + "\n")
-        console.log(`\nSaved: ${path}`)
+        console.error(`Saved: ${path}`)
       } else if (path.endsWith(".tape")) {
-        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" ")))
-        console.log(`\nSaved: ${path}`)
+        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
+        console.error(`Saved: ${path}`)
       } else {
-        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" ")))
-        console.log(`\nSaved: ${path}`)
+        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
+        console.error(`Saved: ${path}`)
       }
     }
   }
 
-  console.log(`Recorded ${inputEvents.length} keystrokes, ${outputEvents.length} output events in ${duration.toFixed(1)}s`)
+  // Cleanup headless terminal
+  if (headlessTerminal) {
+    headlessTerminal.close()
+  }
+
+  console.error(
+    `Recorded ${inputEvents.length} keystrokes, ${outputEvents.length} output events in ${duration.toFixed(1)}s`,
+  )
+  if (animationFrames.length > 0) {
+    console.error(`Captured ${animationFrames.length} animation frames`)
+  }
+}
+
+/**
+ * Write animation frames to an image output file.
+ * Detects format from extension and uses the appropriate encoder.
+ */
+async function writeImageOutput(
+  path: string,
+  frames: import("../../../src/animation/types.ts").AnimationFrame[],
+): Promise<void> {
+  if (frames.length === 0) {
+    console.error(`Warning: no frames captured for ${path}`)
+    return
+  }
+
+  const dir = dirname(resolve(path))
+  mkdirSync(dir, { recursive: true })
+
+  if (path.endsWith(".gif")) {
+    const { createGif } = await import("../../../src/animation/gif.ts")
+    const gif = await createGif(frames)
+    writeFileSync(resolve(path), gif)
+  } else if (path.endsWith(".apng") || (path.endsWith(".png") && frames.length > 1)) {
+    const { createApng } = await import("../../../src/animation/apng.ts")
+    const apng = await createApng(frames)
+    writeFileSync(resolve(path), apng)
+  } else if (path.endsWith(".svg")) {
+    const { createAnimatedSvg } = await import("../../../src/animation/animated-svg.ts")
+    const svg = createAnimatedSvg(frames)
+    writeFileSync(resolve(path), svg, "utf-8")
+  } else if (path.endsWith(".png")) {
+    // Single frame PNG — rasterize the SVG
+    const resvg = await import("@resvg/resvg-js")
+    const renderer = new resvg.Resvg(frames[frames.length - 1]!.svg, {
+      fitTo: { mode: "zoom" as const, value: 2 },
+    })
+    const rendered = renderer.render()
+    writeFileSync(resolve(path), rendered.asPng())
+  }
+
+  console.error(`Saved: ${path}`)
 }
 
 // =============================================================================
@@ -254,6 +420,7 @@ async function recordAction(
     duration?: string
     outputDir?: string
     format?: string
+    raw?: boolean
   },
 ): Promise<void> {
   // ── Scripted mode: inline tape commands ──
@@ -307,7 +474,7 @@ async function recordAction(
   const hasOutputFile = opts.output && opts.output.length > 0
   const cmd = command.length > 0 ? command : undefined
   if (hasOutputFile && !opts.keys && !opts.screenshot && !opts.text) {
-    await interactiveRecord(cmd, opts)
+    await interactiveRecord(cmd, { ...opts, raw: opts.raw })
     return
   }
 
@@ -392,5 +559,6 @@ export function registerRecordCommand(program: Command): void {
     .option("--duration <seconds>", "Stop after N seconds (enables frame recording)", parseNum, 0)
     .option("--output-dir <path>", "Output directory for frame recording")
     .option("--format <type>", "Frame recording format: frames or html")
+    .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .action(recordAction)
 }
