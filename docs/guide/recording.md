@@ -77,18 +77,18 @@ $ termless record -o demo.tape -o demo.gif my-app
 
 ### Record Options
 
-| Option                   | Description                                      | Default   |
-| ------------------------ | ------------------------------------------------ | --------- |
-| `-o, --output <path...>` | Output file(s), format detected from extension   | stdout    |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)              | --        |
-| `-b, --backend <name>`   | Backend for scripted mode                        | vterm     |
-| `--cols <n>`             | Terminal columns                                 | `80`      |
-| `--rows <n>`             | Terminal rows                                    | `24`      |
-| `--timeout <ms>`         | Wait timeout in ms                               | `5000`    |
-| `--keys <keys>`          | Comma-separated key names to press               | --        |
-| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)        | --        |
-| `--wait-for <text>`      | Wait for text before pressing keys               | `content` |
-| `--text`                 | Print terminal text to stdout                    | off       |
+| Option                   | Description                                    | Default   |
+| ------------------------ | ---------------------------------------------- | --------- |
+| `-o, --output <path...>` | Output file(s), format detected from extension | stdout    |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)           | --        |
+| `-b, --backend <name>`   | Backend for scripted mode                      | vterm     |
+| `--cols <n>`             | Terminal columns                               | `80`      |
+| `--rows <n>`             | Terminal rows                                  | `24`      |
+| `--timeout <ms>`         | Wait timeout in ms                             | `5000`    |
+| `--keys <keys>`          | Comma-separated key names to press             | --        |
+| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)      | --        |
+| `--wait-for <text>`      | Wait for text before pressing keys             | `content` |
+| `--text`                 | Print terminal text to stdout                  | off       |
 
 ## Playback
 
@@ -116,27 +116,27 @@ $ termless play demo.cast
 
 ### Play Options
 
-| Option                | Description                                        | Default |
-| --------------------- | -------------------------------------------------- | ------- |
-| `-o, --output <path>` | Output file, format detected from extension        | --      |
-| `-b, --backend <name>`| Backend(s), comma-separated                        | vterm   |
-| `--compare <mode>`    | Comparison mode (requires 2+ backends)             | --      |
-| `--cols <n>`          | Override terminal columns                          | --      |
-| `--rows <n>`          | Override terminal rows                             | --      |
+| Option                 | Description                                 | Default |
+| ---------------------- | ------------------------------------------- | ------- |
+| `-o, --output <path>`  | Output file, format detected from extension | --      |
+| `-b, --backend <name>` | Backend(s), comma-separated                 | vterm   |
+| `--compare <mode>`     | Comparison mode (requires 2+ backends)      | --      |
+| `--cols <n>`           | Override terminal columns                   | --      |
+| `--rows <n>`           | Override terminal rows                      | --      |
 
 ## Output Formats
 
 Termless produces output in multiple formats, all without external dependencies like Chromium or ffmpeg:
 
-| Format        | Extension     | Type            | Dependencies       |
-| ------------- | ------------- | --------------- | ------------------ |
-| PNG           | `.png`        | Single frame    | `@resvg/resvg-js`  |
-| SVG           | `.svg`        | Single frame    | None (built-in)    |
-| Animated SVG  | `.svg`        | Multi-frame     | None (CSS keyframes) |
-| GIF           | `.gif`        | Multi-frame     | `gifenc` (pure JS) |
-| APNG          | `.apng`       | Multi-frame     | `upng-js` (pure JS)|
-| asciicast v2  | `.cast`       | Recording data  | None (JSON-lines)  |
-| Tape          | `.tape`       | Recording data  | None (text)        |
+| Format       | Extension | Type           | Dependencies         |
+| ------------ | --------- | -------------- | -------------------- |
+| PNG          | `.png`    | Single frame   | `@resvg/resvg-js`    |
+| SVG          | `.svg`    | Single frame   | None (built-in)      |
+| Animated SVG | `.svg`    | Multi-frame    | None (CSS keyframes) |
+| GIF          | `.gif`    | Multi-frame    | `gifenc` (pure JS)   |
+| APNG         | `.apng`   | Multi-frame    | `upng-js` (pure JS)  |
+| asciicast v2 | `.cast`   | Recording data | None (JSON-lines)    |
+| Tape         | `.tape`   | Recording data | None (text)          |
 
 ## Cross-Terminal Comparison
 
@@ -158,12 +158,12 @@ $ termless play -b vterm,ghostty --compare diff -o diff.svg demo.tape
 
 ### Comparison Modes
 
-| Mode           | Description                                          |
-| -------------- | ---------------------------------------------------- |
-| `separate`     | Individual screenshots per backend                   |
-| `side-by-side` | Two backends side by side in one image               |
-| `grid`         | All backends in a grid layout                        |
-| `diff`         | Highlights cells that differ between backends        |
+| Mode           | Description                                   |
+| -------------- | --------------------------------------------- |
+| `separate`     | Individual screenshots per backend            |
+| `side-by-side` | Two backends side by side in one image        |
+| `grid`         | All backends in a grid layout                 |
+| `diff`         | Highlights cells that differ between backends |
 
 ## Programmatic API
 

@@ -53,9 +53,9 @@ import { parseAsciicast, replayAsciicast } from "@termless/core"
 const content = await Bun.file("demo.cast").text()
 const recording = parseAsciicast(content)
 
-console.log(recording.header.width)   // 80
-console.log(recording.header.height)  // 24
-console.log(recording.events.length)  // number of events
+console.log(recording.header.width) // 80
+console.log(recording.header.height) // 24
+console.log(recording.events.length) // number of events
 ```
 
 ### Replay Through a Terminal
@@ -138,26 +138,26 @@ await Bun.write("demo.cast", cast)
 
 Asciicast v2 supports three event types:
 
-| Type | Meaning | Example |
-| ---- | ------- | ------- |
+| Type  | Meaning                               | Example                   |
+| ----- | ------------------------------------- | ------------------------- |
 | `"o"` | Output (terminal data sent to screen) | `[1.5, "o", "hello\r\n"]` |
-| `"i"` | Input (user keystrokes) | `[2.0, "i", "ls\n"]` |
-| `"m"` | Marker (named position in recording) | `[3.0, "m", "step-2"]` |
+| `"i"` | Input (user keystrokes)               | `[2.0, "i", "ls\n"]`      |
+| `"m"` | Marker (named position in recording)  | `[3.0, "m", "step-2"]`    |
 
 During replay, only `"o"` events are fed to the terminal. Input events are recorded for reference but not replayed. Marker events are reported via the `onEvent` callback.
 
 ## Header Fields
 
-| Field       | Type     | Required | Description                          |
-| ----------- | -------- | -------- | ------------------------------------ |
-| `version`   | `number` | Yes      | Must be `2`                          |
-| `width`     | `number` | Yes      | Terminal columns                     |
-| `height`    | `number` | Yes      | Terminal rows                        |
-| `duration`  | `number` | No       | Total duration in seconds            |
-| `timestamp` | `number` | No       | Unix timestamp of recording start    |
-| `title`     | `string` | No       | Recording title                      |
-| `env`       | `object` | No       | Environment variables (e.g., SHELL)  |
-| `theme`     | `object` | No       | Color theme (fg, bg, palette)        |
+| Field       | Type     | Required | Description                         |
+| ----------- | -------- | -------- | ----------------------------------- |
+| `version`   | `number` | Yes      | Must be `2`                         |
+| `width`     | `number` | Yes      | Terminal columns                    |
+| `height`    | `number` | Yes      | Terminal rows                       |
+| `duration`  | `number` | No       | Total duration in seconds           |
+| `timestamp` | `number` | No       | Unix timestamp of recording start   |
+| `title`     | `string` | No       | Recording title                     |
+| `env`       | `object` | No       | Environment variables (e.g., SHELL) |
+| `theme`     | `object` | No       | Color theme (fg, bg, palette)       |
 
 ## See Also
 

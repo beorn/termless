@@ -61,19 +61,19 @@ $ termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
 
 ### Options
 
-| Option                   | Description                                      | Default   |
-| ------------------------ | ------------------------------------------------ | --------- |
-| `-o, --output <path...>` | Output file(s), format detected from extension   | stdout    |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)              | --        |
-| `--fmt <format>`         | Output format for stdout: `tape`, `cast`         | `tape`    |
-| `-b, --backend <name>`   | Backend for scripted mode                        | vterm     |
-| `--cols <n>`             | Terminal columns                                 | `80`      |
-| `--rows <n>`             | Terminal rows                                    | `24`      |
-| `--timeout <ms>`         | Wait timeout in ms                               | `5000`    |
-| `--keys <keys>`          | Comma-separated key names to press               | --        |
-| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)        | --        |
-| `--wait-for <text>`      | Wait for text before pressing keys               | `content` |
-| `--text`                 | Print terminal text to stdout                    | off       |
+| Option                   | Description                                    | Default   |
+| ------------------------ | ---------------------------------------------- | --------- |
+| `-o, --output <path...>` | Output file(s), format detected from extension | stdout    |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)           | --        |
+| `--fmt <format>`         | Output format for stdout: `tape`, `cast`       | `tape`    |
+| `-b, --backend <name>`   | Backend for scripted mode                      | vterm     |
+| `--cols <n>`             | Terminal columns                               | `80`      |
+| `--rows <n>`             | Terminal rows                                  | `24`      |
+| `--timeout <ms>`         | Wait timeout in ms                             | `5000`    |
+| `--keys <keys>`          | Comma-separated key names to press             | --        |
+| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)      | --        |
+| `--wait-for <text>`      | Wait for text before pressing keys             | `content` |
+| `--text`                 | Print terminal text to stdout                  | off       |
 
 See [Recording & Playback](/guide/recording) for detailed usage.
 
@@ -100,13 +100,13 @@ $ termless play -b vterm,ghostty --compare side-by-side demo.tape
 
 ### Options
 
-| Option                  | Description                                        | Default |
-| ----------------------- | -------------------------------------------------- | ------- |
-| `-o, --output <path>`  | Output file, format detected from extension        | --      |
-| `-b, --backend <name>` | Backend(s), comma-separated                        | vterm   |
-| `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff` | -- |
-| `--cols <n>`           | Override terminal columns                          | --      |
-| `--rows <n>`           | Override terminal rows                             | --      |
+| Option                 | Description                                                 | Default |
+| ---------------------- | ----------------------------------------------------------- | ------- |
+| `-o, --output <path>`  | Output file, format detected from extension                 | --      |
+| `-b, --backend <name>` | Backend(s), comma-separated                                 | vterm   |
+| `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff` | --      |
+| `--cols <n>`           | Override terminal columns                                   | --      |
+| `--rows <n>`           | Override terminal rows                                      | --      |
 
 See [Recording & Playback](/guide/recording) for detailed usage and comparison modes.
 

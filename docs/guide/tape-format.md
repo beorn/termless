@@ -208,11 +208,11 @@ Set TypingSpeed 50ms
 
 Duration values are used in `Sleep`, `Type@`, and `Set TypingSpeed`:
 
-| Format   | Meaning     | Example     |
-| -------- | ----------- | ----------- |
-| `Ns`     | N seconds   | `2s`, `0.5s`|
-| `Nms`    | N milliseconds | `500ms`, `100ms` |
-| `N`      | N milliseconds (bare number) | `200` |
+| Format | Meaning                      | Example          |
+| ------ | ---------------------------- | ---------------- |
+| `Ns`   | N seconds                    | `2s`, `0.5s`     |
+| `Nms`  | N milliseconds               | `500ms`, `100ms` |
+| `N`    | N milliseconds (bare number) | `200`            |
 
 ## Full Example
 

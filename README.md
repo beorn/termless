@@ -333,7 +333,7 @@ bun vitest run tests/cross-backend.test.ts
 | [@termless/libvterm](packages/libvterm)     | neovim's libvterm via Emscripten WASM                               |
 | [@termless/kitty](packages/kitty)           | Kitty VT parser built from GPL source (not distributed)             |
 | [@termless/test](packages/viterm)           | Vitest matchers, fixtures, and snapshot serializer                  |
-| [@termless/cli](packages/cli)               | CLI (`termless record`, `termless play`) + MCP server              |
+| [@termless/cli](packages/cli)               | CLI (`termless record`, `termless play`) + MCP server               |
 
 ## How Termless Compares
 
