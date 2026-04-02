@@ -31,6 +31,169 @@ import { executeTape } from "../../../src/tape/executor.ts"
 import { createSessionManager } from "./session.ts"
 
 // =============================================================================
+// Key-to-tape mapping
+// =============================================================================
+
+/** Map raw bytes to .tape commands. Returns null if unmappable (raw data). */
+function bytesToTapeCommand(bytes: Uint8Array): string | null {
+  const str = new TextDecoder().decode(bytes)
+
+  // Single printable character — accumulate for Type command
+  if (bytes.length === 1) {
+    const b = bytes[0]!
+    if (b === 0x0d) return "Enter"
+    if (b === 0x09) return "Tab"
+    if (b === 0x1b) return "Escape"
+    if (b === 0x7f) return "Backspace"
+    if (b === 0x20) return "Space"
+    if (b >= 1 && b <= 26) return `Ctrl+${String.fromCharCode(b + 0x60)}`
+    if (b >= 0x20 && b < 0x7f) return null // printable — handled by Type accumulation
+  }
+
+  // Arrow keys and common escape sequences
+  if (str === "\x1b[A") return "Up"
+  if (str === "\x1b[B") return "Down"
+  if (str === "\x1b[C") return "Right"
+  if (str === "\x1b[D") return "Left"
+  if (str === "\x1b[H") return "Home"
+  if (str === "\x1b[F") return "End"
+  if (str === "\x1b[3~") return "Delete"
+  if (str === "\x1b[5~") return "PageUp"
+  if (str === "\x1b[6~") return "PageDown"
+
+  // Alt+key
+  if (bytes.length === 2 && bytes[0] === 0x1b && bytes[1]! >= 0x20 && bytes[1]! < 0x7f) {
+    return `Alt+${String.fromCharCode(bytes[1]!)}`
+  }
+
+  return null // unknown — skip in .tape output
+}
+
+/** Convert recorded events to .tape format string */
+function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell: string): string {
+  const lines: string[] = []
+  lines.push(`Set Shell "${shell}"`)
+  lines.push("")
+
+  let pendingType = ""
+  let lastTime = 0
+
+  function flushType() {
+    if (pendingType) {
+      // Escape quotes in the accumulated text
+      const escaped = pendingType.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+      lines.push(`Type "${escaped}"`)
+      pendingType = ""
+    }
+  }
+
+  for (const event of events) {
+    // Add Sleep if >200ms gap
+    const gap = event.time - lastTime
+    if (gap > 200) {
+      flushType()
+      if (gap >= 1000) {
+        lines.push(`Sleep ${(gap / 1000).toFixed(1)}s`)
+      } else {
+        lines.push(`Sleep ${Math.round(gap)}ms`)
+      }
+    }
+    lastTime = event.time
+
+    const cmd = bytesToTapeCommand(event.bytes)
+    if (cmd === null) {
+      // Printable character — accumulate into Type
+      const ch = new TextDecoder().decode(event.bytes)
+      pendingType += ch
+    } else {
+      flushType()
+      lines.push(cmd)
+    }
+  }
+
+  flushType()
+  lines.push("")
+  return lines.join("\n")
+}
+
+// =============================================================================
+// Interactive recording
+// =============================================================================
+
+async function interactiveRecord(
+  command: string[] | undefined,
+  opts: { output?: string[]; cols: number; rows: number },
+): Promise<void> {
+  const shell = process.env.SHELL ?? "bash"
+  const cmd = command ?? [shell]
+  const outputPaths = opts.output ?? []
+
+  console.error(`Recording: ${cmd.join(" ")}`)
+  console.error(`Output: ${outputPaths.join(", ") || "stdout"}`)
+  console.error("Exit the command to stop recording.\n")
+
+  const events: Array<{ time: number; bytes: Uint8Array }> = []
+  const startTime = Date.now()
+
+  // Intercept stdin in raw mode, forward to child, record keystrokes
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true)
+  }
+
+  const child = Bun.spawn(cmd, {
+    stdin: "pipe",
+    stdout: "inherit",
+    stderr: "inherit",
+    env: { ...process.env, COLUMNS: String(opts.cols), LINES: String(opts.rows) },
+  })
+
+  // Forward raw stdin to child, recording each chunk
+  process.stdin.resume()
+  const stdinHandler = (chunk: Buffer) => {
+    const bytes = new Uint8Array(chunk)
+    events.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
+    child.stdin?.write(bytes)
+  }
+  process.stdin.on("data", stdinHandler)
+
+  // Wait for child to exit
+  await child.exited
+
+  // Cleanup
+  process.stdin.removeListener("data", stdinHandler)
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(false)
+  }
+  process.stdin.pause()
+
+  // Generate .tape output
+  const tape = eventsToTape(events, cmd.join(" "))
+
+  // Write to output files
+  if (outputPaths.length === 0) {
+    // No -o: output to stdout
+    process.stdout.write(tape)
+  } else {
+    for (const path of outputPaths) {
+      if (path.endsWith(".tape")) {
+        writeFileSync(path, tape)
+        console.log(`\nSaved: ${path}`)
+      } else if (path.endsWith(".cast")) {
+        // asciicast format — would need output recording too
+        // For now, just save as .tape
+        writeFileSync(path.replace(".cast", ".tape"), tape)
+        console.log(`\nSaved: ${path.replace(".cast", ".tape")} (asciicast not yet supported for interactive recording)`)
+      } else {
+        writeFileSync(path, tape)
+        console.log(`\nSaved: ${path}`)
+      }
+    }
+  }
+
+  console.log(`\nRecorded ${events.length} keystrokes in ${((Date.now() - startTime) / 1000).toFixed(1)}s`)
+}
+
+// =============================================================================
 // Action
 // =============================================================================
 
@@ -101,18 +264,23 @@ async function recordAction(
     return
   }
 
-  // ── Capture mode: run a command, optionally press keys, take screenshots ──
+  // ── Interactive recording mode: -o <file> with a command (or shell) ──
+  const hasOutputFile = opts.output && opts.output.length > 0
   const cmd = command.length > 0 ? command : undefined
+  if (hasOutputFile && !opts.keys && !opts.screenshot && !opts.text) {
+    await interactiveRecord(cmd, opts)
+    return
+  }
+
   if (!cmd && !opts.keys && !opts.screenshot && !opts.text) {
-    // No command and no scripted mode — show help
-    console.error("Interactive tape recording is not yet implemented.")
-    console.error("")
-    console.error("Usage:")
-    console.error("  termless record -t 'Type \"hello\"\\nEnter\\nScreenshot' bash")
-    console.error("  termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path")
-    console.error("  termless record -o demo.tape bash")
-    console.error("")
-    console.error("See https://termless.dev/guide/recording for the full reference.")
+    // No command, no output, no flags — show help
+    console.log("Usage:")
+    console.log("  termless record -o demo.tape ls -la         Record a command to .tape")
+    console.log("  termless record -o demo.tape                Record shell session to .tape")
+    console.log("  termless rec -t 'Type \"hello\"\\nEnter' bash  Scripted recording")
+    console.log("  termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view")
+    console.log("")
+    console.log("  termless record --help                      Full options")
     process.exitCode = 1
     return
   }
