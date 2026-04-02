@@ -41,6 +41,10 @@ export async function screenshotPng(terminal: TerminalReadable, options?: PngScr
 
   const resvg = new Resvg(svg, {
     fitTo: { mode: "zoom" as const, value: scale },
+    font: {
+      loadSystemFonts: true,
+      defaultFontFamily: "Menlo",
+    },
   })
   return resvg.render().asPng()
 }

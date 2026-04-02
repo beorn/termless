@@ -66,6 +66,7 @@ export async function createApng(
 
     const resvg = new Resvg(frame.svg, {
       fitTo: { mode: "zoom" as const, value: scale },
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
     })
     const rendered = resvg.render()
 

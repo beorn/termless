@@ -73,6 +73,7 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
     const resvg = await import("@resvg/resvg-js")
     const renderer = new resvg.Resvg(frames[frames.length - 1]!.svg, {
       fitTo: { mode: "zoom" as const, value: 2 },
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
     })
     const rendered = renderer.render()
     writeFileSync(resolve(path), rendered.asPng())
