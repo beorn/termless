@@ -1,3 +1,8 @@
+---
+title: Terminal Census
+description: Comprehensive census of terminal emulator capabilities powered by Termless backends and published at terminfo.dev.
+---
+
 # Terminal Census
 
 <div style="text-align: center; padding: 2em 0;">

@@ -1,3 +1,8 @@
+---
+title: Vitest Matchers API
+description: Complete reference for Termless Vitest matchers -- text, style, color, cursor, and snapshot assertions for terminal testing.
+---
+
 # API: Vitest Matchers
 
 ```typescript

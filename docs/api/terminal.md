@@ -1,3 +1,8 @@
+---
+title: Terminal API
+description: API reference for createTerminal -- options, PTY spawning, region selectors, screenshots, and the full Terminal interface.
+---
+
 # Terminal API
 
 ## `createTerminal(options)`

@@ -1,5 +1,7 @@
 ---
 layout: home
+title: Termless -- Headless Terminal Testing
+description: Like Playwright, but for terminal apps. Test TUIs with in-process emulators -- assert on cells, colors, cursor, scrollback, and modes. 10 backends, 21+ matchers.
 
 hero:
   name: "Termless"

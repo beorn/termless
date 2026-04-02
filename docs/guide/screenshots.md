@@ -1,3 +1,8 @@
+---
+title: Screenshots
+description: Generate SVG and PNG screenshots from terminal state for visual regression testing -- no Chromium needed.
+---
+
 # Screenshots
 
 Termless generates screenshots from terminal state -- no Chromium needed. SVG is built-in with zero dependencies. PNG is available via optional `@resvg/resvg-js`.

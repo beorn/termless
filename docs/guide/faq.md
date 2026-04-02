@@ -1,3 +1,33 @@
+---
+title: FAQ
+description: Frequently asked questions about Termless -- backends, CI, Windows support, Jest compatibility, debugging, and mouse events.
+faq:
+  - q: Do I need a real terminal to run tests?
+    a: No. Termless runs entirely headless with in-process terminal emulators. No display, window, or GPU required. Tests run on bare CI machines, containers, and SSH sessions.
+  - q: Which backend should I use?
+    a: Start with the default. @termless/test ships with xterm.js, which covers most testing needs. Use vterm.js for full standards compliance, Ghostty for Ghostty-specific testing, or vt100 for zero-dependency pure TypeScript.
+  - q: Can I test Go/Rust/Python TUI apps?
+    a: Yes. Termless spawns any process via PTY. If it runs in a terminal, Termless can test it -- Go (Bubbletea), Rust (Ratatui), Python (Textual), and more.
+  - q: How is Termless different from pexpect?
+    a: pexpect matches text patterns on a raw byte stream with no terminal understanding. Termless runs a real terminal emulator in-process, giving you structured access to cell attributes, cursor position, terminal modes, and scrollback history.
+  - q: Does Termless work with Jest?
+    a: The custom matchers are built for Vitest, but @termless/core is framework-agnostic. You can use the Terminal API directly with any test runner including Jest.
+  - q: Can I use Termless without Vitest?
+    a: Yes. @termless/core is standalone with no test framework dependency. You get the full Terminal API and can use whatever assertion library you prefer.
+  - q: How do I test on CI?
+    a: Termless needs no display server. Add it to your CI pipeline the same way you run any Node.js or Bun test. No xvfb, no DISPLAY, no Docker-in-Docker required.
+  - q: Does Termless work on Windows?
+    a: PTY features require a Unix PTY and only work on macOS and Linux. In-memory testing and all pure backends work everywhere, including Windows.
+  - q: How do I debug failing tests?
+    a: Three approaches -- screenshot to SVG with term.screenshotSvg(), print the text with term.screen.getText(), or enable debug logging with DEBUG=termless:* environment variable.
+  - q: How fast are Termless tests?
+    a: In-memory tests typically run in under 1ms each. PTY tests that spawn real processes are slower due to process startup, but Termless adds negligible overhead.
+  - q: Can I test multiple backends in the same test suite?
+    a: Yes. Use createTestTerminalByName() to run the same test logic against different backends like xtermjs, vterm, and ghostty.
+  - q: Does Termless support mouse events?
+    a: Yes. Send SGR mouse events with click() and dblclick(). The target app must enable mouse tracking for these events to be received.
+---
+
 # FAQ
 
 ## Do I need a real terminal to run tests?

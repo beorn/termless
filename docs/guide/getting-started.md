@@ -1,3 +1,8 @@
+---
+title: Getting Started
+description: Install Termless and write your first headless terminal test in under 5 minutes with Vitest.
+---
+
 # Getting Started
 
 ## Installation

@@ -1,3 +1,8 @@
+---
+title: Recipes
+description: Real-world Termless testing patterns for Go, Rust, Python TUI apps, CI integration, and visual regression testing.
+---
+
 # Recipes
 
 Real-world testing patterns for common scenarios.

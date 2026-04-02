@@ -1,3 +1,8 @@
+---
+title: Multi-Backend Testing
+description: Write tests once and run them against multiple terminal emulator backends to catch cross-platform rendering differences.
+---
+
 # Multi-Backend Testing
 
 Termless separates the test API from the terminal emulator. Write tests once, run them against any backend.

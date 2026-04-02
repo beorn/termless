@@ -1,3 +1,8 @@
+---
+title: TerminalBackend API
+description: API reference for the TerminalBackend interface -- the contract every Termless backend implements for terminal emulation.
+---
+
 # API: TerminalBackend
 
 ```typescript

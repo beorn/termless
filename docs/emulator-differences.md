@@ -1,3 +1,8 @@
+---
+title: Terminal Emulator Differences
+description: Known behavioral divergences between terminal emulators discovered through cross-backend testing with Termless.
+---
+
 # Terminal Emulator Differences
 
 Termless backends wrap different terminal emulators, each with its own VT parser implementation. This document records the known behavioral divergences discovered through cross-backend testing.

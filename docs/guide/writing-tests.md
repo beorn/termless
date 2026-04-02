@@ -1,3 +1,8 @@
+---
+title: Writing Tests
+description: Learn how to write headless terminal tests with Termless -- feed input, assert on screen state, colors, cursor, and more.
+---
+
 # Writing Tests
 
 ## Setup

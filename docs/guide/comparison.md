@@ -1,3 +1,8 @@
+---
+title: Comparison
+description: How Termless compares to pexpect, expect, Playwright, and other terminal testing approaches -- structured state vs byte streams.
+---
+
 # Comparison
 
 How Termless compares with other approaches to testing terminal applications.

@@ -1,3 +1,8 @@
+---
+title: Backend Capabilities
+description: Compare Termless backends -- xterm.js, Ghostty, vterm.js, vt100, Alacritty, WezTerm, and more. Feature matrix and selection guide.
+---
+
 # Backend Capability Matrix
 
 Each Termless backend wraps a different terminal emulator. They all implement the same `TerminalBackend` interface, but their underlying capabilities differ.

@@ -1,3 +1,8 @@
+---
+title: Why Termless?
+description: Terminal apps are hard to test. Termless gives you structured access to terminal state -- cells, colors, cursor, scrollback -- like Playwright but for TUIs.
+---
+
 # Why Termless?
 
 ## The Problem

@@ -1,3 +1,8 @@
+---
+title: Best Practices
+description: Tips for writing reliable, fast, and maintainable terminal tests with Termless -- in-memory vs PTY, timeouts, and determinism.
+---
+
 # Best Practices
 
 Tips for writing reliable, fast, and maintainable terminal tests.

@@ -1,3 +1,8 @@
+---
+title: Contributing
+description: How to contribute to Termless -- setup, development workflow, testing, and pull request guidelines.
+---
+
 # Contributing to Termless
 
 ## Getting Started

@@ -1,3 +1,8 @@
+---
+title: Silvery Integration
+description: How Termless augments Silvery's virtual buffer tests -- leveraging headless terminals for end-to-end TUI component testing.
+---
+
 # Silvery Test Leverage Plan: Termless Opportunities
 
 Assessment of where Termless can augment or replace [Silvery](https://silvery.dev)'s virtual buffer tests.

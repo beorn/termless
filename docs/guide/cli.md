@@ -1,3 +1,8 @@
+---
+title: CLI & MCP Server
+description: Use the Termless CLI for terminal capture and screenshots, or the MCP server for AI agent integration.
+---
+
 # CLI & MCP Server
 
 The `@termless/cli` package provides a command-line tool for terminal capture and an MCP server for AI agent integration.

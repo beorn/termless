@@ -1,3 +1,8 @@
+---
+title: Cell, Cursor & Colors API
+description: API reference for Cell, CursorState, CursorStyle, RGB, UnderlineStyle, and other terminal cell types in Termless.
+---
+
 # API: Cell, Cursor, Colors
 
 ```typescript

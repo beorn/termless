@@ -1,3 +1,8 @@
+---
+title: Terminal Buffer Model
+description: Understand how Termless models terminal buffers -- cells, rows, scrollback, and the difference between screen and buffer regions.
+---
+
 # Terminal Buffer Model
 
 ## The Buffer
