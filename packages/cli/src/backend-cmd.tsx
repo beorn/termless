@@ -413,19 +413,21 @@ export function registerBackendCommand(program: Command): void {
   const cmd = program.command("backends").description("Manage terminal emulator backends")
 
   cmd.addHelpSection("Examples:", [
-    ["termless backends", "List all backends + install status"],
-    ["termless backends install", "Install default backends"],
-    ["termless backends install ghostty alacritty", "Install specific backends"],
-    ["termless backends install --all", "Install all 11 backends"],
-    ["termless backends update", "Check upstream for newer versions"],
-    ["termless backends update --apply", "Update backends.json with latest"],
+    ["$ termless backends", "List all backends + install status"],
+    ["$ termless backends install", "Install default backends"],
+    ["$ termless backends install ghostty alacritty", "Install specific backends"],
+    ["$ termless backends install --all", "Install all 11 backends"],
+    ["$ termless backends update", "Check upstream for newer versions"],
+    ["$ termless backends update --apply", "Update backends.json with latest"],
   ])
 
-  // Default action: show list + help
+  // Default action: show list + usage hint
   cmd.action(async () => {
     await printBackendsTable()
     console.log("")
-    cmd.outputHelp()
+    console.log("  termless backends install [names...]   Install or upgrade backends")
+    console.log("  termless backends update [--apply]     Check upstream for newer versions")
+    console.log("  termless backends --help               Full help")
   })
 
   cmd

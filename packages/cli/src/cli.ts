@@ -34,23 +34,23 @@ const program = new Command()
   .version("0.3.0")
 
 program.addHelpSection("Recording & Playback:", [
-  ["termless record km view", "Record a command (outputs .tape to stdout)"],
-  ["termless record -o demo.tape km view", "Record to .tape file"],
-  ["termless record -o demo.gif km view", "Record + render animated GIF"],
-  ["termless record -o demo.cast km view", "Record to asciicast format"],
-  ['termless rec -t \'Type "hello"\\nEnter\' bash', "Scripted recording (inline tape)"],
-  ["termless play demo.tape", "Play back a .tape file"],
-  ["termless play demo.cast", "Play back an asciicast recording"],
-  ["termless play -o demo.gif demo.tape", "Convert .tape to GIF"],
-  ["termless play -b vterm,ghostty demo.tape", "Cross-terminal comparison"],
+  ["$ termless record km view", "Record a command (outputs .tape to stdout)"],
+  ["$ termless record -o demo.tape km view", "Record to .tape file"],
+  ["$ termless record -o demo.gif km view", "Record + render animated GIF"],
+  ["$ termless record -o demo.cast km view", "Record to asciicast format"],
+  ['$ termless rec -t \'Type "hello"\\nEnter\' bash', "Scripted recording (inline tape)"],
+  ["$ termless play demo.tape", "Play back a .tape file"],
+  ["$ termless play demo.cast", "Play back an asciicast recording"],
+  ["$ termless play -o demo.gif demo.tape", "Convert .tape to GIF"],
+  ["$ termless play -b vterm,ghostty demo.tape", "Cross-terminal comparison"],
 ])
 
 program.addHelpSection("Backends:", [
-  ["termless backends", "Show all 11 backends + install status"],
-  ["termless backends install", "Install default backends"],
-  ["termless backends install ghostty alacritty", "Install specific backends"],
-  ["termless backends update", "Check upstream for newer versions"],
-  ["termless doctor", "Health check all installed backends"],
+  ["$ termless backends", "Show all 11 backends + install status"],
+  ["$ termless backends install", "Install default backends"],
+  ["$ termless backends install ghostty alacritty", "Install specific backends"],
+  ["$ termless backends update", "Check upstream for newer versions"],
+  ["$ termless doctor", "Health check all installed backends"],
 ])
 
 registerRecordCommand(program)
