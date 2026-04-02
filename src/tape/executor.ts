@@ -28,6 +28,7 @@ import { parseDuration } from "./parser.ts"
 import type { Terminal, TerminalBackend, SvgScreenshotOptions } from "../types.ts"
 import { createTerminal } from "../terminal.ts"
 import { screenshotPng } from "../png.ts"
+import { resolveTheme } from "./themes.ts"
 
 // =============================================================================
 // Types
@@ -44,6 +45,8 @@ export interface TapeExecutorOptions {
   defaultTypingSpeed?: number
   /** Directory for saving screenshots. */
   screenshotDir?: string
+  /** Theme name for screenshots (overrides `Set Theme` in tape). */
+  theme?: string
   /** Called after each visual change when recording is not hidden. */
   onFrame?: (frame: TapeFrame) => void
   /** Called when a Screenshot command is executed. */
@@ -158,6 +161,15 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
   if (tape.settings.FontSize) svgOptions.fontSize = Number.parseInt(tape.settings.FontSize, 10)
   if (tape.settings.FontFamily) svgOptions.fontFamily = tape.settings.FontFamily
 
+  // Resolve theme: CLI --theme flag takes precedence over Set Theme in tape
+  const themeName = options?.theme ?? tape.settings.Theme
+  if (themeName) {
+    const theme = resolveTheme(themeName)
+    if (theme) {
+      svgOptions.theme = theme
+    }
+  }
+
   // Execute commands
   for (const cmd of tape.commands) {
     await executeCommand(cmd, terminal, {
@@ -216,6 +228,12 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
         const newCols = cmd.key === "Width" ? Number.parseInt(cmd.value, 10) : terminal.cols
         const newRows = cmd.key === "Height" ? Number.parseInt(cmd.value, 10) : terminal.rows
         terminal.resize(newCols, newRows)
+      }
+      if (cmd.key === "Theme") {
+        const theme = resolveTheme(cmd.value)
+        if (theme) {
+          ctx.svgOptions.theme = theme
+        }
       }
       break
 

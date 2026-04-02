@@ -485,6 +485,7 @@ async function recordAction(
     format?: string
     raw?: boolean
     showKeys?: boolean
+    theme?: string
   },
 ): Promise<void> {
   // ── Scripted mode: inline tape commands ──
@@ -499,6 +500,7 @@ async function recordAction(
       backend: backendName,
       cols: opts.cols,
       rows: opts.rows,
+      theme: opts.theme,
       onScreenshot: (png, path) => {
         const outPath = path ?? opts.output?.[0] ?? "screenshot.png"
         const dir = dirname(resolve(outPath))
@@ -625,5 +627,6 @@ export function registerRecordCommand(program: Command): void {
     .option("--format <type>", "Frame recording format: frames or html")
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
+    .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
     .action(recordAction)
 }

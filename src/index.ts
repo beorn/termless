@@ -75,6 +75,7 @@ export { compareTape } from "./tape/compare.ts"
 export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot, BackendSpec } from "./tape/compare.ts"
 export { overlayKeystroke } from "./tape/overlay.ts"
 export type { KeyOverlayOptions } from "./tape/overlay.ts"
+export { resolveTheme, listThemes, listAliases } from "./tape/themes.ts"
 
 // Animation output formats (animated SVG, GIF, APNG)
 export { createAnimatedSvg } from "./animation/animated-svg.ts"

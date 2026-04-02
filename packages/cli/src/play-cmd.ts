@@ -23,7 +23,9 @@ import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
+import { resolveTheme } from "../../../src/tape/themes.ts"
 import type { AnimationFrame } from "../../../src/animation/types.ts"
+import type { SvgScreenshotOptions } from "../../../src/types.ts"
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -90,7 +92,7 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
 
 async function playCast(
   source: string,
-  opts: { output?: string[]; backend?: string; cols?: number; rows?: number },
+  opts: { output?: string[]; backend?: string; cols?: number; rows?: number; theme?: string },
 ): Promise<void> {
   const { parseAsciicast, replayAsciicast } = await import("../../../src/asciicast/reader.ts")
   const { createTerminal } = await import("../../../src/terminal.ts")
@@ -108,6 +110,13 @@ async function playCast(
   const frames: AnimationFrame[] = []
   let lastFrameText = ""
   let lastFrameTime = Date.now()
+
+  // Resolve theme for screenshot rendering
+  const svgOpts: SvgScreenshotOptions = {}
+  if (opts.theme) {
+    const theme = resolveTheme(opts.theme)
+    if (theme) svgOpts.theme = theme
+  }
 
   console.log(`Playing asciicast (${recording.events.length} events, ${cols}x${rows})...`)
 
@@ -129,7 +138,7 @@ async function playCast(
             if (frames.length > 0) {
               frames[frames.length - 1]!.duration = now - lastFrameTime
             }
-            frames.push({ svg: term.screenshotSvg(), duration: 100 })
+            frames.push({ svg: term.screenshotSvg(svgOpts), duration: 100 })
             lastFrameText = text
             lastFrameTime = now
           }
@@ -140,7 +149,7 @@ async function playCast(
 
   // Capture final frame
   if (wantImages && term.getText() !== lastFrameText) {
-    frames.push({ svg: term.screenshotSvg(), duration: 100 })
+    frames.push({ svg: term.screenshotSvg(svgOpts), duration: 100 })
   }
 
   // Write outputs
@@ -171,6 +180,7 @@ async function playAction(
     cols?: number
     rows?: number
     showKeys?: boolean
+    theme?: string
   },
 ): Promise<void> {
   // stdin support: read from stdin if file is "-"
@@ -245,6 +255,14 @@ async function playAction(
     const term = createTerminal({ backend: b, cols, rows })
     await term.spawn([shell])
 
+    // Resolve theme for screenshot rendering
+    const shellSvgOpts: SvgScreenshotOptions = {}
+    const shellThemeName = opts.theme ?? tape.settings.Theme
+    if (shellThemeName) {
+      const theme = resolveTheme(shellThemeName)
+      if (theme) shellSvgOpts.theme = theme
+    }
+
     // Collect animation frames for image output
     const frames: AnimationFrame[] = []
     let lastFrameText = ""
@@ -259,7 +277,7 @@ async function playAction(
         if (frames.length > 0) {
           frames[frames.length - 1]!.duration = now - lastFrameTime
         }
-        let svg = term.screenshotSvg()
+        let svg = term.screenshotSvg(shellSvgOpts)
         if (opts.showKeys && currentKeystroke) {
           svg = overlayKeystroke(svg, currentKeystroke)
         }
@@ -334,7 +352,7 @@ async function playAction(
           for (const output of outputs) {
             if (!isImagePath(output)) {
               const { screenshotPng } = await import("../../../src/png.ts")
-              const png = await screenshotPng(term)
+              const png = await screenshotPng(term, shellSvgOpts)
               const outPath = cmd.path ?? output ?? "screenshot.png"
               mkdirSync(dirname(resolve(outPath)), { recursive: true })
               writeFileSync(resolve(outPath), png)
@@ -366,6 +384,11 @@ async function playAction(
           // Handle resize
           if (cmd.key === "Width") term.resize(Number(cmd.value), term.rows)
           if (cmd.key === "Height") term.resize(term.cols, Number(cmd.value))
+          // Handle dynamic theme change (only if no --theme CLI override)
+          if (cmd.key === "Theme" && !opts.theme) {
+            const theme = resolveTheme(cmd.value)
+            if (theme) shellSvgOpts.theme = theme
+          }
           break
       }
     }
@@ -392,6 +415,14 @@ async function playAction(
   // No shell — headless execution (for tapes without Set Shell)
   console.log(`Playing ${fileName}...`)
 
+  // Resolve theme for frame screenshots (onAfterCommand uses screenshotSvg directly)
+  const headlessSvgOpts: SvgScreenshotOptions = {}
+  const headlessThemeName = opts.theme ?? tape.settings.Theme
+  if (headlessThemeName) {
+    const theme = resolveTheme(headlessThemeName)
+    if (theme) headlessSvgOpts.theme = theme
+  }
+
   // Collect animation frames for image output
   const frames: AnimationFrame[] = []
   let lastStreamedText = ""
@@ -400,6 +431,7 @@ async function playAction(
     backend: backendName,
     cols: opts.cols || undefined,
     rows: opts.rows || undefined,
+    theme: opts.theme,
     onScreenshot: (png, path) => {
       const outPath = path ?? firstOutput ?? "screenshot.png"
       const dir = dirname(resolve(outPath))
@@ -417,7 +449,7 @@ async function playAction(
 
       // Capture frames with optional keystroke overlay
       if (wantImages) {
-        let svg = terminal.screenshotSvg()
+        let svg = terminal.screenshotSvg(headlessSvgOpts)
         if (opts.showKeys) {
           let label = ""
           switch (cmd.type) {
@@ -445,7 +477,7 @@ async function playAction(
 
   // Capture final frame for image outputs (if no frames captured yet)
   if (wantImages && frames.length === 0) {
-    const svg = result.terminal.screenshotSvg()
+    const svg = result.terminal.screenshotSvg(headlessSvgOpts)
     frames.push({ svg, duration: 100 })
   }
 
@@ -478,6 +510,7 @@ export function registerPlayCommand(program: Command): void {
     .option("--cols <n>", "Terminal columns override", parseNum, 0)
     .option("--rows <n>", "Terminal rows override", parseNum, 0)
     .option("--show-keys", "Overlay keystroke badges on frames")
+    .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
 
   cmd.addHelpSection("Examples:", [
     ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],

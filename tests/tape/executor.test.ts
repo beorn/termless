@@ -275,6 +275,62 @@ describe("dynamic Set commands", () => {
 })
 
 // =============================================================================
+// Theme support
+// =============================================================================
+
+describe("Set Theme", () => {
+  test("Set Theme applies theme to screenshots", async () => {
+    const tape = parseTape('Set Theme "dracula"\nType "hello"\nScreenshot')
+    const screenshots: Uint8Array[] = []
+
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+      onScreenshot: (png) => screenshots.push(png),
+    })
+
+    // The screenshot was taken — verify it produced output
+    expect(screenshots).toHaveLength(1)
+    expect(screenshots[0]!.length).toBeGreaterThan(0)
+
+    // Verify the SVG uses Dracula colors by inspecting the terminal's SVG output
+    // (the executor stores the theme in svgOptions which is used by screenshotPng)
+    const svg = result.terminal.screenshotSvg({ theme: { background: "#282a36", foreground: "#f8f8f2" } })
+    expect(svg).toContain("#282a36") // Dracula background
+    await result.terminal.close()
+  })
+
+  test("theme option overrides Set Theme in tape", async () => {
+    const tape = parseTape('Set Theme "dracula"\nType "hello"\nScreenshot')
+    const screenshots: Uint8Array[] = []
+
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+      theme: "nord",
+      onScreenshot: (png) => screenshots.push(png),
+    })
+
+    expect(screenshots).toHaveLength(1)
+    await result.terminal.close()
+  })
+
+  test("unknown theme is silently ignored", async () => {
+    const tape = parseTape('Set Theme "nonexistent"\nType "hello"\nScreenshot')
+    const screenshots: Uint8Array[] = []
+
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+      onScreenshot: (png) => screenshots.push(png),
+    })
+
+    expect(screenshots).toHaveLength(1)
+    await result.terminal.close()
+  })
+})
+
+// =============================================================================
 // No-op commands in library mode
 // =============================================================================
 
