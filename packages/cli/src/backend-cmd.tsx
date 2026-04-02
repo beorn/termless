@@ -8,11 +8,11 @@
  *
  * @example
  * ```bash
- * termless backend list
- * termless backend install ghostty vterm
- * termless backend install --all
- * termless backend update
- * termless backend update --apply
+ * termless backendslist
+ * termless backendsinstall ghostty vterm
+ * termless backendsinstall --all
+ * termless backendsupdate
+ * termless backendsupdate --apply
  * ```
  */
 
@@ -84,7 +84,7 @@ async function printBackendsTable(): Promise<void> {
       </Summary>
       {installedCount < totalCount && (
         <Box>
-          <Text color="$muted"> bunx termless backend install {"<name>"}</Text>
+          <Text color="$muted"> bunx termless backendsinstall {"<name>"}</Text>
         </Box>
       )}
       <Box>
@@ -326,7 +326,7 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
   const m = getManifest()
   const allNames = backends()
 
-  console.log(`\ntermless backend update\n`)
+  console.log(`\ntermless backendsupdate\n`)
   console.log("  Checking upstream versions...\n")
 
   // Fetch all versions in parallel
@@ -410,22 +410,42 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
 // =============================================================================
 
 export function registerBackendCommand(program: Command): void {
-  const backend = program.command("backend").description("Manage terminal emulator backends")
+  const cmd = program.command("backends").description("Manage terminal emulator backends")
 
-  backend
+  cmd.addHelpText(
+    "after",
+    `
+Examples:
+  $ termless backends                             List all backends + install status
+  $ termless backends install                     Install default backends
+  $ termless backends install ghostty alacritty   Install specific backends
+  $ termless backends install --all               Install all 11 backends
+  $ termless backends update                      Check upstream for newer versions
+  $ termless backends update --apply              Update backends.json with latest
+`,
+  )
+
+  // Default action: show list + help
+  cmd.action(async () => {
+    await printBackendsTable()
+    console.log("")
+    cmd.outputHelp()
+  })
+
+  cmd
     .command("list")
     .description("List all backends and their install status")
     .action(async () => {
       await printBackendsTable()
     })
 
-  backend
+  cmd
     .command("install [names...]")
     .description("Install or upgrade backends")
     .option("--all", "Install all backends")
     .action(installAction)
 
-  backend
+  cmd
     .command("update")
     .description("Check upstream registries for newer versions")
     .option("--apply", "Update backends.json with latest versions")

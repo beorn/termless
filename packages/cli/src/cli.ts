@@ -11,8 +11,8 @@
  * termless play demo.tape -o demo.png
  *
  * # Manage backends
- * termless backend list
- * termless backend install ghostty vterm
+ * termless backends list
+ * termless backends install ghostty vterm
  *
  * # Health check
  * termless doctor
@@ -48,10 +48,10 @@ Recording & Playback:
   $ termless play -b vterm,ghostty demo.tape      Cross-terminal comparison
 
 Backends:
-  $ termless backend list                         Show all 11 backends + install status
-  $ termless backend install                      Install default backends
-  $ termless backend install ghostty alacritty    Install specific backends
-  $ termless backend update                       Check upstream for newer versions
+  $ termless backends list                         Show all 11 backends + install status
+  $ termless backends install                      Install default backends
+  $ termless backends install ghostty alacritty    Install specific backends
+  $ termless backends update                       Check upstream for newer versions
   $ termless doctor                               Health check all installed backends
 `,
 )
