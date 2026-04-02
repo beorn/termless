@@ -45,12 +45,12 @@ function isImagePath(path: string): boolean {
  */
 async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise<void> {
   if (frames.length === 0) {
-    console.error(`  Warning: no frames captured for ${path}`)
+    console.log(`  Warning: no frames captured for ${path}`)
     return
   }
 
   const ext = path.match(/\.\w+$/)?.[0] ?? ""
-  console.error(`  Generating ${ext.slice(1).toUpperCase()} from ${frames.length} frames...`)
+  console.log(`  Generating ${ext.slice(1).toUpperCase()} from ${frames.length} frames...`)
 
   const dir = dirname(resolve(path))
   mkdirSync(dir, { recursive: true })
@@ -80,7 +80,7 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
 
   const size = Bun.file(resolve(path)).size
   const sizeStr = size > 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)}MB` : `${(size / 1024).toFixed(0)}KB`
-  console.error(`  Saved: ${path} (${sizeStr})`)
+  console.log(`  Saved: ${path} (${sizeStr})`)
 }
 
 // =============================================================================
@@ -108,7 +108,7 @@ async function playCast(
   let lastFrameText = ""
   let lastFrameTime = Date.now()
 
-  console.error(`Playing asciicast (${recording.events.length} events, ${cols}x${rows})...`)
+  console.log(`Playing asciicast (${recording.events.length} events, ${cols}x${rows})...`)
 
   // Replay with real-time delays, streaming output
   let lastText = ""
@@ -199,7 +199,7 @@ async function playAction(
   // Multi-backend comparison mode
   if (opts.compare && backends && backends.length > 1) {
     const mode = opts.compare as CompareMode
-    console.error(`Comparing across ${backends.length} backends (${backends.join(", ")})...`)
+    console.log(`Comparing across ${backends.length} backends (${backends.join(", ")})...`)
 
     const result = await compareTape(tape, {
       backends,
@@ -210,7 +210,7 @@ async function playAction(
     // Save composed SVG if output specified and composition was produced
     if (firstOutput && result.composedSvg) {
       writeFileSync(firstOutput, result.composedSvg, "utf-8")
-      console.error(`Composed comparison saved: ${firstOutput}`)
+      console.log(`Composed comparison saved: ${firstOutput}`)
     }
 
     // Save individual screenshots
@@ -220,11 +220,11 @@ async function playAction(
         mkdirSync(outputDir, { recursive: true })
         const path = `${outputDir}/${s.backend}.png`
         writeFileSync(path, s.png)
-        console.error(`Screenshot saved: ${path}`)
+        console.log(`Screenshot saved: ${path}`)
       }
     }
 
-    console.error(`Text match: ${result.textMatch ? "yes" : "NO — output differs between backends"}`)
+    console.log(`Text match: ${result.textMatch ? "yes" : "NO — output differs between backends"}`)
     return
   }
 
@@ -287,7 +287,7 @@ async function playAction(
     }
 
     // Stream PTY output to stdout
-    console.error(`Playing ${fileName} (shell: ${shell})...`)
+    console.log(`Playing ${fileName} (shell: ${shell})...`)
 
     // Capture initial frame
     captureFrame()
@@ -340,7 +340,7 @@ async function playAction(
               const outPath = cmd.path ?? output ?? "screenshot.png"
               mkdirSync(dirname(resolve(outPath)), { recursive: true })
               writeFileSync(resolve(outPath), png)
-              console.error(`Screenshot saved: ${outPath}`)
+              console.log(`Screenshot saved: ${outPath}`)
               break
             }
           }
@@ -392,7 +392,7 @@ async function playAction(
   }
 
   // No shell — headless execution (for tapes without Set Shell)
-  console.error(`Playing ${fileName}...`)
+  console.log(`Playing ${fileName}...`)
 
   // Collect animation frames for image output
   const frames: AnimationFrame[] = []
@@ -407,7 +407,7 @@ async function playAction(
       const dir = dirname(resolve(outPath))
       mkdirSync(dir, { recursive: true })
       writeFileSync(resolve(outPath), png)
-      console.error(`Screenshot saved: ${outPath}`)
+      console.log(`Screenshot saved: ${outPath}`)
     },
     onAfterCommand: (cmd, terminal) => {
       // Real-time streaming: print terminal state after each command
@@ -461,7 +461,7 @@ async function playAction(
   // Print terminal text to stdout
   console.log(result.terminal.getText())
 
-  console.error(`Done in ${result.duration}ms (${result.screenshotCount} screenshot(s))`)
+  console.log(`Done in ${result.duration}ms (${result.screenshotCount} screenshot(s))`)
 
   await result.terminal.close()
 }
