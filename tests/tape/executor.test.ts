@@ -302,6 +302,44 @@ describe("no-op commands", () => {
 })
 
 // =============================================================================
+// Expect command
+// =============================================================================
+
+describe("Expect command", () => {
+  test("succeeds when text is already present", async () => {
+    const tape = parseTape('Type "hello world"\nExpect "hello"')
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+    })
+
+    expect(result.terminal.getText()).toContain("hello world")
+    await result.terminal.close()
+  })
+
+  test("succeeds after feeding text", async () => {
+    const tape = parseTape('Type "loading..."\nType "\\nready"\nExpect "ready"')
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+    })
+
+    expect(result.terminal.getText()).toContain("ready")
+    await result.terminal.close()
+  })
+
+  test("times out when text never appears", async () => {
+    const tape = parseTape('Type "hello"\nExpect "goodbye" 100ms')
+    await expect(
+      executeTape(tape, {
+        backend: vt100(),
+        defaultTypingSpeed: 0,
+      }),
+    ).rejects.toThrow("Expect timed out after 100ms")
+  })
+})
+
+// =============================================================================
 // Full tape execution
 // =============================================================================
 

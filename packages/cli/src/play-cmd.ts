@@ -22,6 +22,7 @@ import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
+import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import type { AnimationFrame } from "../../../src/animation/types.ts"
 
 /** Read all of stdin as a string. */
@@ -165,6 +166,7 @@ async function playAction(
     compare?: string
     cols?: number
     rows?: number
+    showKeys?: boolean
   },
 ): Promise<void> {
   // stdin support: read from stdin if file is "-"
@@ -243,6 +245,7 @@ async function playAction(
     const frames: AnimationFrame[] = []
     let lastFrameText = ""
     let lastFrameTime = Date.now()
+    let currentKeystroke = ""
 
     const captureFrame = () => {
       if (!wantImages) return
@@ -252,9 +255,31 @@ async function playAction(
         if (frames.length > 0) {
           frames[frames.length - 1]!.duration = now - lastFrameTime
         }
-        frames.push({ svg: term.screenshotSvg(), duration: 100 })
+        let svg = term.screenshotSvg()
+        if (opts.showKeys && currentKeystroke) {
+          svg = overlayKeystroke(svg, currentKeystroke)
+        }
+        frames.push({ svg, duration: 100 })
         lastFrameText = text
         lastFrameTime = now
+      }
+    }
+
+    /** Format a tape command as a human-readable keystroke label. */
+    const commandToKeystroke = (cmd: import("../../../src/tape/parser.ts").TapeCommand): string => {
+      switch (cmd.type) {
+        case "type": {
+          const display = cmd.text.length > 20 ? `Type: ...${cmd.text.slice(-17)}` : `Type: ${cmd.text}`
+          return display
+        }
+        case "key":
+          return cmd.key
+        case "ctrl":
+          return `Ctrl+${cmd.key}`
+        case "alt":
+          return `Alt+${cmd.key}`
+        default:
+          return ""
       }
     }
 
@@ -267,9 +292,11 @@ async function playAction(
     for (const cmd of tape.commands) {
       switch (cmd.type) {
         case "type":
+          if (opts.showKeys) currentKeystroke = commandToKeystroke(cmd)
           term.type(cmd.text)
           break
         case "key": {
+          if (opts.showKeys) currentKeystroke = commandToKeystroke(cmd)
           const keyMap: Record<string, string> = {
             enter: "\r",
             backspace: "\x7f",
@@ -288,14 +315,17 @@ async function playAction(
           break
         }
         case "ctrl":
+          if (opts.showKeys) currentKeystroke = commandToKeystroke(cmd)
           term.type(String.fromCharCode(cmd.key.toLowerCase().charCodeAt(0) - 0x60))
           break
         case "alt":
+          if (opts.showKeys) currentKeystroke = commandToKeystroke(cmd)
           term.type(`\x1b${cmd.key}`)
           break
         case "sleep":
           await new Promise((r) => setTimeout(r, cmd.ms))
           captureFrame()
+          if (opts.showKeys) currentKeystroke = ""
           break
         case "screenshot": {
           captureFrame()
@@ -310,6 +340,24 @@ async function playAction(
               console.error(`Screenshot saved: ${outPath}`)
               break
             }
+          }
+          break
+        }
+        case "expect": {
+          const timeout = cmd.timeout ?? 5000
+          const pollInterval = 50
+          const deadline = Date.now() + timeout
+          let found = false
+          while (Date.now() < deadline) {
+            const text = term.getText()
+            if (text.includes(cmd.text)) {
+              found = true
+              break
+            }
+            await new Promise((r) => setTimeout(r, pollInterval))
+          }
+          if (!found) {
+            throw new Error(`Expect timed out after ${timeout}ms: text "${cmd.text}" not found`)
           }
           break
         }
@@ -345,6 +393,7 @@ async function playAction(
 
   // Collect animation frames for image output
   const frames: AnimationFrame[] = []
+  let lastStreamedText = ""
 
   const result = await executeTape(tape, {
     backend: backendName,
@@ -357,10 +406,44 @@ async function playAction(
       writeFileSync(resolve(outPath), png)
       console.error(`Screenshot saved: ${outPath}`)
     },
+    onAfterCommand: (cmd, terminal) => {
+      // Real-time streaming: print terminal state after each command
+      const text = terminal.getText()
+      if (text !== lastStreamedText) {
+        process.stdout.write(`\x1b[2J\x1b[H${text}`)
+        lastStreamedText = text
+      }
+
+      // Capture frames with optional keystroke overlay
+      if (wantImages) {
+        let svg = terminal.screenshotSvg()
+        if (opts.showKeys) {
+          let label = ""
+          switch (cmd.type) {
+            case "type":
+              label = cmd.text.length > 20 ? `Type: ...${cmd.text.slice(-17)}` : `Type: ${cmd.text}`
+              break
+            case "key":
+              label = cmd.key
+              break
+            case "ctrl":
+              label = `Ctrl+${cmd.key}`
+              break
+            case "alt":
+              label = `Alt+${cmd.key}`
+              break
+          }
+          if (label) {
+            svg = overlayKeystroke(svg, label)
+          }
+        }
+        frames.push({ svg, duration: 100 })
+      }
+    },
   })
 
-  // Capture final frame for image outputs
-  if (wantImages) {
+  // Capture final frame for image outputs (if no frames captured yet)
+  if (wantImages && frames.length === 0) {
     const svg = result.terminal.screenshotSvg()
     frames.push({ svg, duration: 100 })
   }
@@ -393,5 +476,6 @@ export function registerPlayCommand(program: Command): void {
     .option("--compare <mode>", "Comparison mode: separate, side-by-side, grid, diff")
     .option("--cols <n>", "Terminal columns override", parseNum, 0)
     .option("--rows <n>", "Terminal rows override", parseNum, 0)
+    .option("--show-keys", "Overlay keystroke badges on frames")
     .action(playAction)
 }

@@ -290,6 +290,32 @@ describe("Require command", () => {
 })
 
 // =============================================================================
+// Expect command
+// =============================================================================
+
+describe("Expect command", () => {
+  test("parses Expect with quoted text and default timeout", () => {
+    const tape = parseTape('Expect "ready"')
+    expect(tape.commands).toEqual([{ type: "expect", text: "ready" }])
+  })
+
+  test("parses Expect with timeout in seconds", () => {
+    const tape = parseTape('Expect "ready" 10s')
+    expect(tape.commands).toEqual([{ type: "expect", text: "ready", timeout: 10000 }])
+  })
+
+  test("parses Expect with timeout in milliseconds", () => {
+    const tape = parseTape('Expect "ready" 5000ms')
+    expect(tape.commands).toEqual([{ type: "expect", text: "ready", timeout: 5000 }])
+  })
+
+  test("parses Expect with bare number timeout", () => {
+    const tape = parseTape('Expect "done" 3000')
+    expect(tape.commands).toEqual([{ type: "expect", text: "done", timeout: 3000 }])
+  })
+})
+
+// =============================================================================
 // Full tape parsing
 // =============================================================================
 

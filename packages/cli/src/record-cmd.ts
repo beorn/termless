@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
+import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { createSessionManager } from "./session.ts"
 
 // =============================================================================
@@ -180,12 +181,13 @@ function hasImageOutput(paths: string[]): boolean {
 
 async function interactiveRecord(
   command: string[] | undefined,
-  opts: { output?: string[]; cols: number; rows: number; raw?: boolean },
+  opts: { output?: string[]; cols: number; rows: number; raw?: boolean; showKeys?: boolean },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
   const cmd = command ?? [shell]
   const outputPaths = opts.output ?? []
   const raw = opts.raw ?? false
+  const showKeys = opts.showKeys ?? false
   const wantImages = hasImageOutput(outputPaths)
 
   console.error(`Recording: ${cmd.join(" ")}`)
@@ -229,6 +231,9 @@ async function interactiveRecord(
     },
   })
 
+  // Track the latest keystroke label for overlay
+  let currentKeystrokeLabel = ""
+
   // Start frame capture timer for image output
   if (headlessTerminal) {
     const captureInterval = 100 // ms
@@ -238,7 +243,10 @@ async function interactiveRecord(
       if (!headlessTerminal) return
       const currentText = headlessTerminal.getText()
       if (currentText !== lastFrameText) {
-        const svg = headlessTerminal.screenshotSvg()
+        let svg = headlessTerminal.screenshotSvg()
+        if (showKeys && currentKeystrokeLabel) {
+          svg = overlayKeystroke(svg, currentKeystrokeLabel)
+        }
         const now = Date.now()
         // Set duration of previous frame
         if (animationFrames.length > 0) {
@@ -260,6 +268,18 @@ async function interactiveRecord(
   const stdinHandler = (chunk: Buffer) => {
     const bytes = new Uint8Array(chunk)
     inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
+
+    // Update keystroke label for overlay
+    if (showKeys) {
+      const tapeCmdStr = bytesToTapeCommand(bytes, raw)
+      if (tapeCmdStr !== null && tapeCmdStr !== SKIP) {
+        currentKeystrokeLabel = tapeCmdStr
+      } else if (tapeCmdStr === null && bytes.length === 1 && bytes[0]! >= 0x20 && bytes[0]! < 0x7f) {
+        // Printable character
+        currentKeystrokeLabel = new TextDecoder().decode(bytes)
+      }
+    }
+
     try {
       pty.write(new TextDecoder().decode(bytes))
     } catch {
@@ -421,6 +441,7 @@ async function recordAction(
     outputDir?: string
     format?: string
     raw?: boolean
+    showKeys?: boolean
   },
 ): Promise<void> {
   // ── Scripted mode: inline tape commands ──
@@ -474,7 +495,7 @@ async function recordAction(
   const hasOutputFile = opts.output && opts.output.length > 0
   const cmd = command.length > 0 ? command : undefined
   if (hasOutputFile && !opts.keys && !opts.screenshot && !opts.text) {
-    await interactiveRecord(cmd, { ...opts, raw: opts.raw })
+    await interactiveRecord(cmd, { ...opts, raw: opts.raw, showKeys: opts.showKeys })
     return
   }
 
@@ -560,5 +581,6 @@ export function registerRecordCommand(program: Command): void {
     .option("--output-dir <path>", "Output directory for frame recording")
     .option("--format <type>", "Frame recording format: frames or html")
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
+    .option("--show-keys", "Overlay keystroke badges on image frames")
     .action(recordAction)
 }

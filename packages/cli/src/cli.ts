@@ -38,7 +38,7 @@ program.addHelpSection("Recording & Playback:", [
   ["$ termless record -o demo.tape km view", "Record to .tape file"],
   ["$ termless record -o demo.gif km view", "Record + render animated GIF"],
   ["$ termless record -o demo.cast km view", "Record to asciicast format"],
-  ['$ termless rec -t \'Type "hello"\\nEnter\' bash', "Scripted recording (inline tape)"],
+  ["$ termless rec -t 'Type \"hello\"\\nEnter' bash", "Scripted recording (inline tape)"],
   ["$ termless play demo.tape", "Play back a .tape file"],
   ["$ termless play demo.cast", "Play back an asciicast recording"],
   ["$ termless play -o demo.gif demo.tape", "Convert .tape to GIF"],

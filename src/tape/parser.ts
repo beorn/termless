@@ -32,6 +32,7 @@ export type TapeCommand =
   | { type: "alt"; key: string }
   | { type: "sleep"; ms: number }
   | { type: "screenshot"; path?: string }
+  | { type: "expect"; text: string; timeout?: number }
   | { type: "hide" }
   | { type: "show" }
   | { type: "source"; path: string }
@@ -178,6 +179,16 @@ function parseLine(line: string): TapeCommand | null {
   // Require <program>
   if (cmdLower === "require") {
     return { type: "require", program: parts[1] ?? "" }
+  }
+
+  // Expect "text" [timeout]
+  if (cmdLower === "expect") {
+    const text = parseQuotedString(parts[1] ?? "")
+    let timeout: number | undefined
+    if (parts.length > 2) {
+      timeout = parseDuration(parts[2]!)
+    }
+    return { type: "expect", text, ...(timeout !== undefined ? { timeout } : {}) }
   }
 
   // Key commands: Enter, Backspace, Tab, Space, Up, Down, Left, Right, Escape, Delete

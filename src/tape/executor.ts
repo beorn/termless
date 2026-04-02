@@ -48,6 +48,8 @@ export interface TapeExecutorOptions {
   onFrame?: (frame: TapeFrame) => void
   /** Called when a Screenshot command is executed. */
   onScreenshot?: (png: Uint8Array, path?: string) => void
+  /** Called after each command is executed, with the command and terminal. */
+  onAfterCommand?: (cmd: TapeCommand, terminal: Terminal) => void
 }
 
 export interface TapeFrame {
@@ -174,6 +176,7 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
         hidden = false
       },
     })
+    options?.onAfterCommand?.(cmd, terminal)
   }
 
   return {
@@ -295,6 +298,25 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
     case "show":
       ctx.onShow()
       break
+
+    case "expect": {
+      const timeout = cmd.timeout ?? 5000
+      const pollInterval = 50
+      const deadline = Date.now() + timeout
+      let found = false
+      while (Date.now() < deadline) {
+        const text = terminal.getText()
+        if (text.includes(cmd.text)) {
+          found = true
+          break
+        }
+        await delay(pollInterval)
+      }
+      if (!found) {
+        throw new Error(`Expect timed out after ${timeout}ms: text "${cmd.text}" not found`)
+      }
+      break
+    }
 
     case "source":
       // Source requires filesystem access — handled by the CLI layer.
