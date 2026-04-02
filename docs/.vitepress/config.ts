@@ -6,11 +6,16 @@ import {
   seoTransformPageData,
   validateGlossary,
   loadTerminalGlossary,
+  loadEcosystemGlossary,
 } from "@bearly/vitepress-enrich"
 import siteGlossary from "../content/glossary.json"
 
-// Site-specific terms + shared terminal vocabulary from terminfo.dev
-const glossary = [...siteGlossary, ...loadTerminalGlossary()]
+// Site-specific terms + shared terminal vocabulary + ecosystem cross-links
+const glossary = [
+  ...siteGlossary,
+  ...loadTerminalGlossary(),
+  ...loadEcosystemGlossary({ exclude: ["termless.dev"] }),
+]
 
 const seoOptions = {
   hostname: "https://termless.dev",
@@ -75,8 +80,28 @@ export default defineConfig({
     siteTitle: "Termless",
 
     nav: [
-      { text: "Guide", link: "/guide/getting-started" },
-      { text: "API", link: "/api/terminal" },
+      {
+        text: "Guide",
+        items: [
+          { text: "Getting Started", link: "/guide/getting-started" },
+          { text: "Terminal Model", link: "/guide/terminal-model" },
+          { text: "Writing Tests", link: "/guide/writing-tests" },
+          { text: "Screenshots", link: "/guide/screenshots" },
+          { text: "Best Practices", link: "/guide/best-practices" },
+          { text: "Recording & Playback", link: "/guide/recording" },
+          { text: "Backends", link: "/guide/backends" },
+          { text: "CLI & MCP Server", link: "/guide/cli" },
+        ],
+      },
+      {
+        text: "API",
+        items: [
+          { text: "Terminal", link: "/api/terminal" },
+          { text: "Backend", link: "/api/backend" },
+          { text: "Cell & Types", link: "/api/cell" },
+          { text: "Matchers", link: "/api/matchers" },
+        ],
+      },
       {
         text: "Advanced",
         items: [
