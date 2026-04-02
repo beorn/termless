@@ -132,32 +132,48 @@ async function interactiveRecord(
   console.error(`Output: ${outputPaths.join(", ") || "stdout"}`)
   console.error("Exit the command to stop recording.\n")
 
+  const { spawnPty } = await import("../../../src/pty.ts")
+
   const events: Array<{ time: number; bytes: Uint8Array }> = []
   const startTime = Date.now()
 
-  // Intercept stdin in raw mode, forward to child, record keystrokes
+  // Spawn with real PTY — output goes to our stdout
+  const pty = spawnPty({
+    command: cmd,
+    cols: opts.cols,
+    rows: opts.rows,
+    onData: (data: Uint8Array) => {
+      // Forward PTY output to real terminal
+      process.stdout.write(data)
+    },
+  })
+
+  // Intercept stdin in raw mode, forward to PTY, record keystrokes
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(true)
   }
-
-  const child = Bun.spawn(cmd, {
-    stdin: "pipe",
-    stdout: "inherit",
-    stderr: "inherit",
-    env: { ...process.env, COLUMNS: String(opts.cols), LINES: String(opts.rows) },
-  })
-
-  // Forward raw stdin to child, recording each chunk
   process.stdin.resume()
+
   const stdinHandler = (chunk: Buffer) => {
     const bytes = new Uint8Array(chunk)
     events.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
-    child.stdin?.write(bytes)
+    try {
+      pty.write(new TextDecoder().decode(bytes))
+    } catch {
+      // PTY may have closed
+    }
   }
   process.stdin.on("data", stdinHandler)
 
-  // Wait for child to exit
-  await child.exited
+  // Wait for PTY to exit
+  await new Promise<void>((resolve) => {
+    const check = setInterval(() => {
+      if (!pty.alive) {
+        clearInterval(check)
+        resolve()
+      }
+    }, 100)
+  })
 
   // Cleanup
   process.stdin.removeListener("data", stdinHandler)
