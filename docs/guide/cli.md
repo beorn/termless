@@ -1,11 +1,11 @@
 ---
 title: CLI & MCP Server
-description: Use the Termless CLI for terminal capture and screenshots, or the MCP server for AI agent integration.
+description: Use the Termless CLI for recording, playback, backend management, and the MCP server for AI agent integration.
 ---
 
 # CLI & MCP Server
 
-The `@termless/cli` package provides a command-line tool for terminal capture and an MCP server for AI agent integration.
+The `@termless/cli` package provides a command-line tool for recording terminal sessions, playing back tape files, managing backends, and an MCP server for AI agent integration.
 
 ## Installation
 
@@ -32,165 +32,141 @@ yarn add @termless/cli
 Or run directly:
 
 ```bash
-bunx termless capture --command "ls -la" --text
+$ bunx termless record -o demo.tape ls -la
 ```
 
-## Backend Management
+## `termless record` {#record}
+
+Record terminal sessions as `.tape` files, screenshots, or animated output. Alias: `termless rec`.
+
+```bash
+# Interactive recording — exit the command to stop
+$ termless record -o demo.tape ls -la
+
+# Scripted recording with inline tape commands
+$ termless rec -t 'Type "hello"\nEnter\nScreenshot' bash
+
+# Record + render animated GIF
+$ termless record -o demo.gif my-app
+
+# Record to asciicast format
+$ termless record -o demo.cast my-app
+
+# Multiple outputs in one pass
+$ termless record -o demo.tape -o demo.gif my-app
+
+# Capture mode: run command, press keys, take screenshot
+$ termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
+```
+
+### Options
+
+| Option                   | Description                                      | Default   |
+| ------------------------ | ------------------------------------------------ | --------- |
+| `-o, --output <path...>` | Output file(s), format detected from extension   | stdout    |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)              | --        |
+| `--fmt <format>`         | Output format for stdout: `tape`, `cast`         | `tape`    |
+| `-b, --backend <name>`   | Backend for scripted mode                        | vterm     |
+| `--cols <n>`             | Terminal columns                                 | `80`      |
+| `--rows <n>`             | Terminal rows                                    | `24`      |
+| `--timeout <ms>`         | Wait timeout in ms                               | `5000`    |
+| `--keys <keys>`          | Comma-separated key names to press               | --        |
+| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)        | --        |
+| `--wait-for <text>`      | Wait for text before pressing keys               | `content` |
+| `--text`                 | Print terminal text to stdout                    | off       |
+
+See [Recording & Playback](/guide/recording) for detailed usage.
+
+## `termless play` {#play}
+
+Play back `.tape` or `.cast` files against any backend. Produce screenshots or cross-terminal comparisons.
+
+```bash
+# Play a tape file (prints terminal text)
+$ termless play demo.tape
+
+# Play an asciicast file
+$ termless play demo.cast
+
+# Generate an animated GIF
+$ termless play -o demo.gif demo.tape
+
+# Generate an animated SVG
+$ termless play -o demo.svg demo.tape
+
+# Multi-backend comparison
+$ termless play -b vterm,ghostty --compare side-by-side demo.tape
+```
+
+### Options
+
+| Option                  | Description                                        | Default |
+| ----------------------- | -------------------------------------------------- | ------- |
+| `-o, --output <path>`  | Output file, format detected from extension        | --      |
+| `-b, --backend <name>` | Backend(s), comma-separated                        | vterm   |
+| `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff` | -- |
+| `--cols <n>`           | Override terminal columns                          | --      |
+| `--rows <n>`           | Override terminal rows                             | --      |
+
+See [Recording & Playback](/guide/recording) for detailed usage and comparison modes.
+
+## Backend Management {#backends}
 
 Manage backend installation with Playwright-inspired CLI commands. Backend versions are pinned in `backends.json` -- upgrading termless upgrades all backends together.
 
 ### `termless backends`
 
-List all available backends with their type, install status, and version.
+List all available backends with their type, install status, and version:
 
 ```bash
-termless backends
+$ termless backends
 ```
 
-Example output:
+### `termless backends list`
 
-```
-Backend                Upstream                   Version       Status
-─────────────────────  ─────────────────────────  ────────────  ────────────────────
-xtermjs (js)           npm:@xterm/headless        5.5.0         installed (default)
-ghostty (wasm)         npm:ghostty-web            0.4.0         installed (default)
-vt100 (js)             npm:@termless/vt100        0.3.0         installed (default)
-alacritty (native)     crate:alacritty_terminal   0.26.0        installed
-wezterm (native)       crate:tattoy-wezterm-term  0.1.0-fork.5  installed
-peekaboo (os)          npm:peekaboo               0.7.0         installed
-vt100-rust (native)    crate:vt100                0.15.0        installed
-libvterm (wasm)        github:neovim/libvterm     0.3.0         installed
-ghostty-native (native) github:ghostty-org/ghostty 1.3.1        available
-kitty (native)         github:kovidgoyal/kitty    0.40.0        available
-```
+Same as `termless backends` -- list all backends.
 
-### `termless install`
+### `termless backends install`
 
 Install backends. With no arguments, installs the default set (xtermjs, ghostty, vt100).
 
 ```bash
 # Install default backends
-termless install
+$ termless backends install
 
 # Install a specific backend
-termless install ghostty
+$ termless backends install ghostty
 
-# Install all backends
-termless install --all
+# Install multiple backends
+$ termless backends install ghostty alacritty
 ```
 
-### `termless upgrade`
-
-Upgrade installed backends to match the versions in `backends.json`.
-
-```bash
-termless upgrade
-```
-
-### `termless doctor`
-
-Check installation health: verify installed backends load correctly, detect version mismatches, and report missing dependencies.
-
-```bash
-termless doctor
-```
-
-### `termless update`
+### `termless backends update`
 
 Check upstream registries (npm, crates.io, GitHub) for newer backend versions. Compares against the versions pinned in `backends.json`.
 
 ```bash
 # Check for updates (dry run)
-termless update
+$ termless backends update
 
 # Apply updates to backends.json
-termless update --apply
+$ termless backends update --apply
 ```
 
-## `termless capture`
+## `termless doctor` {#doctor}
 
-One-shot terminal capture: start a process, optionally send keypresses, capture text and/or screenshot (SVG or PNG).
+Check installation health: verify installed backends load correctly, detect version mismatches, and report missing dependencies.
 
 ```bash
-termless capture --command "ls -la" --text
-termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.svg --text
-termless capture --command "my-app" --keys "j,j,Enter" --screenshot /tmp/out.png      # PNG
+$ termless doctor
 ```
 
-### Options
-
-| Option                | Description                                           | Default     |
-| --------------------- | ----------------------------------------------------- | ----------- |
-| `--command <cmd>`     | Command to run (required, split on spaces)            | --          |
-| `--keys <keys>`       | Comma-separated key names to press after startup      | --          |
-| `--wait-for <text>`   | Wait for this text before pressing keys               | any content |
-| `--screenshot <path>` | Save screenshot (SVG or PNG, detected from extension) | --          |
-| `--text`              | Print terminal text to stdout                         | off         |
-| `--cols <n>`          | Terminal columns                                      | `120`       |
-| `--rows <n>`          | Terminal rows                                         | `40`        |
-| `--timeout <ms>`      | Wait timeout in milliseconds                          | `5000`      |
-
-### Examples
-
-```bash
-# Capture text output of a command
-termless capture --command "ls -la" --wait-for "total" --text
-
-# Screenshot a TUI app after navigation (SVG)
-termless capture --command "bun run app" \
-  --keys "j,j,Enter" \
-  --screenshot /tmp/app.svg
-
-# Screenshot as PNG (detected from .png extension)
-termless capture --command "bun run app" \
-  --keys "j,j,Enter" \
-  --screenshot /tmp/app.png
-
-# Wide terminal with long timeout
-termless capture --command "htop" \
-  --cols 200 --rows 50 \
-  --timeout 10000 \
-  --screenshot /tmp/htop.svg
-```
-
-### Key Names
-
-Keys use the same format as `terminal.press()`:
-
-- Single characters: `a`, `1`, `/`
-- Named keys: `Enter`, `Tab`, `Backspace`, `Delete`, `Escape`, `Space`
-- Arrow keys: `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
-- Navigation: `Home`, `End`, `PageUp`, `PageDown`
-- Function keys: `F1` through `F12`
-- With modifiers: `Ctrl+c`, `Shift+Tab`, `Alt+x`
-
-## `termless record`
-
-Record a terminal session as SVG frames or an HTML slideshow.
-
-```bash
-termless record --command "htop" --duration 5 --format frames
-termless record --command "bun run app" --format html --output-dir ./demo.html
-```
-
-### Options
-
-| Option                 | Description                                | Default                 |
-| ---------------------- | ------------------------------------------ | ----------------------- |
-| `--command <cmd>`      | Command to run (required, split on spaces) | --                      |
-| `--cols <n>`           | Terminal columns                           | `120`                   |
-| `--rows <n>`           | Terminal rows                              | `40`                    |
-| `--interval <ms>`      | Capture interval in milliseconds           | `100`                   |
-| `--duration <seconds>` | Stop after N seconds                       | --                      |
-| `--output-dir <path>`  | Output directory or file path              | `./termless-recording/` |
-| `--format <type>`      | Output format: `frames` or `html`          | `frames`                |
-
-## `termless mcp`
+## `termless mcp` {#mcp}
 
 Start a stdio MCP server for AI agents (Claude Code, etc.). The server manages terminal sessions -- AI agents can spawn processes, send input, read output, and take screenshots.
 
 ```bash
-termless mcp
+$ termless mcp
 ```
 
 The MCP server exposes tools for:
@@ -264,3 +240,14 @@ Returns array of `{ id, command, cols, rows, alive }` for all sessions.
 ### `stopSession(id)` / `stopAll()`
 
 Close terminal and kill process for one or all sessions.
+
+## Key Names
+
+Keys use the same format as `terminal.press()`:
+
+- Single characters: `a`, `1`, `/`
+- Named keys: `Enter`, `Tab`, `Backspace`, `Delete`, `Escape`, `Space`
+- Arrow keys: `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
+- Navigation: `Home`, `End`, `PageUp`, `PageDown`
+- Function keys: `F1` through `F12`
+- With modifiers: `Ctrl+c`, `Shift+Tab`, `Alt+x`

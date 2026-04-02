@@ -48,7 +48,7 @@ Most users only need `@termless/test`. To add extra backends, use the CLI:
 bunx termless backends
 
 # Install additional backends (e.g., Ghostty)
-bunx termless install ghostty
+bunx termless backends install ghostty
 ```
 
 See [Backend Capabilities](/guide/backends) for a full comparison of all backends.

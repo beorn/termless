@@ -20,14 +20,14 @@ features:
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
   - title: Cross-Terminal Conformance
     details: "Run the same tests against 10 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
-  - title: Fast
-    details: "Pure in-process terminal emulation. Typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses, no flakiness."
+  - title: Recording & Playback
+    details: "Record terminal sessions as .tape files. Play back as GIF, animated SVG, APNG, or asciicast. Cross-terminal comparison in one command. Like VHS, but headless and multi-backend."
   - title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - title: SVG & PNG Screenshots
     details: "Generate terminal screenshots as SVG or PNG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered. PNG via optional @resvg/resvg-js."
-  - title: PTY Support
-    details: "Spawn real processes, send keypresses, wait for output. Test your actual TUI application end-to-end against any backend."
+  - title: Fast & Headless
+    details: "Pure in-process terminal emulation. Under 1ms per unit-style test. No Chromium, no ffmpeg, no subprocesses. GIF and APNG output via pure JS encoders."
 ---
 
 ## Quick Start
@@ -98,6 +98,23 @@ test("inspect what string matching can't see", () => {
 })
 ```
 
+## Recording & Playback
+
+Record terminal sessions and play them back as animated output -- no ffmpeg, no Chromium, no external tools:
+
+```bash
+# Record a command to a tape file
+$ termless record -o demo.tape ls -la
+
+# Play back as an animated GIF
+$ termless play -o demo.gif demo.tape
+
+# Cross-terminal comparison — same tape, different backends
+$ termless play -b vterm,ghostty --compare side-by-side demo.tape
+```
+
+Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all rendered with pure JS encoders. See [Recording & Playback](/guide/recording) for full details.
+
 ## Why Not Just Assert on Strings?
 
 String assertions on terminal output break constantly:
@@ -139,10 +156,10 @@ Most users only need `@termless/test` -- it includes everything for writing Vite
 ### Backend Management CLI
 
 ```bash
-bunx termless backends                  # List all backends and install status
-bunx termless install                   # Install default backends
-bunx termless install ghostty           # Install a specific backend
-bunx termless doctor                    # Health check installed backends
+$ bunx termless backends                       # List all backends and install status
+$ bunx termless backends install               # Install default backends
+$ bunx termless backends install ghostty       # Install a specific backend
+$ bunx termless doctor                         # Health check installed backends
 ```
 
 ### Two Ways to Choose a Backend

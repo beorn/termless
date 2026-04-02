@@ -13,7 +13,8 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 - **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **Fast** -- typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses
-- **CLI + MCP** -- `termless capture` for scripts, `termless mcp` for AI agents
+- **Recording & Playback** -- record terminal sessions as `.tape` files, play back as GIF, animated SVG, APNG, or asciicast. Cross-terminal comparison in one command
+- **CLI + MCP** -- `termless record` / `termless play` for scripting, `termless mcp` for AI agents
 
 ## Quick Start
 
@@ -220,10 +221,10 @@ Termless includes a Playwright-inspired CLI for managing backends. `backends.jso
 
 ```bash
 bunx termless backends                       # List all backends and install status
-bunx termless install                        # Install default backends (xtermjs, ghostty, vt100)
-bunx termless install ghostty alacritty      # Install specific backends
+bunx termless backends install               # Install default backends (xtermjs, ghostty, vt100)
+bunx termless backends install ghostty alacritty  # Install specific backends
 bunx termless doctor                         # Health check all installed backends
-bunx termless upgrade                        # Upgrade installed backends to manifest versions
+bunx termless backends update                # Check upstream for newer versions
 ```
 
 ### Terminal Census
@@ -332,7 +333,7 @@ bun vitest run tests/cross-backend.test.ts
 | [@termless/libvterm](packages/libvterm)     | neovim's libvterm via Emscripten WASM                               |
 | [@termless/kitty](packages/kitty)           | Kitty VT parser built from GPL source (not distributed)             |
 | [@termless/test](packages/viterm)           | Vitest matchers, fixtures, and snapshot serializer                  |
-| [@termless/cli](packages/cli)               | CLI (`termless capture`) + MCP server (`termless mcp`)              |
+| [@termless/cli](packages/cli)               | CLI (`termless record`, `termless play`) + MCP server              |
 
 ## How Termless Compares
 
@@ -360,17 +361,46 @@ Termless is the **only** headless terminal testing library that supports multi-b
 - [Best Practices](https://termless.dev/guide/best-practices) -- avoiding flaky tests, PTY timing, selectors
 - [Multi-Backend Testing](https://termless.dev/guide/multi-backend) -- test against any backend
 - [Backend Capabilities](https://termless.dev/guide/backends) -- which backends support what
+- [Recording & Playback](https://termless.dev/guide/recording) -- record, play, GIF/SVG/APNG output
+- [Tape Format](https://termless.dev/guide/tape-format) -- `.tape` file reference
+- [Asciicast v2](https://termless.dev/guide/asciicast) -- asciinema compatibility
 - [CLI & MCP](https://termless.dev/guide/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://termless.dev/api/terminal) | [Backend](https://termless.dev/api/backend) | [Cell & Types](https://termless.dev/api/cell) | [Matchers](https://termless.dev/api/matchers)
 
-## CLI & MCP Server
+## Recording & Playback
 
-For scripting and AI agents, `@termless/cli` provides terminal capture and an MCP server:
+Record terminal sessions and play them back as animated output -- no ffmpeg, no Chromium:
 
 ```bash
-# Capture terminal output as text or screenshot
-termless capture --command "ls -la" --wait-for "total" --text
-termless capture --command "vim file.txt" --keys "i,Hello,Escape,:,w,q,Enter" --screenshot /tmp/vim.svg
+# Record a command to a tape file
+termless record -o demo.tape ls -la
+
+# Play back as an animated GIF
+termless play -o demo.gif demo.tape
+
+# Cross-terminal comparison
+termless play -b vterm,ghostty --compare side-by-side demo.tape
+
+# Scripted recording with inline tape commands
+termless rec -t 'Type "hello"\nEnter\nScreenshot' bash
+
+# Record to asciicast format
+termless record -o demo.cast my-app
+```
+
+Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all pure JS, no ffmpeg. See the [Recording & Playback docs](https://termless.dev/guide/recording) for full details.
+
+## CLI & MCP Server
+
+For scripting and AI agents, `@termless/cli` provides recording, playback, and an MCP server:
+
+```bash
+# Record and play terminal sessions
+termless record -o demo.tape ls -la
+termless play -o demo.gif demo.tape
+
+# Capture mode: run command, press keys, take screenshot
+termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
 
 # MCP server for AI agents (Claude Code, etc.)
 termless mcp

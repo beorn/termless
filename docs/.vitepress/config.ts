@@ -120,6 +120,14 @@ export default defineConfig({
         ],
       },
       {
+        text: "Recording",
+        items: [
+          { text: "Recording & Playback", link: "/guide/recording" },
+          { text: "Tape Format Reference", link: "/guide/tape-format" },
+          { text: "Asciicast v2", link: "/guide/asciicast" },
+        ],
+      },
+      {
         text: "Tools",
         items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
       },

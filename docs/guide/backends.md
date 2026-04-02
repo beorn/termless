@@ -13,10 +13,10 @@ Use the CLI to see available backends and their installation status:
 
 ```bash
 # List all backends with install status and capabilities
-bunx termless backends
+$ bunx termless backends
 
 # Check health of installed backends (version mismatches, missing deps)
-bunx termless doctor
+$ bunx termless doctor
 ```
 
 ## Capability Matrix
@@ -76,7 +76,7 @@ Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-acceler
 - **Upstream**: `npm:ghostty-web`
 - **Best for**: Testing against a modern, standards-compliant parser. Verifying Kitty keyboard protocol support.
 - **Limitations**: WASM build does not support viewport scrolling or Kitty graphics. OSC title changes have no callback in WASM mode.
-- **Install**: `bunx termless install ghostty` (or `npm install -D @termless/ghostty`)
+- **Install**: `bunx termless backends install ghostty` (or `npm install -D @termless/ghostty`)
 
 ```typescript
 // Factory function (requires async WASM init)
@@ -100,7 +100,7 @@ Pure TypeScript VT100 emulator with zero dependencies. Lightweight and fast, ins
 - **Upstream**: `npm:@termless/vt100` (self-contained)
 - **Best for**: Environments where you want zero native dependencies and zero WASM. CI runners with constrained environments.
 - **Limitations**: No reflow on resize. No OSC 8 hyperlinks. No Kitty keyboard. More limited escape sequence coverage than xterm.js or Ghostty.
-- **Install**: `bunx termless install vt100` (or `npm install -D @termless/vt100`)
+- **Install**: `bunx termless backends install vt100` (or `npm install -D @termless/vt100`)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -123,7 +123,7 @@ Uses Alacritty's `alacritty_terminal` crate via napi-rs native bindings. Alacrit
 - **Upstream**: `crate:alacritty_terminal`
 - **Best for**: Testing against Alacritty's VT parser. Cross-checking reflow behavior.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `bunx termless install alacritty` (or `npm install -D @termless/alacritty`; requires Rust build)
+- **Install**: `bunx termless backends install alacritty` (or `npm install -D @termless/alacritty`; requires Rust build)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -146,7 +146,7 @@ Uses WezTerm's `wezterm-term` VT parser via napi-rs native bindings. WezTerm has
 - **Upstream**: `crate:tattoy-wezterm-term`
 - **Best for**: Testing sixel graphics support, semantic prompts, and the widest protocol coverage.
 - **Limitations**: Requires Rust toolchain to build native bindings. Not available as prebuilt binaries yet.
-- **Install**: `bunx termless install wezterm` (or `npm install -D @termless/wezterm`; requires Rust build)
+- **Install**: `bunx termless backends install wezterm` (or `npm install -D @termless/wezterm`; requires Rust build)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -169,7 +169,7 @@ OS-level terminal automation. Launches a real terminal application, sends keystr
 - **Upstream**: `npm:peekaboo`
 - **Best for**: End-to-end testing against a real terminal application (e.g., testing your app in actual Ghostty or iTerm2). OS-level screenshots of the real terminal window.
 - **Limitations**: macOS only. Requires accessibility permissions. Much slower than in-memory backends. Not suitable for unit tests.
-- **Install**: `bunx termless install peekaboo` (or `npm install -D @termless/peekaboo`)
+- **Install**: `bunx termless backends install peekaboo` (or `npm install -D @termless/peekaboo`)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -192,7 +192,7 @@ Reference Rust implementation of VT100 terminal emulation. Uses the `vt100` Rust
 - **Upstream**: `crate:vt100`
 - **Best for**: Cross-validating the TypeScript vt100 backend. Finding disagreements between implementations. Reference conformance testing.
 - **Limitations**: Requires Rust toolchain. Similar feature set to the TypeScript vt100 backend (no reflow, no OSC 8).
-- **Install**: `bunx termless install vt100-rust` (or `npm install -D @termless/vt100-rust`; requires Rust build)
+- **Install**: `bunx termless backends install vt100-rust` (or `npm install -D @termless/vt100-rust`; requires Rust build)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -215,7 +215,7 @@ Neovim's VT parser compiled to WebAssembly via Emscripten. A completely differen
 - **Upstream**: `github:neovim/libvterm`
 - **Best for**: Cross-terminal conformance testing against neovim's parser. Finding bugs that only appear in C-based implementations.
 - **Limitations**: Requires Emscripten SDK to build WASM. No Kitty keyboard, no reflow, no OSC 8.
-- **Install**: `bunx termless install libvterm` (or `npm install -D @termless/libvterm`; requires Emscripten build)
+- **Install**: `bunx termless backends install libvterm` (or `npm install -D @termless/libvterm`; requires Emscripten build)
 
 ```typescript
 // Factory function (requires async WASM init)
@@ -239,7 +239,7 @@ Native Ghostty backend using libghostty-vt via Zig N-API bindings. Same VT parse
 - **Upstream**: `github:ghostty-org/ghostty`
 - **Best for**: High-performance Ghostty conformance testing without WASM startup cost. Same parser fidelity as `@termless/ghostty` but faster.
 - **Limitations**: Requires Zig 0.15.2+ to build. Not available as prebuilt binaries.
-- **Install**: `bunx termless install ghostty-native` (requires Zig build)
+- **Install**: `bunx termless backends install ghostty-native` (requires Zig build)
 
 ```typescript
 // Factory function (preferred — explicit, sync)
@@ -262,7 +262,7 @@ Kitty's VT parser built from GPL-3.0 source. Kitty is a modern, feature-rich ter
 - **Upstream**: `github:kovidgoyal/kitty`
 - **Best for**: Testing Kitty keyboard protocol, Kitty graphics protocol, and cross-checking against kitty's parser behavior. The only backend with Kitty graphics support.
 - **Limitations**: Requires building from GPL-3.0 source (C compiler + Python 3 + git). The resulting `.node` binary is GPL-3.0 and must not be distributed. Build script is WIP.
-- **Install**: `bunx termless install kitty` (or `npm install -D @termless/kitty`; requires build from source)
+- **Install**: `bunx termless backends install kitty` (or `npm install -D @termless/kitty`; requires build from source)
 
 ```typescript
 // Factory function (preferred — explicit, sync)

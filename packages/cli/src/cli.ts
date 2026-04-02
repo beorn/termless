@@ -53,6 +53,8 @@ program.addHelpSection("Backends:", [
   ["$ termless doctor", "Health check all installed backends"],
 ])
 
+program.addHelpSection("Docs:", [["https://termless.dev/guide/recording", ""]])
+
 registerRecordCommand(program)
 registerPlayCommand(program)
 registerBackendCommand(program)
