@@ -18,7 +18,7 @@
 
 import React from "react"
 import { Box, Text, Table, type TableColumn } from "silvery"
-import type { Command } from "commander"
+import type { Command } from "@silvery/commander"
 import { execSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -412,18 +412,14 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
 export function registerBackendCommand(program: Command): void {
   const cmd = program.command("backends").description("Manage terminal emulator backends")
 
-  cmd.addHelpText(
-    "after",
-    `
-Examples:
-  $ termless backends                             List all backends + install status
-  $ termless backends install                     Install default backends
-  $ termless backends install ghostty alacritty   Install specific backends
-  $ termless backends install --all               Install all 11 backends
-  $ termless backends update                      Check upstream for newer versions
-  $ termless backends update --apply              Update backends.json with latest
-`,
-  )
+  cmd.addHelpSection("Examples:", [
+    ["termless backends", "List all backends + install status"],
+    ["termless backends install", "Install default backends"],
+    ["termless backends install ghostty alacritty", "Install specific backends"],
+    ["termless backends install --all", "Install all 11 backends"],
+    ["termless backends update", "Check upstream for newer versions"],
+    ["termless backends update --apply", "Update backends.json with latest"],
+  ])
 
   // Default action: show list + help
   cmd.action(async () => {
