@@ -190,10 +190,17 @@ async function interactiveRecord(
   const showKeys = opts.showKeys ?? false
   const wantImages = hasImageOutput(outputPaths)
 
-  console.error(`Recording: ${cmd.join(" ")}`)
-  console.error(`Output: ${outputPaths.join(", ") || "stdout"}`)
-  if (wantImages) console.error("Image output enabled — capturing frames via headless terminal")
-  console.error("Exit the command to stop recording.\n")
+  console.error("")
+  console.error(`  Recording: ${cmd.join(" ")}`)
+  console.error(`  Terminal:  ${opts.cols}x${opts.rows}`)
+  console.error(`  Output:    ${outputPaths.join(", ") || "stdout (.tape)"}`)
+  if (wantImages) console.error(`  Frames:    capturing every 100ms for image output`)
+  if (raw) console.error(`  Mode:      raw (all escape sequences preserved)`)
+  if (showKeys) console.error(`  Overlay:   keystroke badges enabled`)
+  console.error("")
+  console.error(`  Press Ctrl+D or type 'exit' to stop recording.`)
+  console.error(`  Everything you type will be captured as .tape commands.`)
+  console.error("")
 
   const { spawnPty } = await import("../../../src/pty.ts")
 
@@ -317,6 +324,13 @@ async function interactiveRecord(
 
   const duration = (Date.now() - startTime) / 1000
 
+  console.error("")
+  console.error(`  Recording complete: ${inputEvents.length} keystrokes, ${outputEvents.length} output events, ${duration.toFixed(1)}s`)
+  if (animationFrames.length > 0) {
+    console.error(`  Captured ${animationFrames.length} animation frames`)
+  }
+  console.error("")
+
   // Write to output files (or stdout)
   if (outputPaths.length === 0) {
     // No -o: output .tape to stdout
@@ -369,12 +383,7 @@ async function interactiveRecord(
     headlessTerminal.close()
   }
 
-  console.error(
-    `Recorded ${inputEvents.length} keystrokes, ${outputEvents.length} output events in ${duration.toFixed(1)}s`,
-  )
-  if (animationFrames.length > 0) {
-    console.error(`Captured ${animationFrames.length} animation frames`)
-  }
+  console.error("  Done.")
 }
 
 /**

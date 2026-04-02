@@ -45,9 +45,12 @@ function isImagePath(path: string): boolean {
  */
 async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise<void> {
   if (frames.length === 0) {
-    console.error(`Warning: no frames captured for ${path}`)
+    console.error(`  Warning: no frames captured for ${path}`)
     return
   }
+
+  const ext = path.match(/\.\w+$/)?.[0] ?? ""
+  console.error(`  Generating ${ext.slice(1).toUpperCase()} from ${frames.length} frames...`)
 
   const dir = dirname(resolve(path))
   mkdirSync(dir, { recursive: true })
@@ -65,10 +68,8 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
     const svg = createAnimatedSvg(frames)
     writeFileSync(resolve(path), svg, "utf-8")
   } else if (path.endsWith(".svg")) {
-    // Single frame SVG — write directly
     writeFileSync(resolve(path), frames[frames.length - 1]!.svg, "utf-8")
   } else if (path.endsWith(".png")) {
-    // Single frame PNG — rasterize the SVG
     const resvg = await import("@resvg/resvg-js")
     const renderer = new resvg.Resvg(frames[frames.length - 1]!.svg, {
       fitTo: { mode: "zoom" as const, value: 2 },
@@ -77,7 +78,9 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
     writeFileSync(resolve(path), rendered.asPng())
   }
 
-  console.error(`Saved: ${path}`)
+  const size = Bun.file(resolve(path)).size
+  const sizeStr = size > 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)}MB` : `${(size / 1024).toFixed(0)}KB`
+  console.error(`  Saved: ${path} (${sizeStr})`)
 }
 
 // =============================================================================
