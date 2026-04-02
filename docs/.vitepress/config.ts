@@ -7,15 +7,11 @@ import {
   validateGlossary,
   loadTerminalGlossary,
   loadEcosystemGlossary,
-} from "@bearly/vitepress-enrich"
+} from "vitepress-enrich"
 import siteGlossary from "../content/glossary.json"
 
 // Site-specific terms + shared terminal vocabulary + ecosystem cross-links
-const glossary = [
-  ...siteGlossary,
-  ...loadTerminalGlossary(),
-  ...loadEcosystemGlossary({ exclude: ["termless.dev"] }),
-]
+const glossary = [...siteGlossary, ...loadTerminalGlossary(), ...loadEcosystemGlossary({ exclude: ["termless.dev"] })]
 
 const seoOptions = {
   hostname: "https://termless.dev",
@@ -38,7 +34,7 @@ export default defineConfig({
       }),
     ],
     ssr: {
-      noExternal: ["@bearly/vitepress-enrich"],
+      noExternal: ["vitepress-enrich"],
     },
   },
 
