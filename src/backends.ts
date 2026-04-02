@@ -218,7 +218,7 @@ export async function backend(
   try {
     import.meta.resolve(entry.package)
   } catch {
-    throw new Error(`Backend "${name}" is not installed.\n` + `Run: bunx termless install ${name}`)
+    throw new Error(`Backend "${name}" is not installed.\n` + `Run: bunx termless backend install ${name}`)
   }
 
   // Check if built

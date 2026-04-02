@@ -46,7 +46,7 @@
           shellHook = ''
             echo "termless dev shell — bun + rust + zig + emscripten"
             echo "  bun test              Run all tests"
-            echo "  bun cli backends      List backends"
+            echo "  bun cli backend list  List backends"
             echo "  bun cli doctor        Health check"
           '';
         };

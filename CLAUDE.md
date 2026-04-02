@@ -61,11 +61,11 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 ## Commands
 
 ```bash
-bun test                     # Run all tests
-bun cli backends             # List backends and install status
-bun cli doctor               # Health check installed backends
-bun cli install [names...]   # Install backends
-bun cli upgrade [names...]   # Upgrade backends to manifest versions
+bun test                              # Run all tests
+bun cli backend list                  # List backends and install status
+bun cli backend install [names...]    # Install or upgrade backends
+bun cli backend update                # Check upstream versions
+bun cli doctor                        # Health check installed backends
 ```
 
 ## Backend Registry

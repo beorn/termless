@@ -101,9 +101,9 @@ function DoctorSummary({
   if (unhealthy === 0 && healthy > 0) {
     message = "All installed backends are healthy."
   } else if (unhealthy > 0) {
-    message = "Some backends are unhealthy. Run `termless install` to reinstall."
+    message = "Some backends are unhealthy. Run `termless backend install` to reinstall."
   } else {
-    message = "No backends installed. Run `termless install` to get started."
+    message = "No backends installed. Run `termless backend install` to get started."
   }
 
   return (
