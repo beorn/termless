@@ -54,14 +54,16 @@ export function StatusLine({
   )
 }
 
+type BackendsTableRow = { backend: string; status: string; upstream: string }
+
 export function BackendsTable({ rows }: { rows: BackendRow[] }): React.ReactElement {
-  const columns: TableColumn[] = [
+  const columns: TableColumn<BackendsTableRow>[] = [
     { header: "Backend", key: "backend" },
     { header: "Status", key: "status" },
     { header: "Upstream", key: "upstream" },
   ]
 
-  const data = rows.map((r) => ({
+  const data: BackendsTableRow[] = rows.map((r) => ({
     backend: `${r.name} (${r.type})${r.isDefault ? " *" : ""}`,
     status: r.installed ? `✓ installed` : "✗ not installed",
     upstream: r.upstream,

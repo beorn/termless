@@ -162,11 +162,15 @@ async function installAction(names: string[], opts: { all?: boolean }): Promise<
     for (const name of names) {
       if (!m.backends[name]) {
         await printComponent(
-          <StatusLine icon="✗" variant="error">
-            Unknown backend: {name}
-          </StatusLine>,
+          <Box flexDirection="column">
+            <StatusLine icon="✗" variant="error">
+              Unknown backend: {name}
+            </StatusLine>
+            <Box marginLeft={2}>
+              <Text color="$muted">Available: {allNames.join(", ")}</Text>
+            </Box>
+          </Box>,
         )
-        console.log(`  Available: ${allNames.join(", ")}`)
         process.exitCode = 1
         return
       }
@@ -254,7 +258,7 @@ async function installAction(names: string[], opts: { all?: boolean }): Promise<
   }
 
   // Show full backends table at the end
-  console.log("")
+  await printComponent(<Box marginTop={1} />)
   await printBackendsTable()
 }
 
@@ -322,12 +326,40 @@ async function checkLatestVersion(uri: string): Promise<string | null> {
   }
 }
 
+type UpdateRow = { backend: string; current: string; latest: string; status: string }
+
+function UpdateTable({
+  rows,
+}: {
+  rows: Array<{ name: string; current: string; latest: string | null; status: string }>
+}): React.ReactElement {
+  const columns: TableColumn<UpdateRow>[] = [
+    { header: "Backend", key: "backend" },
+    { header: "Current", key: "current" },
+    { header: "Latest", key: "latest" },
+    { header: "Status", key: "status" },
+  ]
+
+  const data: UpdateRow[] = rows.map((r) => ({
+    backend: r.name,
+    current: r.current || "-",
+    latest: r.latest ?? "?",
+    status: r.status,
+  }))
+
+  return <Table columns={columns} data={data} />
+}
+
 async function updateAction(opts: { apply?: boolean }): Promise<void> {
   const m = getManifest()
   const allNames = backends()
 
-  console.log(`\ntermless backendsupdate\n`)
-  console.log("  Checking upstream versions...\n")
+  await printComponent(
+    <Box flexDirection="column">
+      <Header title="termless update" version={m.version} />
+      <Text color="$muted">Checking upstream versions...</Text>
+    </Box>,
+  )
 
   // Fetch all versions in parallel
   type Row = {
@@ -363,27 +395,21 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
     }),
   )
 
-  // Compute column widths
-  const col1 = Math.max("Backend".length, ...rows.map((r) => r.name.length))
-  const col2 = Math.max("Current".length, ...rows.map((r) => r.current.length))
-  const col3 = Math.max("Latest".length, ...rows.map((r) => (r.latest ?? "?").length))
-
-  // Header
-  console.log(`  ${"Backend".padEnd(col1)}  ${"Current".padEnd(col2)}  ${"Latest".padEnd(col3)}  Status`)
-  console.log(`  ${"─".repeat(col1)}  ${"─".repeat(col2)}  ${"─".repeat(col3)}  ${"─".repeat(20)}`)
-
-  // Rows
-  for (const r of rows) {
-    console.log(`  ${r.name.padEnd(col1)}  ${r.current.padEnd(col2)}  ${(r.latest ?? "?").padEnd(col3)}  ${r.status}`)
-  }
+  await printComponent(<UpdateTable rows={rows} />)
 
   // Count updates
   const updatable = rows.filter((r) => r.latest !== null && r.latest !== r.current)
 
   if (updatable.length === 0) {
-    console.log("\n  All backends up to date.\n")
+    await printComponent(<Summary>All backends up to date.</Summary>)
   } else {
-    console.log(`\n  ${updatable.length} update${updatable.length === 1 ? "" : "s"} available.`)
+    await printComponent(
+      <Box flexDirection="column">
+        <Summary>
+          {updatable.length} update{updatable.length === 1 ? "" : "s"} available.
+        </Summary>
+      </Box>,
+    )
 
     if (opts.apply) {
       // Read the raw backends.json, update versions, write back
@@ -398,9 +424,17 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
       }
 
       writeFileSync(manifestPath, JSON.stringify(raw, null, 2) + "\n", "utf-8")
-      console.log("  Updated backends.json.\n")
+      await printComponent(
+        <StatusLine icon="✓" variant="success">
+          Updated backends.json.
+        </StatusLine>,
+      )
     } else {
-      console.log("  Run with --apply to update backends.json.\n")
+      await printComponent(
+        <Box>
+          <Text color="$muted">Run with --apply to update backends.json.</Text>
+        </Box>,
+      )
     }
   }
 }
@@ -424,10 +458,28 @@ export function registerBackendCommand(program: Command): void {
   // Default action: show list + usage hint
   cmd.action(async () => {
     await printBackendsTable()
-    console.log("")
-    console.log("  termless backends install [names...]   Install or upgrade backends")
-    console.log("  termless backends update [--apply]     Check upstream for newer versions")
-    console.log("  termless backends --help               Full help")
+    await printComponent(
+      <Box flexDirection="column" marginTop={1}>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">termless backends install [names...]</Text>
+          </Box>
+          <Text color="$muted">Install or upgrade backends</Text>
+        </Box>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">{"termless backends update [--apply]"}</Text>
+          </Box>
+          <Text color="$muted">Check upstream for newer versions</Text>
+        </Box>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">termless backends --help</Text>
+          </Box>
+          <Text color="$muted">Full help</Text>
+        </Box>
+      </Box>,
+    )
   })
 
   cmd

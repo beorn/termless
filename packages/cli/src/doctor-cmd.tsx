@@ -8,7 +8,7 @@
 
 import React from "react"
 import { Box, Text } from "silvery"
-import type { Command } from "commander"
+import type { Command } from "@silvery/commander"
 import {
   manifest as getManifest,
   backends,
@@ -44,7 +44,10 @@ function DoctorResult({
   if (!installed) {
     return (
       <StatusLine icon="─" variant="muted">
-        <Text>{name.padEnd(12)} not installed</Text>
+        <Box width={13}>
+          <Text>{name}</Text>
+        </Box>
+        <Text>not installed</Text>
       </StatusLine>
     )
   }
@@ -55,9 +58,13 @@ function DoctorResult({
     return (
       <Box flexDirection="column">
         <StatusLine icon="✓" variant="success">
-          <Text>
-            {name.padEnd(12)} {verStr.padEnd(7)} {upstream}
-          </Text>
+          <Box width={13}>
+            <Text>{name}</Text>
+          </Box>
+          <Box width={8}>
+            <Text>{verStr}</Text>
+          </Box>
+          <Text>{upstream}</Text>
         </StatusLine>
         {capabilities && (
           <Box marginLeft={4}>
@@ -73,9 +80,13 @@ function DoctorResult({
   return (
     <Box flexDirection="column">
       <StatusLine icon="✗" variant="error">
-        <Text>
-          {name.padEnd(12)} {verStr.padEnd(7)} {upstream}
-        </Text>
+        <Box width={13}>
+          <Text>{name}</Text>
+        </Box>
+        <Box width={8}>
+          <Text>{verStr}</Text>
+        </Box>
+        <Text>{upstream}</Text>
       </StatusLine>
       {error && (
         <Box marginLeft={4}>
@@ -130,8 +141,12 @@ export function registerDoctorCommand(program: Command): void {
       const m = getManifest()
       const allNames = backends()
 
-      await printComponent(<Header title="termless doctor" version={m.version} />)
-      console.log("Checking backends...\n")
+      await printComponent(
+        <Box flexDirection="column">
+          <Header title="termless doctor" version={m.version} />
+          <Text color="$muted">Checking backends...</Text>
+        </Box>,
+      )
 
       let healthy = 0
       let unhealthy = 0
