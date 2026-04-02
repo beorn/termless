@@ -11,8 +11,9 @@ import { createTerminal } from "../../src/terminal.ts"
 import type { AsciicastRecording } from "../../src/asciicast/types.ts"
 
 // Use vt100 backend — pure TypeScript, no native deps
-async function loadVt100Backend() {
-  const { createVt100Backend } = await import("@termless/vt100")
+import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
+
+function loadVt100Backend() {
   return createVt100Backend()
 }
 
