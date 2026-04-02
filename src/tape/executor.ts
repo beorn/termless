@@ -25,7 +25,7 @@
 
 import type { TapeFile, TapeCommand } from "./parser.ts"
 import { parseDuration } from "./parser.ts"
-import type { Terminal, SvgScreenshotOptions } from "../types.ts"
+import type { Terminal, TerminalBackend, SvgScreenshotOptions } from "../types.ts"
 import { createTerminal } from "../terminal.ts"
 import { screenshotPng } from "../png.ts"
 
@@ -34,8 +34,8 @@ import { screenshotPng } from "../png.ts"
 // =============================================================================
 
 export interface TapeExecutorOptions {
-  /** Backend name (default: "vterm"). */
-  backend?: string
+  /** Backend name or pre-created backend instance (default: "vterm"). */
+  backend?: string | TerminalBackend
   /** Override terminal columns. */
   cols?: number
   /** Override terminal rows. */
@@ -127,10 +127,15 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
   const rows = options?.rows ?? (tape.settings.Height ? Number.parseInt(tape.settings.Height, 10) : 24)
   const defaultSpeed = options?.defaultTypingSpeed ?? parseDurationSetting(tape.settings.TypingSpeed, 50)
 
-  // Resolve backend
-  const backendName = options?.backend ?? "vterm"
-  const { backend } = await import("../backends.ts")
-  const backendInstance = await backend(backendName)
+  // Resolve backend — accept a pre-created instance or a name string
+  let backendInstance: TerminalBackend
+  const backendOpt = options?.backend ?? "vterm"
+  if (typeof backendOpt === "string") {
+    const { backend } = await import("../backends.ts")
+    backendInstance = await backend(backendOpt)
+  } else {
+    backendInstance = backendOpt
+  }
 
   const terminal = createTerminal({
     backend: backendInstance,

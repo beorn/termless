@@ -19,6 +19,7 @@
  */
 
 import type { TapeFile } from "./parser.ts"
+import type { TerminalBackend } from "../types.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { screenshotPng } from "../png.ts"
 
@@ -28,9 +29,12 @@ import { screenshotPng } from "../png.ts"
 
 export type CompareMode = "separate" | "side-by-side" | "grid" | "diff"
 
+/** A backend specification: either a name string or a pre-created instance with a label. */
+export type BackendSpec = string | { name: string; backend: TerminalBackend }
+
 export interface CompareOptions {
-  /** Backend names to compare. */
-  backends: string[]
+  /** Backend names or instances to compare. */
+  backends: BackendSpec[]
   /** How to present the comparison. */
   mode: CompareMode
   /** Output path for composed results (SVG/PNG). */
@@ -77,12 +81,14 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
 
   // Run tape against each backend sequentially
   // (parallel would work but sequential is safer for resource-constrained systems)
-  for (const backendName of options.backends) {
+  for (const spec of options.backends) {
+    const backendOpt = typeof spec === "string" ? spec : spec.backend
+    const backendLabel = typeof spec === "string" ? spec : spec.name
     const lastPng: Uint8Array[] = []
 
     const result = await executeTape(tape, {
       ...options.executorOptions,
-      backend: backendName,
+      backend: backendOpt,
       onScreenshot: (png) => {
         lastPng.push(png)
       },
@@ -99,7 +105,7 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
     const text = result.terminal.getText()
 
     screenshots.push({
-      backend: backendName,
+      backend: backendLabel,
       png,
       text,
     })

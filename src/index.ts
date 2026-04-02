@@ -72,7 +72,14 @@ export type { TapeCommand, TapeFile } from "./tape/parser.ts"
 export { executeTape } from "./tape/executor.ts"
 export type { TapeExecutorOptions, TapeFrame, TapeResult } from "./tape/executor.ts"
 export { compareTape } from "./tape/compare.ts"
-export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot } from "./tape/compare.ts"
+export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot, BackendSpec } from "./tape/compare.ts"
+
+// Animation output formats (animated SVG, GIF, APNG)
+export { createAnimatedSvg } from "./animation/animated-svg.ts"
+export { createGif } from "./animation/gif.ts"
+export { createApng } from "./animation/apng.ts"
+export { renderAnimation, detectFormat } from "./animation/index.ts"
+export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation/types.ts"
 
 // Asciicast v2 format
 export { parseAsciicast, replayAsciicast } from "./asciicast/reader.ts"
