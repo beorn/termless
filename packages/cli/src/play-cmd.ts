@@ -25,7 +25,7 @@ import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { resolveTheme } from "../../../src/tape/themes.ts"
 import type { AnimationFrame } from "../../../src/animation/types.ts"
-import type { SvgScreenshotOptions } from "../../../src/types.ts"
+import type { SvgScreenshotOptions, WindowBar } from "../../../src/types.ts"
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -34,6 +34,28 @@ async function readStdin(): Promise<string> {
     chunks.push(chunk as Buffer)
   }
   return Buffer.concat(chunks).toString("utf-8")
+}
+
+/** Apply CLI visual polish options to SvgScreenshotOptions. */
+function applyVisualOptions(
+  svgOpts: SvgScreenshotOptions,
+  cliOpts: {
+    padding?: number
+    borderRadius?: number
+    windowBar?: string
+    windowBarSize?: number
+    margin?: number
+    marginFill?: string
+    framerate?: number
+  },
+): void {
+  if (cliOpts.padding != null) svgOpts.padding = cliOpts.padding
+  if (cliOpts.borderRadius != null) svgOpts.borderRadius = cliOpts.borderRadius
+  if (cliOpts.windowBar != null) svgOpts.windowBar = cliOpts.windowBar.toLowerCase() as WindowBar
+  if (cliOpts.windowBarSize != null) svgOpts.windowBarSize = cliOpts.windowBarSize
+  if (cliOpts.margin != null) svgOpts.margin = cliOpts.margin
+  if (cliOpts.marginFill != null) svgOpts.marginFill = cliOpts.marginFill
+  if (cliOpts.framerate != null) svgOpts.framerate = cliOpts.framerate
 }
 
 /** Check if a path has an image extension. */
@@ -92,7 +114,21 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
 
 async function playCast(
   source: string,
-  opts: { output?: string[]; backend?: string; cols?: number; rows?: number; theme?: string },
+  opts: {
+    output?: string[]
+    backend?: string
+    cols?: number
+    rows?: number
+    theme?: string
+    padding?: number
+    borderRadius?: number
+    windowBar?: string
+    windowBarSize?: number
+    margin?: number
+    marginFill?: string
+    speed?: number
+    framerate?: number
+  },
 ): Promise<void> {
   const { parseAsciicast, replayAsciicast } = await import("../../../src/asciicast/reader.ts")
   const { createTerminal } = await import("../../../src/terminal.ts")
@@ -117,6 +153,7 @@ async function playCast(
     const theme = resolveTheme(opts.theme)
     if (theme) svgOpts.theme = theme
   }
+  applyVisualOptions(svgOpts, opts)
 
   console.log(`Playing asciicast (${recording.events.length} events, ${cols}x${rows})...`)
 
@@ -181,6 +218,14 @@ async function playAction(
     rows?: number
     showKeys?: boolean
     theme?: string
+    padding?: number
+    borderRadius?: number
+    windowBar?: string
+    windowBarSize?: number
+    margin?: number
+    marginFill?: string
+    speed?: number
+    framerate?: number
   },
 ): Promise<void> {
   // stdin support: read from stdin if file is "-"
@@ -262,6 +307,22 @@ async function playAction(
       const theme = resolveTheme(shellThemeName)
       if (theme) shellSvgOpts.theme = theme
     }
+    // Apply tape settings for visual polish, then CLI overrides on top
+    applyVisualOptions(shellSvgOpts, {
+      padding: tape.settings.Padding ? parseInt(tape.settings.Padding, 10) : undefined,
+      borderRadius: tape.settings.BorderRadius ? parseInt(tape.settings.BorderRadius, 10) : undefined,
+      windowBar: tape.settings.WindowBar ?? undefined,
+      windowBarSize: tape.settings.WindowBarSize ? parseInt(tape.settings.WindowBarSize, 10) : undefined,
+      margin: tape.settings.Margin ? parseInt(tape.settings.Margin, 10) : undefined,
+      marginFill: tape.settings.MarginFill ?? undefined,
+      framerate: tape.settings.Framerate ? parseInt(tape.settings.Framerate, 10) : undefined,
+    })
+    // CLI flags override tape settings
+    applyVisualOptions(shellSvgOpts, opts)
+
+    // Playback speed
+    const shellPlaybackSpeed =
+      opts.speed ?? (tape.settings.PlaybackSpeed ? Number.parseFloat(tape.settings.PlaybackSpeed) : 1)
 
     // Collect animation frames for image output
     const frames: AnimationFrame[] = []
@@ -342,7 +403,7 @@ async function playAction(
           term.type(`\x1b${cmd.key}`)
           break
         case "sleep":
-          await new Promise((r) => setTimeout(r, cmd.ms))
+          await new Promise((r) => setTimeout(r, cmd.ms / shellPlaybackSpeed))
           captureFrame()
           if (opts.showKeys) currentKeystroke = ""
           break
@@ -422,6 +483,18 @@ async function playAction(
     const theme = resolveTheme(headlessThemeName)
     if (theme) headlessSvgOpts.theme = theme
   }
+  // Apply tape settings for visual polish, then CLI overrides on top
+  applyVisualOptions(headlessSvgOpts, {
+    padding: tape.settings.Padding ? parseInt(tape.settings.Padding, 10) : undefined,
+    borderRadius: tape.settings.BorderRadius ? parseInt(tape.settings.BorderRadius, 10) : undefined,
+    windowBar: tape.settings.WindowBar ?? undefined,
+    windowBarSize: tape.settings.WindowBarSize ? parseInt(tape.settings.WindowBarSize, 10) : undefined,
+    margin: tape.settings.Margin ? parseInt(tape.settings.Margin, 10) : undefined,
+    marginFill: tape.settings.MarginFill ?? undefined,
+    framerate: tape.settings.Framerate ? parseInt(tape.settings.Framerate, 10) : undefined,
+  })
+  // CLI flags override tape settings
+  applyVisualOptions(headlessSvgOpts, opts)
 
   // Collect animation frames for image output
   const frames: AnimationFrame[] = []
@@ -511,6 +584,14 @@ export function registerPlayCommand(program: Command): void {
     .option("--rows <n>", "Terminal rows override", parseNum, 0)
     .option("--show-keys", "Overlay keystroke badges on frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
+    .option("--padding <n>", "Padding between content and SVG edge in px", parseNum)
+    .option("--border-radius <n>", "Border radius for the SVG in px", parseNum)
+    .option("--window-bar <style>", "Window bar style: none, rings, colorful")
+    .option("--window-bar-size <n>", "Window bar height in px (default: 40)", parseNum)
+    .option("--margin <n>", "Outer margin in px", parseNum)
+    .option("--margin-fill <color>", "Outer margin fill color (e.g. #1a1a2e)")
+    .option("--speed <n>", "Playback speed multiplier (e.g. 2 for 2x)", Number.parseFloat)
+    .option("--framerate <n>", "Output framerate in FPS", parseNum)
 
   cmd.addHelpSection("Examples:", [
     ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],

@@ -25,7 +25,7 @@
 
 import type { TapeFile, TapeCommand } from "./parser.ts"
 import { parseDuration } from "./parser.ts"
-import type { Terminal, TerminalBackend, SvgScreenshotOptions } from "../types.ts"
+import type { Terminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../types.ts"
 import { createTerminal } from "../terminal.ts"
 import { screenshotPng } from "../png.ts"
 import { resolveTheme } from "./themes.ts"
@@ -161,6 +161,20 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
   if (tape.settings.FontSize) svgOptions.fontSize = Number.parseInt(tape.settings.FontSize, 10)
   if (tape.settings.FontFamily) svgOptions.fontFamily = tape.settings.FontFamily
 
+  // Visual polish settings
+  if (tape.settings.Padding) svgOptions.padding = Number.parseInt(tape.settings.Padding, 10)
+  if (tape.settings.BorderRadius) svgOptions.borderRadius = Number.parseInt(tape.settings.BorderRadius, 10)
+  if (tape.settings.WindowBar) svgOptions.windowBar = tape.settings.WindowBar.toLowerCase() as WindowBar
+  if (tape.settings.WindowBarSize) svgOptions.windowBarSize = Number.parseInt(tape.settings.WindowBarSize, 10)
+  if (tape.settings.Margin) svgOptions.margin = Number.parseInt(tape.settings.Margin, 10)
+  if (tape.settings.MarginFill) svgOptions.marginFill = tape.settings.MarginFill
+
+  // Playback speed: from tape settings or options (options override)
+  const playbackSpeed = tape.settings.PlaybackSpeed ? Number.parseFloat(tape.settings.PlaybackSpeed) : 1
+
+  // Framerate: from tape settings (stored for use by callers)
+  if (tape.settings.Framerate) svgOptions.framerate = Number.parseInt(tape.settings.Framerate, 10)
+
   // Resolve theme: CLI --theme flag takes precedence over Set Theme in tape
   const themeName = options?.theme ?? tape.settings.Theme
   if (themeName) {
@@ -178,6 +192,7 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
       hidden,
       startTime,
       frames,
+      playbackSpeed,
       onFrame: options?.onFrame,
       onScreenshot: options?.onScreenshot,
       onScreenshotCount: () => screenshotCount++,
@@ -209,6 +224,7 @@ interface ExecuteContext {
   hidden: boolean
   startTime: number
   frames: TapeFrame[]
+  playbackSpeed: number
   onFrame?: (frame: TapeFrame) => void
   onScreenshot?: (png: Uint8Array, path?: string) => void
   onScreenshotCount: () => void
@@ -235,6 +251,15 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
           ctx.svgOptions.theme = theme
         }
       }
+      // Visual polish settings (can be changed dynamically mid-tape)
+      if (cmd.key === "Padding") ctx.svgOptions.padding = Number.parseInt(cmd.value, 10)
+      if (cmd.key === "BorderRadius") ctx.svgOptions.borderRadius = Number.parseInt(cmd.value, 10)
+      if (cmd.key === "WindowBar") ctx.svgOptions.windowBar = cmd.value.toLowerCase() as WindowBar
+      if (cmd.key === "WindowBarSize") ctx.svgOptions.windowBarSize = Number.parseInt(cmd.value, 10)
+      if (cmd.key === "Margin") ctx.svgOptions.margin = Number.parseInt(cmd.value, 10)
+      if (cmd.key === "MarginFill") ctx.svgOptions.marginFill = cmd.value
+      if (cmd.key === "PlaybackSpeed") ctx.playbackSpeed = Number.parseFloat(cmd.value)
+      if (cmd.key === "Framerate") ctx.svgOptions.framerate = Number.parseInt(cmd.value, 10)
       break
 
     case "type": {
@@ -290,7 +315,7 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
     }
 
     case "sleep":
-      await delay(cmd.ms)
+      await delay(cmd.ms / ctx.playbackSpeed)
       break
 
     case "screenshot": {

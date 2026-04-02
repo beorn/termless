@@ -349,4 +349,106 @@ describe("screenshotSvg", () => {
       expect(svg).toContain(`text-decoration="underline"`)
     }
   })
+
+  // ── Visual polish ──
+
+  test("padding increases SVG dimensions and offsets content", () => {
+    const term = createMockReadable(["ab"])
+    const svg = screenshotSvg(term, { padding: 16 })
+    // 2 cols * 9.6 = 19.2 content + 32 padding = 51.2 width
+    // 1 row * 20 = 20 content + 32 padding = 52 height
+    expect(svg).toContain(`width="51.2"`)
+    expect(svg).toContain(`height="52"`)
+    // Content should be translated by padding
+    expect(svg).toContain(`translate(16, 16)`)
+  })
+
+  test("borderRadius adds rx/ry to background rect and clipPath", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { borderRadius: 8 })
+    expect(svg).toContain(`rx="8"`)
+    expect(svg).toContain(`ry="8"`)
+    expect(svg).toContain(`<clipPath id="terminal-clip">`)
+    expect(svg).toContain(`clip-path="url(#terminal-clip)"`)
+  })
+
+  test("windowBar colorful renders three filled circles", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "colorful" })
+    expect(svg).toContain(`fill="#ff5f57"`)
+    expect(svg).toContain(`fill="#febc2e"`)
+    expect(svg).toContain(`fill="#28c840"`)
+    // Window bar adds height
+    expect(svg).toContain(`height="60"`) // 20 content + 40 bar
+  })
+
+  test("windowBar rings renders three outlined circles", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "rings" })
+    expect(svg).toContain(`stroke="#ff5f57"`)
+    expect(svg).toContain(`stroke="#febc2e"`)
+    expect(svg).toContain(`stroke="#28c840"`)
+    expect(svg).toContain(`fill="none"`)
+  })
+
+  test("windowBar none produces no circles", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "none" })
+    expect(svg).not.toContain(`fill="#ff5f57"`)
+    expect(svg).not.toContain(`fill="#febc2e"`)
+    expect(svg).not.toContain(`fill="#28c840"`)
+  })
+
+  test("margin adds space around the terminal", () => {
+    const term = createMockReadable(["ab"])
+    const svg = screenshotSvg(term, { margin: 10 })
+    // 2*9.6 content + 0 padding + 20 margin = 39.2 width
+    // 20 content + 0 padding + 20 margin = 40 height
+    expect(svg).toContain(`width="39.2"`)
+    expect(svg).toContain(`height="40"`)
+    // Content translated by margin
+    expect(svg).toContain(`translate(10, 10)`)
+  })
+
+  test("marginFill renders outer margin rect", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { margin: 10, marginFill: "#1a1a2e" })
+    expect(svg).toContain(`fill="#1a1a2e"`)
+  })
+
+  test("combined padding + borderRadius + windowBar + margin", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, {
+      padding: 16,
+      borderRadius: 8,
+      windowBar: "colorful",
+      windowBarSize: 40,
+      margin: 20,
+    })
+    // Content: 2*9.6=19.2 wide, 1*20=20 tall
+    // Inner: 19.2+32=51.2 wide, 20+32+40=92 tall
+    // Total: 51.2+40=91.2 wide, 92+40=132 tall
+    expect(svg).toContain(`width="91.2"`)
+    expect(svg).toContain(`height="132"`)
+    expect(svg).toContain(`fill="#ff5f57"`) // window bar dots
+    expect(svg).toContain(`rx="8"`) // border radius
+    expect(svg).toContain(`translate(36, 76)`) // margin(20) + padding(16), margin(20) + padding(16) + bar(40)
+  })
+
+  test("no chrome produces same output as before (backward compat)", () => {
+    const term = createMockReadable(["Hello"])
+    const svg = screenshotSvg(term)
+    // Classic format: no translate group, 100% width/height bg rect
+    expect(svg).toContain(`width="100%"`)
+    expect(svg).toContain(`height="100%"`)
+    expect(svg).not.toContain(`translate`)
+    expect(svg).not.toContain(`clipPath`)
+  })
+
+  test("windowBarSize controls window bar height", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "colorful", windowBarSize: 30 })
+    // Content: 20 + bar: 30 = 50
+    expect(svg).toContain(`height="50"`)
+  })
 })

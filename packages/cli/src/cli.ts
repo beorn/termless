@@ -71,7 +71,7 @@ program
     const aliases = listAliases()
 
     console.log("")
-    console.log("  Available themes:")
+    console.log(`  Available themes (${themes.length}):`)
     console.log("")
     for (const name of themes) {
       const theme = resolveTheme(name)!

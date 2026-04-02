@@ -4,15 +4,19 @@
  * Each theme defines foreground, background, cursor, and (optionally) the
  * 16-color ANSI palette. Theme names are case-insensitive and common aliases
  * are supported (e.g. "catppuccin" → "catppuccin-mocha").
+ *
+ * When @silvery/theme is available (optional peer dependency), all 45+
+ * palettes are automatically mapped to SvgTheme objects and exposed alongside
+ * the built-in fallback themes.
  */
 
 import type { SvgTheme } from "../types.ts"
 
 // =============================================================================
-// Built-in themes
+// Built-in fallback themes (used when @silvery/theme is not installed)
 // =============================================================================
 
-const THEMES: Record<string, SvgTheme> = {
+const BUILTIN_THEMES: Record<string, SvgTheme> = {
   dracula: {
     background: "#282a36",
     foreground: "#f8f8f2",
@@ -292,7 +296,7 @@ const THEMES: Record<string, SvgTheme> = {
 }
 
 // =============================================================================
-// Aliases
+// Aliases (work for both built-in and silvery themes)
 // =============================================================================
 
 const ALIASES: Record<string, string> = {
@@ -300,6 +304,109 @@ const ALIASES: Record<string, string> = {
   solarized: "solarized-dark",
   gruvbox: "gruvbox-dark",
   github: "github-dark",
+  kanagawa: "kanagawa-wave",
+  material: "material-dark",
+  oxocarbon: "oxocarbon-dark",
+  edge: "edge-dark",
+  ayu: "ayu-dark",
+  everforest: "everforest-dark",
+  modus: "modus-vivendi",
+}
+
+// =============================================================================
+// @silvery/theme integration (optional peer dependency)
+// =============================================================================
+
+/**
+ * Map a silvery ColorPalette to an SvgTheme.
+ *
+ * ColorPalette has named fields (black, red, green, ..., brightWhite)
+ * which map to ANSI indices 0-15.
+ */
+interface ColorPaletteLike {
+  name?: string
+  foreground: string
+  background: string
+  cursorColor: string
+  black: string
+  red: string
+  green: string
+  yellow: string
+  blue: string
+  magenta: string
+  cyan: string
+  white: string
+  brightBlack: string
+  brightRed: string
+  brightGreen: string
+  brightYellow: string
+  brightBlue: string
+  brightMagenta: string
+  brightCyan: string
+  brightWhite: string
+}
+
+function paletteToSvgTheme(p: ColorPaletteLike): SvgTheme {
+  return {
+    foreground: p.foreground.toLowerCase(),
+    background: p.background.toLowerCase(),
+    cursor: p.cursorColor.toLowerCase(),
+    palette: {
+      0: p.black.toLowerCase(),
+      1: p.red.toLowerCase(),
+      2: p.green.toLowerCase(),
+      3: p.yellow.toLowerCase(),
+      4: p.blue.toLowerCase(),
+      5: p.magenta.toLowerCase(),
+      6: p.cyan.toLowerCase(),
+      7: p.white.toLowerCase(),
+      8: p.brightBlack.toLowerCase(),
+      9: p.brightRed.toLowerCase(),
+      10: p.brightGreen.toLowerCase(),
+      11: p.brightYellow.toLowerCase(),
+      12: p.brightBlue.toLowerCase(),
+      13: p.brightMagenta.toLowerCase(),
+      14: p.brightCyan.toLowerCase(),
+      15: p.brightWhite.toLowerCase(),
+    },
+  }
+}
+
+/**
+ * Eagerly load @silvery/theme palettes via top-level await.
+ * Variable indirection prevents tsc from resolving the import statically.
+ * Falls back to empty record if @silvery/theme is not installed.
+ */
+const silveryThemes: Record<string, SvgTheme> = await (async () => {
+  try {
+    const themePkg = "@silvery/theme"
+    const mod = await import(themePkg)
+    const palettes: Record<string, ColorPaletteLike> | undefined = mod.builtinPalettes
+    if (!palettes) return {}
+
+    const result: Record<string, SvgTheme> = {}
+    for (const [name, palette] of Object.entries(palettes)) {
+      result[name] = paletteToSvgTheme(palette)
+    }
+    return result
+  } catch {
+    return {}
+  }
+})()
+
+// =============================================================================
+// Merged theme access
+// =============================================================================
+
+/**
+ * Get all available themes (silvery palettes override built-in for same name).
+ */
+function getAllThemes(): Record<string, SvgTheme> {
+  // Silvery themes take precedence over built-in for overlapping names
+  if (Object.keys(silveryThemes).length > 0) {
+    return { ...BUILTIN_THEMES, ...silveryThemes }
+  }
+  return BUILTIN_THEMES
 }
 
 // =============================================================================
@@ -309,18 +416,24 @@ const ALIASES: Record<string, string> = {
 /**
  * Resolve a theme name to an SvgTheme. Case-insensitive, supports aliases.
  * Returns undefined for unknown themes.
+ *
+ * When @silvery/theme is available, resolves from all 45+ silvery palettes
+ * in addition to the 12 built-in fallback themes.
  */
 export function resolveTheme(name: string): SvgTheme | undefined {
   const normalized = name.toLowerCase()
   const resolved = ALIASES[normalized] ?? normalized
-  return THEMES[resolved]
+  return getAllThemes()[resolved]
 }
 
 /**
  * List all available theme names (canonical names only, not aliases).
+ *
+ * When @silvery/theme is installed, includes all silvery palette names
+ * alongside built-in themes (deduplicated).
  */
 export function listThemes(): string[] {
-  return Object.keys(THEMES)
+  return Object.keys(getAllThemes())
 }
 
 /**

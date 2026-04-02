@@ -3,9 +3,12 @@
  *
  * Converts a terminal cell grid (TerminalReadable) into an SVG string.
  * Pure function with no side effects — suitable for snapshots, docs, and debugging.
+ *
+ * Supports VHS-style visual polish: padding, border radius, window bar
+ * (macOS traffic light dots), margin, and margin fill color.
  */
 
-import type { TerminalReadable, SvgScreenshotOptions, SvgTheme, Cell, RGB, CursorState } from "./types.ts"
+import type { TerminalReadable, SvgScreenshotOptions, SvgTheme, Cell, RGB, CursorState, WindowBar } from "./types.ts"
 
 // ── Defaults ──
 
@@ -209,6 +212,12 @@ interface ResolvedOptions {
   themeFg: string
   themeBg: string
   themeCursor: string
+  padding: number
+  borderRadius: number
+  windowBar: WindowBar
+  windowBarSize: number
+  margin: number
+  marginFill: string | null
 }
 
 function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
@@ -220,6 +229,12 @@ function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
     themeFg: options?.theme?.foreground ?? DEFAULT_THEME.foreground,
     themeBg: options?.theme?.background ?? DEFAULT_THEME.background,
     themeCursor: options?.theme?.cursor ?? DEFAULT_THEME.cursor,
+    padding: options?.padding ?? 0,
+    borderRadius: options?.borderRadius ?? 0,
+    windowBar: options?.windowBar ?? "none",
+    windowBarSize: options?.windowBarSize ?? 40,
+    margin: options?.margin ?? 0,
+    marginFill: options?.marginFill ?? null,
   }
 }
 
@@ -288,35 +303,161 @@ function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null
   }
 }
 
+// ── Window bar rendering ──
+
+function renderWindowBar(barWidth: number, barHeight: number, style: WindowBar, borderRadius: number): string[] {
+  if (style === "none") return []
+
+  const parts: string[] = []
+
+  // Window bar background — use only top border radius
+  parts.push(
+    `<rect width="${barWidth}" height="${barHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#333333"/>`,
+  )
+  // Cover the bottom corners so only top has border radius
+  if (borderRadius > 0) {
+    parts.push(`<rect y="${barHeight - borderRadius}" width="${barWidth}" height="${borderRadius}" fill="#333333"/>`)
+  }
+
+  // Traffic light dots
+  const dotRadius = 6
+  const dotY = barHeight / 2
+  const dotStartX = 20
+
+  if (style === "rings") {
+    // Outlined circles (like inactive/unfocused window)
+    parts.push(
+      `<circle cx="${dotStartX}" cy="${dotY}" r="${dotRadius}" fill="none" stroke="#ff5f57" stroke-width="1.5"/>`,
+    )
+    parts.push(
+      `<circle cx="${dotStartX + 20}" cy="${dotY}" r="${dotRadius}" fill="none" stroke="#febc2e" stroke-width="1.5"/>`,
+    )
+    parts.push(
+      `<circle cx="${dotStartX + 40}" cy="${dotY}" r="${dotRadius}" fill="none" stroke="#28c840" stroke-width="1.5"/>`,
+    )
+  } else {
+    // Filled circles (colorful — like active/focused window)
+    parts.push(`<circle cx="${dotStartX}" cy="${dotY}" r="${dotRadius}" fill="#ff5f57"/>`)
+    parts.push(`<circle cx="${dotStartX + 20}" cy="${dotY}" r="${dotRadius}" fill="#febc2e"/>`)
+    parts.push(`<circle cx="${dotStartX + 40}" cy="${dotY}" r="${dotRadius}" fill="#28c840"/>`)
+  }
+
+  return parts
+}
+
 // ── Main renderer ──
 
 export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreenshotOptions): string {
   const opts = resolveOptions(options)
-  const { cellWidth, cellHeight, themeFg, themeBg } = opts
+  const {
+    cellWidth,
+    cellHeight,
+    themeFg,
+    themeBg,
+    padding,
+    borderRadius,
+    windowBar,
+    windowBarSize,
+    margin,
+    marginFill,
+  } = opts
 
   const lines = terminal.getLines()
   const rows = lines.length
   const cols = rows > 0 ? Math.max(...lines.map((l) => l.length)) : 0
-  const totalWidth = cols * cellWidth
-  const totalHeight = rows * cellHeight
+
+  // Terminal content dimensions
+  const contentWidth = cols * cellWidth
+  const contentHeight = rows * cellHeight
+
+  // Detect whether any visual chrome is active
+  const hasChrome = padding > 0 || borderRadius > 0 || windowBar !== "none" || margin > 0
+
+  // Fast path: no chrome — produce the classic minimal SVG (backward-compatible)
+  if (!hasChrome) {
+    const totalWidth = contentWidth
+    const totalHeight = contentHeight
+    const parts: string[] = []
+
+    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
+    parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
+
+    for (const rect of buildBgRects(lines, cellWidth, cellHeight, themeFg, themeBg)) {
+      parts.push(
+        `<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" fill="${rect.fill}"/>`,
+      )
+    }
+
+    parts.push(...renderTextRows(lines, opts))
+
+    const cursorSvg = renderCursor(terminal.getCursor(), opts)
+    if (cursorSvg) parts.push(cursorSvg)
+
+    parts.push(`</svg>`)
+    return parts.join("\n")
+  }
+
+  // Chrome path: padding, border radius, window bar, margin
+  const barHeight = windowBar !== "none" ? windowBarSize : 0
+  const innerWidth = contentWidth + padding * 2
+  const innerHeight = contentHeight + padding * 2 + barHeight
+  const totalWidth = innerWidth + margin * 2
+  const totalHeight = innerHeight + margin * 2
 
   const parts: string[] = []
 
-  // SVG header + full background
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
-  parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
 
-  // Background rects for cells with non-default bg (merged adjacent)
+  // Outer margin fill
+  if (margin > 0 && marginFill) {
+    parts.push(`<rect width="100%" height="100%" fill="${marginFill}"/>`)
+  }
+
+  // Clip path for border radius
+  if (borderRadius > 0) {
+    parts.push(`<defs>`)
+    parts.push(`<clipPath id="terminal-clip">`)
+    parts.push(
+      `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"/>`,
+    )
+    parts.push(`</clipPath>`)
+    parts.push(`</defs>`)
+    parts.push(`<g clip-path="url(#terminal-clip)">`)
+  }
+
+  // Terminal background rect
+  const bgAttrs =
+    borderRadius > 0
+      ? `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"`
+      : `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}"`
+  parts.push(`<rect ${bgAttrs} fill="${themeBg}"/>`)
+
+  // Window bar
+  if (windowBar !== "none") {
+    parts.push(`<g transform="translate(${margin}, ${margin})">`)
+    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius))
+    parts.push(`</g>`)
+  }
+
+  // Content group — offset by margin + padding + window bar
+  const contentOffsetX = margin + padding
+  const contentOffsetY = margin + padding + barHeight
+  parts.push(`<g transform="translate(${contentOffsetX}, ${contentOffsetY})">`)
+
   for (const rect of buildBgRects(lines, cellWidth, cellHeight, themeFg, themeBg)) {
     parts.push(`<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" fill="${rect.fill}"/>`)
   }
 
-  // Text rows
   parts.push(...renderTextRows(lines, opts))
 
-  // Cursor overlay
   const cursorSvg = renderCursor(terminal.getCursor(), opts)
   if (cursorSvg) parts.push(cursorSvg)
+
+  parts.push(`</g>`)
+
+  if (borderRadius > 0) {
+    parts.push(`</g>`)
+  }
 
   parts.push(`</svg>`)
   return parts.join("\n")

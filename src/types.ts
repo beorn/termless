@@ -316,12 +316,30 @@ export interface Terminal extends TerminalReadable {
 // SVG Screenshot Options
 // ═══════════════════════════════════════════════════════
 
+export type WindowBar = "none" | "rings" | "colorful"
+
 export interface SvgScreenshotOptions {
   fontFamily?: string
   fontSize?: number
   cellWidth?: number
   cellHeight?: number
   theme?: SvgTheme
+  /** Padding between terminal content and SVG edge in pixels (default: 0). */
+  padding?: number
+  /** Border radius for the outer SVG rect in pixels (default: 0). */
+  borderRadius?: number
+  /** Window bar style — macOS traffic light dots (default: "none"). */
+  windowBar?: WindowBar
+  /** Height of the window bar area in pixels (default: 40). */
+  windowBarSize?: number
+  /** Outer margin around the SVG in pixels (default: 0). */
+  margin?: number
+  /** Fill color for the outer margin area (default: transparent). */
+  marginFill?: string
+  /** Playback speed multiplier for Sleep durations (default: 1). */
+  playbackSpeed?: number
+  /** Output framerate in frames per second (default: 50). */
+  framerate?: number
 }
 
 export interface PngScreenshotOptions extends SvgScreenshotOptions {
