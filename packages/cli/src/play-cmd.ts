@@ -59,7 +59,7 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
     const { createGif } = await import("../../../src/animation/gif.ts")
     const gif = await createGif(frames)
     writeFileSync(resolve(path), gif)
-  } else if (path.endsWith(".apng") || (path.endsWith(".png") && frames.length > 1)) {
+  } else if (path.endsWith(".apng")) {
     const { createApng } = await import("../../../src/animation/apng.ts")
     const apng = await createApng(frames)
     writeFileSync(resolve(path), apng)
@@ -290,9 +290,6 @@ async function playAction(
     // Stream PTY output to stdout
     console.log(`Playing ${fileName} (shell: ${shell})...`)
 
-    // Capture initial frame
-    captureFrame()
-
     for (const cmd of tape.commands) {
       switch (cmd.type) {
         case "type":
@@ -401,8 +398,8 @@ async function playAction(
 
   const result = await executeTape(tape, {
     backend: backendName,
-    cols: opts.cols,
-    rows: opts.rows,
+    cols: opts.cols || undefined,
+    rows: opts.rows || undefined,
     onScreenshot: (png, path) => {
       const outPath = path ?? firstOutput ?? "screenshot.png"
       const dir = dirname(resolve(outPath))
