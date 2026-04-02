@@ -10,16 +10,16 @@ import { parseAsciicast, replayAsciicast } from "../../src/asciicast/reader.ts"
 import { createTerminal } from "../../src/terminal.ts"
 import type { AsciicastRecording } from "../../src/asciicast/types.ts"
 
-// Use vt100 backend — pure TypeScript, no native deps
-import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
+// Use vterm backend — pure TypeScript, full feature coverage, no native deps
+import { createVtermBackend } from "../../packages/vterm/src/backend.ts"
 
-function loadVt100Backend() {
-  return createVt100Backend()
+function loadBackend() {
+  return createVtermBackend()
 }
 
 describe("replayAsciicast", () => {
   test("replays output through a terminal", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
@@ -36,7 +36,7 @@ describe("replayAsciicast", () => {
   })
 
   test("skips input events during replay", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
@@ -58,7 +58,7 @@ describe("replayAsciicast", () => {
   })
 
   test("handles ANSI escape sequences", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
@@ -72,7 +72,7 @@ describe("replayAsciicast", () => {
   })
 
   test("calls onEvent callback for each event", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
@@ -96,7 +96,7 @@ describe("replayAsciicast", () => {
   test("speed multiplier affects timing", async () => {
     vi.useFakeTimers()
     try {
-      const backend = await loadVt100Backend()
+      const backend = await loadBackend()
       const term = createTerminal({ backend, cols: 80, rows: 24 })
 
       const recording: AsciicastRecording = {
@@ -132,7 +132,7 @@ describe("replayAsciicast", () => {
   })
 
   test("instant replay with speed=0", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
@@ -153,7 +153,7 @@ describe("replayAsciicast", () => {
   })
 
   test("replays parsed asciicast end-to-end", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     const term = createTerminal({ backend, cols: 80, rows: 24 })
 
     const content = [
@@ -172,7 +172,7 @@ describe("replayAsciicast", () => {
   })
 
   test("replays directly into a TerminalBackend", async () => {
-    const backend = await loadVt100Backend()
+    const backend = await loadBackend()
     backend.init({ cols: 80, rows: 24 })
 
     const recording: AsciicastRecording = {
