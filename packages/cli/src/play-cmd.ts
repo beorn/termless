@@ -76,7 +76,74 @@ async function playAction(
 
   // Single backend mode
   const backendName = backends?.[0]
+  const shell = tape.settings.Shell?.replace(/^"|"$/g, "") ?? undefined
 
+  // If tape has a Shell setting, spawn a real PTY and type into it
+  if (shell) {
+    const { createTerminal } = await import("../../../src/terminal.ts")
+    const { backend } = await import("../../../src/backends.ts")
+    const cols = opts.cols || Number(tape.settings.Width) || 80
+    const rows = opts.rows || Number(tape.settings.Height) || 24
+
+    const b = await backend(backendName ?? "vterm")
+    const term = createTerminal({ backend: b, cols, rows })
+    await term.spawn([shell])
+
+    // Stream PTY output to stdout
+    console.error(`Playing ${file} (shell: ${shell})...`)
+
+    for (const cmd of tape.commands) {
+      switch (cmd.type) {
+        case "type":
+          term.type(cmd.text)
+          break
+        case "key": {
+          const keyMap: Record<string, string> = {
+            enter: "\r", backspace: "\x7f", tab: "\t", space: " ", escape: "\x1b",
+            delete: "\x1b[3~", up: "\x1b[A", down: "\x1b[B", right: "\x1b[C", left: "\x1b[D",
+          }
+          const count = cmd.count ?? 1
+          const seq = keyMap[cmd.key.toLowerCase()] ?? (cmd.key.length === 1 ? cmd.key : "")
+          for (let i = 0; i < count; i++) term.type(seq)
+          break
+        }
+        case "ctrl":
+          term.type(String.fromCharCode(cmd.key.toLowerCase().charCodeAt(0) - 0x60))
+          break
+        case "alt":
+          term.type(`\x1b${cmd.key}`)
+          break
+        case "sleep":
+          await new Promise((r) => setTimeout(r, cmd.ms))
+          break
+        case "screenshot":
+          if (opts.output) {
+            const { screenshotPng } = await import("../../../src/png.ts")
+            const png = await screenshotPng(term)
+            const outPath = cmd.path ?? opts.output ?? "screenshot.png"
+            mkdirSync(dirname(resolve(outPath)), { recursive: true })
+            writeFileSync(resolve(outPath), png)
+            console.error(`Screenshot saved: ${outPath}`)
+          }
+          break
+        case "set":
+          // Handle resize
+          if (cmd.key === "Width") term.resize(Number(cmd.value), term.rows)
+          if (cmd.key === "Height") term.resize(term.cols, Number(cmd.value))
+          break
+      }
+    }
+
+    // Wait a moment for final output
+    await new Promise((r) => setTimeout(r, 200))
+
+    // Print final terminal state
+    console.log(term.getText())
+    await term.close()
+    return
+  }
+
+  // No shell — headless execution (for tapes without Set Shell)
   console.error(`Playing ${file}...`)
 
   const result = await executeTape(tape, {
@@ -92,10 +159,8 @@ async function playAction(
     },
   })
 
-  // If no output file and no compare, print terminal text
-  if (!opts.output && !opts.compare) {
-    console.log(result.terminal.getText())
-  }
+  // Print terminal text to stdout
+  console.log(result.terminal.getText())
 
   console.error(`Done in ${result.duration}ms (${result.screenshotCount} screenshot(s))`)
 
