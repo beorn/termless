@@ -10,9 +10,9 @@ import type { TerminalReadable, SvgScreenshotOptions, SvgTheme, Cell, RGB, Curso
 // ── Defaults ──
 
 const DEFAULT_FONT_FAMILY = "'Menlo', 'Monaco', 'Courier New', monospace"
-const DEFAULT_FONT_SIZE = 14
-const DEFAULT_CELL_WIDTH = 8.4
-const DEFAULT_CELL_HEIGHT = 18
+const DEFAULT_FONT_SIZE = 22
+const DEFAULT_CELL_WIDTH = 13.2
+const DEFAULT_CELL_HEIGHT = 28
 
 const DEFAULT_THEME: Required<Pick<SvgTheme, "foreground" | "background" | "cursor">> = {
   foreground: "#d4d4d4",

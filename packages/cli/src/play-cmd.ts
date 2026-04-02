@@ -14,7 +14,7 @@
  * ```
  */
 
-import type { Command } from "commander"
+import type { Command } from "@silvery/commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
@@ -471,8 +471,8 @@ async function playAction(
 // =============================================================================
 
 export function registerPlayCommand(program: Command): void {
-  program
-    .command("play <file>")
+  const cmd = program
+    .command("play [file]")
     .description("Tape player — play back recordings (use - for stdin)")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
     .option("-b, --backend <name>", "Backend(s), comma-separated (default: vterm)")
@@ -480,5 +480,21 @@ export function registerPlayCommand(program: Command): void {
     .option("--cols <n>", "Terminal columns override", parseNum, 0)
     .option("--rows <n>", "Terminal rows override", parseNum, 0)
     .option("--show-keys", "Overlay keystroke badges on frames")
-    .action(playAction)
+
+  cmd.addHelpSection("Examples:", [
+    ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],
+    ["$ termless play demo.cast", "Play an asciicast recording"],
+    ["$ termless play -o demo.gif demo.tape", "Convert tape to animated GIF"],
+    ["$ termless play -o demo.svg demo.tape", "Convert to animated SVG"],
+    ["$ termless play -b vterm,ghostty demo.tape", "Cross-terminal comparison"],
+    ["$ cat demo.tape | termless play -", "Play from stdin"],
+  ])
+
+  cmd.action(async (file: string | undefined, opts: any) => {
+    if (!file) {
+      cmd.outputHelp()
+      return
+    }
+    await playAction(file, opts)
+  })
 }

@@ -21,7 +21,7 @@
  * ```
  */
 
-import type { Command } from "commander"
+import type { Command } from "@silvery/commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
@@ -325,7 +325,9 @@ async function interactiveRecord(
   const duration = (Date.now() - startTime) / 1000
 
   console.error("")
-  console.error(`  Recording complete: ${inputEvents.length} keystrokes, ${outputEvents.length} output events, ${duration.toFixed(1)}s`)
+  console.error(
+    `  Recording complete: ${inputEvents.length} keystrokes, ${outputEvents.length} output events, ${duration.toFixed(1)}s`,
+  )
   if (animationFrames.length > 0) {
     console.error(`  Captured ${animationFrames.length} animation frames`)
   }
@@ -362,8 +364,8 @@ async function interactiveRecord(
         // Sort by timestamp
         const header = lines[0]!
         const events = lines.slice(1).sort((a, b) => {
-          const ta = JSON.parse(a)[0] as number
-          const tb = JSON.parse(b)[0] as number
+          const ta = (JSON.parse(a) as number[])[0]!
+          const tb = (JSON.parse(b) as number[])[0]!
           return ta - tb
         })
         writeFileSync(path, [header, ...events].join("\n") + "\n")
@@ -476,7 +478,7 @@ async function recordAction(
 
     // Print terminal text if requested
     if (opts.text) {
-      console.log(result.terminal.getText())
+      console.error(result.terminal.getText())
     }
 
     console.error(`Done in ${result.duration}ms (${result.screenshotCount} screenshot(s))`)
@@ -510,13 +512,13 @@ async function recordAction(
 
   if (!cmd && !opts.keys && !opts.screenshot && !opts.text) {
     // No command, no output, no flags — show help
-    console.log("Usage:")
-    console.log("  termless record -o demo.tape ls -la         Record a command to .tape")
-    console.log("  termless record -o demo.tape                Record shell session to .tape")
-    console.log("  termless rec -t 'Type \"hello\"\\nEnter' bash  Scripted recording")
-    console.log("  termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view")
-    console.log("")
-    console.log("  termless record --help                      Full options")
+    console.error("Usage:")
+    console.error("  termless record -o demo.tape ls -la         Record a command to .tape")
+    console.error("  termless record -o demo.tape                Record shell session to .tape")
+    console.error("  termless rec -t 'Type \"hello\"\\nEnter' bash  Scripted recording")
+    console.error("  termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view")
+    console.error("")
+    console.error("  termless record --help                      Full options")
     process.exitCode = 1
     return
   }
@@ -558,7 +560,7 @@ async function recordAction(
 
     // Print text if requested
     if (opts.text) {
-      console.log(terminal.getText())
+      console.error(terminal.getText())
     }
   } finally {
     await manager.stopAll()

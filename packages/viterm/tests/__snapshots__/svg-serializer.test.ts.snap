@@ -1,34 +1,34 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`toMatchSvgSnapshot matcher > accepts name option > basic 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="33.6" height="18">
+"<svg xmlns="http://www.w3.org/2000/svg" width="52.8" height="28">
 <rect width="100%" height="100%" fill="#1e1e1e"/>
-<text x="0" y="14" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="14" fill="#d4d4d4">
+<text x="0" y="22" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="22" fill="#d4d4d4">
 <tspan x="0">Test</tspan>
 </text>
-<rect x="0" y="0" width="8.4" height="18" fill="#aeafad" opacity="0.5"/>
+<rect x="0" y="0" width="13.2" height="28" fill="#aeafad" opacity="0.5"/>
 </svg>"
 `;
 
 exports[`toMatchSvgSnapshot matcher > accepts theme option 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="33.6" height="18">
+"<svg xmlns="http://www.w3.org/2000/svg" width="52.8" height="28">
 <rect width="100%" height="100%" fill="#000000"/>
-<text x="0" y="14" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="14" fill="#ffffff">
+<text x="0" y="22" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="22" fill="#ffffff">
 <tspan x="0">Test</tspan>
 </text>
-<rect x="0" y="0" width="8.4" height="18" fill="#aeafad" opacity="0.5"/>
+<rect x="0" y="0" width="13.2" height="28" fill="#aeafad" opacity="0.5"/>
 </svg>"
 `;
 
 exports[`toMatchSvgSnapshot matcher > produces SVG output from TerminalReadable 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="42" height="36">
+"<svg xmlns="http://www.w3.org/2000/svg" width="66" height="56">
 <rect width="100%" height="100%" fill="#1e1e1e"/>
-<text x="0" y="14" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="14" fill="#d4d4d4">
+<text x="0" y="22" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="22" fill="#d4d4d4">
 <tspan x="0">Hello</tspan>
 </text>
-<text x="0" y="32" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="14" fill="#d4d4d4">
+<text x="0" y="50" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="22" fill="#d4d4d4">
 <tspan x="0">World</tspan>
 </text>
-<rect x="0" y="0" width="8.4" height="18" fill="#aeafad" opacity="0.5"/>
+<rect x="0" y="0" width="13.2" height="28" fill="#aeafad" opacity="0.5"/>
 </svg>"
 `;
