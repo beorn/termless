@@ -13,7 +13,7 @@ Requires **Zig 0.15.2+** (available via nix).
 bash build/build.sh
 
 # Or via the termless CLI:
-bunx termless install ghostty-native
+bunx termless backends install ghostty-native
 ```
 
 The first build fetches the ghostty source (~large download, cached after).
