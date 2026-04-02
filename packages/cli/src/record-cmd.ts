@@ -190,23 +190,33 @@ async function interactiveRecord(
   const showKeys = opts.showKeys ?? false
   const wantImages = hasImageOutput(outputPaths)
 
-  console.error("")
-  console.error(`  Recording: ${cmd.join(" ")}`)
-  console.error(`  Terminal:  ${opts.cols}x${opts.rows}`)
-  console.error(`  Output:    ${outputPaths.join(", ") || "stdout (.tape)"}`)
-  if (wantImages) console.error(`  Frames:    capturing every 100ms for image output`)
-  if (raw) console.error(`  Mode:      raw (all escape sequences preserved)`)
-  if (showKeys) console.error(`  Overlay:   keystroke badges enabled`)
-  console.error("")
-  console.error(`  Press Ctrl+D or type 'exit' to stop recording.`)
-  console.error(`  Everything you type will be captured as .tape commands.`)
-  console.error("")
+  const cmdLabel = cmd.join(" ")
+
+  // Styled separator + info (stderr, won't appear in .tape stdout)
+  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
+  process.stderr.write(`\x1b[31m●\x1b[0m Recording: ${cmdLabel}\n`)
+  process.stderr.write(`\x1b[2m  ${opts.cols}x${opts.rows}`)
+  process.stderr.write(` · ${outputPaths.join(", ") || "stdout (.tape)"}`)
+  if (wantImages) process.stderr.write(` · frames`)
+  process.stderr.write(`\n`)
+  process.stderr.write(`  Ctrl+D or exit app to stop\x1b[22m\n`)
+  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
 
   const { spawnPty } = await import("../../../src/pty.ts")
 
   const inputEvents: Array<{ time: number; bytes: Uint8Array }> = []
   const outputEvents: Array<{ time: number; data: string }> = []
   const startTime = Date.now()
+
+  // Window title with live timer (invisible in recording — only on real terminal)
+  const setTitle = (t: string) => process.stderr.write(`\x1b]0;${t}\x07`)
+  setTitle(`● REC — ${cmdLabel}`)
+  const titleTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000)
+    const m = Math.floor(elapsed / 60)
+    const s = elapsed % 60
+    setTitle(`● REC ${m}:${String(s).padStart(2, "0")} — ${cmdLabel}`)
+  }, 1000)
 
   // If image output is requested, create a headless terminal that mirrors PTY output
   let headlessTerminal: import("../../../src/types.ts").Terminal | null = null
@@ -305,7 +315,8 @@ async function interactiveRecord(
     }, 100)
   })
 
-  // Cleanup
+  // Cleanup timers
+  clearInterval(titleTimer)
   if (frameTimer) clearInterval(frameTimer)
   process.stdin.removeListener("data", stdinHandler)
   if (process.stdin.isTTY) {
@@ -324,14 +335,15 @@ async function interactiveRecord(
 
   const duration = (Date.now() - startTime) / 1000
 
-  console.error("")
-  console.error(
-    `  Recording complete: ${inputEvents.length} keystrokes, ${outputEvents.length} output events, ${duration.toFixed(1)}s`,
-  )
-  if (animationFrames.length > 0) {
-    console.error(`  Captured ${animationFrames.length} animation frames`)
-  }
-  console.error("")
+  // Restore window title + post-recording separator
+  setTitle("")
+  const m = Math.floor(duration / 60)
+  const s = Math.floor(duration % 60)
+  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
+  process.stderr.write(`\x1b[32m✓\x1b[0m Done · ${m}:${String(s).padStart(2, "0")}`)
+  process.stderr.write(` · ${inputEvents.length} keystrokes · ${outputEvents.length} output events`)
+  if (animationFrames.length > 0) process.stderr.write(` · ${animationFrames.length} frames`)
+  process.stderr.write(`\n`)
 
   // Write to output files (or stdout)
   if (outputPaths.length === 0) {
