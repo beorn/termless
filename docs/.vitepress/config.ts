@@ -16,8 +16,12 @@ const seoOptions = {
   hostname: "https://termless.dev",
   siteName: "Termless",
   description: "Headless terminal testing for every backend",
-  ogImage: "https://termless.dev/og-image.svg",
-  author: "Bjørn Stabell",
+  ogImage: "https://termless.dev/og-image.png",
+  author: {
+    name: "Bjørn Stabell",
+    url: "https://beorn.codes",
+    sameAs: ["https://github.com/beorn", "https://x.com/bjornstabell"],
+  },
   codeRepository: "https://github.com/beorn/termless",
 }
 
