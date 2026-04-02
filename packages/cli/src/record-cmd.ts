@@ -134,16 +134,19 @@ async function interactiveRecord(
 
   const { spawnPty } = await import("../../../src/pty.ts")
 
-  const events: Array<{ time: number; bytes: Uint8Array }> = []
+  const inputEvents: Array<{ time: number; bytes: Uint8Array }> = []
+  const outputEvents: Array<{ time: number; data: string }> = []
   const startTime = Date.now()
 
-  // Spawn with real PTY — output goes to our stdout
+  // Spawn with real PTY — capture output AND forward to terminal
   const pty = spawnPty({
     command: cmd,
     cols: opts.cols,
     rows: opts.rows,
     onData: (data: Uint8Array) => {
-      // Forward PTY output to real terminal
+      // Record output event for asciicast
+      outputEvents.push({ time: Date.now() - startTime, data: new TextDecoder().decode(data) })
+      // Forward to real terminal
       process.stdout.write(data)
     },
   })
@@ -156,7 +159,7 @@ async function interactiveRecord(
 
   const stdinHandler = (chunk: Buffer) => {
     const bytes = new Uint8Array(chunk)
-    events.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
+    inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
     try {
       pty.write(new TextDecoder().decode(bytes))
     } catch {
@@ -182,31 +185,51 @@ async function interactiveRecord(
   }
   process.stdin.pause()
 
-  // Generate .tape output
-  const tape = eventsToTape(events, cmd.join(" "))
+  const duration = (Date.now() - startTime) / 1000
 
-  // Write to output files
+  // Write to output files (or stdout)
   if (outputPaths.length === 0) {
-    // No -o: output to stdout
-    process.stdout.write(tape)
+    // No -o: output .tape to stdout
+    process.stdout.write(eventsToTape(inputEvents, cmd.join(" ")))
   } else {
     for (const path of outputPaths) {
-      if (path.endsWith(".tape")) {
-        writeFileSync(path, tape)
+      if (path.endsWith(".cast")) {
+        // asciicast v2 format — JSON-lines with output events
+        const lines: string[] = []
+        lines.push(JSON.stringify({
+          version: 2,
+          width: opts.cols,
+          height: opts.rows,
+          timestamp: Math.floor(Date.now() / 1000),
+          duration,
+          env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
+        }))
+        for (const event of outputEvents) {
+          lines.push(JSON.stringify([event.time / 1000, "o", event.data]))
+        }
+        for (const event of inputEvents) {
+          lines.push(JSON.stringify([event.time / 1000, "i", new TextDecoder().decode(event.bytes)]))
+        }
+        // Sort by timestamp
+        const header = lines[0]!
+        const events = lines.slice(1).sort((a, b) => {
+          const ta = JSON.parse(a)[0] as number
+          const tb = JSON.parse(b)[0] as number
+          return ta - tb
+        })
+        writeFileSync(path, [header, ...events].join("\n") + "\n")
         console.log(`\nSaved: ${path}`)
-      } else if (path.endsWith(".cast")) {
-        // asciicast format — would need output recording too
-        // For now, just save as .tape
-        writeFileSync(path.replace(".cast", ".tape"), tape)
-        console.log(`\nSaved: ${path.replace(".cast", ".tape")} (asciicast not yet supported for interactive recording)`)
+      } else if (path.endsWith(".tape")) {
+        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" ")))
+        console.log(`\nSaved: ${path}`)
       } else {
-        writeFileSync(path, tape)
+        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" ")))
         console.log(`\nSaved: ${path}`)
       }
     }
   }
 
-  console.log(`\nRecorded ${events.length} keystrokes in ${((Date.now() - startTime) / 1000).toFixed(1)}s`)
+  console.log(`Recorded ${inputEvents.length} keystrokes, ${outputEvents.length} output events in ${duration.toFixed(1)}s`)
 }
 
 // =============================================================================
