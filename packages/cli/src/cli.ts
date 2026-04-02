@@ -30,6 +30,7 @@ import { registerBackendsCommand } from "./backends-cmd.tsx"
 import { registerInstallCommand, registerUpgradeCommand } from "./install-cmd.tsx"
 import { registerDoctorCommand } from "./doctor-cmd.tsx"
 import { registerUpdateCommand } from "./update-cmd.ts"
+import { registerTapeCommand } from "./tape-cmd.ts"
 
 const program = new Command()
   .name("termless")
@@ -139,5 +140,6 @@ registerInstallCommand(program)
 registerUpgradeCommand(program)
 registerDoctorCommand(program)
 registerUpdateCommand(program)
+registerTapeCommand(program)
 
 program.parse()

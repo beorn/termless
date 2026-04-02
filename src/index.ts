@@ -65,3 +65,26 @@ export {
   ensureCachedVersion,
 } from "./backends.ts"
 export type { BackendEntry, Manifest, ResolveOptions } from "./backends.ts"
+
+// Tape format (VHS .tape parser, executor, comparison)
+export { parseTape, parseDuration } from "./tape/parser.ts"
+export type { TapeCommand, TapeFile } from "./tape/parser.ts"
+export { executeTape } from "./tape/executor.ts"
+export type { TapeExecutorOptions, TapeFrame, TapeResult } from "./tape/executor.ts"
+export { compareTape } from "./tape/compare.ts"
+export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot } from "./tape/compare.ts"
+
+// Asciicast v2 format
+export { parseAsciicast, replayAsciicast } from "./asciicast/reader.ts"
+export type { ReplayOptions } from "./asciicast/reader.ts"
+export { toAsciicast, createAsciicastWriter } from "./asciicast/writer.ts"
+export type { ToAsciicastOptions, AsciicastWriter } from "./asciicast/writer.ts"
+export { recordingToAsciicast, asciicastToRecording } from "./asciicast/convert.ts"
+export type { ConvertOptions } from "./asciicast/convert.ts"
+export type {
+  AsciicastHeader,
+  AsciicastTheme,
+  AsciicastEvent,
+  AsciicastEventType,
+  AsciicastRecording,
+} from "./asciicast/types.ts"
