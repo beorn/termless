@@ -6,7 +6,7 @@
  */
 
 import type { Terminal, TerminalBackend } from "../types.ts"
-import type { AsciicastEvent, AsciicastEventType, AsciicastRecording } from "./types.ts"
+import type { AsciicastEvent, AsciicastEventType, AsciicastHeader, AsciicastRecording } from "./types.ts"
 
 /** Options for replaying an asciicast recording. */
 export interface ReplayOptions {
@@ -35,7 +35,7 @@ export function parseAsciicast(content: string): AsciicastRecording {
 
   // Parse header (first line)
   const headerLine = lines[0]!.replace(/\r$/, "")
-  const header = JSON.parse(headerLine)
+  const header = JSON.parse(headerLine) as AsciicastHeader
 
   if (header.version !== 2) {
     throw new Error(`Unsupported asciicast version: ${header.version} (expected 2)`)

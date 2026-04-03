@@ -373,26 +373,35 @@ function paletteToSvgTheme(p: ColorPaletteLike): SvgTheme {
 }
 
 /**
- * Eagerly load @silvery/theme palettes via top-level await.
- * Variable indirection prevents tsc from resolving the import statically.
+ * Lazily load @silvery/theme palettes on first access.
+ * Uses synchronous require() to avoid top-level await, which would make
+ * @termless/core an async module and break require() callers (e.g. silvery's createTerm).
  * Falls back to empty record if @silvery/theme is not installed.
  */
-const silveryThemes: Record<string, SvgTheme> = await (async () => {
+let _silveryThemes: Record<string, SvgTheme> | undefined
+function getSilveryThemes(): Record<string, SvgTheme> {
+  if (_silveryThemes !== undefined) return _silveryThemes
   try {
     const themePkg = "@silvery/theme"
-    const mod = await import(themePkg)
-    const palettes: Record<string, ColorPaletteLike> | undefined = mod.builtinPalettes
-    if (!palettes) return {}
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require(themePkg) as { builtinPalettes?: Record<string, ColorPaletteLike> }
+    const palettes = mod.builtinPalettes
+    if (!palettes) {
+      _silveryThemes = {}
+      return _silveryThemes
+    }
 
     const result: Record<string, SvgTheme> = {}
     for (const [name, palette] of Object.entries(palettes)) {
       result[name] = paletteToSvgTheme(palette)
     }
-    return result
+    _silveryThemes = result
+    return _silveryThemes
   } catch {
-    return {}
+    _silveryThemes = {}
+    return _silveryThemes
   }
-})()
+}
 
 // =============================================================================
 // Merged theme access
@@ -403,6 +412,7 @@ const silveryThemes: Record<string, SvgTheme> = await (async () => {
  */
 function getAllThemes(): Record<string, SvgTheme> {
   // Silvery themes take precedence over built-in for overlapping names
+  const silveryThemes = getSilveryThemes()
   if (Object.keys(silveryThemes).length > 0) {
     return { ...BUILTIN_THEMES, ...silveryThemes }
   }

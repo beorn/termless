@@ -34,7 +34,7 @@ describe("toAsciicast", () => {
     expect(lines).toHaveLength(4) // header + 3 events
 
     // Header
-    const header = JSON.parse(lines[0]!)
+    const header = JSON.parse(lines[0]!) as Record<string, unknown>
     expect(header.version).toBe(2)
     expect(header.width).toBe(80)
     expect(header.height).toBe(24)
@@ -56,7 +56,7 @@ describe("toAsciicast", () => {
     }
 
     const result = toAsciicast(recording, { title: "My Session" })
-    const header = JSON.parse(result.trim().split("\n")[0]!)
+    const header = JSON.parse(result.trim().split("\n")[0]!) as Record<string, unknown>
     expect(header.title).toBe("My Session")
   })
 
@@ -93,7 +93,7 @@ describe("toAsciicast", () => {
 
     const result = toAsciicast(recording)
     const lines = result.trim().split("\n")
-    const event = JSON.parse(lines[1]!)
+    const event = JSON.parse(lines[1]!) as [number, string, string]
 
     // JSON.parse should restore the original control characters
     expect(event[2]).toBe("\x1b[31mred\x1b[0m\t\nnewline")
@@ -149,20 +149,20 @@ describe("createAsciicastWriter", () => {
 
     expect(lines).toHaveLength(4) // header + 3 events
 
-    const header = JSON.parse(lines[0]!)
+    const header = JSON.parse(lines[0]!) as Record<string, unknown>
     expect(header.version).toBe(2)
     expect(header.width).toBe(80)
 
     // Events
-    const e1 = JSON.parse(lines[1]!)
+    const e1 = JSON.parse(lines[1]!) as [number, string, string]
     expect(e1[1]).toBe("o")
     expect(e1[2]).toBe("$ ")
 
-    const e2 = JSON.parse(lines[2]!)
+    const e2 = JSON.parse(lines[2]!) as [number, string, string]
     expect(e2[1]).toBe("i")
     expect(e2[2]).toBe("ls\n")
 
-    const e3 = JSON.parse(lines[3]!)
+    const e3 = JSON.parse(lines[3]!) as [number, string, string]
     expect(e3[1]).toBe("m")
     expect(e3[2]).toBe("prompt")
   })
@@ -180,8 +180,8 @@ describe("createAsciicastWriter", () => {
     const result = writer.close()
     const lines = result.trim().split("\n")
 
-    const t1 = JSON.parse(lines[1]!)[0] as number
-    const t2 = JSON.parse(lines[2]!)[0] as number
+    const t1 = (JSON.parse(lines[1]!) as [number, string, string])[0]
+    const t2 = (JSON.parse(lines[2]!) as [number, string, string])[0]
 
     // Timestamps should be non-negative and non-decreasing
     expect(t1).toBeGreaterThanOrEqual(0)
