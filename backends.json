@@ -48,7 +48,7 @@
       "type": "js",
       "default": true,
       "label": "vt100",
-      "slug": "vt100",
+      "slug": "vt100-js",
       "description": "Pure TypeScript VT100 emulator. Zero dependencies, fastest backend.",
       "terminal": {
         "name": "vt100.js",
@@ -65,7 +65,7 @@
       "type": "js",
       "default": false,
       "label": "vterm",
-      "slug": "vterm",
+      "slug": "vterm-js",
       "description": "Full-featured TypeScript terminal emulator with complete VT standards coverage.",
       "terminal": {
         "name": "vterm.js",
