@@ -575,7 +575,8 @@ async function playAction(
 
 export function registerPlayCommand(program: Command): void {
   const cmd = program
-    .command("play [file]")
+    .command("play")
+    .argument("[file]", "Recording file to play (use - for stdin)")
     .description("Tape player — play back recordings (use - for stdin)")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
     .option("-b, --backend <name>", "Backend(s), comma-separated (default: vterm)")
@@ -602,11 +603,12 @@ export function registerPlayCommand(program: Command): void {
     ["$ cat demo.tape | termless play -", "Play from stdin"],
   ])
 
-  cmd.action(async (file: string | undefined, opts: any) => {
-    if (!file) {
+  cmd.action(async (opts: { file?: string } & Record<string, any>) => {
+    if (!opts.file) {
       cmd.outputHelp()
       return
     }
-    await playAction(file, opts)
+    const { file, ...rest } = opts
+    await playAction(file, rest)
   })
 }

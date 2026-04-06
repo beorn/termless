@@ -607,7 +607,8 @@ async function recordAction(
 
 export function registerRecordCommand(program: Command): void {
   program
-    .command("record [command...]")
+    .command("record")
+    .argument("[command...]", "Command to record")
     .alias("rec")
     .description("Tape recorder — record terminal sessions")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
@@ -628,5 +629,8 @@ export function registerRecordCommand(program: Command): void {
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
-    .action(recordAction)
+    .action(async (opts: { command: string[] } & Record<string, any>) => {
+      const { command, ...rest } = opts
+      await recordAction(command, rest as any)
+    })
 }
