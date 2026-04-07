@@ -603,7 +603,7 @@ export function registerPlayCommand(program: Command): void {
     ["$ cat demo.tape | termless play -", "Play from stdin"],
   ])
 
-  cmd.action(async (opts: { file?: string } & Record<string, any>) => {
+  cmd.actionMerged(async (opts: { file?: string } & Record<string, any>) => {
     if (!opts.file) {
       cmd.outputHelp()
       return

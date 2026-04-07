@@ -629,7 +629,7 @@ export function registerRecordCommand(program: Command): void {
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
-    .action(async (opts: { command: string[] } & Record<string, any>) => {
+    .actionMerged(async (opts: { command: string[] } & Record<string, any>) => {
       const { command, ...rest } = opts
       await recordAction(command, rest as any)
     })

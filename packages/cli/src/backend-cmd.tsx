@@ -494,7 +494,7 @@ export function registerBackendCommand(program: Command): void {
     .argument("[names...]", "Backend names to install")
     .description("Install or upgrade backends")
     .option("--all", "Install all backends")
-    .action(async (opts: { names: string[]; all?: boolean }) => {
+    .actionMerged(async (opts: { names: string[]; all?: boolean }) => {
       await installAction(opts.names, opts)
     })
 
