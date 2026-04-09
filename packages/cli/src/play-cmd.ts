@@ -576,8 +576,8 @@ async function playAction(
 export function registerPlayCommand(program: Command): void {
   const cmd = program
     .command("play")
-    .argument("[file]", "Recording file to play (use - for stdin)")
     .description("Tape player — play back recordings (use - for stdin)")
+    .argument("[file]", "Recording file to play (use - for stdin)")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
     .option("-b, --backend <name>", "Backend(s), comma-separated (default: vterm)")
     .option("--compare <mode>", "Comparison mode: separate, side-by-side, grid, diff")

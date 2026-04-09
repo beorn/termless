@@ -608,9 +608,9 @@ async function recordAction(
 export function registerRecordCommand(program: Command): void {
   program
     .command("record")
-    .argument("[command...]", "Command to record")
     .alias("rec")
     .description("Tape recorder — record terminal sessions")
+    .argument("[command...]", "Command to record")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
     .option("-t, --tape <commands>", "Inline tape commands (scripted mode)")
     .option("--fmt <format>", "Output format for stdout: tape, cast (default: tape)")
