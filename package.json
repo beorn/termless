@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
@@ -53,7 +53,6 @@
     "docs:preview": "vitepress preview docs",
     "cli": "bun packages/cli/src/cli.ts",
     "publish:all": "bun run publish:core && bun run publish:packages",
-    "prepublishOnly": "bun run build",
     "publish:core": "npm publish",
     "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/viterm packages/peekaboo packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust; do (cd $pkg && npm publish); done"
   },
