@@ -254,7 +254,7 @@ const term = createTerminal({ backend: b, cols: 80, rows: 24 })
 
 ## Runtime Compatibility
 
-Termless works on both **Bun** (>=1.0) and **Node.js** (>=18).
+Termless works on both **Bun** (>=1.0) and **Node.js** (>=23.6).
 
 | Feature                                 | Bun                   | Node.js             |
 | --------------------------------------- | --------------------- | ------------------- |
