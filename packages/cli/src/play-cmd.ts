@@ -17,7 +17,7 @@
 import type { Command } from "@silvery/commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
@@ -103,7 +103,7 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
     writeFileSync(resolve(path), rendered.asPng())
   }
 
-  const size = Bun.file(resolve(path)).size
+  const size = statSync(resolve(path)).size
   const sizeStr = size > 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)}MB` : `${(size / 1024).toFixed(0)}KB`
   console.log(`  Saved: ${path} (${sizeStr})`)
 }

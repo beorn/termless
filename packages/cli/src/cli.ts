@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * termless CLI — headless terminal capture, recording, and playback.
  *
