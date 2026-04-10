@@ -1,6 +1,6 @@
 {
   "name": "@termless/wezterm",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "headless",

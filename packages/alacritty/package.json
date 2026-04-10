@@ -1,6 +1,6 @@
 {
   "name": "@termless/alacritty",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "alacritty",

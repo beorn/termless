@@ -1,6 +1,6 @@
 {
   "name": "@termless/cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "CLI and MCP server for termless — terminal capture, screenshots, and AI agent integration",
   "keywords": [
     "ai-agent",

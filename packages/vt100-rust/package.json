@@ -1,6 +1,6 @@
 {
   "name": "@termless/vt100-rust",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Rust vt100 backend for termless — doy/vt100-rust crate via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "headless",
