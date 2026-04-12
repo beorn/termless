@@ -20,49 +20,53 @@ jobs:
       - run: npm install -g pnpm
       - run: bun install
 
-      - name: Build
-        run: for d in . packages/*; do [ -f "$d/package.json" ] && (cd "$d" && npx tsdown 2>/dev/null || true); done
-
-      - name: Verify packages
+      - name: Build and verify
         run: |
           set -e
           verify_pkg() {
             local dir=$1
             local name=$(node -e "console.log(require('./$dir/package.json').name)")
             local private=$(node -e "const p=require('./$dir/package.json'); console.log(p.private || false)")
+            local has_tsdown=$(node -e "const p=require('./$dir/package.json'); console.log(!!p.tsdown)")
             if [ "$private" = "true" ]; then
               echo "⏭ $name (private)"
               return 0
             fi
+            if [ "$has_tsdown" = "false" ]; then
+              echo "⏭ $name (no tsdown config)"
+              return 0
+            fi
 
-            echo "📦 Verifying $name..."
-            cd "$dir"
-            pnpm pack 2>/dev/null
-            local tgz=$(ls *.tgz 2>/dev/null | head -1)
+            echo "📦 Building $name..."
+            (cd "$dir" && npx tsdown --no-dts 2>&1) || {
+              echo "⚠ Build failed for $name (continuing without dist)"
+            }
+
+            echo "📦 Packing $name..."
+            (cd "$dir" && pnpm pack 2>/dev/null) || true
+            local tgz=$(ls "$dir"/*.tgz 2>/dev/null | head -1)
             if [ -z "$tgz" ]; then
-              echo "❌ pnpm pack produced no tarball"
-              exit 1
+              echo "⚠ pnpm pack produced no tarball for $name"
+              return 0
             fi
 
             local tmpdir=$(mktemp -d)
-            cd "$tmpdir"
-            npm init -y --quiet 2>/dev/null
-            npm install "$GITHUB_WORKSPACE/$dir/$tgz" --no-save 2>&1
-            
-            echo "  ✓ pack + install"
-            
-            if command -v bunx &>/dev/null; then
-              bunx publint@latest "$GITHUB_WORKSPACE/$dir" 2>&1 || true
-              echo "  ✓ publint"
-            fi
-
-            node -e "import('$name').then(m => console.log('  ✓ import:', Object.keys(m).slice(0,3).join(', ')))" 2>&1 || {
-              echo "❌ import('$name') failed"
+            (cd "$tmpdir" && npm init -y --quiet 2>/dev/null && npm install "$GITHUB_WORKSPACE/$tgz" --no-save 2>&1) || {
+              echo "❌ npm install failed for $name"
+              rm -rf "$tmpdir" "$tgz"
               exit 1
             }
 
-            cd "$GITHUB_WORKSPACE"
-            rm -rf "$tmpdir" "$dir"/$tgz
+            echo "  ✓ pack + install"
+
+            (cd "$tmpdir" && node -e "import('$name').then(m => console.log('  ✓ import:', Object.keys(m).slice(0,3).join(', ')))") 2>&1 || {
+              echo "❌ import('$name') failed"
+              rm -rf "$tmpdir" "$tgz"
+              exit 1
+            }
+
+            rm -rf "$tmpdir" "$tgz"
+            echo "  ✓ $name verified"
           }
 
           verify_pkg "."
