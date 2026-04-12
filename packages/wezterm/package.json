@@ -43,18 +43,18 @@
       }
     }
   },
-  "tsdown": {
-    "entry": "src/index.ts",
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
   "scripts": {
     "build:native": "cd native && cargo build --release",
     "postbuild:native": "cp native/target/release/libtermless_wezterm_native.dylib termless-wezterm.node"
   },
   "peerDependencies": {
     "@termless/core": "*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": "src/index.ts",
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

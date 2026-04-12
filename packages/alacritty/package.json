@@ -40,12 +40,6 @@
       }
     }
   },
-  "tsdown": {
-    "entry": "src/index.ts",
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0"
   },
@@ -60,6 +54,12 @@
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu"
     ]
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": "src/index.ts",
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

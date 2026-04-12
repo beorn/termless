@@ -42,18 +42,18 @@
       }
     }
   },
-  "tsdown": {
-    "entry": "src/index.ts",
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
   "dependencies": {
     "@xterm/headless": "^5.5.0"
   },
   "peerDependencies": {
     "@termless/core": "*",
     "@termless/xtermjs": "*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": "src/index.ts",
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

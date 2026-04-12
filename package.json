@@ -61,17 +61,6 @@
       }
     }
   },
-  "tsdown": {
-    "entry": [
-      "src/index.ts",
-      "src/backends-advanced.ts",
-      "src/svg.ts",
-      "src/png.ts"
-    ],
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -116,6 +105,17 @@
     "@resvg/resvg-js": "^2.6.2",
     "gifenc": "^1.0.3",
     "upng-js": "^2.1.0"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": [
+      "src/index.ts",
+      "src/backends-advanced.ts",
+      "src/svg.ts",
+      "src/png.ts"
+    ],
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

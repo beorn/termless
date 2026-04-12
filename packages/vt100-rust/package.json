@@ -42,18 +42,18 @@
       }
     }
   },
-  "tsdown": {
-    "entry": "src/index.ts",
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
   "scripts": {
     "build:native": "cd native && cargo build --release",
     "postbuild:native": "cp native/target/release/libtermless_vt100_rust_native.dylib termless-vt100-rust.node"
   },
   "peerDependencies": {
     "@termless/core": "*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": "src/index.ts",
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

@@ -53,19 +53,19 @@
       }
     }
   },
+  "peerDependencies": {
+    "@termless/core": "*",
+    "vitest": ">=2.0.0"
+  },
   "tsdown": {
+    "clean": true,
+    "dts": true,
     "entry": [
       "src/index.ts",
       "src/matchers.ts",
       "src/fixture.ts"
     ],
-    "format": "esm",
-    "dts": true,
-    "clean": true
-  },
-  "peerDependencies": {
-    "@termless/core": "*",
-    "vitest": ">=2.0.0"
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",
