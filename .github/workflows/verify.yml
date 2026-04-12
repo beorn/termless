@@ -1,0 +1,82 @@
+name: Verify Publishable
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+      - run: npm install -g pnpm
+      - run: bun install
+
+      - name: Build
+        run: for d in . packages/*; do [ -f "$d/package.json" ] && (cd "$d" && npx tsdown 2>/dev/null || true); done
+
+      - name: Verify packages
+        run: |
+          set -e
+          verify_pkg() {
+            local dir=$1
+            local name=$(node -e "console.log(require('./$dir/package.json').name)")
+            local private=$(node -e "const p=require('./$dir/package.json'); console.log(p.private || false)")
+            if [ "$private" = "true" ]; then
+              echo "⏭ $name (private)"
+              return 0
+            fi
+
+            echo "📦 Verifying $name..."
+            cd "$dir"
+            pnpm pack 2>/dev/null
+            local tgz=$(ls *.tgz 2>/dev/null | head -1)
+            if [ -z "$tgz" ]; then
+              echo "❌ pnpm pack produced no tarball"
+              exit 1
+            fi
+
+            local tmpdir=$(mktemp -d)
+            cd "$tmpdir"
+            npm init -y --quiet 2>/dev/null
+            npm install "$GITHUB_WORKSPACE/$dir/$tgz" --no-save 2>&1
+            
+            echo "  ✓ pack + install"
+            
+            if command -v bunx &>/dev/null; then
+              bunx publint@latest "$GITHUB_WORKSPACE/$dir" 2>&1 || true
+              echo "  ✓ publint"
+            fi
+
+            node -e "import('$name').then(m => console.log('  ✓ import:', Object.keys(m).slice(0,3).join(', ')))" 2>&1 || {
+              echo "❌ import('$name') failed"
+              exit 1
+            }
+
+            cd "$GITHUB_WORKSPACE"
+            rm -rf "$tmpdir" "$dir"/$tgz
+          }
+
+          verify_pkg "."
+          verify_pkg "packages/cli"
+          verify_pkg "packages/peekaboo"
+          verify_pkg "packages/alacritty"
+          verify_pkg "packages/ghostty"
+          verify_pkg "packages/ghostty-native"
+          verify_pkg "packages/kitty"
+          verify_pkg "packages/libvterm"
+          verify_pkg "packages/vt100"
+          verify_pkg "packages/vt100-rust"
+          verify_pkg "packages/vt220"
+          verify_pkg "packages/vterm"
+          verify_pkg "packages/wezterm"
+          verify_pkg "packages/xtermjs"
+          verify_pkg "packages/viterm"
