@@ -27,7 +27,7 @@
     "directory": "packages/viterm"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "type": "module",
   "module": "./src/index.ts",
@@ -37,7 +37,31 @@
     "./fixture": "./src/fixture.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      },
+      "./matchers": {
+        "types": "./dist/matchers.d.mts",
+        "import": "./dist/matchers.mjs"
+      },
+      "./fixture": {
+        "types": "./dist/fixture.d.mts",
+        "import": "./dist/fixture.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts",
+      "src/matchers.ts",
+      "src/fixture.ts"
+    ],
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "peerDependencies": {
     "@termless/core": "*",

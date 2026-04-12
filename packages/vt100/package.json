@@ -26,7 +26,7 @@
     "directory": "packages/vt100"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "type": "module",
   "module": "./src/index.ts",
@@ -34,7 +34,19 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": "src/index.ts",
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "dependencies": {
     "vt100.js": "^0.3.0"

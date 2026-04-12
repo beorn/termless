@@ -30,7 +30,7 @@
     "packages/*"
   ],
   "files": [
-    "src",
+    "dist",
     "backends.json"
   ],
   "type": "module",
@@ -41,7 +41,36 @@
     "./png": "./src/png.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      },
+      "./registry": {
+        "types": "./dist/backends-advanced.d.mts",
+        "import": "./dist/backends-advanced.mjs"
+      },
+      "./svg": {
+        "types": "./dist/svg.d.mts",
+        "import": "./dist/svg.mjs"
+      },
+      "./png": {
+        "types": "./dist/png.d.mts",
+        "import": "./dist/png.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts",
+      "src/backends-advanced.ts",
+      "src/svg.ts",
+      "src/png.ts"
+    ],
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "scripts": {
     "test": "vitest run",

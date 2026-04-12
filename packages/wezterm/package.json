@@ -25,7 +25,7 @@
     "directory": "packages/wezterm"
   },
   "files": [
-    "src",
+    "dist",
     "native",
     "*.node"
   ],
@@ -35,7 +35,19 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": "src/index.ts",
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "scripts": {
     "build:native": "cd native && cargo build --release",

@@ -24,7 +24,7 @@
     "directory": "packages/alacritty"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "type": "module",
   "module": "./src/index.ts",
@@ -32,7 +32,19 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": "src/index.ts",
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0"

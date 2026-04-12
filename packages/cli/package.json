@@ -28,7 +28,7 @@
     "termless": "./src/cli.ts"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "type": "module",
   "module": "./src/index.ts",
@@ -36,7 +36,25 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "bin": {
+      "termless": "./dist/cli.mjs"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts",
+      "src/cli.ts"
+    ],
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

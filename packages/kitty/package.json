@@ -23,7 +23,7 @@
     "directory": "packages/kitty"
   },
   "files": [
-    "src",
+    "dist",
     "build"
   ],
   "type": "module",
@@ -32,7 +32,19 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "tsdown": {
+    "entry": "src/index.ts",
+    "format": "esm",
+    "dts": true,
+    "clean": true
   },
   "scripts": {
     "build:native": "bash build/build.sh"
