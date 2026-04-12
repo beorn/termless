@@ -8,6 +8,7 @@
 // @xterm/headless is CJS — use default import for Node.js ESM compat
 import xterm from "@xterm/headless"
 const { Terminal } = xterm
+type XTerminal = InstanceType<typeof Terminal>
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -97,16 +98,16 @@ const DEFAULT_ROWS = 24
  * The terminal is initialized lazily via init(), or eagerly if opts are provided.
  */
 export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
-  let term: Terminal | null = null
+  let term: XTerminal | null = null
   let title = ""
   const decoder = new TextDecoder()
 
   /** Access the internal write buffer for synchronous writes */
-  function writeSync(t: Terminal, data: string): void {
+  function writeSync(t: XTerminal, data: string): void {
     ;(t as any)._core._writeBuffer.writeSync(data)
   }
 
-  function ensureTerm(): Terminal {
+  function ensureTerm(): XTerminal {
     if (!term) throw new Error("xterm backend not initialized — call init() first")
     return term
   }
@@ -122,12 +123,12 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     })
 
     title = ""
-    term.onTitleChange((t) => {
+    term.onTitleChange((t: string) => {
       title = t
     })
 
     // Forward DA1/DA2/DSR responses to the terminal layer
-    term.onData((data) => {
+    term.onData((data: string) => {
       if (backend.onResponse) {
         backend.onResponse(new TextEncoder().encode(data))
       }
