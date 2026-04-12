@@ -1,6 +1,6 @@
 {
   "name": "@termless/cli",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "CLI and MCP server for termless — terminal capture, screenshots, and AI agent integration",
   "keywords": [
     "ai-agent",
@@ -55,8 +55,8 @@
     "zod": "^3.24.0"
   },
   "peerDependencies": {
-    "@termless/core": "*",
-    "@termless/xtermjs": "*"
+    "@termless/core": "0.3.2",
+    "@termless/xtermjs": "0.3.2"
   },
   "tsdown": {
     "clean": true,
