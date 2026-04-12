@@ -236,7 +236,7 @@ Termless is part of the terminal tools ecosystem:
 - **[terminfo.dev](https://terminfo.dev)** — terminal feature compatibility database, powered by Termless
 - **[Silvery](https://silvery.dev)** — React framework for terminal UIs (30+ components, incremental rendering)
 - **[Flexily](https://beorn.codes/flexily)** — pure JS flexbox layout engine (Yoga-compatible, zero WASM)
-- **[Loggily](https://beorn.codes/loggily)** — debug + structured logging + tracing in one library
+- **[Loggily](https://loggily.dev)** — debug + structured logging + tracing in one library
 
 <style>
 :root {
