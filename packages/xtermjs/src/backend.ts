@@ -5,7 +5,9 @@
  * providing in-process terminal emulation with no browser dependency.
  */
 
-import { Terminal } from "@xterm/headless"
+// @xterm/headless is CJS — use default import for Node.js ESM compat
+import xterm from "@xterm/headless"
+const { Terminal } = xterm
 import type {
   TerminalBackend,
   TerminalOptions,
