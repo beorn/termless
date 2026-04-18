@@ -222,8 +222,21 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       "osc52", // Clipboard read/write via OSC 52
       "osc7", // CWD reporting via OSC 7
       "osc9", // Desktop notifications via OSC 9
-      "osc10", // Foreground color query via OSC 10
-      "osc11", // Background color query via OSC 11
+      "osc4", // Palette set/query (xterm dynamic colors)
+      "osc5", // Special color set/query (bold/ul/blink/reverse/italic)
+      "osc10", // Default foreground set/query
+      "osc11", // Default background set/query
+      "osc12", // Cursor color set/query
+      "osc17", // Selection background set/query
+      "osc19", // Selection foreground set/query
+      "osc21", // Kitty key=value color protocol
+      "osc104", // Palette reset
+      "osc105", // Special color reset
+      "osc110", // Reset default fg
+      "osc111", // Reset default bg
+      "osc112", // Reset cursor color
+      "osc117", // Reset selection bg
+      "osc119", // Reset selection fg
       "iterm2Images", // iTerm2 inline images (OSC 1337 File=)
       "modifyOtherKeys", // CSI > 4 ; Pm m keyboard mode
     ]),
