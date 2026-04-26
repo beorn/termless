@@ -3,7 +3,7 @@ use napi_derive::napi;
 use std::sync::Arc;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize,
+    color::ColorScheme, Terminal, TerminalConfiguration, TerminalSize,
 };
 
 // ═══════════════════════════════════════════════════════
@@ -24,8 +24,8 @@ impl TerminalConfiguration for HeadlessConfig {
         true
     }
 
-    fn color_palette(&self) -> ColorPalette {
-        ColorPalette::default()
+    fn color_palette(&self) -> ColorScheme {
+        ColorScheme::default()
     }
 }
 

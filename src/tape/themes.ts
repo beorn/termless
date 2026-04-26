@@ -318,9 +318,9 @@ const ALIASES: Record<string, string> = {
 // =============================================================================
 
 /**
- * Map a silvery ColorPalette to an SvgTheme.
+ * Map a silvery ColorScheme to an SvgTheme.
  *
- * ColorPalette has named fields (black, red, green, ..., brightWhite)
+ * ColorScheme has named fields (black, red, green, ..., brightWhite)
  * which map to ANSI indices 0-15.
  */
 interface ColorPaletteLike {
