@@ -278,11 +278,14 @@ test("read text from different regions", () => {
   // Scrollback has the history
   const scrollbackText = term.scrollback.getText()
 
-  // Buffer has everything
-  const bufferText = term.buffer.getText()
+// Buffer has everything
+const bufferText = term.buffer.getText()
 
-  // Single row
-  const rowText = term.row(0).getText()
+// Raw output has protocol bytes before terminal parsing
+const outputText = term.out.getText()
+
+// Single row
+const rowText = term.row(0).getText()
 })
 ```
 
@@ -318,6 +321,9 @@ await expect(term.row(0)).toContainText("Title", { timeout: 5000 })
 
 // Wait for alt screen mode
 await expect(term).toBeInMode("altScreen", { timeout: 5000 })
+
+// Wait for raw protocol output that may not render as screen text
+await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
 ```
 
 Without `{ timeout }`, matchers run synchronously -- they pass or fail immediately without polling. Use the synchronous form for in-memory tests where the terminal state is already set:
@@ -340,3 +346,24 @@ expect(term.cell(0, 0)).toBeBold() // sync, no polling
 | `term.getViewportText()`                  | `term.screen.getText()`                                           |
 | `term.getScrollbackText()`                | `term.scrollback.getText()`                                       |
 | `term.getRowText(n)`                      | `term.row(n).getText()`                                           |
+
+## Raw Protocol Output
+
+Most assertions should use rendered terminal state: `term.screen`, `term.buffer`, `term.row(n)`, `term.cell(r, c)`, cursor, mode, and title matchers. Use `term.out` only when the behavior is the literal output stream itself.
+
+That matters for protocols such as Kitty graphics, OSC 52 clipboard writes, OSC titles, terminal queries, or CSI mode changes. These bytes may be consumed by the emulator and never appear in screen text.
+
+```typescript
+test("emits a Kitty graphics packet", async () => {
+  const term = createTestTerminal({ cols: 80, rows: 24 })
+
+  app.renderImage()
+
+  await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
+  expect(term.out.getText()).toContain("a=p")
+
+  term.out.clear()
+  app.unmount()
+  await expect(term.out).toContainOutput("a=d,d=i", { timeout: 5000 })
+})
+```

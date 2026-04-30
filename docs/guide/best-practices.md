@@ -60,6 +60,12 @@ await expect(term.screen).toContainText("loaded", { timeout: 15000 })
 await expect(term.screen).toContainText("prompt>")
 ```
 
+For protocol bytes that are consumed by the terminal emulator and do not render as screen text, use the raw output view:
+
+```typescript
+await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 }) // Kitty graphics APC
+```
+
 ### Use `waitForStable()` after keypresses
 
 After sending input, use `waitForStable()` to wait for the terminal to settle:

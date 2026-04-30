@@ -122,3 +122,42 @@ describe("OSC 52 clipboard capture", () => {
     term.close()
   })
 })
+
+describe("raw output capture", () => {
+  test("captures protocol output separately from rendered screen text", () => {
+    const term = createTerm()
+    const kittyPacket = "\x1b_Ga=p,i=7;payload\x1b\\"
+
+    term.feed(`before${kittyPacket}after`)
+
+    expect(term.out.getText()).toContain(kittyPacket)
+    expect(term.screen.getText()).toContain("before")
+    expect(term.screen.getText()).toContain("after")
+    expect(term.screen.getText()).not.toContain("a=p,i=7")
+    term.close()
+  })
+
+  test("toContainOutput lazily waits for later protocol output", async () => {
+    const term = createTerm()
+    const kittyPacket = "\x1b_Ga=p,i=9;payload\x1b\\"
+
+    setTimeout(() => term.feed(kittyPacket), 10)
+
+    await expect(term.out).toContainOutput(kittyPacket, { timeout: 500 })
+    term.close()
+  })
+
+  test("raw output capture can be cleared between protocol assertions", () => {
+    const term = createTerm()
+
+    term.feed("\x1b_Ga=p,i=1;payload\x1b\\")
+    expect(term.out.getText()).toContain("a=p")
+
+    term.out.clear()
+    expect(term.out.getText()).toBe("")
+
+    term.feed("\x1b_Ga=d,d=i,i=1\x1b\\")
+    expect(term.out.getText()).toContain("a=d,d=i")
+    term.close()
+  })
+})

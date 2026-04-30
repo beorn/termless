@@ -8,6 +8,7 @@ export type {
   MouseEvent,
   MouseModifiers,
   MouseOptions,
+  OutputView,
   PngScreenshotOptions,
   RegionView,
   RGB,

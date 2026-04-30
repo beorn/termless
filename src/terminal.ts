@@ -21,6 +21,7 @@ import type {
   TextPosition,
   MouseOptions,
   MouseModifiers,
+  OutputView,
 } from "./types.ts"
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
@@ -78,6 +79,26 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   const osc52Re = /\x1b\]52;[a-z]*;([A-Za-z0-9+/=]+)(?:\x07|\x1b\\)/g
 
   const clipboardWrites: string[] = []
+  const outputChunks: string[] = []
+
+  const out: OutputView = {
+    getText() {
+      return outputChunks.join("")
+    },
+    getChunks() {
+      return [...outputChunks]
+    },
+    containsOutput(text: string) {
+      return this.getText().includes(text)
+    },
+    clear() {
+      outputChunks.length = 0
+    },
+  }
+
+  function captureOutput(data: string): void {
+    if (data.length > 0) outputChunks.push(data)
+  }
 
   function scanOsc52(data: string): void {
     osc52Re.lastIndex = 0
@@ -135,6 +156,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   function feed(data: Uint8Array | string): void {
     if (closed) throw new Error("Terminal is closed")
     const text = typeof data === "string" ? data : new TextDecoder().decode(data)
+    captureOutput(text)
     scanOsc52(text)
     const bytes = typeof data === "string" ? encoder.encode(data) : data
     backend.feed(bytes)
@@ -153,7 +175,9 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       cols,
       rows,
       onData: (data) => {
-        scanOsc52(new TextDecoder().decode(data))
+        const text = new TextDecoder().decode(data)
+        captureOutput(text)
+        scanOsc52(text)
         backend.feed(data)
       },
     })
@@ -397,6 +421,9 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     },
     get viewport(): RegionView {
       return createViewportView(backend)
+    },
+    get out(): OutputView {
+      return out
     },
     row(n: number): RowView {
       const { totalLines, screenLines } = backend.getScrollback()

@@ -122,6 +122,19 @@ export interface RegionView {
   containsText(text: string): boolean
 }
 
+/**
+ * Raw terminal output stream captured before emulator parsing.
+ *
+ * Use this for terminal protocol assertions (OSC/APC/CSI bytes such as
+ * Kitty graphics packets) that may intentionally leave no visible cells.
+ */
+export interface OutputView {
+  getText(): string
+  getChunks(): readonly string[]
+  containsOutput(text: string): boolean
+  clear(): void
+}
+
 /** A single cell with positional context. Used with style matchers. */
 export interface CellView {
   readonly char: string
@@ -262,6 +275,7 @@ export interface Terminal extends TerminalReadable {
   readonly scrollback: RegionView
   readonly buffer: RegionView
   readonly viewport: RegionView
+  readonly out: OutputView
   row(n: number): RowView
   cell(row: number, col: number): CellView
   range(r1: number, c1: number, r2: number, c2: number): RegionView

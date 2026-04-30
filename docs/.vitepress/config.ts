@@ -169,6 +169,7 @@ export default defineConfig({
           { text: "toHaveAttrs", link: "/matchers/to-have-attrs" },
           { text: "toHaveCursor", link: "/matchers/to-have-cursor" },
           { text: "toContainText", link: "/matchers/to-contain-text" },
+          { text: "toContainOutput", link: "/matchers/to-contain-output" },
           { text: "toHaveText", link: "/matchers/to-have-text" },
           { text: "toMatchLines", link: "/matchers/to-match-lines" },
           { text: "toBeBold", link: "/matchers/to-be-bold" },

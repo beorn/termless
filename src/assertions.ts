@@ -10,7 +10,16 @@
  *   - Terminal assertions: operate on TerminalReadable (cursor, modes, scrollback)
  */
 
-import type { CellView, CursorStyle, RegionView, RGB, TerminalMode, TerminalReadable, UnderlineStyle } from "./types.ts"
+import type {
+  CellView,
+  CursorStyle,
+  OutputView,
+  RegionView,
+  RGB,
+  TerminalMode,
+  TerminalReadable,
+  UnderlineStyle,
+} from "./types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Result Type
@@ -33,6 +42,17 @@ export function isRegionView(value: unknown): value is RegionView {
     typeof value === "object" &&
     "containsText" in value &&
     typeof (value as Record<string, unknown>).containsText === "function"
+  )
+}
+
+export function isOutputView(value: unknown): value is OutputView {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "containsOutput" in value &&
+    typeof (value as Record<string, unknown>).containsOutput === "function" &&
+    "getText" in value &&
+    typeof (value as Record<string, unknown>).getText === "function"
   )
 }
 
@@ -72,6 +92,16 @@ export function assertCellView(value: unknown, matcherName: string): asserts val
   throw new Error(
     `${matcherName} expects a CellView. Use term.cell(row, col). ` +
       `Example: expect(term.cell(0, 0)).${matcherName}()`,
+  )
+}
+
+export function assertOutputView(value: unknown, matcherName: string): asserts value is OutputView {
+  if (isOutputView(value)) return
+  if (isTerminalReadable(value)) {
+    throw new Error(`${matcherName} requires raw output. Use term.out. Example: expect(term.out).${matcherName}(...)`)
+  }
+  throw new Error(
+    `${matcherName} requires an OutputView (an object with containsOutput and getText). ` + `Got ${typeof value}.`,
   )
 }
 
@@ -159,6 +189,22 @@ export function assertMatchesLines(region: RegionView, expectedLines: string[]):
       : `Region line mismatch:\n${mismatches.join("\n")}`,
     expected: expectedLines,
     actual: actualLines,
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Output Assertions (OutputView)
+// ═══════════════════════════════════════════════════════
+
+/** Assert the raw output stream contains the given protocol/text bytes. */
+export function assertContainsOutput(out: OutputView, text: string): AssertionResult {
+  const pass = out.containsOutput(text)
+  const content = out.getText()
+  return {
+    pass,
+    message: pass
+      ? `Expected raw output not to contain "${text}"\n\nOutput:\n${content}`
+      : `Expected raw output to contain "${text}"\n\nOutput:\n${content}`,
   }
 }
 

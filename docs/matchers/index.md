@@ -5,7 +5,7 @@ description: Complete reference for all Termless Vitest matchers
 
 # Matcher Reference
 
-Termless provides 24 custom Vitest matchers for terminal assertions. All matchers support `.not` negation.
+Termless provides 25 custom Vitest matchers for terminal assertions. All matchers support `.not` negation.
 
 ```typescript
 import "@termless/test/matchers" // Auto-registers all matchers
@@ -25,6 +25,12 @@ Work on `RegionView` (screen, scrollback, row, range).
 - [toContainText](/matchers/to-contain-text) - Assert region contains text substring
 - [toHaveText](/matchers/to-have-text) - Assert exact text match (after trimming)
 - [toMatchLines](/matchers/to-match-lines) - Assert multi-line content
+
+## Raw Output Matchers
+
+Work on `OutputView` via `term.out` for protocol bytes before terminal parsing.
+
+- [toContainOutput](/matchers/to-contain-output) - Assert raw output contains text or protocol bytes
 
 ## Style Matchers <Badge type="info" text="prefer toHaveAttrs" />
 

@@ -32,9 +32,11 @@ import type {
 import { screenshotSvg } from "../../../src/svg.ts"
 import {
   assertRegionView,
+  assertOutputView,
   assertCellView,
   assertTerminalReadable,
   assertContainsText,
+  assertContainsOutput,
   assertHasText,
   assertMatchesLines,
   assertIsBold,
@@ -129,6 +131,9 @@ declare module "vitest" {
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
     toMatchLines(lines: string[], options?: RetryOptions): void
+
+    // Raw output (OutputView) — pass { timeout } for Playwright-style auto-retry
+    toContainOutput(text: string, options?: RetryOptions): void
 
     // Cell Style — composable (CellView)
     toHaveAttrs(attrs: CellAttrs): void
@@ -229,6 +234,14 @@ export const terminalMatchers = {
   toMatchLines(received: unknown, expectedLines: string[], options?: RetryOptions) {
     assertRegionView(received, "toMatchLines")
     return maybeRetry(() => assertMatchesLines(received, expectedLines), options?.timeout)
+  },
+
+  // ── Raw Output Matchers (OutputView) ──
+
+  /** Assert raw terminal output contains the given protocol/text bytes. Auto-retries when { timeout } is passed. */
+  toContainOutput(received: unknown, text: string, options?: RetryOptions) {
+    assertOutputView(received, "toContainOutput")
+    return maybeRetry(() => assertContainsOutput(received, text), options?.timeout)
   },
 
   // ── Cell Style Matchers (CellView) ──

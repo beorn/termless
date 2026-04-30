@@ -66,6 +66,14 @@ function createMockTerminal(): Terminal & { fedData: string[] } {
     scrollback: null as never,
     buffer: null as never,
     viewport: null as never,
+    out: {
+      getText: () => fedData.join(""),
+      getChunks: () => [...fedData],
+      containsOutput: (text: string) => fedData.join("").includes(text),
+      clear: () => {
+        fedData.length = 0
+      },
+    },
     row: () => null as never,
     cell: () => null as never,
     range: () => null as never,

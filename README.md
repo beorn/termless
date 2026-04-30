@@ -55,6 +55,7 @@ console.log(term.screen.getText()) // visible area
 console.log(term.scrollback.getText()) // history above screen
 console.log(term.row(0).getText()) // first row
 console.log(term.lastRow().getText()) // last row
+console.log(term.out.getText()) // raw output bytes, including OSC/APC/CSI protocols
 
 const svg = term.screenshotSvg()
 const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
@@ -149,6 +150,9 @@ expect(term.cell(2, 5)).toHaveUnderline("curly")
 expect(term).toHaveCursorAt(5, 0)
 expect(term).toBeInMode("altScreen")
 expect(term).toHaveTitle("My App")
+
+// Raw output matchers work on term.out for protocol bytes that do not render
+await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
 ```
 
 ## Matchers Reference
@@ -160,6 +164,20 @@ expect(term).toHaveTitle("My App")
 | `toContainText(text)`   | Region contains text as substring                        |
 | `toHaveText(text)`      | Region text matches exactly (trimmed)                    |
 | `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) |
+
+### Raw Output Matchers (on OutputView)
+
+Use `term.out` when you need the literal output stream before terminal parsing, such as Kitty graphics APC packets, OSC clipboard/title sequences, CSI mode toggles, or other protocols that may leave no visible cells.
+
+| Matcher                 | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| `toContainOutput(text)` | Raw output stream contains text/protocol bytes as substring |
+
+```typescript
+term.feed("\x1b_Ga=p,i=7;payload\x1b\\")
+await expect(term.out).toContainOutput("\x1b_Ga=p", { timeout: 5000 })
+term.out.clear() // useful before asserting cleanup/delete protocol output
+```
 
 ### Cell Style Matchers (on CellView)
 
