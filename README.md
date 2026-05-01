@@ -169,8 +169,8 @@ await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
 
 Use `term.out` when you need the literal output stream before terminal parsing, such as Kitty graphics APC packets, OSC clipboard/title sequences, CSI mode toggles, or other protocols that may leave no visible cells.
 
-| Matcher                 | Description                                                |
-| ----------------------- | ---------------------------------------------------------- |
+| Matcher                 | Description                                                 |
+| ----------------------- | ----------------------------------------------------------- |
 | `toContainOutput(text)` | Raw output stream contains text/protocol bytes as substring |
 
 ```typescript
