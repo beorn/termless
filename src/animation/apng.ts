@@ -7,6 +7,8 @@
  * Both are optional/lazy-loaded dependencies — throws clear errors if missing.
  */
 
+/// <reference path="./upng.d.ts" />
+
 import type { AnimationFrame, AnimationOptions } from "./types.ts"
 
 // Lazy-cached imports
