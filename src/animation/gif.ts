@@ -7,8 +7,7 @@
  * Both are optional/lazy-loaded dependencies — throws clear errors if missing.
  */
 
-/// <reference path="./gifenc.d.ts" />
-
+// Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./types.ts"
 
 // Lazy-cached imports
