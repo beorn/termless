@@ -278,14 +278,14 @@ test("read text from different regions", () => {
   // Scrollback has the history
   const scrollbackText = term.scrollback.getText()
 
-// Buffer has everything
-const bufferText = term.buffer.getText()
+  // Buffer has everything
+  const bufferText = term.buffer.getText()
 
-// Raw output has protocol bytes before terminal parsing
-const outputText = term.out.getText()
+  // Raw output has protocol bytes before terminal parsing
+  const outputText = term.out.getText()
 
-// Single row
-const rowText = term.row(0).getText()
+  // Single row
+  const rowText = term.row(0).getText()
 })
 ```
 
