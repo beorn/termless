@@ -63,8 +63,43 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     screen = null
   }
 
+  /**
+   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
+   * responses. vterm.js doesn't carry a window pixel size — it's a pure
+   * cell-grid emulator. Synthesize 14t/18t responses so silvery's
+   * `resolveMouseOption()` probe sees the expected shape and switches
+   * to SGR-Pixels (1016) mouse coordinate mode.
+   *
+   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt 96 DPI.
+   * What matters is the ratio matches the backend's cell grid
+   * (one cell = one cell, invariant).
+   */
+  const CELL_W_PX = 8
+  const CELL_H_PX = 17
+
+  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
+  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
+  const CSI_14t_RE = /\x1b\[14t/g
+  const CSI_18t_RE = /\x1b\[18t/g
+
   function feed(data: Uint8Array): void {
-    ensureScreen().process(data)
+    const s = ensureScreen()
+    s.process(data)
+
+    if (backend.onResponse) {
+      const text = new TextDecoder().decode(data)
+      CSI_14t_RE.lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = CSI_14t_RE.exec(text)) !== null) {
+        const heightPx = s.rows * CELL_H_PX
+        const widthPx = s.cols * CELL_W_PX
+        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+      }
+      CSI_18t_RE.lastIndex = 0
+      while ((m = CSI_18t_RE.exec(text)) !== null) {
+        backend.onResponse(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
+      }
+    }
   }
 
   function resize(cols: number, rows: number): void {
