@@ -310,20 +310,56 @@ export function createGhosttyBackend(
     }
   }
 
+  /**
+   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
+   * responses. ghostty-web (WASM) doesn't natively report a window pixel
+   * size or text-area cell count because it has no real window.
+   *
+   * Real Ghostty.app answers these probes with the actual rendered
+   * dimensions; for the WASM backend we synthesize equivalent responses
+   * from the configured rows/cols × typical Iosevka/JetBrains Mono cell
+   * (8px × 17px @ 12pt 96 DPI). silvery's `resolveMouseOption()` divides
+   * pixel coords by cell metrics to recover cell coordinates from
+   * SGR-Pixels (1016) mouse events — what matters is the ratio matches
+   * the backend's cell grid (one cell = one cell, invariant).
+   */
+  const CELL_W_PX = 8
+  const CELL_H_PX = 17
+
+  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
+  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
+  const CSI_14t_RE = /\x1b\[14t/g
+  const CSI_18t_RE = /\x1b\[18t/g
+
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
+    const text = new TextDecoder().decode(data)
+
     withWarningCapture(() => {
       t.write(data)
       t.update() // Sync render state
     })
 
-    // Drain DA1/DA2/DSR responses and forward to the terminal layer
     if (backend.onResponse) {
+      // Drain DA1/DA2/DSR + native window-op responses
       while (t.hasResponse()) {
         const response = t.readResponse()
         if (response) {
           backend.onResponse(new TextEncoder().encode(response))
         }
+      }
+      // Synthesize 14t / 18t responses if ghostty-web didn't already
+      // (it currently doesn't — see backend doc above).
+      CSI_14t_RE.lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = CSI_14t_RE.exec(text)) !== null) {
+        const heightPx = rows * CELL_H_PX
+        const widthPx = cols * CELL_W_PX
+        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+      }
+      CSI_18t_RE.lastIndex = 0
+      while ((m = CSI_18t_RE.exec(text)) !== null) {
+        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
   }

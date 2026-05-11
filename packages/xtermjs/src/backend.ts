@@ -120,6 +120,14 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       rows: options.rows,
       scrollback: options.scrollbackLimit ?? 1000,
       allowProposedApi: true,
+      // Answer CSI 18t (text-area size in cells) — xterm.js has a default
+      // implementation that returns the configured rows/cols. We add 14t
+      // (text-area pixel size) via our feed() intercept below since
+      // xterm.js headless has no real window pixel size to report.
+      windowOptions: {
+        getWinSizeChars: true,
+        getCellSizePixels: true,
+      },
     })
 
     title = ""
@@ -127,7 +135,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       title = t
     })
 
-    // Forward DA1/DA2/DSR responses to the terminal layer
+    // Forward DA1/DA2/DSR + window-op responses to the terminal layer
     term.onData((data: string) => {
       if (backend.onResponse) {
         backend.onResponse(new TextEncoder().encode(data))
@@ -151,10 +159,50 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
+  /**
+   * Standard cell metrics used for the synthetic 14t (text-area pixel
+   * size) response. xterm.js headless has no real window, so it can't
+   * report pixel dimensions on its own. Real terminals (xterm.js in
+   * VSCode, Ghostty, etc.) answer CSI 14t with the actual rendered
+   * text-area pixel size — silvery's `resolveMouseOption()` divides
+   * pixel dims by cell dims to obtain cell size for SGR-Pixels (1016)
+   * mouse coordinate translation.
+   *
+   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt on a 96 DPI
+   * display. The exact value isn't load-bearing — what matters is the
+   * ratio matches the backend's cell grid, which is invariant for a
+   * headless emulator (one cell = one cell).
+   */
+  const CELL_W_PX = 8
+  const CELL_H_PX = 17
+
+  /** Intercept CSI 14t (text-area pixel size query). xterm.js's
+   *  windowOptions.getWinSizePixels has a default implementation that
+   *  returns 0;0 in headless contexts (no real window), which silvery
+   *  rejects via its isSanePositive guard. Synthesize a sensible
+   *  response from the configured rows/cols × standard cell metrics. */
+  const CSI_14t_RE = /\x1b\[14t/g
+
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
+    const text = decoder.decode(data)
+
+    // Synthesize 14t responses out-of-band BEFORE writing the bytes to
+    // xterm.js (which would drop them as unhandled when the default
+    // implementation reports 0;0).
+    if (backend.onResponse && CSI_14t_RE.test(text)) {
+      // Reset lastIndex — regex is /g, so a prior test() may leave state
+      CSI_14t_RE.lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = CSI_14t_RE.exec(text)) !== null) {
+        const heightPx = t.rows * CELL_H_PX
+        const widthPx = t.cols * CELL_W_PX
+        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+      }
+    }
+
     // xterm.js write() is async — use internal writeSync for immediate buffer updates
-    writeSync(t, decoder.decode(data))
+    writeSync(t, text)
   }
 
   function resize(cols: number, rows: number): void {
