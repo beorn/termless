@@ -201,6 +201,8 @@ const DEFAULT_ROWS = 24
  */
 export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let handle: NativeTerminalHandle | null = null
+  let cols = DEFAULT_COLS
+  let rows = DEFAULT_ROWS
 
   function ensureHandle(): NativeTerminalHandle {
     if (!handle) throw new Error("ghostty-native backend not initialized — call init() first")
@@ -214,6 +216,8 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     }
 
     const native = loadGhosttyNative()
+    cols = options.cols
+    rows = options.rows
     handle = native.createTerminal(options.cols, options.rows, options.scrollbackLimit ?? 1000)
   }
 
@@ -233,6 +237,27 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     }
   }
 
+  /**
+   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
+   * responses. libghostty-vt (native) is a parser library with no
+   * native window pixel concept — there is no real window. Real
+   * Ghostty.app answers these probes with the actual rendered
+   * dimensions; for the headless native backend we synthesize
+   * equivalent responses from the configured rows/cols × typical
+   * Iosevka/JetBrains Mono cell (8px × 17px @ 12pt 96 DPI). silvery's
+   * `resolveMouseOption()` divides pixel coords by cell metrics to
+   * recover cell coordinates from SGR-Pixels (1016) mouse events —
+   * what matters is the ratio matches the backend's cell grid (one
+   * cell = one cell, invariant).
+   */
+  const CELL_W_PX = 8
+  const CELL_H_PX = 17
+
+  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
+  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
+  const CSI_14t_RE = /\x1b\[14t/g
+  const CSI_18t_RE = /\x1b\[18t/g
+
   function feed(data: Uint8Array): void {
     const native = loadGhosttyNative()
     const h = ensureHandle()
@@ -247,11 +272,30 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
         }
       }
     }
+
+    if (backend.onResponse) {
+      // Synthesize 14t / 18t responses if libghostty-vt didn't already
+      // (it currently doesn't — see backend doc above).
+      const text = new TextDecoder().decode(data)
+      CSI_14t_RE.lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = CSI_14t_RE.exec(text)) !== null) {
+        const heightPx = rows * CELL_H_PX
+        const widthPx = cols * CELL_W_PX
+        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+      }
+      CSI_18t_RE.lastIndex = 0
+      while ((m = CSI_18t_RE.exec(text)) !== null) {
+        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
+      }
+    }
   }
 
-  function resize(cols: number, rows: number): void {
+  function resize(newCols: number, newRows: number): void {
     const native = loadGhosttyNative()
-    native.resize(ensureHandle(), cols, rows)
+    native.resize(ensureHandle(), newCols, newRows)
+    cols = newCols
+    rows = newRows
   }
 
   function reset(): void {
