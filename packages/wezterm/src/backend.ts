@@ -211,6 +211,25 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     term = null
   }
 
+  /**
+   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
+   * responses. The wezterm backend (wezterm-term via napi-rs) exposes
+   * only a cell grid — there's no native window-pixel concept, so we
+   * synthesize 14t/18t from `rows × cols × typical cell metrics`.
+   * silvery's `resolveMouseOption()` divides pixel coords by cell metrics
+   * to recover cell coords for SGR-Pixels (1016) mouse hit-testing.
+   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt 96 DPI —
+   * what matters is the ratio matches the backend's cell grid
+   * (one cell = one cell, invariant).
+   */
+  const CELL_W_PX = 8
+  const CELL_H_PX = 17
+
+  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
+  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
+  const CSI_14t_RE = /\x1b\[14t/g
+  const CSI_18t_RE = /\x1b\[18t/g
+
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     t.feed(Buffer.from(data))
@@ -220,6 +239,23 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
       const response = t.readResponse()
       if (response && response.length > 0) {
         backend.onResponse(new Uint8Array(response))
+      }
+    }
+
+    // Synthesize CSI 14t / 18t window-op probe responses from our
+    // tracked cell grid (wezterm-term has no window-pixel concept).
+    if (backend.onResponse) {
+      const text = new TextDecoder().decode(data)
+      CSI_14t_RE.lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = CSI_14t_RE.exec(text)) !== null) {
+        const heightPx = rows * CELL_H_PX
+        const widthPx = cols * CELL_W_PX
+        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+      }
+      CSI_18t_RE.lastIndex = 0
+      while ((m = CSI_18t_RE.exec(text)) !== null) {
+        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
   }
