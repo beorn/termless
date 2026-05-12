@@ -22,10 +22,21 @@ const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
 
 // Probe WASM availability synchronously up-front so we can use describe.skip.
 // initLibvterm() is async, so we kick it off and await before the suite.
+// A "loaded" module can still be incomplete (missing HEAPU8 / _malloc) when
+// the WASM artifact isn't built — verify required exports before running.
 let wasmModule: LibvtermModule | null = null
 let skipReason = ""
 try {
-  wasmModule = await initLibvterm()
+  const candidate = await initLibvterm()
+  if (
+    candidate &&
+    typeof (candidate as { _malloc?: unknown })._malloc === "function" &&
+    (candidate as { HEAPU8?: unknown }).HEAPU8 instanceof Uint8Array
+  ) {
+    wasmModule = candidate
+  } else {
+    skipReason = "WASM module loaded but missing required exports (likely not built)"
+  }
 } catch (e) {
   skipReason = e instanceof Error ? e.message.split("\n")[0]! : String(e)
 }

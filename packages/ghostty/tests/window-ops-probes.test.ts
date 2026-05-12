@@ -16,10 +16,7 @@ import type { TerminalBackend } from "../../../src/types.ts"
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
 const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
 
-async function probeBackend(
-  backend: TerminalBackend,
-  query: string,
-): Promise<string[]> {
+async function probeBackend(backend: TerminalBackend, query: string): Promise<string[]> {
   backend.init?.({ cols: 80, rows: 24 })
   const responses: string[] = []
   backend.onResponse = (b: Uint8Array): void => {

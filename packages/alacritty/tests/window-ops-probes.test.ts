@@ -31,10 +31,7 @@ try {
 
 const describeNative = nativeAvailable ? describe : describe.skip
 
-async function probeBackend(
-  backend: TerminalBackend,
-  query: string,
-): Promise<string[]> {
+async function probeBackend(backend: TerminalBackend, query: string): Promise<string[]> {
   backend.init?.({ cols: 80, rows: 24 })
   const responses: string[] = []
   backend.onResponse = (b: Uint8Array): void => {
