@@ -18,10 +18,14 @@ jobs:
           bun-version: latest
       - run: bun install
       - run: bun run test
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      # pnpm publish (not npm publish) — pnpm applies publishConfig.exports overrides
       - name: Publish all packages
         run: bun run publish:all
         env:
