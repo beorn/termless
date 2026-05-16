@@ -57,7 +57,8 @@ export async function startMcpServer(): Promise<void> {
     server,
     "start",
     {
-      description: "Start a terminal session with a PTY and xterm-headless emulator",
+      description:
+        "Start a terminal session with a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence.",
       inputSchema: {
         command: z.array(z.string()).describe("Command to run (e.g. ['bun', 'km', 'view', '/path'])"),
         env: z.record(z.string(), z.string()).optional().describe("Environment variables"),
@@ -69,6 +70,12 @@ export async function startMcpServer(): Promise<void> {
           .describe("Wait condition: 'content', 'stable', or specific text"),
         timeout: z.number().default(5000).describe("Timeout in ms for waitFor condition (default: 5000)"),
         cwd: z.string().optional().describe("Working directory"),
+        backend: z
+          .enum(["xtermjs", "ghostty", "vterm", "vt100"])
+          .optional()
+          .describe(
+            "Terminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset.",
+          ),
       },
     },
     safeTool(async (args) => {
@@ -80,6 +87,7 @@ export async function startMcpServer(): Promise<void> {
         waitFor: args.waitFor,
         timeout: args.timeout,
         cwd: args.cwd,
+        backend: args.backend,
       })
 
       return textResult({

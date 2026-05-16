@@ -56,7 +56,15 @@
   },
   "peerDependencies": {
     "@termless/core": "*",
-    "@termless/xtermjs": "*"
+    "@termless/xtermjs": "*",
+    "@termless/ghostty": "*",
+    "@termless/vterm": "*",
+    "@termless/vt100": "*"
+  },
+  "peerDependenciesMeta": {
+    "@termless/ghostty": { "optional": true },
+    "@termless/vterm": { "optional": true },
+    "@termless/vt100": { "optional": true }
   },
   "tsdown": {
     "clean": true,

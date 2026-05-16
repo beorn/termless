@@ -6,10 +6,24 @@
  */
 
 import { createTerminal } from "@termless/core"
-import type { Terminal, SvgScreenshotOptions } from "@termless/core"
+import type { Terminal, SvgScreenshotOptions, TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 // ── Types ──
+
+/**
+ * Backend name accepted by createSession. Default is "xtermjs" (the historical
+ * behavior, fast + portable). "ghostty" uses ghostty-web WASM and is the
+ * highest-fidelity headless backend — matches what real Ghostty renders, so
+ * screenshots reflect true truecolor + glyph fidelity. "vterm" uses vterm.js
+ * (pure-TS, standards-compliant). "vt100" uses the minimal VT100 emulator.
+ *
+ * Visual-bug-close evidence (Layer 2 screenshot at user's terminal size) should
+ * use "ghostty" — xterm.js headless drops truecolor and falls back on glyphs
+ * (em-dashes, sigils, box-drawing) which produces misleading screenshots that
+ * misrepresent km view rendering. See bead @km/all/15297-agent-screenshot-fidelity-gap.
+ */
+export type SessionBackend = "xtermjs" | "ghostty" | "vterm" | "vt100"
 
 export interface SessionCreateOptions {
   command?: string[]
@@ -19,6 +33,7 @@ export interface SessionCreateOptions {
   rows?: number
   waitFor?: string | "content" | "stable"
   timeout?: number
+  backend?: SessionBackend
 }
 
 export interface SessionInfo {
@@ -62,8 +77,9 @@ export function createSessionManager(): SessionManager {
     const cols = opts.cols ?? DEFAULT_COLS
     const rows = opts.rows ?? DEFAULT_ROWS
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT
+    const backendName: SessionBackend = opts.backend ?? "xtermjs"
 
-    const backend = createXtermBackend()
+    const backend: TerminalBackend = await resolveBackend(backendName)
     const terminal = createTerminal({ backend, cols, rows })
 
     counter++
@@ -128,6 +144,35 @@ export function createSessionManager(): SessionManager {
   }
 
   return { createSession, getSession, listSessions, stopSession, stopAll }
+}
+
+// ── Backend resolution ──
+
+/**
+ * Resolve a backend name to a TerminalBackend instance. xtermjs is sync; the
+ * rest are async to handle WASM/init. Falls back to xtermjs on unknown name
+ * (defensive — type system already constrains the input but runtime callers
+ * may pass arbitrary strings).
+ */
+async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
+  switch (name) {
+    case "xtermjs":
+      return createXtermBackend()
+    case "ghostty": {
+      const mod = await import("@termless/ghostty")
+      return mod.resolve()
+    }
+    case "vterm": {
+      const mod = await import("@termless/vterm")
+      return mod.resolve()
+    }
+    case "vt100": {
+      const mod = await import("@termless/vt100")
+      return mod.resolve()
+    }
+    default:
+      return createXtermBackend()
+  }
 }
 
 // ── Helpers ──
