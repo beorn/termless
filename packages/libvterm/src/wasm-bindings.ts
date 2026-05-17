@@ -15,7 +15,7 @@ export interface LibvtermModule {
   vterm_free(vt: number): void
   vterm_set_size(vt: number, rows: number, cols: number): void
   vterm_input_write(vt: number, bytes: number, len: number): number
-  vterm_output_read(vt: number, buf: number, len: number): number
+  vterm_output_read?: (vt: number, buf: number, len: number) => number
   vterm_obtain_screen(vt: number): number
   vterm_obtain_state(vt: number): number
   vterm_screen_reset(screen: number, hard: number): void
@@ -38,7 +38,6 @@ export interface LibvtermModule {
   UTF8ToString(ptr: number): string
   stringToUTF8(str: string, outPtr: number, maxBytesToWrite: number): void
   lengthBytesUTF8(str: string): number
-  HEAPU8: Uint8Array
 }
 
 let modulePromise: Promise<LibvtermModule> | null = null
@@ -142,17 +141,17 @@ export function readCell(
   bgG: number
   bgB: number
 } {
-  const heap = mod.HEAPU8
+  const byteAt = (offset: number) => mod.getValue(cellPtr + offset, "i8") & 0xff
 
   // Read chars (uint32_t[6] -- we only need the first codepoint for most cells)
   const cp0 = mod.getValue(cellPtr, "i32")
   const chars = cp0 > 0 ? String.fromCodePoint(cp0) : ""
 
   // Read width (offset 24)
-  const width = heap[cellPtr + 24]!
+  const width = byteAt(24)
 
   // Read attrs bitfield (offset 25 -- packed bits)
-  const attrByte = heap[cellPtr + 25]!
+  const attrByte = byteAt(25)
   const bold = !!(attrByte & 1)
   const underline = (attrByte >> 1) & 0x3
   const italic = !!((attrByte >> 3) & 1)
@@ -162,16 +161,16 @@ export function readCell(
   const strike = !!((attrByte >> 7) & 1)
 
   // Read fg color (VTermColor at offset 32 -- type byte + r/g/b)
-  const fgType = heap[cellPtr + 32]!
-  const fgR = heap[cellPtr + 33]!
-  const fgG = heap[cellPtr + 34]!
-  const fgB = heap[cellPtr + 35]!
+  const fgType = byteAt(32)
+  const fgR = byteAt(33)
+  const fgG = byteAt(34)
+  const fgB = byteAt(35)
 
   // Read bg color (VTermColor at offset 36)
-  const bgType = heap[cellPtr + 36]!
-  const bgR = heap[cellPtr + 37]!
-  const bgG = heap[cellPtr + 38]!
-  const bgB = heap[cellPtr + 39]!
+  const bgType = byteAt(36)
+  const bgR = byteAt(37)
+  const bgG = byteAt(38)
+  const bgB = byteAt(39)
 
   return {
     chars,

@@ -96,6 +96,9 @@ $ termless play -o demo.svg demo.tape
 
 # Multi-backend comparison
 $ termless play -b vterm,ghostty --compare side-by-side demo.tape
+
+# Compare every installed, ready backend
+$ termless play -b all --compare grid -o all-backends.svg demo.tape
 ```
 
 ### Options
@@ -103,7 +106,7 @@ $ termless play -b vterm,ghostty --compare side-by-side demo.tape
 | Option                 | Description                                                 | Default |
 | ---------------------- | ----------------------------------------------------------- | ------- |
 | `-o, --output <path>`  | Output file, format detected from extension                 | --      |
-| `-b, --backend <name>` | Backend(s), comma-separated                                 | vterm   |
+| `-b, --backend <name>` | Backend(s), comma-separated; use `all` for every ready backend | vterm   |
 | `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff` | --      |
 | `--cols <n>`           | Override terminal columns                                   | --      |
 | `--rows <n>`           | Override terminal rows                                      | --      |

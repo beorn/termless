@@ -83,6 +83,20 @@ const DEFAULT_ROWS = 24
 // TextEncoder for converting strings to bytes for WASM memory
 const encoder = new TextEncoder()
 
+function writeBytes(mod: LibvtermModule, ptr: number, data: Uint8Array): void {
+  for (let i = 0; i < data.length; i++) {
+    mod.setValue(ptr + i, data[i]!, "i8")
+  }
+}
+
+function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array {
+  const data = new Uint8Array(length)
+  for (let i = 0; i < length; i++) {
+    data[i] = mod.getValue(ptr + i, "i8") & 0xff
+  }
+  return data
+}
+
 /**
  * Create a libvterm backend for termless.
  *
@@ -189,7 +203,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
     // Allocate WASM memory for the input data
     const ptr = m._malloc(data.length)
-    m.HEAPU8.set(data, ptr)
+    writeBytes(m, ptr, data)
 
     // Feed data to libvterm
     m.vterm_input_write(vt, ptr, data.length)
@@ -199,14 +213,12 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
     // Drain DA1/DA2/DSR responses and forward to the terminal layer.
     // libvterm buffers output internally; vterm_output_read drains it.
-    if (backend.onResponse) {
+    if (backend.onResponse && m.vterm_output_read) {
       const outBufLen = 1024
       const outBuf = m._malloc(outBufLen)
       const bytesRead = m.vterm_output_read(vt, outBuf, outBufLen)
       if (bytesRead > 0) {
-        const responseData = new Uint8Array(bytesRead)
-        responseData.set(m.HEAPU8.subarray(outBuf, outBuf + bytesRead))
-        backend.onResponse(responseData)
+        backend.onResponse(readBytes(m, outBuf, bytesRead))
       }
       m._free(outBuf)
     }
@@ -241,7 +253,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     // Feed RIS (Reset to Initial State) escape sequence
     const ris = encoder.encode("\x1bc")
     const ptr = m._malloc(ris.length)
-    m.HEAPU8.set(ris, ptr)
+    writeBytes(m, ptr, ris)
     m.vterm_input_write(vt, ptr, ris.length)
     m._free(ptr)
     title = ""

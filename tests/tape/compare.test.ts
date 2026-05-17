@@ -10,6 +10,7 @@ import { describe, test, expect } from "vitest"
 import { parseTape } from "../../src/tape/parser.ts"
 import { compareTape } from "../../src/tape/compare.ts"
 import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
+import type { TerminalBackend } from "../../src/types.ts"
 
 // =============================================================================
 // Helpers
@@ -24,6 +25,21 @@ Screenshot
 /** Create a named backend spec for compareTape. */
 function vt100Spec(name = "vt100") {
   return { name, backend: createVt100Backend() }
+}
+
+/** Create a vt100 backend that transforms input before the emulator sees it. */
+function transformedVt100Spec(name: string, transform: (input: string) => string) {
+  const inner = createVt100Backend()
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  const backend: TerminalBackend = {
+    ...inner,
+    name,
+    feed(data: Uint8Array) {
+      inner.feed(encoder.encode(transform(decoder.decode(data))))
+    },
+  }
+  return { name, backend }
 }
 
 // =============================================================================
@@ -149,6 +165,18 @@ describe("diff mode", () => {
     expect(result.composedSvg).toBeDefined()
     expect(result.composedSvg).toContain("<svg")
     expect(result.composedSvg).toContain("identical text output")
+  })
+
+  test("embeds pixel diff overlays when backend screenshots differ", async () => {
+    const result = await compareTape(SIMPLE_TAPE, {
+      backends: [vt100Spec("baseline"), transformedVt100Spec("mutated", (input) => input.replaceAll("h", "j"))],
+      mode: "diff",
+    })
+
+    expect(result.textMatch).toBe(false)
+    expect(result.composedSvg).toContain("Pixel diff vs baseline")
+    expect(result.composedSvg).toContain("changed pixels")
+    expect(result.composedSvg).toContain("data-diff-overlay")
   })
 
   test("diff with single backend falls back to side-by-side", async () => {

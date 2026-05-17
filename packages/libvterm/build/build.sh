@@ -52,6 +52,7 @@ emcc -O2 \
     "_vterm_free",
     "_vterm_set_size",
     "_vterm_input_write",
+    "_vterm_output_read",
     "_vterm_obtain_screen",
     "_vterm_screen_reset",
     "_vterm_screen_enable_altscreen",

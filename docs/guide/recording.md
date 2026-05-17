@@ -143,16 +143,20 @@ Termless produces output in multiple formats, all without external dependencies 
 Play a tape file against multiple backends simultaneously and compare the results. This answers the question: "Does my TUI look the same in every terminal?"
 
 ```bash
-# Side-by-side comparison (composed SVG)
+# Side-by-side comparison (SVG or PNG, based on -o extension)
 $ termless play -b vterm,ghostty --compare side-by-side -o comparison.svg demo.tape
+$ termless play -b vterm,ghostty --compare side-by-side -o comparison.png demo.tape
 
 # Separate screenshots per backend
 $ termless play -b vterm,ghostty,xtermjs --compare separate -o ./out/ demo.tape
 
+# Every installed, ready backend
+$ termless play -b all --compare grid -o all-backends.svg demo.tape
+
 # Grid layout
 $ termless play -b vterm,ghostty,alacritty --compare grid -o grid.svg demo.tape
 
-# Diff mode — highlights differences between backends
+# Diff mode — embeds pixel-diff overlays between the baseline and each backend
 $ termless play -b vterm,ghostty --compare diff -o diff.svg demo.tape
 ```
 
@@ -163,7 +167,7 @@ $ termless play -b vterm,ghostty --compare diff -o diff.svg demo.tape
 | `separate`     | Individual screenshots per backend            |
 | `side-by-side` | Two backends side by side in one image        |
 | `grid`         | All backends in a grid layout                 |
-| `diff`         | Highlights cells that differ between backends |
+| `diff`         | Shows screenshots plus pixel-diff overlays against the first backend |
 
 ## Programmatic API
 

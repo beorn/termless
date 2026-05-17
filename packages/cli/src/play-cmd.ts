@@ -24,6 +24,7 @@ import { executeTape } from "../../../src/tape/executor.ts"
 import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { resolveTheme } from "../../../src/tape/themes.ts"
+import { backends as listBackends, isReady as isBackendReady } from "../../../src/backends.ts"
 import type { AnimationFrame } from "../../../src/animation/types.ts"
 import type { SvgScreenshotOptions, WindowBar } from "../../../src/types.ts"
 
@@ -61,6 +62,81 @@ function applyVisualOptions(
 /** Check if a path has an image extension. */
 function isImagePath(path: string): boolean {
   return /\.(gif|svg|png|apng)$/i.test(path)
+}
+
+/** Resolve the output directory for `--compare separate`. */
+export function compareSeparateOutputDir(output?: string): string {
+  if (!output) return "."
+  if (/[\\/]$/.test(output)) {
+    const trimmed = output.replace(/[\\/]+$/, "")
+    return trimmed.length > 0 ? trimmed : output
+  }
+  return dirname(output)
+}
+
+/** Write a composed comparison SVG, rasterizing it when the user requests `.png`. */
+export async function writeComparisonOutput(path: string, svg: string): Promise<void> {
+  const resolved = resolve(path)
+  mkdirSync(dirname(resolved), { recursive: true })
+
+  if (path.toLowerCase().endsWith(".png")) {
+    const resvg = await import("@resvg/resvg-js")
+    const renderer = new resvg.Resvg(svg, {
+      fitTo: { mode: "zoom" as const, value: 1 },
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
+    })
+    writeFileSync(resolved, renderer.render().asPng())
+    return
+  }
+
+  writeFileSync(resolved, svg, "utf-8")
+}
+
+export interface BackendCatalog {
+  names(): string[]
+  ready(name: string): boolean
+}
+
+const defaultBackendCatalog: BackendCatalog = {
+  names: listBackends,
+  ready: isBackendReady,
+}
+
+/** Resolve a comma-separated CLI backend list, expanding `all` to ready backends. */
+export function resolveBackendNames(
+  input?: string,
+  catalog: BackendCatalog = defaultBackendCatalog,
+): string[] | undefined {
+  const tokens = input
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (!tokens || tokens.length === 0) return undefined
+
+  const resolved: string[] = []
+  const seen = new Set<string>()
+  const push = (name: string) => {
+    if (!seen.has(name)) {
+      seen.add(name)
+      resolved.push(name)
+    }
+  }
+
+  for (const token of tokens) {
+    if (token.toLowerCase() === "all") {
+      const ready = catalog.names().filter((name) => catalog.ready(name))
+      if (ready.length === 0) {
+        throw new Error("No installed, ready backends found for --backend all")
+      }
+      for (const name of ready) push(name)
+      continue
+    }
+
+    push(token)
+  }
+
+  return resolved
 }
 
 /**
@@ -250,7 +326,7 @@ async function playAction(
 
   const tape = parseTape(source)
 
-  const backends = opts.backend ? opts.backend.split(",").map((b) => b.trim()) : undefined
+  const backends = resolveBackendNames(opts.backend)
 
   // Multi-backend comparison mode
   if (opts.compare && backends && backends.length > 1) {
@@ -263,16 +339,16 @@ async function playAction(
       output: firstOutput,
     })
 
-    // Save composed SVG if output specified and composition was produced
+    // Save composed comparison if output specified and composition was produced
     if (firstOutput && result.composedSvg) {
-      writeFileSync(firstOutput, result.composedSvg, "utf-8")
+      await writeComparisonOutput(firstOutput, result.composedSvg)
       console.log(`Composed comparison saved: ${firstOutput}`)
     }
 
     // Save individual screenshots
     if (mode === "separate") {
       for (const s of result.screenshots) {
-        const outputDir = firstOutput ? dirname(firstOutput) : "."
+        const outputDir = compareSeparateOutputDir(firstOutput)
         mkdirSync(outputDir, { recursive: true })
         const path = `${outputDir}/${s.backend}.png`
         writeFileSync(path, s.png)

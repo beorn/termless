@@ -22,8 +22,8 @@ const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
 
 // Probe WASM availability synchronously up-front so we can use describe.skip.
 // initLibvterm() is async, so we kick it off and await before the suite.
-// A "loaded" module can still be incomplete (missing HEAPU8 / _malloc) when
-// the WASM artifact isn't built — verify required exports before running.
+// A "loaded" module can still be incomplete when the WASM artifact isn't built;
+// verify the exported accessors required by the TypeScript wrapper before running.
 let wasmModule: LibvtermModule | null = null
 let skipReason = ""
 try {
@@ -31,7 +31,8 @@ try {
   if (
     candidate &&
     typeof (candidate as { _malloc?: unknown })._malloc === "function" &&
-    (candidate as { HEAPU8?: unknown }).HEAPU8 instanceof Uint8Array
+    typeof (candidate as { setValue?: unknown }).setValue === "function" &&
+    typeof (candidate as { getValue?: unknown }).getValue === "function"
   ) {
     wasmModule = candidate
   } else {
@@ -56,6 +57,13 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
+  test("feeds bytes through exported accessors without requiring HEAPU8", async () => {
+    const backend: TerminalBackend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init?.({ cols: 80, rows: 24 })
+    expect(() => backend.feed(new TextEncoder().encode("ok"))).not.toThrow()
+    backend.destroy()
+  })
+
   test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
     const responses = await probeBackend("\x1b[14t")
     const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))

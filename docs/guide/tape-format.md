@@ -256,6 +256,9 @@ $ termless play -b ghostty demo.tape
 
 # Play with cross-terminal comparison
 $ termless play -b vterm,ghostty --compare side-by-side demo.tape
+
+# Play against every installed, ready backend
+$ termless play -b all --compare grid -o all-backends.svg demo.tape
 ```
 
 ## VHS Compatibility
@@ -265,7 +268,7 @@ The termless tape parser is compatible with VHS `.tape` files. The main differen
 - **Execution is headless** -- no GUI window, no ffmpeg dependency
 - **Multi-backend** -- play against any of 10+ terminal emulators
 - **Output formats** -- GIF, animated SVG, APNG, PNG, asciicast (all pure JS, no ffmpeg)
-- **Cross-terminal comparison** -- side-by-side, grid, diff modes
+- **Cross-terminal comparison** -- side-by-side, grid, diff modes, including pixel-diff overlays
 
 ## See Also
 
