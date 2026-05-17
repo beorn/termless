@@ -347,6 +347,7 @@ bun vitest run tests/cross-backend.test.ts
 | [@termless/alacritty](packages/alacritty)   | Alacritty backend (`alacritty_terminal` via napi-rs)                |
 | [@termless/wezterm](packages/wezterm)       | WezTerm backend (`wezterm-term` via napi-rs)                        |
 | [@termless/peekaboo](packages/peekaboo)     | OS-level terminal automation (xterm.js + real app)                  |
+| [@termless/web-player](packages/web-player) | Browser xterm.js player for `.cast` / `.tape` playback              |
 | [@termless/vt100-rust](packages/vt100-rust) | Rust vt100 crate via napi-rs (reference implementation)             |
 | [@termless/libvterm](packages/libvterm)     | neovim's libvterm via Emscripten WASM                               |
 | [@termless/kitty](packages/kitty)           | Kitty VT parser built from GPL source (not distributed)             |

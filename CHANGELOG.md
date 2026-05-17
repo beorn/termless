@@ -12,6 +12,7 @@
 - **Expect command**: assert terminal content during tape execution
 - **Play streaming**: real-time asciicast playback with configurable speed
 - **Interactive recording**: capture keystrokes and generate .tape files
+- **Browser web player**: `@termless/web-player` for xterm.js playback of `.cast` recordings and browser-safe `.tape` timelines
 - **Animation formats**: tape executor/compare tests, VHS tape format support
 - **Composable matchers**: `toHaveAttrs` and `toHaveCursor` matchers
 - **@termless/vt220 backend**: VT220 emulator backend

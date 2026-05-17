@@ -1,0 +1,66 @@
+{
+  "name": "@termless/web-player",
+  "version": "0.1.0",
+  "description": "Browser xterm.js player for termless .cast and .tape recordings",
+  "keywords": [
+    "asciicast",
+    "browser",
+    "tape",
+    "terminal",
+    "terminal-player",
+    "termless",
+    "xterm"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/web-player"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      },
+      "./browser": {
+        "types": "./dist/browser.d.mts",
+        "import": "./dist/browser.mjs"
+      }
+    }
+  },
+  "dependencies": {
+    "@xterm/xterm": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": [
+      "src/index.ts",
+      "src/browser.ts"
+    ],
+    "format": "esm"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=23.6.0"
+  }
+}

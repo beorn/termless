@@ -14,7 +14,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "types": ["@types/bun"],
-    "lib": ["ESNext"]
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"],
   "exclude": ["packages/cli/**", "packages/libvterm/**", "tests/cross-backend.test.ts"]

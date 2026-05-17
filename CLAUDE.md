@@ -27,6 +27,7 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 | `@termless/alacritty`  | Alacritty backend (alacritty_terminal via napi-rs)                         | Bun + Node.js | Needs Rust build       |
 | `@termless/wezterm`    | WezTerm backend (wezterm-term via napi-rs)                                 | Bun + Node.js | Needs Rust build       |
 | `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                         | Bun + Node.js | Active (macOS)         |
+| `@termless/web-player` | Browser xterm.js player for `.cast` / `.tape` recordings                   | Browser       | Active                 |
 | `@termless/vt100-rust` | Rust vt100 crate via napi-rs                                               | Bun + Node.js | Needs Rust build       |
 | `@termless/libvterm`   | neovim's libvterm via WASM                                                 | Bun + Node.js | Needs Emscripten build |
 | `@termless/kitty`      | Kitty VT parser built from GPL source (not distributed)                    | Bun + Node.js | Needs C build          |
@@ -55,7 +56,8 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
         ├── @termless/vt100-rust (Rust napi-rs)
         ├── @termless/libvterm (C via Emscripten WASM)
         ├── @termless/kitty (C built from GPL source)
-        └── @termless/peekaboo (xterm.js + OS automation)
+        ├── @termless/peekaboo (xterm.js + OS automation)
+        └── @termless/web-player (@xterm/xterm browser playback)
 ```
 
 ## Commands

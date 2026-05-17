@@ -85,6 +85,7 @@ export default defineConfig({
           { text: "Screenshots", link: "/guide/screenshots" },
           { text: "Best Practices", link: "/guide/best-practices" },
           { text: "Recording & Playback", link: "/guide/recording" },
+          { text: "Web Player", link: "/guide/web-player" },
           { text: "Backends", link: "/guide/backends" },
           { text: "CLI & MCP Server", link: "/guide/cli" },
         ],
@@ -146,6 +147,7 @@ export default defineConfig({
           { text: "Recording & Playback", link: "/guide/recording" },
           { text: "Tape Format Reference", link: "/guide/tape-format" },
           { text: "Asciicast v2", link: "/guide/asciicast" },
+          { text: "Web Player", link: "/guide/web-player" },
         ],
       },
       {

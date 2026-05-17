@@ -112,6 +112,9 @@ $ termless play -o demo.apng demo.tape
 
 # Play an asciicast file
 $ termless play demo.cast
+
+# Embed browser playback on a docs site
+$ bun add @termless/web-player
 ```
 
 ### Play Options
@@ -128,15 +131,16 @@ $ termless play demo.cast
 
 Termless produces output in multiple formats, all without external dependencies like Chromium or ffmpeg:
 
-| Format       | Extension | Type           | Dependencies         |
-| ------------ | --------- | -------------- | -------------------- |
-| PNG          | `.png`    | Single frame   | `@resvg/resvg-js`    |
-| SVG          | `.svg`    | Single frame   | None (built-in)      |
-| Animated SVG | `.svg`    | Multi-frame    | None (CSS keyframes) |
-| GIF          | `.gif`    | Multi-frame    | `gifenc` (pure JS)   |
-| APNG         | `.apng`   | Multi-frame    | `upng-js` (pure JS)  |
-| asciicast v2 | `.cast`   | Recording data | None (JSON-lines)    |
-| Tape         | `.tape`   | Recording data | None (text)          |
+| Format       | Extension | Type           | Dependencies           |
+| ------------ | --------- | -------------- | ---------------------- |
+| PNG          | `.png`    | Single frame   | `@resvg/resvg-js`      |
+| SVG          | `.svg`    | Single frame   | None (built-in)        |
+| Animated SVG | `.svg`    | Multi-frame    | None (CSS keyframes)   |
+| GIF          | `.gif`    | Multi-frame    | `gifenc` (pure JS)     |
+| APNG         | `.apng`   | Multi-frame    | `upng-js` (pure JS)    |
+| asciicast v2 | `.cast`   | Recording data | None (JSON-lines)      |
+| Tape         | `.tape`   | Recording data | None (text)            |
+| Web player   | browser   | Interactive    | `@termless/web-player` |
 
 ## Cross-Terminal Comparison
 
@@ -162,11 +166,11 @@ $ termless play -b vterm,ghostty --compare diff -o diff.svg demo.tape
 
 ### Comparison Modes
 
-| Mode           | Description                                   |
-| -------------- | --------------------------------------------- |
-| `separate`     | Individual screenshots per backend            |
-| `side-by-side` | Two backends side by side in one image        |
-| `grid`         | All backends in a grid layout                 |
+| Mode           | Description                                                          |
+| -------------- | -------------------------------------------------------------------- |
+| `separate`     | Individual screenshots per backend                                   |
+| `side-by-side` | Two backends side by side in one image                               |
+| `grid`         | All backends in a grid layout                                        |
 | `diff`         | Shows screenshots plus pixel-diff overlays against the first backend |
 
 ## Programmatic API
@@ -210,5 +214,6 @@ const rec = asciicastToRecording(cast)
 
 - [Tape Format Reference](/guide/tape-format) -- full `.tape` command reference
 - [Asciicast v2](/guide/asciicast) -- asciicast format details and API
+- [Web Player](/guide/web-player) -- embed `.cast` and `.tape` playback in browser docs
 - [Screenshots](/guide/screenshots) -- SVG and PNG screenshot generation
 - [Multi-Backend Testing](/guide/multi-backend) -- testing against multiple backends in Vitest

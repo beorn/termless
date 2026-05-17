@@ -47,6 +47,7 @@ bun run typecheck
 | `@termless/alacritty`      | Alacritty backend (alacritty_terminal via napi-rs)                |
 | `@termless/wezterm`        | WezTerm backend (wezterm-term via napi-rs)                        |
 | `@termless/peekaboo`       | OS-level terminal automation (xterm.js + real app)                |
+| `@termless/web-player`     | Browser xterm.js player for `.cast` / `.tape` playback            |
 | `@termless/vt100-rust`     | Rust vt100 crate via napi-rs (reference implementation)           |
 | `@termless/libvterm`       | neovim's libvterm via Emscripten WASM                             |
 | `@termless/ghostty-native` | Native Ghostty via napigen N-API bindings (ghostty-vt Zig module) |
