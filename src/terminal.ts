@@ -22,11 +22,13 @@ import type {
   MouseOptions,
   MouseModifiers,
   OutputView,
+  PlaywrightScreenshotOptions,
 } from "./types.ts"
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
 import { screenshotSvg } from "./svg.ts"
 import { screenshotPng } from "./png.ts"
+import { screenshotPlaywrightPng } from "./playwright.ts"
 import {
   createBufferView,
   createCellView,
@@ -356,6 +358,10 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return screenshotPng(terminal, pngOptions)
   }
 
+  function screenshotAsPlaywrightPng(options?: PlaywrightScreenshotOptions): Promise<Uint8Array> {
+    return screenshotPlaywrightPng(terminal, options)
+  }
+
   // ── Resize ──
 
   function resize(newCols: number, newRows: number): void {
@@ -485,6 +491,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     // Screenshot
     screenshotSvg: screenshot,
     screenshotPng: screenshotAsPng,
+    screenshotPlaywrightPng: screenshotAsPlaywrightPng,
 
     // Resize
     resize,

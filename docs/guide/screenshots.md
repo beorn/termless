@@ -1,11 +1,11 @@
 ---
 title: Screenshots
-description: Generate SVG and PNG screenshots from terminal state for visual regression testing -- no Chromium needed.
+description: Generate SVG and PNG screenshots from terminal state, with a fast default renderer and an optional Playwright renderer for browser-shaped text.
 ---
 
 # Screenshots
 
-Termless generates screenshots from terminal state -- no Chromium needed. SVG is built-in with zero dependencies. PNG is available via optional `@resvg/resvg-js`.
+Termless generates screenshots from terminal state. SVG is built in with zero dependencies. The default PNG renderer uses optional `@resvg/resvg-js` and does not need Chromium. A separate Playwright renderer is available for docs and marketing screenshots where browser font shaping matters more than startup cost.
 
 ## Basic Usage
 
@@ -18,6 +18,7 @@ term.feed("\x1b[1;38;2;255;85;85mError:\x1b[0m file not found")
 
 const svg = term.screenshotSvg()
 const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
+const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright
 ```
 
 ## Saving to File
@@ -32,6 +33,10 @@ await writeFile("/tmp/terminal.svg", svg, "utf-8")
 // PNG (requires @resvg/resvg-js)
 const png = await term.screenshotPng()
 await writeFile("/tmp/terminal.png", png)
+
+// Browser-shaped PNG (requires playwright)
+const browserPng = await term.screenshotPlaywrightPng()
+await writeFile("/tmp/terminal-browser.png", browserPng)
 ```
 
 ## Options
@@ -87,16 +92,38 @@ const png = await term.screenshotPng({
 
 All `SvgScreenshotOptions` (`fontFamily`, `fontSize`, `cellWidth`, `cellHeight`, `theme`) are also accepted.
 
+## Playwright PNG Options
+
+`screenshotPlaywrightPng()` accepts a `PlaywrightScreenshotOptions` object. It extends `SvgScreenshotOptions`, uses the same `scale` default as `screenshotPng()`, and passes `launchOptions` through to `chromium.launch()`.
+
+```typescript
+const png = await term.screenshotPlaywrightPng({
+  scale: 2,
+  fontFamily: "'Fira Code', monospace",
+  launchOptions: { channel: "chrome" },
+})
+```
+
+Use this path when browser font rendering or ligature shaping is the point of the screenshot. Use `screenshotPng()` for deterministic test snapshots and fast CI output.
+
+| Option          | Type      | Default | Description                                      |
+| --------------- | --------- | ------- | ------------------------------------------------ |
+| `scale`         | `number`  | `2`     | Browser device scale factor                      |
+| `launchOptions` | `unknown` | --      | Passed through to Playwright `chromium.launch()` |
+| `playwright`    | `object`  | --      | Inject a loaded Playwright module                |
+
 ## Standalone Functions
 
 You can also use the screenshot functions directly on any `TerminalReadable`:
 
 ```typescript
-import { screenshotSvg } from "termless/svg"
-import { screenshotPng } from "termless/png"
+import { screenshotSvg } from "@termless/core/svg"
+import { screenshotPng } from "@termless/core/png"
+import { screenshotPlaywrightPng } from "@termless/core/playwright"
 
 const svg = screenshotSvg(term, { theme: { background: "#000" } })
 const png = await screenshotPng(term, { scale: 3 })
+const browserPng = await screenshotPlaywrightPng(term, { scale: 2 })
 ```
 
 ## What Gets Rendered

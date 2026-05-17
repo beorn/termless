@@ -9,6 +9,11 @@ export type {
   MouseModifiers,
   MouseOptions,
   OutputView,
+  PlaywrightBrowserLike,
+  PlaywrightModuleLike,
+  PlaywrightNewPageOptions,
+  PlaywrightPageLike,
+  PlaywrightScreenshotOptions,
   PngScreenshotOptions,
   RegionView,
   RGB,
@@ -33,6 +38,7 @@ export { hasExtension } from "./types.ts"
 export { createTerminal } from "./terminal.ts"
 export { screenshotSvg } from "./svg.ts"
 export { screenshotPng } from "./png.ts"
+export { screenshotPlaywrightPng } from "./playwright.ts"
 export { parseKey, keyToAnsi } from "./key-mapping.ts"
 export { encodeKeyToAnsi } from "./key-encoding.ts"
 export { createCellView, createRegionView, createRowView } from "./views.ts"

@@ -92,6 +92,7 @@ interface Terminal extends TerminalReadable {
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
   screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
+  screenshotPlaywrightPng(options?: PlaywrightScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
@@ -432,6 +433,15 @@ Capture the terminal as a PNG buffer. Requires `@resvg/resvg-js` (`bun add -d @r
 ```typescript
 const png = await term.screenshotPng()
 const png = await term.screenshotPng({ scale: 3, theme: { background: "#282a36" } })
+```
+
+### `screenshotPlaywrightPng(options?)`
+
+Capture the terminal as a PNG buffer through Playwright/Chromium. Requires `playwright` (`bun add -d playwright`). Use this for browser-shaped text rendering in docs or marketing screenshots; keep `screenshotPng()` for fast deterministic test snapshots.
+
+```typescript
+const png = await term.screenshotPlaywrightPng()
+const png = await term.screenshotPlaywrightPng({ scale: 2, fontFamily: "'Fira Code', monospace" })
 ```
 
 ## Resize

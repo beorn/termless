@@ -25,7 +25,7 @@ features:
   - title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - title: SVG & PNG Screenshots
-    details: "Generate terminal screenshots as SVG or PNG. No Chromium, no native dependencies. Colors, bold, italic, cursor — all rendered. PNG via optional @resvg/resvg-js."
+    details: "Generate terminal screenshots as SVG or PNG. Default PNG uses optional @resvg/resvg-js; browser-shaped PNGs can use optional Playwright/Chromium."
   - title: Fast & Headless
     details: "Pure in-process terminal emulation. Unit-style feed/assert tests typically run under 1ms; PTY, browser, and OS-level tests trade speed for realism. No Chromium, no ffmpeg."
 ---
@@ -140,17 +140,17 @@ expect(term).toHaveTitle("my-app")
 
 ## Which Package Do I Need?
 
-| You want to...                                  | Install                                                   |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| Test a terminal UI in Vitest                    | `@termless/test` (bundles the default xterm.js fixture)   |
-| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
-| Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
-| Test with a zero-dependency emulator            | `@termless/vt100`                                         |
-| Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
-| Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
-| Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
-| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                   |
-| Use the CLI or MCP server                       | `@termless/cli`                                           |
+| You want to...                                   | Install                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Test a terminal UI in Vitest                     | `@termless/test` (bundles the default xterm.js fixture)                                          |
+| Use the core Terminal API without test matchers  | `@termless/core` + a backend (`@termless/xtermjs`, etc.)                                         |
+| Test against Ghostty's VT parser                 | `@termless/ghostty`                                                                              |
+| Test with a zero-dependency emulator             | `@termless/vt100`                                                                                |
+| Take SVG/PNG screenshots                         | Built into `@termless/core` (PNG needs `@resvg/resvg-js`; browser-shaped PNG needs `playwright`) |
+| Spawn and test real processes via PTY            | Built into `@termless/core` (used via any backend)                                               |
+| Automate a real terminal app (OS-level)          | `@termless/peekaboo`                                                                             |
+| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                                                           |
+| Use the CLI or MCP server                        | `@termless/cli`                                                                                  |
 
 Most test suites start with `@termless/test`. Add backend packages for [multi-backend testing](/guide/multi-backend), `@termless/peekaboo` for real terminal automation, or `@termless/web-player` when publishing recordings in browser docs.
 
@@ -160,7 +160,7 @@ Most test suites start with `@termless/test`. Add backend packages for [multi-ba
 | ------------------------------ | -------------------------------------------------------------------------------------- |
 | First install and first test    | [Getting Started](/guide/getting-started)                                              |
 | Locator-style terminal regions  | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal) |
-| Assertions and matchers         | [Writing Tests](/guide/writing-tests#assertions-matchers-reference), [Matchers](/api/matchers), and [Matcher Reference](/matchers/) |
+| Assertions and matchers          | [Writing Tests](/guide/writing-tests#assertions-matchers-reference), [Matchers](/api/matchers), and [Matcher Reference](/matchers/) |
 | Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                      |
 | Real process / PTY tests        | [Getting Started: Spawning Real Processes](/guide/getting-started#spawning-real-processes) |
 | Cross-backend coverage          | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends) |
@@ -231,16 +231,16 @@ See [Backend Capabilities](/guide/backends) for the full feature matrix, per-bac
 
 ## How It Compares
 
-| Feature               | Termless                              | Manual string testing | Playwright     |
-| --------------------- | ------------------------------------- | --------------------- | -------------- |
-| Speed                 | &lt;1ms/unit-style test (in-memory, no PTY) | &lt;1ms/test     | ~100ms+/test   |
-| Terminal internals    | Scrollback, cursor, modes, cell attrs | None                  | N/A            |
-| ANSI awareness        | Full (colors, bold, cursor)           | None                  | N/A            |
-| Multi-backend         | 10 terminal emulators                 | N/A                   | 3 browsers     |
-| Protocol capabilities | Kitty, sixel, OSC 8, reflow           | None                  | N/A            |
-| Wide char support     | Cell-level width tracking             | Broken                | N/A            |
-| Screenshots           | SVG + PNG (no Chromium)               | None                  | PNG (Chromium) |
-| PTY support           | Spawn real processes                  | Manual                | N/A            |
+| Feature               | Termless                                    | Manual string testing | Playwright     |
+| --------------------- | ------------------------------------------- | --------------------- | -------------- |
+| Speed                 | &lt;1ms/unit-style test (in-memory, no PTY) | &lt;1ms/test          | ~100ms+/test   |
+| Terminal internals    | Scrollback, cursor, modes, cell attrs       | None                  | N/A            |
+| ANSI awareness        | Full (colors, bold, cursor)                 | None                  | N/A            |
+| Multi-backend         | 10 terminal emulators                       | N/A                   | 3 browsers     |
+| Protocol capabilities | Kitty, sixel, OSC 8, reflow                 | None                  | N/A            |
+| Wide char support     | Cell-level width tracking                   | Broken                | N/A            |
+| Screenshots           | SVG + PNG; optional browser PNG             | None                  | PNG (Chromium) |
+| PTY support           | Spawn real processes                        | Manual                | N/A            |
 
 ## See Also
 

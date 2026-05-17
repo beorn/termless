@@ -10,7 +10,7 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, vt100-rust, libvterm, Kitty, and Peekaboo to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
 - **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
-- **SVG & PNG screenshots** -- no Chromium, no native deps (PNG via optional `@resvg/resvg-js`)
+- **SVG & PNG screenshots** -- fast default renderers (PNG via optional `@resvg/resvg-js`), plus optional Playwright/Chromium rendering for browser-shaped text
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **Fast** -- typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses
 - **Recording & Playback** -- record terminal sessions as `.tape` files, play back as GIF, animated SVG, APNG, or asciicast. Cross-terminal comparison in one command
@@ -59,6 +59,7 @@ console.log(term.out.getText()) // raw output bytes, including OSC/APC/CSI proto
 
 const svg = term.screenshotSvg()
 const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
+const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright
 await term.close()
 ```
 
@@ -212,6 +213,7 @@ term.out.clear() // useful before asserting cleanup/delete protocol output
 ```bash
 npm install -D @termless/test               # Vitest matchers + fixtures (bundles default xterm.js fixture)
 npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
+npm install -D playwright                    # Optional: browser-shaped PNG screenshots
 npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
 
@@ -280,6 +282,7 @@ Termless works on both **Bun** (>=1.0) and **Node.js** (>=23.6).
 | PTY spawn (`terminal.spawn()`)          | Built-in (native PTY) | Requires `node-pty` |
 | SVG screenshots                         | Built-in              | Built-in            |
 | PNG screenshots                         | `@resvg/resvg-js`     | `@resvg/resvg-js`   |
+| Playwright PNG screenshots              | `playwright`          | `playwright`        |
 | Peekaboo (OS automation)                | macOS only            | macOS only          |
 | napi-rs backends (alacritty, wezterm)   | Needs Rust build      | Needs Rust build    |
 
@@ -287,17 +290,17 @@ On Node.js, PTY support requires `node-pty` as an optional peer dependency. If n
 
 ## Which Package Do I Need?
 
-| You want to...                                  | Install                                                   |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| Test a terminal UI in Vitest                    | `@termless/test` (bundles the default xterm.js fixture)   |
-| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
-| Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
-| Test with a zero-dependency emulator            | `@termless/vt100`                                         |
-| Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
-| Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
-| Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
-| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                   |
-| Use the CLI or MCP server                       | `@termless/cli`                                           |
+| You want to...                                   | Install                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Test a terminal UI in Vitest                     | `@termless/test` (bundles the default xterm.js fixture)                                          |
+| Use the core Terminal API without test matchers  | `@termless/core` + a backend (`@termless/xtermjs`, etc.)                                         |
+| Test against Ghostty's VT parser                 | `@termless/ghostty`                                                                              |
+| Test with a zero-dependency emulator             | `@termless/vt100`                                                                                |
+| Take SVG/PNG screenshots                         | Built into `@termless/core` (PNG needs `@resvg/resvg-js`; browser-shaped PNG needs `playwright`) |
+| Spawn and test real processes via PTY            | Built into `@termless/core` (used via any backend)                                               |
+| Automate a real terminal app (OS-level)          | `@termless/peekaboo`                                                                             |
+| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                                                           |
+| Use the CLI or MCP server                        | `@termless/cli`                                                                                  |
 
 Most test suites start with `@termless/test`. Add backend packages for multi-backend testing, `@termless/peekaboo` for real terminal automation, or `@termless/web-player` when publishing recordings in browser docs.
 
@@ -367,7 +370,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 | **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |
 | **SVG & PNG screenshots** | ✅                                       | ❌                      | ❌               | ❌           | ❌      | ❌      | ❌  |
-| **No browser/Chromium**   | ✅                                       | ❌ needs Chromium       | ✅               | ✅           | ✅      | ✅      | ✅  |
+| **No browser required**   | ✅ optional for browser PNG              | ❌ needs Chromium       | ✅               | ✅           | ✅      | ✅      | ✅  |
 | **Framework-agnostic**    | ✅                                       | ✅                      | ✅               | ✅           | ✅      | ❌      | ❌  |
 | **TypeScript**            | ✅                                       | ✅                      | ✅               | ❌           | ❌      | ❌      | ✅  |
 

@@ -313,6 +313,7 @@ export interface Terminal extends TerminalReadable {
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
   screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
+  screenshotPlaywrightPng(options?: PlaywrightScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
@@ -359,6 +360,40 @@ export interface SvgScreenshotOptions {
 export interface PngScreenshotOptions extends SvgScreenshotOptions {
   /** Render scale factor (default: 2 for retina-quality output). */
   scale?: number
+}
+
+export interface PlaywrightScreenshotOptions extends SvgScreenshotOptions {
+  /** Device scale factor for the browser screenshot (default: 2 for retina-quality output). */
+  scale?: number
+  /** Playwright `chromium.launch()` options. Typed as unknown to keep Playwright optional. */
+  launchOptions?: unknown
+  /** Inject an already-loaded Playwright module, mainly for tests and controlled hosts. */
+  playwright?: PlaywrightModuleLike
+}
+
+export interface PlaywrightModuleLike {
+  chromium: {
+    launch(options?: unknown): Promise<PlaywrightBrowserLike>
+  }
+}
+
+export interface PlaywrightBrowserLike {
+  newPage(options?: PlaywrightNewPageOptions): Promise<PlaywrightPageLike>
+  close(): Promise<void>
+}
+
+export interface PlaywrightNewPageOptions {
+  viewport?: { width: number; height: number }
+  deviceScaleFactor?: number
+}
+
+export interface PlaywrightPageLike {
+  setContent(
+    html: string,
+    options?: { waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit" },
+  ): Promise<void>
+  evaluate?<T>(fn: () => T | Promise<T>): Promise<T>
+  screenshot(options?: { type?: "png" }): Promise<Uint8Array | ArrayBuffer>
 }
 
 export interface SvgTheme {
