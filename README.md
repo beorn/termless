@@ -59,7 +59,7 @@ console.log(term.out.getText()) // raw output bytes, including OSC/APC/CSI proto
 
 const svg = term.screenshotSvg()
 const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
-const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright
+const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright && bunx playwright install chromium
 await term.close()
 ```
 
@@ -214,6 +214,7 @@ term.out.clear() // useful before asserting cleanup/delete protocol output
 npm install -D @termless/test               # Vitest matchers + fixtures (bundles default xterm.js fixture)
 npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 npm install -D playwright                    # Optional: browser-shaped PNG screenshots
+npx playwright install chromium              # Optional: Chromium binary for browser-shaped PNG screenshots
 npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
 

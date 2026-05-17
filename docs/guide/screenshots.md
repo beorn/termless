@@ -18,7 +18,7 @@ term.feed("\x1b[1;38;2;255;85;85mError:\x1b[0m file not found")
 
 const svg = term.screenshotSvg()
 const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
-const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright
+const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright && bunx playwright install chromium
 ```
 
 ## Saving to File
@@ -34,7 +34,7 @@ await writeFile("/tmp/terminal.svg", svg, "utf-8")
 const png = await term.screenshotPng()
 await writeFile("/tmp/terminal.png", png)
 
-// Browser-shaped PNG (requires playwright)
+// Browser-shaped PNG (requires playwright + Chromium)
 const browserPng = await term.screenshotPlaywrightPng()
 await writeFile("/tmp/terminal-browser.png", browserPng)
 ```
@@ -95,6 +95,13 @@ All `SvgScreenshotOptions` (`fontFamily`, `fontSize`, `cellWidth`, `cellHeight`,
 ## Playwright PNG Options
 
 `screenshotPlaywrightPng()` accepts a `PlaywrightScreenshotOptions` object. It extends `SvgScreenshotOptions`, uses the same `scale` default as `screenshotPng()`, and passes `launchOptions` through to `chromium.launch()`.
+
+Install both the Playwright package and the Chromium browser binary:
+
+```bash
+bun add -d playwright
+bunx playwright install chromium
+```
 
 ```typescript
 const png = await term.screenshotPlaywrightPng({
