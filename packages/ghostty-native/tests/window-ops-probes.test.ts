@@ -1,8 +1,8 @@
 /**
  * Window-op probe responses — ghostty-native backend.
  *
- * libghostty-vt (Ghostty's VT parser compiled natively via Zig) is a
- * parser library with no native window pixel concept — there is no
+ * The native Ghostty VT backend has terminal state but no native
+ * window pixel concept — there is no
  * real window. We synthesize CSI 14t (text-area pixel size) and CSI
  * 18t (text-area cell count) responses from configured grid × cell
  * metrics. silvery's `resolveMouseOption()` uses both to enable

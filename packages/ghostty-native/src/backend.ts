@@ -1,8 +1,8 @@
 /**
  * Native Ghostty backend for termless.
  *
- * Wraps libghostty-vt (Ghostty's VT parser compiled as a native library)
- * via Zig napigen N-API bindings. Same terminal emulation as Ghostty,
+ * Wraps Ghostty's VT Zig module via napigen N-API bindings.
+ * Same terminal emulation as Ghostty,
  * but running natively (no WASM overhead).
  *
  * Requires the native module to be built first:
@@ -239,8 +239,8 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
 
   /**
    * Standard cell metrics used for synthetic CSI 14t / 18t window-op
-   * responses. libghostty-vt (native) is a parser library with no
-   * native window pixel concept — there is no real window. Real
+   * responses. The native Ghostty VT backend has terminal state but no
+   * window pixel concept — there is no real window. Real
    * Ghostty.app answers these probes with the actual rendered
    * dimensions; for the headless native backend we synthesize
    * equivalent responses from the configured rows/cols × typical

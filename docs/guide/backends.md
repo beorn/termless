@@ -233,12 +233,12 @@ const term = createTerminal({ backend: b })
 
 ### @termless/ghostty-native
 
-Native Ghostty backend using libghostty-vt via Zig N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
+Native Ghostty backend using Ghostty's VT Zig module via napigen N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
 
-- **Engine**: libghostty-vt 1.3.1 (Zig via napigen N-API)
+- **Engine**: ghostty-vt Zig module pinned to Ghostty 1.3.1 (napigen N-API)
 - **Upstream**: `github:ghostty-org/ghostty`
 - **Best for**: High-performance Ghostty conformance testing without WASM startup cost. Same parser fidelity as `@termless/ghostty` but faster.
-- **Limitations**: Requires Zig 0.15.2+ to build. Not available as prebuilt binaries.
+- **Limitations**: Requires Zig 0.15.2+ to build. Not available as prebuilt binaries. The stable libghostty-vt C API migration is blocked until upstream tags or declares the C signatures stable enough for external bindings.
 - **Install**: `bunx termless backends install ghostty-native` (requires Zig build)
 
 ```typescript
