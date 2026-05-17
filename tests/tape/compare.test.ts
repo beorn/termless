@@ -11,6 +11,7 @@ import { parseTape } from "../../src/tape/parser.ts"
 import { compareTape } from "../../src/tape/compare.ts"
 import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
 import type { TerminalBackend } from "../../src/types.ts"
+import * as UPNG from "upng-js"
 
 // =============================================================================
 // Helpers
@@ -40,6 +41,12 @@ function transformedVt100Spec(name: string, transform: (input: string) => string
     },
   }
   return { name, backend }
+}
+
+function pngSize(png: Uint8Array): { width: number; height: number } {
+  const buffer = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer
+  const decoded = UPNG.decode(buffer)
+  return { width: decoded.width, height: decoded.height }
 }
 
 // =============================================================================
@@ -123,6 +130,20 @@ describe("side-by-side mode", () => {
     })
 
     expect(result.composedSvg).toContain("data:image/png;base64,")
+  })
+
+  test("composed SVG uses decoded PNG dimensions instead of fixed boxes", async () => {
+    const tape = parseTape('Set Width 12\nSet Height 4\nType "hi"\nScreenshot')
+    const result = await compareTape(tape, {
+      backends: [vt100Spec("a"), vt100Spec("b")],
+      mode: "side-by-side",
+    })
+    const first = pngSize(result.screenshots[0]!.png)
+    const second = pngSize(result.screenshots[1]!.png)
+
+    expect(result.composedSvg).toContain(`width="${first.width}" height="${first.height}"`)
+    expect(result.composedSvg).toContain(`width="${second.width}" height="${second.height}"`)
+    expect(result.composedSvg).toContain(`width="${first.width + second.width + 10}"`)
   })
 })
 

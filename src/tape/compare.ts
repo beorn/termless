@@ -128,11 +128,11 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
       break
 
     case "side-by-side":
-      composedSvg = composeSideBySide(screenshots)
+      composedSvg = await composeSideBySide(screenshots)
       break
 
     case "grid":
-      composedSvg = composeGrid(screenshots)
+      composedSvg = await composeGrid(screenshots)
       break
 
     case "diff":
@@ -149,39 +149,34 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
 
 /**
  * Compose screenshots horizontally with backend name headers.
- * Generates a wrapper SVG that embeds individual PNGs as base64 images.
+ * Generates a wrapper SVG that embeds individual PNGs at their decoded dimensions.
  */
-function composeSideBySide(screenshots: BackendScreenshot[]): string {
+async function composeSideBySide(screenshots: BackendScreenshot[]): Promise<string> {
   if (screenshots.length === 0) return "<svg></svg>"
 
-  // Estimate dimensions (we don't have exact PNG dimensions without decoding,
-  // so use reasonable defaults based on terminal size)
-  const imgWidth = 640
-  const imgHeight = 480
+  const measured = await measureScreenshots(screenshots)
   const headerHeight = 30
   const gap = 10
 
-  const totalWidth = screenshots.length * imgWidth + (screenshots.length - 1) * gap
-  const totalHeight = imgHeight + headerHeight
+  const totalWidth = measured.reduce((sum, s) => sum + s.width, 0) + (measured.length - 1) * gap
+  const totalHeight = Math.max(...measured.map((s) => s.height)) + headerHeight
 
   const parts: string[] = []
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
   parts.push(`<rect width="100%" height="100%" fill="#1e1e1e"/>`)
 
-  for (let i = 0; i < screenshots.length; i++) {
-    const x = i * (imgWidth + gap)
-    const s = screenshots[i]!
+  let x = 0
+  for (const s of measured) {
     const b64 = uint8ArrayToBase64(s.png)
 
-    // Header
     parts.push(
-      `<text x="${x + imgWidth / 2}" y="20" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
+      `<text x="${x + s.width / 2}" y="20" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
     )
 
-    // Image
     parts.push(
-      `<image x="${x}" y="${headerHeight}" width="${imgWidth}" height="${imgHeight}" href="data:image/png;base64,${b64}"/>`,
+      `<image x="${x}" y="${headerHeight}" width="${s.width}" height="${s.height}" href="data:image/png;base64,${b64}"/>`,
     )
+    x += s.width + gap
   }
 
   parts.push("</svg>")
@@ -191,36 +186,37 @@ function composeSideBySide(screenshots: BackendScreenshot[]): string {
 /**
  * Compose screenshots in a grid layout (2 columns).
  */
-function composeGrid(screenshots: BackendScreenshot[]): string {
+async function composeGrid(screenshots: BackendScreenshot[]): Promise<string> {
   if (screenshots.length === 0) return "<svg></svg>"
 
-  const imgWidth = 640
-  const imgHeight = 480
+  const measured = await measureScreenshots(screenshots)
   const headerHeight = 30
   const gap = 10
   const gridCols = 2
+  const cellWidth = Math.max(...measured.map((s) => s.width))
+  const cellHeight = Math.max(...measured.map((s) => s.height))
 
-  const gridRows = Math.ceil(screenshots.length / gridCols)
-  const totalWidth = gridCols * imgWidth + (gridCols - 1) * gap
-  const totalHeight = gridRows * (imgHeight + headerHeight + gap)
+  const gridRows = Math.ceil(measured.length / gridCols)
+  const totalWidth = gridCols * cellWidth + (gridCols - 1) * gap
+  const totalHeight = gridRows * (cellHeight + headerHeight + gap)
 
   const parts: string[] = []
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
   parts.push(`<rect width="100%" height="100%" fill="#1e1e1e"/>`)
 
-  for (let i = 0; i < screenshots.length; i++) {
+  for (let i = 0; i < measured.length; i++) {
     const col = i % gridCols
     const row = Math.floor(i / gridCols)
-    const x = col * (imgWidth + gap)
-    const y = row * (imgHeight + headerHeight + gap)
-    const s = screenshots[i]!
+    const x = col * (cellWidth + gap)
+    const y = row * (cellHeight + headerHeight + gap)
+    const s = measured[i]!
     const b64 = uint8ArrayToBase64(s.png)
 
     parts.push(
-      `<text x="${x + imgWidth / 2}" y="${y + 20}" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
+      `<text x="${x + s.width / 2}" y="${y + 20}" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
     )
     parts.push(
-      `<image x="${x}" y="${y + headerHeight}" width="${imgWidth}" height="${imgHeight}" href="data:image/png;base64,${b64}"/>`,
+      `<image x="${x}" y="${y + headerHeight}" width="${s.width}" height="${s.height}" href="data:image/png;base64,${b64}"/>`,
     )
   }
 
@@ -234,39 +230,39 @@ function composeGrid(screenshots: BackendScreenshot[]): string {
 async function composeDiff(screenshots: BackendScreenshot[]): Promise<string> {
   if (screenshots.length < 2) return composeSideBySide(screenshots)
 
-  const imgWidth = 640
-  const imgHeight = 480
+  const measured = await measureScreenshots(screenshots)
   const headerHeight = 30
   const diffHeaderHeight = 50
   const gap = 10
   const baseline = screenshots[0]!
   const overlays = await Promise.all(screenshots.slice(1).map((s) => createPixelDiffOverlay(baseline, s)))
 
-  const screenshotWidth = screenshots.length * imgWidth + (screenshots.length - 1) * gap
-  const overlayWidth = overlays.length * imgWidth + Math.max(0, overlays.length - 1) * gap
+  const screenshotWidth = measured.reduce((sum, s) => sum + s.width, 0) + (measured.length - 1) * gap
+  const screenshotHeight = Math.max(...measured.map((s) => s.height))
+  const overlayWidth = overlays.reduce((sum, s) => sum + s.width, 0) + Math.max(0, overlays.length - 1) * gap
+  const overlayHeight = Math.max(...overlays.map((s) => s.height))
   const totalWidth = Math.max(screenshotWidth, overlayWidth)
-  const overlayY = headerHeight + imgHeight + gap + diffHeaderHeight
-  const totalHeight = overlayY + imgHeight
+  const overlayY = headerHeight + screenshotHeight + gap + diffHeaderHeight
+  const totalHeight = overlayY + overlayHeight
 
   const parts: string[] = []
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
   parts.push(`<rect width="100%" height="100%" fill="#1e1e1e"/>`)
 
-  // Screenshots
-  for (let i = 0; i < screenshots.length; i++) {
-    const x = i * (imgWidth + gap)
-    const s = screenshots[i]!
+  let screenshotX = 0
+  for (const s of measured) {
     const b64 = uint8ArrayToBase64(s.png)
 
     parts.push(
-      `<text x="${x + imgWidth / 2}" y="20" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
+      `<text x="${screenshotX + s.width / 2}" y="20" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="14">${escapeXml(s.backend)}</text>`,
     )
     parts.push(
-      `<image x="${x}" y="${headerHeight}" width="${imgWidth}" height="${imgHeight}" href="data:image/png;base64,${b64}"/>`,
+      `<image x="${screenshotX}" y="${headerHeight}" width="${s.width}" height="${s.height}" href="data:image/png;base64,${b64}"/>`,
     )
+    screenshotX += s.width + gap
   }
 
-  const diffY = headerHeight + imgHeight + gap
+  const diffY = headerHeight + screenshotHeight + gap
   const texts = screenshots.map((s) => s.text)
   const allMatch = texts.every((t) => t === texts[0])
 
@@ -277,19 +273,19 @@ async function composeDiff(screenshots: BackendScreenshot[]): Promise<string> {
     `<text x="10" y="${diffY + 20}" fill="${diffColor}" font-family="monospace" font-size="12">${escapeXml(diffMessage)}</text>`,
   )
 
-  for (let i = 0; i < overlays.length; i++) {
-    const overlay = overlays[i]!
-    const x = i * (imgWidth + gap)
+  let overlayX = 0
+  for (const overlay of overlays) {
     const b64 = uint8ArrayToBase64(overlay.png)
     const changedPct = ((overlay.diffPixels / overlay.totalPixels) * 100).toFixed(2)
     const label = `Pixel diff vs ${baseline.backend}: ${overlay.backend} — ${overlay.diffPixels}/${overlay.totalPixels} changed pixels (${changedPct}%)`
 
     parts.push(
-      `<text x="${x + imgWidth / 2}" y="${overlayY - 14}" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="12">${escapeXml(label)}</text>`,
+      `<text x="${overlayX + overlay.width / 2}" y="${overlayY - 14}" text-anchor="middle" fill="#d4d4d4" font-family="monospace" font-size="12">${escapeXml(label)}</text>`,
     )
     parts.push(
-      `<image data-diff-overlay="true" x="${x}" y="${overlayY}" width="${imgWidth}" height="${imgHeight}" href="data:image/png;base64,${b64}"/>`,
+      `<image data-diff-overlay="true" x="${overlayX}" y="${overlayY}" width="${overlay.width}" height="${overlay.height}" href="data:image/png;base64,${b64}"/>`,
     )
+    overlayX += overlay.width + gap
   }
 
   parts.push("</svg>")
@@ -306,8 +302,15 @@ interface DecodedPng {
   rgba: Uint8Array
 }
 
+interface MeasuredScreenshot extends BackendScreenshot {
+  width: number
+  height: number
+}
+
 interface PixelDiffOverlay {
   backend: string
+  width: number
+  height: number
   png: Uint8Array
   diffPixels: number
   totalPixels: number
@@ -336,6 +339,19 @@ async function decodePng(data: Uint8Array): Promise<DecodedPng> {
     height: decoded.height,
     rgba: new Uint8Array(frame),
   }
+}
+
+async function measureScreenshots(screenshots: BackendScreenshot[]): Promise<MeasuredScreenshot[]> {
+  const UPNG = await loadUpng()
+  return screenshots.map((s) => {
+    const buffer = s.png.buffer.slice(s.png.byteOffset, s.png.byteOffset + s.png.byteLength) as ArrayBuffer
+    const decoded = UPNG.decode(buffer)
+    return {
+      ...s,
+      width: decoded.width,
+      height: decoded.height,
+    }
+  })
 }
 
 async function createPixelDiffOverlay(
@@ -377,6 +393,8 @@ async function createPixelDiffOverlay(
   const png = UPNG.encode([output.buffer as ArrayBuffer], width, height, 0)
   return {
     backend: target.backend,
+    width,
+    height,
     png: new Uint8Array(png),
     diffPixels,
     totalPixels: width * height,
