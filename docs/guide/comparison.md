@@ -44,6 +44,21 @@ You can test terminal apps by running them inside [ttyd](https://github.com/tsl0
 
 **When to prefer Playwright + ttyd:** You need to test a web-based terminal specifically (e.g., verifying your xterm.js integration renders correctly in a real browser).
 
+## Termless vs Screenshot and Demo Tools
+
+Terminal screenshot tools are usually optimized for presentation output. Termless uses many of the same ideas, but keeps the terminal model available for assertions, replay, and backend comparison.
+
+| Tool                                                     | Best at                                                                 | Termless difference                                                                                                                          |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [termshot](https://github.com/homeport/termshot)         | Prefix a command, run it in a PTY, render ANSI output as a polished PNG | Termless can do one-shot PTY screenshots, but also exposes cells, cursor, modes, scrollback, and typed assertions                            |
+| [carbon-now-cli](https://github.com/mixn/carbon-now-cli) | Styled source-code images through Carbon/browser rendering              | Termless renders terminal state, not syntax-highlighted source snippets                                                                      |
+| [VHS](https://github.com/charmbracelet/vhs)              | Declarative terminal demos from `.tape` files                           | Termless supports the tape shape without requiring ttyd, Chromium, or ffmpeg, and can render the same tape across multiple emulator backends |
+| [asciinema/agg](https://github.com/asciinema/agg)        | High-quality GIFs from asciicast recordings                             | Termless reads and writes asciicast, but also supports screenshots, APNG/animated SVG, and test assertions before render                     |
+
+**When to prefer a screenshot tool:** You only need a beautiful artifact from already-known output, especially source-code snippets for Carbon or a single command image for termshot.
+
+**When to prefer Termless:** You need the image to come from a reproducible terminal state, or the same script must double as a test fixture, visual regression artifact, docs asset, and cross-terminal comparison.
+
 ## Termless vs tmux send-keys
 
 Shell scripts that use `tmux send-keys` and `tmux capture-pane` can drive terminal apps:
@@ -103,5 +118,8 @@ Termless is designed for testing terminal applications. It's the wrong tool for:
 | **Termless**              | TUI testing with rich assertions (colors, cursor, modes, screenshots) |
 | **pexpect**               | Python-based process automation, serial ports                         |
 | **Playwright + ttyd**     | Testing web-based terminal UIs                                        |
+| **termshot**              | One-shot PTY command screenshots                                      |
+| **carbon-now-cli**        | Polished source-code images                                           |
+| **VHS / agg**             | Demo GIFs and recording conversions                                   |
 | **tmux send-keys**        | Quick shell-script smoke tests                                        |
 | **Raw string assertions** | Non-interactive CLI output                                            |

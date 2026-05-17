@@ -7,6 +7,8 @@ description: Generate SVG and PNG screenshots from terminal state, with a fast d
 
 Termless generates screenshots from terminal state. SVG is built in with zero dependencies. The default PNG renderer uses optional `@resvg/resvg-js` and does not need Chromium. A separate Playwright renderer is available for docs and marketing screenshots where browser font shaping matters more than startup cost.
 
+For one-off command-output images, use `termless record --screenshot`. For reproducible docs, demos, and regression fixtures, write a `.tape` and render it with `termless play`. Both paths render from parsed terminal state, so ANSI styling, cursor state, and screen geometry stay inspectable before they become an image.
+
 ## Basic Usage
 
 ```typescript
@@ -46,9 +48,14 @@ await writeFile("/tmp/terminal-browser.png", browserPng)
 ```typescript
 const svg = term.screenshotSvg({
   fontFamily: "'JetBrains Mono', monospace",
-  fontSize: 14,
-  cellWidth: 8.4,
-  cellHeight: 18,
+  fontSize: 16,
+  cellWidth: 9.6,
+  cellHeight: 20,
+  padding: 16,
+  borderRadius: 8,
+  windowBar: "colorful",
+  margin: 24,
+  marginFill: "#111827",
   theme: {
     foreground: "#f8f8f2",
     background: "#282a36",
@@ -58,13 +65,70 @@ const svg = term.screenshotSvg({
 })
 ```
 
-| Option       | Type       | Default                                         | Description                 |
-| ------------ | ---------- | ----------------------------------------------- | --------------------------- |
-| `fontFamily` | `string`   | `"'Menlo', 'Monaco', 'Courier New', monospace"` | CSS font-family for text    |
-| `fontSize`   | `number`   | `14`                                            | Font size in px             |
-| `cellWidth`  | `number`   | `8.4`                                           | Character cell width in px  |
-| `cellHeight` | `number`   | `18`                                            | Character cell height in px |
-| `theme`      | `SvgTheme` | _(dark theme)_                                  | Color theme                 |
+| Option          | Type                              | Default                                         | Description                                     |
+| --------------- | --------------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| `fontFamily`    | `string`                          | `"'Menlo', 'Monaco', 'Courier New', monospace"` | CSS font-family for text                        |
+| `fontSize`      | `number`                          | `16`                                            | Font size in px                                 |
+| `cellWidth`     | `number`                          | `9.6`                                           | Character cell width in px                      |
+| `cellHeight`    | `number`                          | `20`                                            | Character cell height in px                     |
+| `theme`         | `SvgTheme`                        | _(dark theme)_                                  | Color theme                                     |
+| `padding`       | `number`                          | `0`                                             | Padding between terminal cells and the frame    |
+| `borderRadius`  | `number`                          | `0`                                             | Radius for the terminal background rectangle    |
+| `windowBar`     | `"none" \| "rings" \| "colorful"` | `"none"`                                        | Optional macOS-style window controls            |
+| `windowBarSize` | `number`                          | `40`                                            | Height reserved for the window bar              |
+| `margin`        | `number`                          | `0`                                             | Outer image margin                              |
+| `marginFill`    | `string`                          | transparent                                     | Fill color behind the terminal frame and margin |
+
+## Polished Frames
+
+Use visual frame options when the screenshot is meant for docs, blog posts, or release notes:
+
+```typescript
+const png = await term.screenshotPng({
+  theme: { background: "#111827", foreground: "#f9fafb" },
+  padding: 18,
+  borderRadius: 8,
+  windowBar: "colorful",
+  margin: 24,
+  marginFill: "#0b1020",
+})
+```
+
+The same options are available from `.tape` settings and `termless play` flags:
+
+```tape
+Set Theme "github-dark"
+Set Padding 18
+Set BorderRadius 8
+Set WindowBar "colorful"
+Set Margin 24
+Set MarginFill "#0b1020"
+
+Type "bun test"
+Enter
+Sleep 1s
+Screenshot build.png
+```
+
+```bash
+termless play demo.tape -o demo.png --window-bar colorful --padding 18 --margin 24 --margin-fill '#0b1020'
+```
+
+## Command Output Captures
+
+For a single command, `termless record --screenshot` is the shortest path:
+
+```bash
+termless record --cols 100 --rows 30 --screenshot /tmp/listing.png -- ls -la
+```
+
+This runs the command in a PTY, waits for content, captures the terminal state, and writes SVG or PNG based on the filename extension. Add `--keys` and `--wait-for` for simple interactive captures:
+
+```bash
+termless record --wait-for "ready>" --keys j,j,Enter --screenshot /tmp/app.svg -- bun km view /path/to/vault
+```
+
+Use `.tape` when the capture needs setup, timing, hidden commands, multiple screenshots, or a future GIF/APNG/SVG recording.
 
 ## SvgTheme
 

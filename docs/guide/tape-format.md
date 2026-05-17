@@ -196,6 +196,28 @@ Set Theme "Dracula"
 Set Theme "Monokai"
 ```
 
+### Visual Frame
+
+These settings affect screenshots and animations generated from the tape:
+
+```tape
+Set Padding 18
+Set BorderRadius 8
+Set WindowBar "colorful"
+Set WindowBarSize 40
+Set Margin 24
+Set MarginFill "#0b1020"
+```
+
+| Setting         | Meaning                                               |
+| --------------- | ----------------------------------------------------- |
+| `Padding`       | Pixels between terminal cells and the frame edge      |
+| `BorderRadius`  | Radius for the terminal background rectangle          |
+| `WindowBar`     | `none`, `rings`, or `colorful`                        |
+| `WindowBarSize` | Height reserved for the window bar                    |
+| `Margin`        | Outer image margin                                    |
+| `MarginFill`    | Fill color behind the terminal frame and outer margin |
+
 ### Typing Speed
 
 Default speed for all `Type` commands:
@@ -203,6 +225,15 @@ Default speed for all `Type` commands:
 ```tape
 Set TypingSpeed 50ms
 ```
+
+### Playback Output
+
+```tape
+Set PlaybackSpeed 2
+Set Framerate 30
+```
+
+`PlaybackSpeed` changes how `Sleep` durations are interpreted during render. `Framerate` caps generated animation output.
 
 ## Duration Format
 
