@@ -13,6 +13,30 @@ import siteGlossary from "../content/glossary.json"
 // Site-specific terms + shared terminal vocabulary + ecosystem cross-links
 const glossary = [...siteGlossary, ...loadTerminalGlossary(), ...loadEcosystemGlossary({ exclude: ["termless.dev"] })]
 
+const tapeLanguage = {
+  name: "tape",
+  scopeName: "source.tape",
+  patterns: [
+    {
+      match: "^\\s*#.*$",
+      name: "comment.line.number-sign.tape",
+    },
+    {
+      match:
+        "^\\s*(Set|Type(?:@\\S+)?|Sleep|Screenshot|Hide|Show|Source|Require|Output|Expect|Enter|Tab|Space|Backspace|Delete|Escape|Up|Down|Left|Right|Home|End|PageUp|PageDown|Ctrl\\+\\S+|Alt\\+\\S+)\\b",
+      name: "keyword.control.tape",
+    },
+    {
+      match: '"(?:[^"\\\\]|\\\\.)*"',
+      name: "string.quoted.double.tape",
+    },
+    {
+      match: "\\b\\d+(?:\\.\\d+)?(?:ms|s)?\\b",
+      name: "constant.numeric.tape",
+    },
+  ],
+}
+
 const seoOptions = {
   hostname: "https://termless.dev",
   siteName: "Termless",
@@ -47,6 +71,7 @@ export default defineConfig({
   sitemap: { hostname: "https://termless.dev" },
 
   markdown: {
+    languages: [tapeLanguage],
     config(md) {
       md.use(glossaryPlugin, { entities: glossary })
     },
