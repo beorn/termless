@@ -79,8 +79,10 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
   // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
+  // DSR ?996 = color-scheme query; reply CSI ?997;1n (dark)
   const CSI_14t_RE = /\x1b\[14t/g
   const CSI_18t_RE = /\x1b\[18t/g
+  const DSR_COLOR_SCHEME_RE = /\x1b\[\?996n/g
 
   function feed(data: Uint8Array): void {
     const s = ensureScreen()
@@ -98,6 +100,10 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       CSI_18t_RE.lastIndex = 0
       while ((m = CSI_18t_RE.exec(text)) !== null) {
         backend.onResponse(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
+      }
+      DSR_COLOR_SCHEME_RE.lastIndex = 0
+      while ((m = DSR_COLOR_SCHEME_RE.exec(text)) !== null) {
+        backend.onResponse(new TextEncoder().encode("\x1b[?997;1n"))
       }
     }
   }
