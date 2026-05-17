@@ -22,14 +22,115 @@
  */
 
 import type { Command } from "@silvery/commander"
-
-const parseNum = (v: string) => parseInt(v, 10)
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { createSessionManager } from "./session.ts"
+
+const parseNum = (v: string) => parseInt(v, 10)
+export const collectOutputPath = (value: string, previous: string[] = []): string[] => [...previous, value]
+
+export const SAVE_TITLE_SEQUENCE = "\x1b[22;0t"
+export const RESTORE_TITLE_SEQUENCE = "\x1b[23;0t"
+
+const BANNER_WIDTH = 60
+const BANNER_LINE = "─".repeat(BANNER_WIDTH)
+
+export interface RecordingStartOptions {
+  cmdLabel: string
+  cols: number
+  rows: number
+  outputPaths: string[]
+  wantImages: boolean
+}
+
+export interface RecordingSavedOutput {
+  path: string
+  bytes: number
+}
+
+export interface RecordingSummaryOptions {
+  durationMs: number
+  inputEventCount: number
+  outputEventCount: number
+  frameCount?: number
+  savedOutputs?: RecordingSavedOutput[]
+}
+
+function faint(text: string): string {
+  return `\x1b[2m${text}\x1b[22m`
+}
+
+function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`
+}
+
+function formatDuration(ms: number): string {
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function previewCommandFor(outputs: RecordingSavedOutput[]): string | undefined {
+  const preview = outputs.find((output) => /\.(gif|svg|png|apng|html)$/i.test(output.path))
+  return preview ? `open ${preview.path}` : undefined
+}
+
+export function formatRecordingStart(opts: RecordingStartOptions): string {
+  const outputLabel = opts.outputPaths.length > 0 ? opts.outputPaths.join(", ") : "stdout (.tape)"
+  const details = [`${opts.cols}x${opts.rows}`, outputLabel]
+  if (opts.wantImages) details.push("frames")
+
+  return (
+    [
+      faint(BANNER_LINE),
+      `\x1b[31m●\x1b[0m Recording: ${opts.cmdLabel}`,
+      faint(`  ${details.join(" · ")}`),
+      faint("  Ctrl+D or exit app to stop"),
+      faint(BANNER_LINE),
+    ].join("\n") + "\n"
+  )
+}
+
+export function formatRecordingSummary(opts: RecordingSummaryOptions): string {
+  const parts = [
+    plural(opts.inputEventCount, "keystroke"),
+    plural(opts.outputEventCount, "output event"),
+    formatDuration(opts.durationMs),
+  ]
+  if (opts.frameCount && opts.frameCount > 0) {
+    parts.push(plural(opts.frameCount, "frame"))
+  }
+
+  const lines = [faint(BANNER_LINE), `\x1b[32m✓\x1b[0m Done (${parts.join(", ")})`]
+  for (const output of opts.savedOutputs ?? []) {
+    lines.push(`Saved: ${output.path} (${formatBytes(output.bytes)})`)
+  }
+  const preview = previewCommandFor(opts.savedOutputs ?? [])
+  if (preview) lines.push(`Preview: ${preview}`)
+  lines.push(faint(BANNER_LINE))
+
+  return lines.join("\n") + "\n"
+}
+
+export function recordingTitle(cmdLabel: string, elapsedMs?: number): string {
+  if (elapsedMs == null) return `● REC — ${cmdLabel}`
+
+  const elapsed = Math.floor(elapsedMs / 1000)
+  const m = Math.floor(elapsed / 60)
+  const s = elapsed % 60
+  return `● REC ${m}:${String(s).padStart(2, "0")} — ${cmdLabel}`
+}
+
+export function setTitleSequence(title: string): string {
+  return `\x1b]0;${title.replace(/[\x00-\x1f\x7f]/g, " ")}\x07`
+}
 
 // =============================================================================
 // Font detection
@@ -211,15 +312,8 @@ async function interactiveRecord(
 
   const cmdLabel = cmd.join(" ")
 
-  // Styled separator + info (stderr, won't appear in .tape stdout)
-  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
-  process.stderr.write(`\x1b[31m●\x1b[0m Recording: ${cmdLabel}\n`)
-  process.stderr.write(`\x1b[2m  ${opts.cols}x${opts.rows}`)
-  process.stderr.write(` · ${outputPaths.join(", ") || "stdout (.tape)"}`)
-  if (wantImages) process.stderr.write(` · frames`)
-  process.stderr.write(`\n`)
-  process.stderr.write(`  Ctrl+D or exit app to stop\x1b[22m\n`)
-  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
+  // Styled separator + info (stderr, won't appear in .tape stdout).
+  process.stderr.write(formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages }))
 
   const { spawnPty } = await import("../../../src/pty.ts")
 
@@ -227,14 +321,18 @@ async function interactiveRecord(
   const outputEvents: Array<{ time: number; data: string }> = []
   const startTime = Date.now()
 
-  // Window title with live timer (invisible in recording — only on real terminal)
-  const setTitle = (t: string) => process.stderr.write(`\x1b]0;${t}\x07`)
-  setTitle(`● REC — ${cmdLabel}`)
+  // Window title with live timer (invisible in recording — only on real terminal).
+  process.stderr.write(SAVE_TITLE_SEQUENCE)
+  let titleRestored = false
+  const restoreTitle = () => {
+    if (titleRestored) return
+    process.stderr.write(RESTORE_TITLE_SEQUENCE)
+    titleRestored = true
+  }
+  const setTitle = (title: string) => process.stderr.write(setTitleSequence(title))
+  setTitle(recordingTitle(cmdLabel))
   const titleTimer = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000)
-    const m = Math.floor(elapsed / 60)
-    const s = elapsed % 60
-    setTitle(`● REC ${m}:${String(s).padStart(2, "0")} — ${cmdLabel}`)
+    setTitle(recordingTitle(cmdLabel, Date.now() - startTime))
   }, 1000)
 
   // If image output is requested, create a headless terminal that mirrors PTY output
@@ -269,154 +367,160 @@ async function interactiveRecord(
 
   // Track the latest keystroke label for overlay
   let currentKeystrokeLabel = ""
+  let stdinHandler: ((chunk: Buffer) => void) | null = null
 
-  // Start frame capture timer for image output
-  if (headlessTerminal) {
-    const captureInterval = 100 // ms
-    let lastCaptureTime = Date.now()
+  try {
+    // Start frame capture timer for image output
+    if (headlessTerminal) {
+      const captureInterval = 100 // ms
+      let lastCaptureTime = Date.now()
 
-    frameTimer = setInterval(() => {
-      if (!headlessTerminal) return
-      const currentText = headlessTerminal.getText()
-      if (currentText !== lastFrameText) {
-        let svg = headlessTerminal.screenshotSvg(svgOpts)
-        if (showKeys && currentKeystrokeLabel) {
-          svg = overlayKeystroke(svg, currentKeystrokeLabel)
+      frameTimer = setInterval(() => {
+        if (!headlessTerminal) return
+        const currentText = headlessTerminal.getText()
+        if (currentText !== lastFrameText) {
+          let svg = headlessTerminal.screenshotSvg(svgOpts)
+          if (showKeys && currentKeystrokeLabel) {
+            svg = overlayKeystroke(svg, currentKeystrokeLabel)
+          }
+          const now = Date.now()
+          // Set duration of previous frame
+          if (animationFrames.length > 0) {
+            animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
+          }
+          animationFrames.push({ svg, duration: captureInterval })
+          lastFrameText = currentText
+          lastCaptureTime = now
         }
-        const now = Date.now()
-        // Set duration of previous frame
-        if (animationFrames.length > 0) {
-          animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
-        }
-        animationFrames.push({ svg, duration: captureInterval })
-        lastFrameText = currentText
-        lastCaptureTime = now
-      }
-    }, captureInterval)
-  }
-
-  // Intercept stdin in raw mode, forward to PTY, record keystrokes
-  if (process.stdin.isTTY) {
-    process.stdin.setRawMode(true)
-  }
-  process.stdin.resume()
-
-  const stdinHandler = (chunk: Buffer) => {
-    const bytes = new Uint8Array(chunk)
-    inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
-
-    // Update keystroke label for overlay
-    if (showKeys) {
-      const tapeCmdStr = bytesToTapeCommand(bytes, raw)
-      if (tapeCmdStr !== null && tapeCmdStr !== SKIP) {
-        currentKeystrokeLabel = tapeCmdStr
-      } else if (tapeCmdStr === null && bytes.length === 1 && bytes[0]! >= 0x20 && bytes[0]! < 0x7f) {
-        // Printable character
-        currentKeystrokeLabel = new TextDecoder().decode(bytes)
-      }
+      }, captureInterval)
     }
 
-    try {
-      pty.write(new TextDecoder().decode(bytes))
-    } catch {
-      // PTY may have closed
+    // Intercept stdin in raw mode, forward to PTY, record keystrokes
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true)
     }
-  }
-  process.stdin.on("data", stdinHandler)
+    process.stdin.resume()
 
-  // Wait for PTY to exit
-  await new Promise<void>((resolve) => {
-    const check = setInterval(() => {
-      if (!pty.alive) {
-        clearInterval(check)
-        resolve()
+    stdinHandler = (chunk: Buffer) => {
+      const bytes = new Uint8Array(chunk)
+      inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
+
+      // Update keystroke label for overlay
+      if (showKeys) {
+        const tapeCmdStr = bytesToTapeCommand(bytes, raw)
+        if (tapeCmdStr !== null && tapeCmdStr !== SKIP) {
+          currentKeystrokeLabel = tapeCmdStr
+        } else if (tapeCmdStr === null && bytes.length === 1 && bytes[0]! >= 0x20 && bytes[0]! < 0x7f) {
+          // Printable character
+          currentKeystrokeLabel = new TextDecoder().decode(bytes)
+        }
       }
-    }, 100)
-  })
 
-  // Cleanup timers
-  clearInterval(titleTimer)
-  if (frameTimer) clearInterval(frameTimer)
-  process.stdin.removeListener("data", stdinHandler)
-  if (process.stdin.isTTY) {
-    process.stdin.setRawMode(false)
-  }
-  process.stdin.pause()
-
-  // Capture final frame if headless terminal has changed
-  if (headlessTerminal) {
-    const finalText = headlessTerminal.getText()
-    if (finalText !== lastFrameText) {
-      const svg = headlessTerminal.screenshotSvg(svgOpts)
-      animationFrames.push({ svg, duration: 100 })
-    }
-  }
-
-  const duration = (Date.now() - startTime) / 1000
-
-  // Restore window title + post-recording separator
-  setTitle("")
-  const m = Math.floor(duration / 60)
-  const s = Math.floor(duration % 60)
-  process.stderr.write(`\x1b[2m${"─".repeat(60)}\x1b[22m\n`)
-  process.stderr.write(`\x1b[32m✓\x1b[0m Done · ${m}:${String(s).padStart(2, "0")}`)
-  process.stderr.write(` · ${inputEvents.length} keystrokes · ${outputEvents.length} output events`)
-  if (animationFrames.length > 0) process.stderr.write(` · ${animationFrames.length} frames`)
-  process.stderr.write(`\n`)
-
-  // Write to output files (or stdout)
-  if (outputPaths.length === 0) {
-    // No -o: output .tape to stdout
-    process.stdout.write(eventsToTape(inputEvents, cmd.join(" "), raw))
-  } else {
-    for (const path of outputPaths) {
-      if (/\.(gif|svg|png|apng)$/i.test(path)) {
-        // Image output — render animation frames
-        await writeImageOutput(path, animationFrames)
-      } else if (path.endsWith(".cast")) {
-        // asciicast v2 format — JSON-lines with output events
-        const lines: string[] = []
-        lines.push(
-          JSON.stringify({
-            version: 2,
-            width: opts.cols,
-            height: opts.rows,
-            timestamp: Math.floor(Date.now() / 1000),
-            duration,
-            env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
-          }),
-        )
-        for (const event of outputEvents) {
-          lines.push(JSON.stringify([event.time / 1000, "o", event.data]))
-        }
-        for (const event of inputEvents) {
-          lines.push(JSON.stringify([event.time / 1000, "i", new TextDecoder().decode(event.bytes)]))
-        }
-        // Sort by timestamp
-        const header = lines[0]!
-        const events = lines.slice(1).sort((a, b) => {
-          const ta = (JSON.parse(a) as number[])[0]!
-          const tb = (JSON.parse(b) as number[])[0]!
-          return ta - tb
-        })
-        writeFileSync(path, [header, ...events].join("\n") + "\n")
-        console.error(`Saved: ${path}`)
-      } else if (path.endsWith(".tape")) {
-        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
-        console.error(`Saved: ${path}`)
-      } else {
-        writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
-        console.error(`Saved: ${path}`)
+      try {
+        pty.write(new TextDecoder().decode(bytes))
+      } catch {
+        // PTY may have closed
       }
     }
-  }
+    process.stdin.on("data", stdinHandler)
 
-  // Cleanup headless terminal
-  if (headlessTerminal) {
-    headlessTerminal.close()
-  }
+    // Wait for PTY to exit
+    await new Promise<void>((resolve) => {
+      const check = setInterval(() => {
+        if (!pty.alive) {
+          clearInterval(check)
+          resolve()
+        }
+      }, 100)
+    })
 
-  console.error("  Done.")
+    // Capture final frame if headless terminal has changed
+    if (headlessTerminal) {
+      const finalText = headlessTerminal.getText()
+      if (finalText !== lastFrameText) {
+        const svg = headlessTerminal.screenshotSvg(svgOpts)
+        animationFrames.push({ svg, duration: 100 })
+      }
+    }
+
+    const duration = (Date.now() - startTime) / 1000
+
+    // Restore the previous terminal title before writing summaries or artifacts.
+    restoreTitle()
+
+    // Write to output files (or stdout)
+    const savedOutputs: RecordingSavedOutput[] = []
+    if (outputPaths.length === 0) {
+      // No -o: output .tape to stdout
+      process.stdout.write(eventsToTape(inputEvents, cmd.join(" "), raw))
+    } else {
+      for (const path of outputPaths) {
+        if (/\.(gif|svg|png|apng)$/i.test(path)) {
+          // Image output — render animation frames
+          const bytes = await writeImageOutput(path, animationFrames)
+          if (bytes != null) savedOutputs.push({ path, bytes })
+        } else if (path.endsWith(".cast")) {
+          // asciicast v2 format — JSON-lines with output events
+          const lines: string[] = []
+          lines.push(
+            JSON.stringify({
+              version: 2,
+              width: opts.cols,
+              height: opts.rows,
+              timestamp: Math.floor(Date.now() / 1000),
+              duration,
+              env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
+            }),
+          )
+          for (const event of outputEvents) {
+            lines.push(JSON.stringify([event.time / 1000, "o", event.data]))
+          }
+          for (const event of inputEvents) {
+            lines.push(JSON.stringify([event.time / 1000, "i", new TextDecoder().decode(event.bytes)]))
+          }
+          // Sort by timestamp
+          const header = lines[0]!
+          const events = lines.slice(1).sort((a, b) => {
+            const ta = (JSON.parse(a) as number[])[0]!
+            const tb = (JSON.parse(b) as number[])[0]!
+            return ta - tb
+          })
+          writeFileSync(path, [header, ...events].join("\n") + "\n")
+          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
+        } else if (path.endsWith(".tape")) {
+          writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
+          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
+        } else {
+          writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
+          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
+        }
+      }
+    }
+
+    process.stderr.write(
+      formatRecordingSummary({
+        durationMs: duration * 1000,
+        inputEventCount: inputEvents.length,
+        outputEventCount: outputEvents.length,
+        frameCount: animationFrames.length,
+        savedOutputs,
+      }),
+    )
+  } finally {
+    clearInterval(titleTimer)
+    if (frameTimer) clearInterval(frameTimer)
+    if (stdinHandler) {
+      process.stdin.removeListener("data", stdinHandler)
+    }
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false)
+    }
+    process.stdin.pause()
+    restoreTitle()
+    if (headlessTerminal) {
+      headlessTerminal.close()
+    }
+  }
 }
 
 /**
@@ -426,10 +530,10 @@ async function interactiveRecord(
 async function writeImageOutput(
   path: string,
   frames: import("../../../src/animation/types.ts").AnimationFrame[],
-): Promise<void> {
+): Promise<number | null> {
   if (frames.length === 0) {
     console.error(`Warning: no frames captured for ${path}`)
-    return
+    return null
   }
 
   const dir = dirname(resolve(path))
@@ -458,7 +562,7 @@ async function writeImageOutput(
     writeFileSync(resolve(path), rendered.asPng())
   }
 
-  console.error(`Saved: ${path}`)
+  return statSync(resolve(path)).size
 }
 
 // =============================================================================
@@ -611,7 +715,7 @@ export function registerRecordCommand(program: Command): void {
     .alias("rec")
     .description("Tape recorder — record terminal sessions")
     .argument("[command...]", "Command to record")
-    .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
+    .option("-o, --output <path>", "Output file(s), format by extension (repeat for multiple)", collectOutputPath, [])
     .option("-t, --tape <commands>", "Inline tape commands (scripted mode)")
     .option("--fmt <format>", "Output format for stdout: tape, cast (default: tape)")
     .option("-b, --backend <name>", "Backend name (default: vterm)")

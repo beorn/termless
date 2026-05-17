@@ -71,6 +71,21 @@ describe.skipIf(!hasPty)("PTY integration", () => {
     }
   })
 
+  test("alive becomes false after process exits", async () => {
+    const term = createXterm()
+    try {
+      await term.spawn(["echo", "done"])
+      const deadline = Date.now() + 5000
+      while (!term.exitInfo && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      expect(term.exitInfo).toContain("exit=")
+      expect(term.alive).toBe(false)
+    } finally {
+      await term.close()
+    }
+  })
+
   test("press sends key to PTY", async () => {
     const term = createXterm()
     try {

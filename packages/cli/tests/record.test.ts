@@ -1,6 +1,22 @@
 import { describe, it, expect } from "vitest"
 import { hasFrameChanged, generateHtmlSlideshow, type RecordedFrame } from "../src/record.ts"
-import { isTerminalResponse, bytesToTapeCommand, eventsToTape, SKIP } from "../src/record-cmd.ts"
+import {
+  isTerminalResponse,
+  bytesToTapeCommand,
+  eventsToTape,
+  SKIP,
+  SAVE_TITLE_SEQUENCE,
+  RESTORE_TITLE_SEQUENCE,
+  formatRecordingStart,
+  formatRecordingSummary,
+  recordingTitle,
+  setTitleSequence,
+  collectOutputPath,
+} from "../src/record-cmd.ts"
+
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, "")
+}
 
 // ── Frame change detection ──
 
@@ -170,6 +186,60 @@ describe("generateHtmlSlideshow", () => {
     const html = generateHtmlSlideshow(frames, 100)
 
     expect(html).toContain("Hello &amp; World")
+  })
+})
+
+// ── Recording UX ──
+
+describe("recording UX formatting", () => {
+  it("collects repeated output options without making output consume the command", () => {
+    expect(collectOutputPath("demo.tape")).toEqual(["demo.tape"])
+    expect(collectOutputPath("demo.gif", ["demo.tape"])).toEqual(["demo.tape", "demo.gif"])
+  })
+
+  it("formats a separator banner with command, size, outputs, and frame mode", () => {
+    const banner = stripAnsi(
+      formatRecordingStart({
+        cmdLabel: "km view ./vault",
+        cols: 120,
+        rows: 40,
+        outputPaths: ["demo.gif", "demo.cast"],
+        wantImages: true,
+      }),
+    )
+
+    expect(banner).toContain("────────────────────────────────────────────────────────────")
+    expect(banner).toContain("● Recording: km view ./vault")
+    expect(banner).toContain("120x40 · demo.gif, demo.cast · frames")
+    expect(banner).toContain("Ctrl+D or exit app to stop")
+  })
+
+  it("formats a post-session summary with counts, file sizes, and preview command", () => {
+    const summary = stripAnsi(
+      formatRecordingSummary({
+        durationMs: 7040,
+        inputEventCount: 22,
+        outputEventCount: 40,
+        frameCount: 12,
+        savedOutputs: [
+          { path: "km2.gif", bytes: 482_304 },
+          { path: "session.cast", bytes: 2_048 },
+        ],
+      }),
+    )
+
+    expect(summary).toContain("✓ Done (22 keystrokes, 40 output events, 7.0s, 12 frames)")
+    expect(summary).toContain("Saved: km2.gif (471 KB)")
+    expect(summary).toContain("Saved: session.cast (2 KB)")
+    expect(summary).toContain("Preview: open km2.gif")
+  })
+
+  it("uses title-stack restore around OSC recording titles", () => {
+    expect(SAVE_TITLE_SEQUENCE).toBe("\x1b[22;0t")
+    expect(RESTORE_TITLE_SEQUENCE).toBe("\x1b[23;0t")
+    expect(recordingTitle("km view ./vault")).toBe("● REC — km view ./vault")
+    expect(recordingTitle("km view ./vault", 154_000)).toBe("● REC 2:34 — km view ./vault")
+    expect(setTitleSequence("● REC — km view ./vault")).toBe("\x1b]0;● REC — km view ./vault\x07")
   })
 })
 

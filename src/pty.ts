@@ -130,7 +130,7 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     },
 
     get alive(): boolean {
-      return !closed && proc.exitCode === null
+      return !closed && exitCode === null
     },
 
     get exitInfo(): string | null {
