@@ -6,6 +6,8 @@ Terminal apps are hard to test because the terminal is a black box — you can s
 
 Built alongside [silvery](https://silvery.dev), a React TUI framework, but works with any terminal app.
 
+![Termless rendered terminal screenshot](docs/public/screenshots/build-pipeline.svg)
+
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
 - **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, vt100-rust, libvterm, Kitty, and Peekaboo to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
