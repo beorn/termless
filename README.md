@@ -14,7 +14,7 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 - **PTY support** -- spawn real processes, send keypresses, wait for output
 - **Fast** -- typically under 1ms per unit-style test (in-memory backend, no PTY). No Chromium, no subprocesses
 - **Recording & Playback** -- record terminal sessions as `.tape` files, play back as GIF, animated SVG, APNG, or asciicast. Cross-terminal comparison in one command
-- **CLI + MCP** -- `termless record` / `termless play` for scripting, `termless mcp` for AI agents
+- **Automation tooling** -- `termless record` / `termless play` for scripting, plus an optional MCP server for AI agents
 
 ## Quick Start
 
@@ -210,7 +210,7 @@ term.out.clear() // useful before asserting cleanup/delete protocol output
 ## Installation
 
 ```bash
-npm install -D @termless/test               # Vitest matchers + fixtures (includes xterm.js backend)
+npm install -D @termless/test               # Vitest matchers + fixtures (bundles default xterm.js fixture)
 npm install -D @resvg/resvg-js              # Optional: PNG screenshot support
 npm install node-pty                         # Optional: PTY support on Node.js (not needed on Bun)
 ```
@@ -289,16 +289,17 @@ On Node.js, PTY support requires `node-pty` as an optional peer dependency. If n
 
 | You want to...                                  | Install                                                   |
 | ----------------------------------------------- | --------------------------------------------------------- |
-| Test a terminal UI in Vitest                    | `@termless/test` (includes xterm.js backend)              |
+| Test a terminal UI in Vitest                    | `@termless/test` (bundles the default xterm.js fixture)   |
 | Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
 | Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
 | Test with a zero-dependency emulator            | `@termless/vt100`                                         |
 | Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
 | Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
 | Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
+| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                   |
 | Use the CLI or MCP server                       | `@termless/cli`                                           |
 
-Most users only need `@termless/test`.
+Most test suites start with `@termless/test`. Add backend packages for multi-backend testing, `@termless/peekaboo` for real terminal automation, or `@termless/web-player` when publishing recordings in browser docs.
 
 ## Multi-Backend Testing
 

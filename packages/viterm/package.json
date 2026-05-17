@@ -1,13 +1,17 @@
 {
   "name": "@termless/test",
   "version": "0.3.1",
-  "description": "Vitest integration for termless — 25+ terminal matchers, fixtures, and snapshot serializer for TUI testing",
+  "description": "Playwright-style Vitest integration for terminal apps — fixtures, terminal matchers, snapshots, PTY support, and xterm.js-backed tests",
   "keywords": [
     "ansi",
+    "emulator",
     "jest",
     "matchers",
+    "playwright-style",
+    "pty",
     "snapshot-testing",
     "terminal",
+    "terminal-emulator",
     "terminal-testing",
     "test-fixtures",
     "testing",

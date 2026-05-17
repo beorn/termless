@@ -27,21 +27,23 @@ yarn add -D @termless/test
 
 :::
 
-- **@termless/test** -- Vitest integration (21+ matchers, fixtures, snapshot serializer). Installs `@termless/core` and `@termless/xtermjs` (xterm.js backend) as dependencies.
+- **@termless/test** -- Vitest integration (21+ matchers, fixtures, snapshot serializer). Bundles the default xterm.js-backed fixture for fast in-memory terminal tests.
 
 ### Which Package Do I Need?
 
 | You want to...                                  | Install                                                   |
 | ----------------------------------------------- | --------------------------------------------------------- |
-| Test a terminal UI in Vitest                    | `@termless/test` (includes xterm.js backend)              |
+| Test a terminal UI in Vitest                    | `@termless/test` (bundles the default xterm.js fixture)   |
 | Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
 | Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
 | Test with a zero-dependency emulator            | `@termless/vt100`                                         |
 | Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
+| Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
 | Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
+| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                   |
 | Use the CLI or MCP server                       | `@termless/cli`                                           |
 
-Most users only need `@termless/test`. To add extra backends, use the CLI:
+Most test suites start with `@termless/test`. To add extra backends, use the CLI:
 
 ```bash
 # See all available backends
@@ -52,6 +54,19 @@ bunx termless backends install ghostty
 ```
 
 See [Backend Capabilities](/guide/backends) for a full comparison of all backends.
+
+## Start Here
+
+| If you need...                  | Read                                                                                   |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| First install and first test     | This page                                                                              |
+| Locator-style terminal regions   | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal) |
+| Assertions and matchers          | [Writing Tests](/guide/writing-tests#assertions-matchers-reference), [Matchers](/api/matchers), and [Matcher Reference](/matchers/) |
+| Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                      |
+| Real process / PTY tests         | [Spawning Real Processes](#spawning-real-processes)                                    |
+| Cross-backend coverage           | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends) |
+| Less flaky terminal tests        | [Best Practices](/guide/best-practices)                                                |
+| Full API surface                 | [Terminal](/api/terminal), [Backend](/api/backend), [Cell & Types](/api/cell)          |
 
 ## First Test
 

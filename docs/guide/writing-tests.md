@@ -41,9 +41,9 @@ const term = createTestTerminal({ backend: createGhosttyBackend(undefined, ghost
 `createTerminalFixture` and `createTerminalFixtureAsync` still work as deprecated aliases for `createTestTerminal` and `createTestTerminalByName` respectively.
 :::
 
-## Composable API
+## Locators: Region Selectors
 
-The key design principle: separate **where** to look from **what** to assert.
+Termless uses terminal-region locators: first choose **where** to look, then choose **what** to assert. This is the terminal equivalent of a Playwright locator, but it points at terminal buffers, rows, cells, and ranges instead of DOM elements.
 
 ```typescript
 // WHERE: region selectors
@@ -63,7 +63,7 @@ expect(term.cell(0, 0)).toBeBold() // style matcher on cell
 expect(term).toHaveCursorAt(5, 0) // terminal matcher
 ```
 
-## Matchers Reference
+## Assertions: Matchers Reference
 
 ### Text Matchers (on RegionView / RowView)
 
