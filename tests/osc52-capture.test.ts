@@ -11,6 +11,10 @@ import { createTerminal } from "../src/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import "../packages/viterm/src/matchers.ts"
 
+type ClipboardMatcherExpect = {
+  toHaveClipboardText(text: string): void
+}
+
 function createTerm(cols = 80, rows = 24) {
   return createTerminal({ backend: createXtermBackend(), cols, rows })
 }
@@ -97,7 +101,7 @@ describe("OSC 52 clipboard capture", () => {
     const term = createTerm()
     term.feed(`\x1b]52;c;${btoa("matched")}\x07`)
 
-    expect(term).toHaveClipboardText("matched")
+    ;(expect(term) as unknown as ClipboardMatcherExpect).toHaveClipboardText("matched")
     term.close()
   })
 
@@ -105,7 +109,7 @@ describe("OSC 52 clipboard capture", () => {
     const term = createTerm()
 
     expect(() => {
-      expect(term).toHaveClipboardText("missing")
+      ;(expect(term) as unknown as ClipboardMatcherExpect).toHaveClipboardText("missing")
     }).toThrow("no OSC 52 writes were captured")
 
     term.close()
@@ -116,7 +120,7 @@ describe("OSC 52 clipboard capture", () => {
     term.feed(`\x1b]52;c;${btoa("actual text")}\x07`)
 
     expect(() => {
-      expect(term).toHaveClipboardText("wrong text")
+      ;(expect(term) as unknown as ClipboardMatcherExpect).toHaveClipboardText("wrong text")
     }).toThrow("actual text")
 
     term.close()

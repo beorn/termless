@@ -11,6 +11,11 @@ import { terminalSnapshot, terminalSerializer } from "../packages/viterm/src/ser
 
 expect.addSnapshotSerializer(terminalSerializer)
 
+type TerminalMatcherExpect = {
+  toHaveCursorAt(x: number, y: number): void
+  toHaveTitle(title: string): void
+}
+
 // Helper: create a terminal with xterm backend
 function createXterm(cols = 80, rows = 24) {
   return createTerminal({ backend: createXtermBackend(), cols, rows })
@@ -133,7 +138,7 @@ describe("Terminal + Viterm matchers integration", () => {
   test("toHaveCursorAt works with terminal", () => {
     const term = createXterm()
     term.feed("Hi")
-    expect(term).toHaveCursorAt(2, 0)
+    ;(expect(term) as unknown as TerminalMatcherExpect).toHaveCursorAt(2, 0)
     term.close()
   })
 
@@ -148,7 +153,7 @@ describe("Terminal + Viterm matchers integration", () => {
   test("toHaveTitle works with terminal", () => {
     const term = createXterm()
     term.feed("\x1b]2;Test Title\x07")
-    expect(term).toHaveTitle("Test Title")
+    ;(expect(term) as unknown as TerminalMatcherExpect).toHaveTitle("Test Title")
     term.close()
   })
 
