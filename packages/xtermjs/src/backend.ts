@@ -9,6 +9,17 @@
 import xterm from "@xterm/headless"
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
+
+// Unicode V11 addon: treats most emoji + many extended-grapheme codepoints as
+// wide (2-cell). Without it, xterm.js defaults to Unicode V6 wcwidth, where
+// many emoji are narrow (1-cell). Real modern terminals (Ghostty, iTerm 3.5+,
+// Alacritty 0.13+) use V11+ — and they emit byte streams assuming the parser
+// agrees. The mismatch produces visible duplication: when a TUI re-renders a
+// row containing an emoji, each render advances the cursor by 2 cells (V11)
+// but xterm.js advances by 1 (V6), so subsequent writes land at different
+// columns and the cumulative buffer state shows the emoji repeated in
+// adjacent cells. Loading + activating V11 fixes this.
+import { Unicode11Addon } from "@xterm/addon-unicode11"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -129,6 +140,13 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
         getCellSizePixels: true,
       },
     })
+
+    // Activate Unicode V11 wcwidth so wide emoji (📋📄💡⚠️📁 etc) advance the
+    // cursor by 2 cells, matching real modern terminals. Default is V6 which
+    // classifies many emoji as narrow — see import comment above for the
+    // failure mode that motivated this.
+    term.loadAddon(new Unicode11Addon())
+    term.unicode.activeVersion = "11"
 
     title = ""
     term.onTitleChange((t: string) => {
