@@ -77,7 +77,11 @@ describe("cellsToAnsi", () => {
     expect(out).toContain("hello")
     expect(out).toContain("world")
     expect(out).toContain("\r\n") // CRLF separator
-    expect(out.startsWith("hello")).toBe(true)
+    // Deterministic preamble: home + clear + DECAWM-off + cursor-hide.
+    // Required so ghostty-web doesn't double-advance at the right margin
+    // when a row fills exactly `cols` glyphs (the case for any kanban
+    // render). See vendor/termless/src/canvas-render.ts cellsToAnsi().
+    expect(out).toMatch(/^\x1b\[H\x1b\[2J\x1b\[\?7l\x1b\[\?25lhello/)
   })
 
   test("trailing reset SGR + cursor reposition", () => {

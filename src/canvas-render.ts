@@ -309,7 +309,18 @@ export function cellsToAnsi(terminal: TerminalReadable, opts: { rows?: number; c
   })()
 
   let prev: SgrState = INITIAL_SGR
-  let out = ""
+  // Deterministic starting state for the downstream parser:
+  //   \x1b[H     — cursor home (1,1)
+  //   \x1b[2J    — clear entire display
+  //   \x1b[?7l   — DECAWM off: writing exactly `cols` chars to a row
+  //                 must NOT enter the pending-wrap state. xterm.js handles
+  //                 the spec-correct DECAWM+CRLF interaction, but ghostty-web
+  //                 (in canvas-render's headless playwright path) double-
+  //                 advances when a row fills the right margin and the next
+  //                 byte is CR — losing the top N rows of the buffer when
+  //                 every row emits exactly cols glyphs.
+  //   \x1b[?25l  — hide cursor so the cursor box doesn't paint over content
+  let out = "\x1b[H\x1b[2J\x1b[?7l\x1b[?25l"
   for (let r = 0; r < screenRows.length; r++) {
     const row = screenRows[r]
     for (let c = 0; c < colCount; c++) {
