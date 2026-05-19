@@ -71,10 +71,10 @@ export async function startMcpServer(): Promise<void> {
         timeout: z.number().default(5000).describe("Timeout in ms for waitFor condition (default: 5000)"),
         cwd: z.string().optional().describe("Working directory"),
         backend: z
-          .enum(["xtermjs", "ghostty", "vterm", "vt100"])
+          .enum(["xtermjs", "ghostty", "vterm", "vt100", "peekaboo"])
           .optional()
           .describe(
-            "Terminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset.",
+            "Terminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect).",
           ),
       },
     },

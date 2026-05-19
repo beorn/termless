@@ -17,13 +17,15 @@ import { createXtermBackend } from "@termless/xtermjs"
  * highest-fidelity headless backend — matches what real Ghostty renders, so
  * screenshots reflect true truecolor + glyph fidelity. "vterm" uses vterm.js
  * (pure-TS, standards-compliant). "vt100" uses the minimal VT100 emulator.
+ * "peekaboo" drives a real terminal app via OS automation (macOS only) —
+ * pixel-perfect against the user's actual terminal, slowest of all backends.
  *
  * Visual-bug-close evidence (Layer 2 screenshot at user's terminal size) should
  * use "ghostty" — xterm.js headless drops truecolor and falls back on glyphs
  * (em-dashes, sigils, box-drawing) which produces misleading screenshots that
  * misrepresent km view rendering. See bead @km/all/15297-agent-screenshot-fidelity-gap.
  */
-export type SessionBackend = "xtermjs" | "ghostty" | "vterm" | "vt100"
+export type SessionBackend = "xtermjs" | "ghostty" | "vterm" | "vt100" | "peekaboo"
 
 export interface SessionCreateOptions {
   command?: string[]
@@ -168,6 +170,14 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
     }
     case "vt100": {
       const mod = await import("@termless/vt100")
+      return mod.resolve()
+    }
+    case "peekaboo": {
+      // macOS-only OS automation backend. Failure surface (e.g. running on
+      // Linux, missing osascript, or no terminal app installed) bubbles up
+      // to the caller — we don't silently fall back to xtermjs because that
+      // would mislead callers asking for pixel-perfect evidence.
+      const mod = await import("@termless/peekaboo")
       return mod.resolve()
     }
     default:

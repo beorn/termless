@@ -59,12 +59,14 @@
     "@termless/xtermjs": "*",
     "@termless/ghostty": "*",
     "@termless/vterm": "*",
-    "@termless/vt100": "*"
+    "@termless/vt100": "*",
+    "@termless/peekaboo": "*"
   },
   "peerDependenciesMeta": {
     "@termless/ghostty": { "optional": true },
     "@termless/vterm": { "optional": true },
-    "@termless/vt100": { "optional": true }
+    "@termless/vt100": { "optional": true },
+    "@termless/peekaboo": { "optional": true }
   },
   "tsdown": {
     "clean": true,

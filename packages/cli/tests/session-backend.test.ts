@@ -81,6 +81,26 @@ describe("createSessionManager — backend option", () => {
     }
   })
 
+  // peekaboo defaults to visual=false → no real terminal app is launched, the
+  // data path uses xterm.js. This wiring test exercises the dynamic-import +
+  // resolve() path without requiring osascript / a Ghostty install.
+  test("backend: 'peekaboo' resolves through resolveBackend (wiring test)", async () => {
+    const mgr = createSessionManager()
+    try {
+      const { id, terminal } = await mgr.createSession({
+        cols: 40,
+        rows: 10,
+        backend: "peekaboo",
+      })
+      expect(id).toBe("session-1")
+      expect(terminal.cols).toBe(40)
+      expect(terminal.rows).toBe(10)
+      expect(terminal).toBeDefined()
+    } finally {
+      await mgr.stopAll()
+    }
+  })
+
   test("unknown backend name falls back to xtermjs (defensive)", async () => {
     const mgr = createSessionManager()
     try {
