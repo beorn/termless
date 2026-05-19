@@ -147,6 +147,37 @@ function installExitHandler(): void {
   })
 }
 
+/**
+ * Snapshot the AppleScript ids of every open Ghostty window. Used to diff
+ * pre/post-launch and identify which window we just spawned, so we can
+ * target it precisely for cleanup (vs the racy "close front window").
+ *
+ * Returns an empty list if Ghostty isn't running yet — `open -a` will start
+ * it, and the polling loop in the launcher catches the new window.
+ */
+async function listGhosttyWindowIds(): Promise<string[]> {
+  try {
+    const r = await exec(
+      [
+        "osascript",
+        "-e",
+        `if application "Ghostty" is running then
+           tell application "Ghostty" to return id of every window as text
+         else
+           return ""
+         end if`,
+      ],
+      { stdout: "pipe", stderr: "pipe" },
+    )
+    if (r.exitCode !== 0) return []
+    const out = r.stdout.trim()
+    if (!out) return []
+    return out.split(", ").map((s) => s.trim()).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 /** Launch a terminal app with a command. Returns the app process. */
 async function launchTerminalApp(
   app: TerminalApp,
@@ -169,8 +200,23 @@ async function launchTerminalApp(
 
   switch (app) {
     case "ghostty": {
-      // Ghostty supports --command flag
+      // Ghostty supports --command flag. Snapshot existing window ids before
+      // launch, spawn, then diff to find the newly-created window. Ghostty
+      // exposes AppleScript `id of front window` so we can target the new
+      // window for close later — preferred over "close front window" which
+      // races on user focus changes.
+      const beforeIds = await listGhosttyWindowIds()
       handle = execDetached(["open", "-a", "Ghostty", "--args", "-e", fullCmd])
+      // Poll for a new window — typical launch is sub-second on warm app.
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 100))
+        const nowIds = await listGhosttyWindowIds()
+        const fresh = nowIds.find((id) => !beforeIds.includes(id))
+        if (fresh) {
+          windowId = fresh
+          break
+        }
+      }
       break
     }
     case "iterm2": {
@@ -252,59 +298,71 @@ async function launchTerminalApp(
 /** Capture a screenshot of a specific application window using screencapture (macOS). */
 async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
   const tmpPath = `/tmp/peekaboo-screenshot-${crypto.randomUUID()}.png`
-
-  // Use screencapture with window selection by app name
-  // First, get the window ID of the terminal app
   const bundleName = APP_BUNDLE_NAMES[app]
-  const getWindowIdScript = `
-    tell application "System Events"
-      set appProc to first process whose name is "${bundleName}"
-      set frontWindow to first window of appProc
-      return id of frontWindow
-    end tell
-  `
 
-  const windowIdResult = await exec(["osascript", "-e", getWindowIdScript], {
-    stdout: "pipe",
-    stderr: "pipe",
-  })
+  // Preferred: query the window's position + size via System Events, then
+  // capture the corresponding screen region. Avoids both interactive
+  // (`screencapture -w`) and the CGWindowID-vs-AppleScript-id mismatch
+  // (`-l <id>` expects a CGWindowID; Ghostty's AppleScript `id` returns a
+  // different identifier). Activates the app first so the window is
+  // frontmost — this skirts the screencapture-blocks-occluded-windows
+  // limitation.
+  await exec(["osascript", "-e", `tell application "${bundleName}" to activate`])
+  await new Promise((resolve) => setTimeout(resolve, 300))
 
-  const windowId = windowIdResult.stdout.trim()
+  const boundsResult = await exec(
+    [
+      "osascript",
+      "-e",
+      `tell application "System Events" to tell process "${bundleName}"
+         set p to position of front window
+         set s to size of front window
+         return (item 1 of p as text) & "," & (item 2 of p as text) & "," & (item 1 of s as text) & "," & (item 2 of s as text)
+       end tell`,
+    ],
+    { stdout: "pipe", stderr: "pipe" },
+  )
 
-  if (windowId && windowIdResult.exitCode === 0) {
-    // Capture specific window by ID
-    const captureResult = await exec(["screencapture", "-l", windowId, "-o", "-x", tmpPath], {
-      stderr: "pipe",
-    })
+  if (boundsResult.exitCode === 0 && boundsResult.stdout.trim()) {
+    // bounds = "x,y,w,h" in screen points
+    const captureResult = await exec(
+      ["screencapture", "-R", boundsResult.stdout.trim(), "-o", "-x", tmpPath],
+      { stderr: "pipe" },
+    )
     if (captureResult.exitCode !== 0) {
       throw new Error(`screencapture failed with exit code ${captureResult.exitCode}: ${captureResult.stderr.trim()}`)
     }
   } else {
-    // Fallback: capture the frontmost window
-    // Bring the app to front first
-    const activateScript = `tell application "${bundleName}" to activate`
-    await exec(["osascript", "-e", activateScript])
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const captureResult = await exec(["screencapture", "-w", "-o", "-x", tmpPath], {
-      stderr: "pipe",
-    })
-    if (captureResult.exitCode !== 0) {
-      throw new Error(`screencapture failed with exit code ${captureResult.exitCode}: ${captureResult.stderr.trim()}`)
+    // Fallback: try CGWindowID via System Events `id`. Some apps expose it;
+    // when they don't, fall through to interactive `-w` which prompts the
+    // user to click a window — last resort.
+    const idResult = await exec(
+      ["osascript", "-e", `tell application "System Events" to tell process "${bundleName}" to return id of front window`],
+      { stdout: "pipe", stderr: "pipe" },
+    )
+    const windowId = idResult.stdout.trim()
+    if (idResult.exitCode === 0 && windowId && windowId !== "missing value") {
+      const captureResult = await exec(["screencapture", "-l", windowId, "-o", "-x", tmpPath], { stderr: "pipe" })
+      if (captureResult.exitCode !== 0) {
+        throw new Error(`screencapture -l failed: ${captureResult.stderr.trim()}`)
+      }
+    } else {
+      // Last resort — interactive. Prompts the user to click a window.
+      // Avoid this in automated runs; it surfaces a screencapture cursor.
+      const captureResult = await exec(["screencapture", "-w", "-o", "-x", tmpPath], { stderr: "pipe" })
+      if (captureResult.exitCode !== 0) {
+        throw new Error(`screencapture -w failed: ${captureResult.stderr.trim()}`)
+      }
     }
   }
 
-  // Read the screenshot file
   const buffer = await readFileAsBuffer(tmpPath)
-
-  // Clean up temp file
   try {
     const { unlink } = await import("node:fs/promises")
     await unlink(tmpPath)
   } catch {
-    // Ignore cleanup errors
+    // Best-effort cleanup
   }
-
   return buffer
 }
 
