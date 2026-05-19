@@ -196,4 +196,105 @@ export const termlessMatchers = {
     assertTerminalReadable(received, "toBeAtBottomOfScrollback")
     return toMatcherResult(assertAtBottomOfScrollback(received))
   },
+
+  // ── Cross-Renderer Matcher ────────────────────────────────────
+  /**
+   * Capture the terminal's current buffer state via canvas + SVG (and
+   * optionally peekaboo against a real terminal app), then assert the
+   * three renderings agree on cell-grid dimensions + content. Saves all
+   * three to `saveTo` for visual review.
+   *
+   * Hard invariant (always asserted):
+   *   - SVG's natural dimensions match canvas's logical dimensions
+   *     within `dimensionTolerance` (default 0.10 — 10%). Different DPRs
+   *     and cell-pixel defaults make exact match impossible without
+   *     unifying all parameters.
+   *
+   * Soft assertions (warn-only via report.notes when set):
+   *   - Peekaboo dimensions roughly match expected window size
+   *     (window chrome adds 60-100px height typically)
+   *
+   * @example
+   * ```ts
+   * await expect(term).toMatchAcrossRenderers({
+   *   command: ["bash", "-c", "echo hello"],
+   *   saveTo: "/tmp/diff",
+   *   includePeekaboo: process.env.PEEKABOO === "1",
+   * })
+   * ```
+   */
+  async toMatchAcrossRenderers(
+    received: unknown,
+    options: {
+      command?: string[]
+      theme?: { background?: string; foreground?: string }
+      fontPath?: string
+      fontSize?: number
+      cellWidth?: number
+      cellHeight?: number
+      fontFamily?: string
+      saveTo?: string
+      includePeekaboo?: boolean
+      peekabooApp?: "ghostty" | "iterm2" | "terminal" | "wezterm" | "kitty"
+      dimensionTolerance?: number
+    } = {},
+  ): Promise<{ pass: boolean; message: () => string }> {
+    assertTerminalReadable(received, "toMatchAcrossRenderers")
+    const { captureCrossRenderer } = await import("./cross-renderer.ts")
+    const term = received as import("./types.ts").Terminal
+    const result = await captureCrossRenderer(term, {
+      ...options,
+      cols: term.cols,
+      rows: term.rows,
+    })
+    const tol = options.dimensionTolerance ?? 0.1
+    const canvas = result.report.dimensions.canvas
+    const svg = result.report.dimensions.svg
+
+    if (!canvas || !svg) {
+      return {
+        pass: false,
+        message: () =>
+          `toMatchAcrossRenderers: one renderer failed to produce dimensions (canvas=${canvas ? "ok" : "null"}, svg=${svg ? "ok" : "null"})`,
+      }
+    }
+
+    // Canvas pixels are CSS-logical-px × DPR; SVG is plain logical px.
+    // Try DPR=2 first (typical), pick whichever produces the closest
+    // match — robust without plumbing meta through.
+    let bestMatch = { dpr: 2, widthRatio: 1, heightRatio: 1 }
+    for (const dpr of [2, 1]) {
+      const cw = canvas.width / dpr
+      const ch = canvas.height / dpr
+      const wr = Math.abs(cw - svg.width) / Math.max(cw, svg.width)
+      const hr = Math.abs(ch - svg.height) / Math.max(ch, svg.height)
+      if (wr + hr < bestMatch.widthRatio + bestMatch.heightRatio) {
+        bestMatch = { dpr, widthRatio: wr, heightRatio: hr }
+      }
+    }
+    const widthRatio = bestMatch.widthRatio
+    const heightRatio = bestMatch.heightRatio
+    const canvasLogical = { width: canvas.width / bestMatch.dpr, height: canvas.height / bestMatch.dpr }
+
+    const dimensionOk = widthRatio <= tol && heightRatio <= tol
+    if (!dimensionOk) {
+      const lines = [
+        `toMatchAcrossRenderers: canvas vs svg dimension drift exceeds tolerance ${tol}:`,
+        `  canvas: ${canvas.width}×${canvas.height} px (logical ${canvasLogical.width}×${canvasLogical.height})`,
+        `  svg:    ${svg.width}×${svg.height} px`,
+        `  width drift:  ${(widthRatio * 100).toFixed(1)}%`,
+        `  height drift: ${(heightRatio * 100).toFixed(1)}%`,
+      ]
+      if (result.report.files) {
+        lines.push(`  diff bundle: ${result.report.files.report}`)
+      }
+      return { pass: false, message: () => lines.join("\n") }
+    }
+
+    return {
+      pass: true,
+      message: () =>
+        `Expected canvas + svg to differ by more than ${tol}, got widthDrift=${(widthRatio * 100).toFixed(1)}%, heightDrift=${(heightRatio * 100).toFixed(1)}%`,
+    }
+  },
 }

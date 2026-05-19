@@ -179,11 +179,24 @@ async function listGhosttyWindowIds(): Promise<string[]> {
 }
 
 /** Launch a terminal app with a command. Returns the app process. */
+/**
+ * Synchronously close a tracked terminal window via osascript. Used by
+ * destroy() — the calling code's interface is sync, and async close()
+ * was racing with process exit, leaking windows.
+ */
+function closeAppWindowSync(app: TerminalApp, windowId?: string): void {
+  const bundleName = APP_BUNDLE_NAMES[app]
+  const script = windowId
+    ? `tell application "${bundleName}" to close (every window whose id is ${windowId})`
+    : `tell application "${bundleName}" to close front window`
+  spawnSync("osascript", ["-e", script], { stdio: "ignore", timeout: 2000 })
+}
+
 async function launchTerminalApp(
   app: TerminalApp,
   command: string[],
   opts?: { env?: Record<string, string>; cwd?: string },
-): Promise<{ pid: number; close: () => Promise<void> }> {
+): Promise<{ pid: number; close: () => Promise<void>; tracked?: TrackedWindow }> {
   const cmd = command.map((arg) => `'${arg.replace(/'/g, "'\\''")}'`).join(" ")
   const cwd = opts?.cwd ?? process.cwd()
 
@@ -277,6 +290,7 @@ async function launchTerminalApp(
 
   return {
     pid: handle.pid,
+    tracked,
     async close() {
       // Window-id targeted close beats "close front window" — survives
       // the user activating another window between launch and close.
@@ -423,7 +437,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   let initialized = false
   let currentCols = DEFAULT_COLS
   let currentRows = DEFAULT_ROWS
-  let appHandle: { pid: number; close: () => Promise<void> } | null = null
+  let appHandle: { pid: number; close: () => Promise<void>; tracked?: TrackedWindow } | null = null
 
   // ── TerminalBackend: Lifecycle ──
 
@@ -437,14 +451,19 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   function destroy(): void {
     xterm.destroy()
     if (appHandle) {
-      // Synchronous fire-and-forget: TerminalBackend.destroy is sync.
-      // The promise removes the window from TRACKED_WINDOWS once it
-      // resolves, so the exit handler won't double-close.
+      // TerminalBackend.destroy is sync but we MUST close the window
+      // synchronously here — async close() is fire-and-forget and the
+      // calling process often exits before the osascript completes,
+      // leaking the window. Use sync osascript via spawnSync.
       const h = appHandle
       appHandle = null
-      h.close().catch(() => {
-        // Best-effort — exit handler is the safety net.
-      })
+      try {
+        closeAppWindowSync(app, h.tracked?.windowId)
+      } catch {
+        // Best-effort — process-exit handler is the safety net.
+      } finally {
+        if (h.tracked) TRACKED_WINDOWS.delete(h.tracked)
+      }
     }
     initialized = false
   }
