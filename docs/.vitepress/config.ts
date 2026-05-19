@@ -171,6 +171,7 @@ export default defineConfig({
         items: [
           { text: "Recording & Playback", link: "/guide/recording" },
           { text: "Tape Format Reference", link: "/guide/tape-format" },
+          { text: "Frame-Trace Mode", link: "/guide/frame-trace" },
           { text: "Asciicast v2", link: "/guide/asciicast" },
           { text: "Web Player", link: "/guide/web-player" },
         ],

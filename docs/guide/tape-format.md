@@ -235,6 +235,24 @@ Set Framerate 30
 
 `PlaybackSpeed` changes how `Sleep` durations are interpreted during render. `Framerate` caps generated animation output.
 
+### Frame-Trace (every-render-frame capture)
+
+Capture every render-relevant buffer change with timestamp + content-hash dedupe to a sibling directory. Useful for frame-by-frame debugging of TUI rendering.
+
+```tape
+Set Frames "/tmp/my-trace/"
+Set FrameDebounceMs 16
+```
+
+| Setting            | Meaning                                                   |
+| ------------------ | --------------------------------------------------------- |
+| `Frames`           | Directory to write `NNNNN.png` + `index.jsonl` into       |
+| `FrameDebounceMs`  | Debounce interval in ms (default 16 = 60fps render-pass) |
+
+The `index.jsonl` is append-only and streaming-readable — partial traces from a crashed session remain parseable up to the last fully-flushed line. Identical buffer states (by xxHash64) are recorded with `duplicate_of` but skip the PNG to save disk.
+
+See [Frame-Trace Mode](frame-trace.md) for the full guide.
+
 ## Duration Format
 
 Duration values are used in `Sleep`, `Type@`, and `Set TypingSpeed`:

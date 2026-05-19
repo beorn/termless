@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Canvas-rendered screenshots** — `screenshotCanvasPng()` and `terminal.screenshotPng({ renderer: "canvas" })` route through ghostty-web's CanvasRenderer in headless playwright. Real-fidelity truecolor + glyph shaping + DPR 2 retina output. SVG path remains for deterministic snapshots.
+- **Frame-trace mode** — `createFrameTracer(terminal, { dir, debounceMs, maxFrames, dedupe })` captures every render-relevant buffer change with timestamp + xxHash64 content dedupe. Append-only streaming-readable `index.jsonl` + `NNNNN.png` per unique frame. New `TerminalCreateOptions.onAfterWrite` hook wires it transparently.
+- **Tape `Set Frames` directive** — `Set Frames "/path/to/trace/"` + optional `Set FrameDebounceMs 16` in `.tape` files enables frame-trace during execution; summary surfaces on `result.frameTrace`. See [Frame-Trace Mode](docs/guide/frame-trace.md).
+
 ## 0.6.0 - 2026-04-09
 
 ### Added

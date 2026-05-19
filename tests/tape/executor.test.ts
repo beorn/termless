@@ -253,6 +253,79 @@ describe("frame recording", () => {
 })
 
 // =============================================================================
+// Frame-trace mode (Set Frames directive)
+// =============================================================================
+
+describe("Set Frames (frame-trace mode)", () => {
+  test("no frames directive → frameTrace is null", async () => {
+    const tape = parseTape('Type "hello"')
+    const result = await executeTape(tape, {
+      backend: vt100(),
+      defaultTypingSpeed: 0,
+    })
+
+    expect(result.frameTrace).toBeNull()
+    await result.terminal.close()
+  })
+
+  test('Set Frames "<dir>" produces frame-trace summary + on-disk artifacts', async () => {
+    const { mkdtempSync, readFileSync, readdirSync, existsSync, rmSync } = await import("node:fs")
+    const { tmpdir } = await import("node:os")
+    const { join } = await import("node:path")
+
+    const dir = mkdtempSync(join(tmpdir(), "tape-frames-"))
+    try {
+      const tape = parseTape(`Set Frames "${dir}"\nType "hello"`)
+      const result = await executeTape(tape, {
+        backend: vt100(),
+        defaultTypingSpeed: 0,
+      })
+
+      expect(result.frameTrace).not.toBeNull()
+      expect(result.frameTrace!.count).toBeGreaterThan(0)
+      expect(existsSync(result.frameTrace!.indexFile)).toBe(true)
+
+      // index.jsonl is streaming-readable — every line is valid JSON
+      const lines = readFileSync(result.frameTrace!.indexFile, "utf-8").trim().split("\n")
+      for (const line of lines) JSON.parse(line)
+      expect(lines.length).toBe(result.frameTrace!.count)
+
+      // At least one PNG written (the first unique frame).
+      const pngs = readdirSync(dir).filter((f) => f.endsWith(".png"))
+      expect(pngs.length).toBeGreaterThan(0)
+
+      await result.terminal.close()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("framesDir option overrides Set Frames in tape", async () => {
+    const { mkdtempSync, rmSync } = await import("node:fs")
+    const { tmpdir } = await import("node:os")
+    const { join } = await import("node:path")
+
+    const optDir = mkdtempSync(join(tmpdir(), "tape-frames-opt-"))
+    const tapeDir = mkdtempSync(join(tmpdir(), "tape-frames-tape-"))
+    try {
+      const tape = parseTape(`Set Frames "${tapeDir}"\nType "x"`)
+      const result = await executeTape(tape, {
+        backend: vt100(),
+        defaultTypingSpeed: 0,
+        framesDir: optDir,
+      })
+
+      // Index file resolves under option dir, not tape dir.
+      expect(result.frameTrace!.indexFile.startsWith(optDir)).toBe(true)
+      await result.terminal.close()
+    } finally {
+      rmSync(optDir, { recursive: true, force: true })
+      rmSync(tapeDir, { recursive: true, force: true })
+    }
+  })
+})
+
+// =============================================================================
 // Dynamic Set commands
 // =============================================================================
 

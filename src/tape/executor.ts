@@ -28,6 +28,8 @@ import { parseDuration } from "./parser.ts"
 import type { Terminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../types.ts"
 import { createTerminal } from "../terminal.ts"
 import { screenshotPng } from "../png.ts"
+import { createFrameTracer } from "../frame-trace.ts"
+import type { FrameTracer, FrameTraceSummary } from "../frame-trace.ts"
 import { resolveTheme } from "./themes.ts"
 
 // =============================================================================
@@ -53,6 +55,12 @@ export interface TapeExecutorOptions {
   onScreenshot?: (png: Uint8Array, path?: string) => void
   /** Called after each command is executed, with the command and terminal. */
   onAfterCommand?: (cmd: TapeCommand, terminal: Terminal) => void
+  /**
+   * Visual Eyes Phase 3: directory for frame-trace output. Overrides
+   * `Set Frames` in the tape. When neither this nor `Set Frames` is set,
+   * frame-trace mode is disabled.
+   */
+  framesDir?: string
 }
 
 export interface TapeFrame {
@@ -71,6 +79,11 @@ export interface TapeResult {
   screenshotCount: number
   /** The terminal instance (still open for inspection). */
   terminal: Terminal
+  /**
+   * Frame-trace summary if `framesDir` (option or `Set Frames`) was set.
+   * `null` otherwise.
+   */
+  frameTrace: FrameTraceSummary | null
 }
 
 // =============================================================================
@@ -142,11 +155,27 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
     backendInstance = backendOpt
   }
 
+  // Resolve frame-trace dir (option override → Set Frames in tape).
+  const framesDir = options?.framesDir ?? tape.settings.Frames ?? null
+  const frameDebounceMs = tape.settings.FrameDebounceMs
+    ? Number.parseInt(tape.settings.FrameDebounceMs, 10)
+    : undefined
+
+  let frameTracer: FrameTracer | null = null
   const terminal = createTerminal({
     backend: backendInstance,
     cols,
     rows,
+    onAfterWrite: (data) => frameTracer?.onWrite(data),
   })
+
+  if (framesDir) {
+    frameTracer = createFrameTracer(terminal, {
+      dir: framesDir,
+      debounceMs: frameDebounceMs,
+      canvas: { cols, rows },
+    })
+  }
 
   // Spawn shell if specified
   const shell = tape.settings.Shell ? parseShellSetting(tape.settings.Shell) : null
@@ -206,11 +235,14 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
     options?.onAfterCommand?.(cmd, terminal)
   }
 
+  const frameTrace = frameTracer ? await frameTracer.stop() : null
+
   return {
     duration: Date.now() - startTime,
     frames,
     screenshotCount,
     terminal,
+    frameTrace,
   }
 }
 
