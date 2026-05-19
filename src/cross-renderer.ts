@@ -56,6 +56,10 @@ export interface CrossRendererOptions {
   ghosttyConfig?: { theme?: string; fontFamily?: string; fontSize?: number; backgroundOpacity?: number }
   /** Strip window chrome from peekaboo capture (Ghostty: enabled with window-decoration=false in temp config). */
   cropChrome?: boolean
+  /** Env vars for the peekaboo spawned shell (e.g. KM_ROOT). */
+  peekabooEnv?: Record<string, string>
+  /** Working directory for the peekaboo spawned shell. */
+  peekabooCwd?: string
   /** Terminal dimensions — must match the source terminal's cols/rows. */
   cols?: number
   rows?: number
@@ -166,6 +170,8 @@ export async function captureCrossRenderer(
           waitMs: 2500,
           ...(options.cropChrome != null ? { cropChrome: options.cropChrome } : {}),
           ...(options.ghosttyConfig ? { ghosttyConfig: options.ghosttyConfig } : {}),
+          ...(options.peekabooEnv ? { env: options.peekabooEnv } : {}),
+          ...(options.peekabooCwd ? { cwd: options.peekabooCwd } : {}),
         })
       } catch (err) {
         notes.push(`peekaboo failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -274,6 +280,10 @@ async function captureRealTerminal(opts: {
   cropChrome?: boolean
   /** Ghostty config overrides (theme, font, padding). Ignored for non-Ghostty. */
   ghosttyConfig?: { theme?: string; fontFamily?: string; fontSize?: number; backgroundOpacity?: number }
+  /** Environment variables for the spawned shell. */
+  env?: Record<string, string>
+  /** Working directory for the spawned shell. */
+  cwd?: string
 }): Promise<Uint8Array> {
   const { spawnSync } = await import("node:child_process")
   const { mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } = await import("node:fs")
@@ -282,24 +292,48 @@ async function captureRealTerminal(opts: {
   const bundle = APP_BUNDLE_NAMES[opts.app]
 
   const idsBefore = listWindowIds(opts.app)
+  // Also snapshot CGWindowIDs (numeric, macOS-native) so we can diff
+  // post-launch to find OUR new window — independent of AppleScript ids.
+  const cgIdsBefore = listCGWindowIds(bundle)
   const tmpDir = mkdtempSync(join(tmpdir(), "term-real-"))
   const script = join(tmpDir, "payload.sh")
-  writeFileSync(script, `#!/bin/bash\n${opts.command.slice(2).join(" ") || opts.command.join(" ")}\n`)
+  // Build the script: prepend env exports + cd, then the command.
+  const envLines = opts.env
+    ? Object.entries(opts.env).map(([k, v]) => `export ${k}=${JSON.stringify(v)}`)
+    : []
+  const cdLine = opts.cwd ? `cd ${JSON.stringify(opts.cwd)}` : ""
+  // Build the command line. For bash -c shape (["/bin/bash", "-c", "..."]),
+  // unwrap to the inner shell command. For other shapes, shell-quote each
+  // argv element so spaces/special-chars in paths don't split.
+  const cmdLine =
+    opts.command[0] === "/bin/bash" && opts.command[1] === "-c" && opts.command.length === 3
+      ? opts.command[2]
+      : opts.command.map((arg) => `'${arg.replace(/'/g, "'\\''")}'`).join(" ")
+  // Append a sleep so the window doesn't auto-close before screencapture
+  // fires. The harness's `pkill -f <script>` in finally{} kills bash mid-
+  // sleep, triggering Ghostty's wait-after-command=false → window closes.
+  writeFileSync(
+    script,
+    `#!/bin/bash\n${envLines.join("\n")}\n${cdLine}\n${cmdLine}\nsleep 60\n`,
+  )
   chmodSync(script, 0o755)
 
-  // Ghostty: temp config that makes cleanup reliable.
+  // Ghostty on macOS doesn't accept `-e <command>` via `open --args` —
+  // per the docs, "launching the terminal emulator from the CLI is not
+  // supported". Instead, set `command = <script>` in a temp config file
+  // and pass it via `--config-file=<path>`.
+  //
+  // Additional config keys for reliable capture + cleanup:
   // - confirm-close-surface = false: no "Are you sure?" dialog
-  // - close-on-exit = true:        window auto-closes when shell exits
-  // - window-decoration = false:   no titlebar (so cropping isn't needed)
+  // - wait-after-command = false:  (default) window closes when command exits
   // - window-padding-x/y = 0:      cell-grid fills the window
-  // Without these, AppleScript 'close window' leaves the window open
-  // (waiting for user confirmation).
   let ghosttyConfigPath: string | undefined
   if (opts.app === "ghostty") {
     ghosttyConfigPath = join(tmpDir, "ghostty.cfg")
     const cfgLines = [
+      `command = ${script}`,
       "confirm-close-surface = false",
-      "close-on-exit = true",
+      "wait-after-command = false",
       "window-padding-x = 0",
       "window-padding-y = 0",
       ...(opts.ghosttyConfig?.theme ? [`theme = ${opts.ghosttyConfig.theme}`] : []),
@@ -316,9 +350,17 @@ async function captureRealTerminal(opts: {
   // window stays focused. The new terminal still spawns visibly (macOS
   // can't truly hide a window) but doesn't steal keyboard focus.
   if (opts.app === "ghostty") {
+    // On macOS, Ghostty doesn't accept `-e <command>` via `open --args`.
+    // The temp config-file (above) carries `command = <script>` instead.
+    //
+    // CRITICAL: do NOT use `-n` (open --new-instance). It spawns a fresh
+    // Ghostty.app PROCESS each time, creating a stack of dock icons that
+    // accumulates over the user's session. The user can't `quit` them
+    // selectively without losing their primary Ghostty (which hosts
+    // their actual terminal sessions / cmux). Use a regular `open` so
+    // existing Ghostty makes a new window inside its single process.
     const args = ["-g", "-a", "Ghostty", "--args"]
     if (ghosttyConfigPath) args.push(`--config-file=${ghosttyConfigPath}`)
-    args.push("-e", script)
     spawnSync("open", args, { stdio: "ignore" })
   } else if (opts.app === "kitty") {
     spawnSync("open", ["-g", "-a", "kitty", "--args", script], { stdio: "ignore" })
@@ -341,37 +383,32 @@ async function captureRealTerminal(opts: {
 
     spawnSync("osascript", ["-e", `tell application "${bundle}" to activate`], { stdio: "ignore" })
     await new Promise((r) => setTimeout(r, 300))
-    const boundsResult = spawnSync(
-      "osascript",
-      [
-        "-e",
-        `tell application "System Events" to tell process "${bundle}"
-           set p to position of front window
-           set s to size of front window
-           return (item 1 of p as text) & "," & (item 2 of p as text) & "," & (item 1 of s as text) & "," & (item 2 of s as text)
-         end tell`,
-      ],
-      { stdio: ["ignore", "pipe", "pipe"], encoding: "utf-8" },
-    )
-    const bounds = boundsResult.stdout?.trim()
-    if (!bounds) throw new Error(`captureRealTerminal: could not get window bounds (Accessibility permission needed for osascript?)`)
 
-    // Optionally crop Ghostty's chrome (titlebar + padding) from the
-    // capture region — when window-decoration=false in the temp config,
-    // there's no titlebar, but a small content-padding may remain.
-    let captureBounds = bounds
-    if (opts.cropChrome) {
-      const [x, y, w, h] = bounds.split(",").map((n) => Number.parseInt(n, 10))
-      // With window-decoration=false + window-padding-x/y=0, the entire
-      // window IS the content area — no crop needed. Keep this path
-      // for future when chrome is still present.
-      captureBounds = `${x},${y},${w},${h}`
+    // Get the spawned window's CGWindowID via a Swift one-liner. This is
+    // the macOS window-number used by `screencapture -l <id>` — captures
+    // THAT specific window's pixels even when occluded by other windows.
+    // The AppleScript `id of front window` returns a different identifier
+    // (a "tab-group-XXX" string for Ghostty) that screencapture doesn't
+    // accept; bounds-based `-R` capture picks up whatever's visible at the
+    // screen coordinates, which fails when other apps overlap. CGWindowID
+    // is the right primitive.
+    //
+    // env -i bypasses the user's Nix-managed PATH so xcrun resolves the
+    // macOS-bundled Swift toolchain (which matches the macOS SDK).
+    const cgIds = listCGWindowIds(bundle)
+    if (cgIds.length === 0) {
+      throw new Error(`captureRealTerminal: no ${bundle} windows visible (CGWindowList returned empty)`)
     }
-
+    // Pick the window that's NEW since launch — diff against the
+    // pre-launch CGWindowID set. Falls back to the highest id when the
+    // diff is empty (shouldn't happen but defensive).
+    const freshIds = cgIds.filter((id) => !cgIdsBefore.includes(id))
+    const cgId = (freshIds[0] ?? cgIds.sort((a, b) => Number(a) - Number(b)).pop())!.toString()
     const outPath = join(tmpDir, "capture.png")
-    const cap = spawnSync("screencapture", ["-R", captureBounds, "-o", "-x", outPath], { stdio: ["ignore", "ignore", "pipe"] })
-    if (cap.status !== 0) throw new Error(`screencapture -R failed: ${cap.stderr?.toString().trim()}`)
+    const cap = spawnSync("screencapture", ["-l", cgId, "-o", "-x", outPath], { stdio: ["ignore", "ignore", "pipe"] })
+    if (cap.status !== 0) throw new Error(`screencapture -l ${cgId} failed: ${cap.stderr?.toString().trim()}`)
     const bytes = readFileSync(outPath)
+    void opts.cropChrome // currently unused; chrome handling lives in caller
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   } finally {
     // Cleanup strategy (in order):
@@ -392,7 +429,14 @@ async function captureRealTerminal(opts: {
       const closeScript = `tell application "${bundle}" to close (every window whose id is ${newId})`
       spawnSync("osascript", ["-e", closeScript], { stdio: "ignore", timeout: 3000 })
     }
-    rmSync(tmpDir, { recursive: true, force: true })
+    // KEEP tmpDir when CROSS_RENDERER_DEBUG=1 — useful for inspecting the
+    // generated script + Ghostty config when capture fails. Default: clean.
+    if (process.env.CROSS_RENDERER_DEBUG !== "1") {
+      rmSync(tmpDir, { recursive: true, force: true })
+    } else {
+      // eslint-disable-next-line no-console
+      console.error(`[cross-renderer] preserved tmpDir: ${tmpDir}`)
+    }
   }
 }
 
@@ -483,6 +527,33 @@ export function hashDistance(a: string, b: string): number {
     diff >>= 1n
   }
   return count
+}
+
+/** Get CGWindowIDs (numeric) for all on-screen windows owned by an app. */
+function listCGWindowIds(bundle: string): string[] {
+  const { spawnSync } = require("node:child_process") as typeof import("node:child_process")
+  const swiftSnippet = `import Foundation
+import CoreGraphics
+let opts: CGWindowListOption = [.optionOnScreenOnly]
+guard let windows = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] else { exit(1) }
+for w in windows {
+  if let owner = w["kCGWindowOwnerName"] as? String, owner == "${bundle}" {
+    if let id = w["kCGWindowNumber"] as? Int {
+      print(id)
+    }
+  }
+}`
+  const r = spawnSync(
+    "env",
+    ["-i", "PATH=/usr/bin:/bin", "xcrun", "swift", "-"],
+    { input: swiftSnippet, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8" },
+  )
+  if (r.status !== 0) return []
+  return (r.stdout ?? "")
+    .trim()
+    .split("\n")
+    .map((s: string) => s.trim())
+    .filter(Boolean)
 }
 
 function listWindowIds(app: keyof typeof APP_BUNDLE_NAMES): string[] {
