@@ -107,6 +107,26 @@ export interface CanvasScreenshotOptions {
    */
   targetWidth?: number
   targetHeight?: number
+  /**
+   * Raw ANSI bytes to feed directly to ghostty-web, bypassing the
+   * `cellsToAnsi(terminal)` serialization step.
+   *
+   * Why this exists: when the source `terminal` is an xterm.js-backed
+   * Terminal, `cellsToAnsi` re-serializes xterm.js's parsed cell grid as
+   * ANSI for ghostty-web to re-parse. Parser disagreements between xterm.js
+   * and ghostty-web (most notably nerd-font glyph handling — xterm.js
+   * splits some single-cell PUA glyphs into two cells with the same
+   * character) get baked into the cells before they reach ghostty-web.
+   *
+   * For maximum fidelity to a real Ghostty render, capture the raw bytes
+   * fed to the source terminal and pass them as `rawAnsi`. ghostty-web
+   * will parse those bytes directly with the same VT engine real Ghostty
+   * uses, eliminating the round-trip through xterm.js's parser.
+   *
+   * The `terminal` argument is still consulted for cursor position and
+   * dimension inference; only the cell→ANSI step is skipped.
+   */
+  rawAnsi?: string
 }
 
 export interface CanvasTheme {
@@ -601,8 +621,18 @@ export async function screenshotCanvasPng(
     fontBytes = await readFile(options.fontPath!)
   }
 
-  // Cells → ANSI.
-  const ansi = cellsToAnsi(terminal, { cols, rows })
+  // Cells → ANSI. When `rawAnsi` is provided, skip the cellsToAnsi
+  // round-trip — ghostty-web will parse the original bytes directly,
+  // matching what real Ghostty would see. See the `rawAnsi` field doc on
+  // `CanvasScreenshotOptions` for the parser-disagreement rationale.
+  //
+  // The preamble (\x1b[H \x1b[2J \x1b[?7l \x1b[?25l) is still prepended so
+  // ghostty-web starts from a known state (home + clear + DECAWM-off +
+  // cursor-hide); without DECAWM-off, exactly-cols-wide rows trigger
+  // ghostty-web's pending-wrap and drop the top N rows.
+  const ansi = options.rawAnsi != null
+    ? "\x1b[H\x1b[2J\x1b[?7l\x1b[?25l" + options.rawAnsi
+    : cellsToAnsi(terminal, { cols, rows })
 
   // Load assets.
   const { jsBytes, wasmBytes } = await loadGhosttyWebAssets()
