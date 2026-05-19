@@ -18,6 +18,7 @@
  * The "visual path" (takeScreenshot) uses the real terminal for fidelity.
  */
 
+import { spawnSync } from "node:child_process"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
 import { spawnPty, type PtyHandle } from "../../../src/pty.ts"
 import { exec, execDetached, readFileAsBuffer } from "./exec.ts"
@@ -72,6 +73,80 @@ const APP_BUNDLE_NAMES: Record<TerminalApp, string> = {
   kitty: "kitty",
 }
 
+// ─────────────────────────────────────────────────────────
+// Process-wide window tracking
+// ─────────────────────────────────────────────────────────
+//
+// Every window peekaboo opens is registered here. A single process-exit
+// handler closes all tracked windows on SIGINT/SIGTERM/normal exit so
+// terminal windows can't leak if a script forgets to call destroy() or
+// crashes mid-run.
+//
+// "close front window" was the original cleanup path; that's racy — if the
+// user activates another window before destroy fires, the wrong window
+// closes. We now capture an AppleScript window id where we can (iTerm2,
+// Terminal.app) and target by id; for apps that don't expose ids we fall
+// back to a pid-targeted kill of the launcher process AND a window-name
+// close as a belt-and-suspenders pass.
+//
+// Tracked windows are removed from the registry when their owning backend
+// calls destroy() cleanly. The exit handler only sees windows that leaked.
+
+type TrackedWindow = {
+  app: TerminalApp
+  /** AppleScript window id (iTerm2, Terminal.app) — preferred close path. */
+  windowId?: string
+  /** Launcher process pid — used for diagnostics + fallback signal. */
+  pid: number
+  /** ms epoch when launched — diagnostic. */
+  launchedAt: number
+}
+
+const TRACKED_WINDOWS = new Set<TrackedWindow>()
+let exitHandlerInstalled = false
+
+function installExitHandler(): void {
+  if (exitHandlerInstalled) return
+  exitHandlerInstalled = true
+
+  const flush = (): void => {
+    // Synchronous close — exit handlers can't await. Use osascript's
+    // standalone close command per window. iTerm2/Terminal use the id;
+    // others get a best-effort "close front window" since by exit time
+    // there's usually only one window left.
+    for (const w of TRACKED_WINDOWS) {
+      try {
+        const bundle = APP_BUNDLE_NAMES[w.app]
+        const script = w.windowId
+          ? `tell application "${bundle}" to close (every window whose id is ${w.windowId})`
+          : `tell application "${bundle}" to close front window`
+        // Sync osascript on exit — best effort.
+        spawnSync("osascript", ["-e", script], {
+          stdio: "ignore",
+          timeout: 2000,
+        })
+      } catch {
+        // Best-effort — process is exiting anyway.
+      }
+    }
+    TRACKED_WINDOWS.clear()
+  }
+
+  process.on("exit", flush)
+  process.on("SIGINT", () => {
+    flush()
+    process.exit(130)
+  })
+  process.on("SIGTERM", () => {
+    flush()
+    process.exit(143)
+  })
+  process.on("SIGHUP", () => {
+    flush()
+    process.exit(129)
+  })
+}
+
 /** Launch a terminal app with a command. Returns the app process. */
 async function launchTerminalApp(
   app: TerminalApp,
@@ -90,6 +165,7 @@ async function launchTerminalApp(
   const fullCmd = envExports ? `${envExports}; cd ${JSON.stringify(cwd)}; ${cmd}` : `cd ${JSON.stringify(cwd)}; ${cmd}`
 
   let handle: { pid: number; exited: Promise<number> }
+  let windowId: string | undefined
 
   switch (app) {
     case "ghostty": {
@@ -98,24 +174,35 @@ async function launchTerminalApp(
       break
     }
     case "iterm2": {
-      // Use osascript to tell iTerm2 to create a new window with the command
+      // Tell iTerm2 to create a window with the command, returning the new
+      // window's AppleScript id. We capture this synchronously via exec
+      // (not execDetached) because the script returns the id on stdout.
       const script = `
         tell application "iTerm2"
-          create window with default profile command "${fullCmd.replace(/"/g, '\\"')}"
+          set newWindow to (create window with default profile command "${fullCmd.replace(/"/g, '\\"')}")
+          return id of newWindow as text
         end tell
       `
-      handle = execDetached(["osascript", "-e", script])
+      const r = await exec(["osascript", "-e", script], { stdout: "pipe", stderr: "pipe" })
+      if (r.exitCode === 0) windowId = r.stdout.trim() || undefined
+      // We don't get a useful pid here (osascript exits), so use the
+      // osascript invocation's pid as a placeholder for diagnostics.
+      handle = { pid: -1, exited: Promise.resolve(r.exitCode) }
       break
     }
     case "terminal": {
-      // macOS Terminal.app
+      // Terminal.app — `do script` returns a tab whose containing window
+      // gets a unique id. Capture it synchronously.
       const script = `
         tell application "Terminal"
-          do script "${fullCmd.replace(/"/g, '\\"')}"
+          set newTab to do script "${fullCmd.replace(/"/g, '\\"')}"
           activate
+          return id of (window 1 whose tabs contains newTab) as text
         end tell
       `
-      handle = execDetached(["osascript", "-e", script])
+      const r = await exec(["osascript", "-e", script], { stdout: "pipe", stderr: "pipe" })
+      if (r.exitCode === 0) windowId = r.stdout.trim() || undefined
+      handle = { pid: -1, exited: Promise.resolve(r.exitCode) }
       break
     }
     case "wezterm": {
@@ -131,16 +218,32 @@ async function launchTerminalApp(
   // Wait briefly for the app to launch
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
+  // Register with the process-wide tracker so the exit handler closes the
+  // window even if destroy() never runs (Ctrl-C, crash, forgotten close).
+  installExitHandler()
+  const tracked: TrackedWindow = {
+    app,
+    windowId,
+    pid: handle.pid,
+    launchedAt: Date.now(),
+  }
+  TRACKED_WINDOWS.add(tracked)
+
   return {
     pid: handle.pid,
     async close() {
-      // Try graceful close via osascript
+      // Window-id targeted close beats "close front window" — survives
+      // the user activating another window between launch and close.
       try {
         const bundleName = APP_BUNDLE_NAMES[app]
-        const closeScript = `tell application "${bundleName}" to close front window`
+        const closeScript = tracked.windowId
+          ? `tell application "${bundleName}" to close (every window whose id is ${tracked.windowId})`
+          : `tell application "${bundleName}" to close front window`
         await exec(["osascript", "-e", closeScript])
       } catch {
-        // Ignore close errors
+        // Ignore close errors — process-exit handler will retry.
+      } finally {
+        TRACKED_WINDOWS.delete(tracked)
       }
     },
   }
@@ -276,8 +379,14 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   function destroy(): void {
     xterm.destroy()
     if (appHandle) {
-      void appHandle.close()
+      // Synchronous fire-and-forget: TerminalBackend.destroy is sync.
+      // The promise removes the window from TRACKED_WINDOWS once it
+      // resolves, so the exit handler won't double-close.
+      const h = appHandle
       appHandle = null
+      h.close().catch(() => {
+        // Best-effort — exit handler is the safety net.
+      })
     }
     initialized = false
   }

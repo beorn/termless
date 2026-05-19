@@ -67,6 +67,18 @@ Because these are independent OS processes, their output can diverge at any time
 - Visual mode is best for human-in-the-loop verification, not automated cross-referencing
 - Data-only mode (`visual: false`) uses a single PTY and is fully consistent
 
+## Window cleanup
+
+Every window peekaboo opens is registered with a process-wide tracker and a single SIGINT/SIGTERM/exit handler. When your script:
+
+- Calls `backend.destroy()` — the window closes immediately via an AppleScript id-targeted `close` (survives the user activating another window between launch and close).
+- Crashes or is Ctrl-C'd — the exit handler synchronously closes every still-tracked window.
+- Forgets to call destroy — same as above; the exit handler is the safety net.
+
+For iTerm2 and Terminal.app, peekaboo captures the new window's AppleScript id at launch time, so it can target that specific window for close. For Ghostty / WezTerm / kitty (which spawn via `open -a` and don't expose a window id), peekaboo falls back to `close front window` — usually fine because there's typically only one window remaining at exit, but if you have multiple peekaboo windows from those apps open simultaneously, the wrong one could close. Use iTerm2 or Terminal.app if you need precise multi-window cleanup.
+
+If you find leaked terminal windows after a peekaboo run, that's a bug — file it on the termless repo with the app, script that reproduced it, and what kind of exit (Ctrl-C / crash / clean shutdown).
+
 ## Requirements
 
 - macOS (uses `screencapture` and AppleScript for window management)
