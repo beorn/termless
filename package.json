@@ -39,7 +39,8 @@
     "./registry": "./src/backends-advanced.ts",
     "./svg": "./src/svg.ts",
     "./png": "./src/png.ts",
-    "./playwright": "./src/playwright.ts"
+    "./playwright": "./src/playwright.ts",
+    "./canvas": "./src/canvas-render.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -63,6 +64,10 @@
       "./playwright": {
         "types": "./dist/playwright.d.mts",
         "import": "./dist/playwright.mjs"
+      },
+      "./canvas": {
+        "types": "./dist/canvas-render.d.mts",
+        "import": "./dist/canvas-render.mjs"
       }
     }
   },
@@ -117,6 +122,7 @@
   },
   "optionalDependencies": {
     "@resvg/resvg-js": "^2.6.2",
+    "ghostty-web": "^0.4.0",
     "gifenc": "^1.0.3",
     "upng-js": "^2.1.0"
   },
@@ -128,7 +134,8 @@
       "src/backends-advanced.ts",
       "src/svg.ts",
       "src/png.ts",
-      "src/playwright.ts"
+      "src/playwright.ts",
+      "src/canvas-render.ts"
     ],
     "format": "esm"
   },
