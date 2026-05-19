@@ -72,8 +72,18 @@ describe("toMatchAcrossRenderers", () => {
       saveTo: "/tmp/cross-renderer-test/peekaboo-three-way",
       includePeekaboo: true,
       peekabooApp: "ghostty",
+      // Match the user's Ghostty config in the spawned window so all
+      // three renderers paint with the same theme/font.
+      ghosttyConfig: {
+        theme: "Espresso",
+        fontFamily: "FiraMono Nerd Font Mono",
+        fontSize: 12,
+      },
+      cropChrome: true,
       dimensionTolerance: 0.20,
       ...(fontPath ? { fontPath } : {}),
+      // Pass matching theme to canvas + SVG.
+      theme: { background: "#323232", foreground: "#ffffff" },
     })
     await term.close()
   }, 120_000)
