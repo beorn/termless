@@ -162,6 +162,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     scanOsc52(text)
     const bytes = typeof data === "string" ? encoder.encode(data) : data
     backend.feed(bytes)
+    options.onAfterWrite?.(bytes)
   }
 
   // ── PTY lifecycle ──
@@ -181,6 +182,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
         captureOutput(text)
         scanOsc52(text)
         backend.feed(data)
+        options.onAfterWrite?.(data)
       },
     })
 

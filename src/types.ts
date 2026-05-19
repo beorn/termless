@@ -238,6 +238,13 @@ export interface TerminalCreateOptions {
   cols?: number
   rows?: number
   scrollbackLimit?: number
+  /**
+   * Optional hook fired after every successful write to the backend
+   * (both direct `feed()` calls and PTY-spawned data). Receives the raw
+   * bytes written. Used by frame-trace mode and other observers that need
+   * to react to buffer mutations without polling.
+   */
+  onAfterWrite?: (data: Uint8Array) => void
 }
 
 export interface SpawnOptions {
