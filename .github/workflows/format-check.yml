@@ -1,0 +1,41 @@
+name: format-check
+
+# Per-push CI idempotency gate — asserts the formatter produces a clean
+# tree against HEAD. Catches non-idempotent formatter regressions the
+# moment they land, before they pollute downstream consumers (km, etc).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: format-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run formatter
+        run: bun run fix || bun run format || echo "No formatter script found"
+
+      - name: Assert clean tree
+        run: |
+          if ! git diff --exit-code; then
+            echo ""
+            echo "::error::Formatter produced a non-empty diff against HEAD."
+            echo "::error::Run the project formatter locally + commit the result before pushing."
+            exit 1
+          fi
