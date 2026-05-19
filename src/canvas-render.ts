@@ -78,6 +78,35 @@ export interface CanvasScreenshotOptions {
    * measured cell metrics, dpr). For diagnostics / Phase 2 frame-trace.
    */
   returnMeta?: boolean
+  /**
+   * Override the per-cell pixel metrics measured by ghostty-web. ghostty-web's
+   * `measureFont` uses `Math.ceil(actualBoundingBoxAscent + actualBoundingBoxDescent) + 2`
+   * which adds a constant 2-pixel padding row — this is generous compared to
+   * real Ghostty's line-height-derived metric and produces a render that's ~1
+   * physical row taller than the equivalent Ghostty screenshot at the same
+   * point size.
+   *
+   * Provide `cellWidth` / `cellHeight` (logical CSS pixels, pre-DPR) to
+   * override the ghostty-web measurement and pin the canvas to a specific
+   * geometry. Typical use: matching a reference screenshot's aspect ratio
+   * in visual-regression tests.
+   *
+   * If only one axis is specified, the other is left to the renderer's
+   * measurement. Set both to lock the geometry exactly.
+   */
+  cellWidth?: number
+  cellHeight?: number
+  /**
+   * Final-size override applied after rasterization. When the canvas cell
+   * metrics quantize to integer pixels but the reference uses fractional
+   * pixel heights (e.g. real Ghostty's 10pt FiraMono is ~10.5px/row), force
+   * the captured PNG to an exact target size with a high-quality resample.
+   *
+   * Provide both width and height in physical pixels. The PNG is resampled
+   * via macOS `sips`. Only takes effect on darwin; ignored elsewhere.
+   */
+  targetWidth?: number
+  targetHeight?: number
 }
 
 export interface CanvasTheme {
@@ -385,6 +414,8 @@ function buildHtml(opts: {
   cursorStyle: "block" | "underline" | "beam"
   cursorBlink: boolean
   hideCursor: boolean
+  cellWidth?: number
+  cellHeight?: number
 }): string {
   const themeJson = JSON.stringify(opts.theme)
   const ansiJson = JSON.stringify(opts.ansi)
@@ -392,6 +423,21 @@ function buildHtml(opts: {
     ? `@font-face { font-family: "${opts.bundledFontName}"; src: url("./font") format("truetype"); font-display: block; }`
     : ""
   const fontFamily = opts.hasBundledFont ? `${opts.bundledFontName}, ${opts.fontFamily}` : opts.fontFamily
+  // After `remeasureFont()`, the renderer's `metrics` field is populated with
+  // {width, height, baseline}. To pin cell geometry to a reference (for
+  // visual-regression tests), we override the measured values BEFORE the
+  // first `resize()` call. ghostty-web's `measureFont` adds +2 px of vertical
+  // padding which makes cells slightly taller than real Ghostty's; an
+  // explicit override removes that drift while preserving glyph fidelity.
+  const cellOverride: string[] = []
+  if (opts.cellWidth != null) cellOverride.push(`renderer.metrics.width = ${opts.cellWidth};`)
+  if (opts.cellHeight != null) {
+    cellOverride.push(`renderer.metrics.height = ${opts.cellHeight};`)
+    // Keep the baseline proportional so glyphs sit correctly within the
+    // overridden cell. Default baseline = ceil(ascent)+1; for a square-ish
+    // cell, ~0.8 * height is a sane fallback.
+    cellOverride.push(`renderer.metrics.baseline = Math.min(renderer.metrics.baseline, ${opts.cellHeight} - 1);`)
+  }
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8" />
@@ -399,6 +445,10 @@ function buildHtml(opts: {
   ${familyDecl}
   html, body { margin: 0; background: ${opts.theme.background}; }
   #target { display: block; }
+  /* Match real Ghostty's font rendering: subpixel-antialiased glyphs.
+     Without explicit smoothing, Chromium defaults to a different LCD/grayscale
+     mix that subtly shifts glyph weight vs Ghostty's Core Text path. */
+  canvas { -webkit-font-smoothing: antialiased; font-smooth: always; }
 </style>
 </head><body>
 <canvas id="target"></canvas>
@@ -417,9 +467,29 @@ function buildHtml(opts: {
       cursorBlink: ${opts.cursorBlink},
       theme: ${themeJson},
     });
+    // Force the canvas 2D context to render text with high-quality
+    // geometric placement before ghostty-web measures + draws. Chromium's
+    // default text-rendering on a 2D context is "auto", which biases toward
+    // speed and emits subtly different glyph positions than real Ghostty's
+    // Core Text path. Setting "geometricPrecision" matches Ghostty's
+    // per-cell integer-offset draw model and reduces dHash drift in the
+    // bottom rows (small glyphs + status-bar icons are the most sensitive).
     const ctx = canvas.getContext("2d");
-    if (ctx) ctx.font = "${opts.fontSize}px " + ${JSON.stringify(fontFamily)};
+    if (ctx) {
+      ctx.font = "${opts.fontSize}px " + ${JSON.stringify(fontFamily)};
+      // textRendering is a newer Canvas 2D property (Chromium ≥ 100). Guard
+      // with a typeof check so older Chromium versions don't throw.
+      if ("textRendering" in ctx) {
+        (ctx).textRendering = "geometricPrecision";
+      }
+      // Force the highest-quality image resampler when ghostty-web's
+      // glyph atlas blits cells to the canvas.
+      if ("imageSmoothingQuality" in ctx) {
+        (ctx).imageSmoothingQuality = "high";
+      }
+    }
     renderer.remeasureFont();
+    ${cellOverride.join("\n    ")}
     renderer.resize(cols, rows);
     renderer.setCursorBlink(${opts.cursorBlink});
     ${opts.hideCursor ? "if (typeof renderer.setCursorVisible === 'function') renderer.setCursorVisible(false);" : ""}
@@ -442,6 +512,41 @@ function buildHtml(opts: {
 
 function asUint8Array(bytes: Uint8Array | ArrayBuffer): Uint8Array {
   return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+}
+
+/**
+ * Resample a PNG buffer to a target physical pixel size.
+ *
+ * Uses macOS `sips` when available (good Lanczos-quality resampler that's
+ * always present on darwin and matches Quartz's image-event behavior). On
+ * other platforms, returns the input bytes unchanged — the caller takes
+ * responsibility for resizing.
+ *
+ * This is the post-render escape hatch for fractional-pixel cell heights
+ * (see `targetWidth` / `targetHeight` option for the full rationale).
+ */
+async function resamplePngTo(png: Uint8Array, width: number, height: number): Promise<Uint8Array> {
+  if (process.platform !== "darwin") return png
+  const { spawnSync } = await import("node:child_process")
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs")
+  const { tmpdir } = await import("node:os")
+  const { join } = await import("node:path")
+  const tmp = mkdtempSync(join(tmpdir(), "canvas-resize-"))
+  try {
+    const inPath = join(tmp, "in.png")
+    const outPath = join(tmp, "out.png")
+    writeFileSync(inPath, png)
+    // sips -z <height> <width> — note the height-first argument order.
+    const r = spawnSync("sips", ["-z", String(height), String(width), inPath, "--out", outPath], { stdio: "ignore" })
+    if (r.status !== 0) {
+      // Resize failed — return original. The caller decides whether to
+      // treat a geometry mismatch as a test failure.
+      return png
+    }
+    return new Uint8Array(readFileSync(outPath))
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
 }
 
 // ── Public API ──
@@ -516,6 +621,8 @@ export async function screenshotCanvasPng(
     cursorStyle,
     cursorBlink,
     hideCursor,
+    cellWidth: options.cellWidth,
+    cellHeight: options.cellHeight,
   })
 
   // Launch + route.
@@ -625,7 +732,19 @@ export async function screenshotCanvasPng(
 
     const locator = (page as unknown as { locator: (sel: string) => { screenshot: (opts?: { type?: "png" }) => Promise<Uint8Array | ArrayBuffer> } }).locator
     const canvasLocator = locator.call(page, "#target")
-    const shot = asUint8Array(await canvasLocator.screenshot({ type: "png" }))
+    let shot = asUint8Array(await canvasLocator.screenshot({ type: "png" }))
+
+    // Post-render resample to target dimensions when requested. This is the
+    // escape hatch for fractional-pixel cell heights — ghostty-web measures
+    // glyph metrics as ceil(ascent+descent)+2 which quantizes to an integer
+    // pixel height, while real Ghostty's cell height (line-height-derived)
+    // can land between two integers. For visual-regression tests the cleanest
+    // fix is a single high-quality resample to the reference geometry.
+    if (options.targetWidth != null && options.targetHeight != null) {
+      shot = await resamplePngTo(shot, options.targetWidth, options.targetHeight)
+      meta.width = options.targetWidth
+      meta.height = options.targetHeight
+    }
 
     if (options.returnMeta) return { png: shot, meta }
     return shot

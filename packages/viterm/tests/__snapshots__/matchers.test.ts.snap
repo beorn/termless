@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`snapshot matchers > toMatchSvgSnapshot creates a snapshot file 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="76.8" height="20">
+"<svg xmlns="http://www.w3.org/2000/svg" width="76.8" height="20" viewBox="0 0 76.8 20" preserveAspectRatio="xMidYMid meet">
 <rect width="100%" height="100%" fill="#1e1e1e"/>
 <text x="0" y="16" font-family="&apos;Menlo&apos;, &apos;Monaco&apos;, &apos;Courier New&apos;, monospace" font-size="16" fill="#d4d4d4">
 <tspan x="0" textLength="76.8" lengthAdjust="spacingAndGlyphs">SVG Test</tspan>

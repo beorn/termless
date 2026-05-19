@@ -406,7 +406,17 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
     const totalHeight = contentHeight
     const parts: string[] = []
 
-    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
+    // viewBox lets rasterizers (rsvg-convert, Chromium, qlmanage) scale the
+    // SVG to a target raster size while preserving aspect. Without it, some
+    // rasterizers fall back to fixed-size canvases (qlmanage always produces
+    // 1680x1680 thumbnails) and the SVG content shrinks-to-fit, distorting
+    // dHash/pixel comparisons that expect a known output geometry.
+    // preserveAspectRatio="xMidYMid meet" is the standard SVG default — we
+    // emit it explicitly so consumers can override via the SVG element if
+    // they want a different fit strategy.
+    parts.push(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
+    )
     parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
 
     for (const rect of buildBgRects(lines, cellWidth, cellHeight, themeFg, themeBg)) {
@@ -433,7 +443,11 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
 
   const parts: string[] = []
 
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}">`)
+  // viewBox + preserveAspectRatio mirror the fast-path emission so chrome-mode
+  // SVGs scale predictably under rasterizers that ignore intrinsic dimensions.
+  parts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
+  )
 
   // Outer margin fill
   if (margin > 0 && marginFill) {
