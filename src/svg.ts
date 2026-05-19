@@ -58,6 +58,14 @@ interface TextSpan {
   underline: boolean
   strikethrough: boolean
   startCol: number
+  /**
+   * Visual cell width this span occupies. NOT text.length — wide chars
+   * (emoji, CJK) count 2 cells per char; narrow chars count 1. Used to
+   * emit textLength on the tspan so the browser distributes glyphs across
+   * exactly cellCount × cellWidth pixels, instead of letting font kerning
+   * drift the right edge of the span away from cell boundaries.
+   */
+  cellCount: number
 }
 
 function cellFgBg(cell: Cell, themeFg: string, themeBg: string): { fg: string; bg: string } {
@@ -181,10 +189,15 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
     const { fg } = cellFgBg(cell, themeFg, themeBg)
     const char = cell.char || " "
     const underline = cell.underline !== false
+    // Visual cells consumed by this cell: 2 for a wide-char head, 1 otherwise.
+    // The continuation cell (col N+1 for wide at N) is `continue`d at the top
+    // of the loop and never reaches here.
+    const cellsForChar = cell.wide ? 2 : 1
 
     const current = spans.length > 0 ? spans[spans.length - 1] : null
     if (current && spansMatch(current, fg, cell.bold, cell.italic, cell.dim, underline, cell.strikethrough)) {
       current.text += char
+      current.cellCount += cellsForChar
     } else {
       spans.push({
         text: char,
@@ -195,6 +208,7 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
         underline,
         strikethrough: cell.strikethrough,
         startCol: col,
+        cellCount: cellsForChar,
       })
     }
   }
@@ -242,6 +256,19 @@ function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
 
 function spanToTspan(span: TextSpan, cellWidth: number, themeFg: string): string {
   const attrs: string[] = [`x="${span.startCol * cellWidth}"`]
+  // textLength + lengthAdjust forces the browser to stretch/shrink glyph
+  // spacing so the rendered span occupies EXACTLY cellCount × cellWidth
+  // pixels. Without this, font kerning drifts the right edge of each span
+  // away from cell boundaries — narrow chars consume fewer pixels than
+  // cellWidth, producing visible gaps; wide chars consume more, producing
+  // visible overlap into the next column (the original #55 collision).
+  // We only emit it when cellCount > 0 (always true for non-empty spans)
+  // and skip for single-character spans where the savings are tiny and
+  // some font hinting paths render slightly better with default spacing.
+  if (span.cellCount > 1) {
+    attrs.push(`textLength="${span.cellCount * cellWidth}"`)
+    attrs.push(`lengthAdjust="spacingAndGlyphs"`)
+  }
   if (span.fill !== themeFg) attrs.push(`fill="${span.fill}"`)
   if (span.bold) attrs.push(`font-weight="bold"`)
   if (span.italic) attrs.push(`font-style="italic"`)
