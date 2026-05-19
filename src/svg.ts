@@ -66,6 +66,13 @@ interface TextSpan {
    * drift the right edge of the span away from cell boundaries.
    */
   cellCount: number
+  /**
+   * True if this span contains a single wide character (emoji / CJK).
+   * Wide-char spans are NEVER merged with adjacent narrow-char spans —
+   * textLength + spacingAndGlyphs on a mixed tspan squishes the emoji
+   * into a narrow slot or stretches surrounding letters off-grid.
+   */
+  isWide: boolean
 }
 
 function cellFgBg(cell: Cell, themeFg: string, themeBg: string): { fg: string; bg: string } {
@@ -195,9 +202,21 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
     const cellsForChar = cell.wide ? 2 : 1
 
     const current = spans.length > 0 ? spans[spans.length - 1] : null
-    if (current && spansMatch(current, fg, cell.bold, cell.italic, cell.dim, underline, cell.strikethrough)) {
-      current.text += char
-      current.cellCount += cellsForChar
+    // Never merge a wide cell (emoji, CJK) with neighbors, even with same
+    // styling. textLength+spacingAndGlyphs on a mixed tspan tries to
+    // distribute N "characters" across cellCount × cellWidth pixels
+    // uniformly — which squishes the emoji into a narrow slot, or stretches
+    // surrounding letters off the cell grid. Isolating the wide char in
+    // its own tspan lets the browser render the emoji at its natural width
+    // and the surrounding text at cell-aligned positions.
+    const canMerge =
+      current &&
+      !cell.wide &&
+      !current.isWide &&
+      spansMatch(current, fg, cell.bold, cell.italic, cell.dim, underline, cell.strikethrough)
+    if (canMerge) {
+      current!.text += char
+      current!.cellCount += cellsForChar
     } else {
       spans.push({
         text: char,
@@ -209,6 +228,7 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
         strikethrough: cell.strikethrough,
         startCol: col,
         cellCount: cellsForChar,
+        isWide: cell.wide === true,
       })
     }
   }
