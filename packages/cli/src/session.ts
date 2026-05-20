@@ -70,10 +70,16 @@ export interface SessionManager {
    * `attachTracer()`. Attaching after the session is created (rather than at
    * creation time) keeps the API symmetric with the bearly tty pattern, where
    * the late-bound tracer reference is captured by closure.
+   *
+   * `dir` is the trace output directory passed to `createFrameTracer`. Stored
+   * alongside the tracer so `getTraceDir` can resolve PNG paths absolutely
+   * (the FrameTracer's `Frame.png` field is relative to `dir`).
    */
-  attachTracer(id: string, tracer: FrameTracer): void
+  attachTracer(id: string, tracer: FrameTracer, dir: string): void
   /** Get the tracer attached to a session, or `null` if none was attached. */
   getTracer(id: string): FrameTracer | null
+  /** Get the trace output dir for a session, or `null` if no tracer is attached. */
+  getTraceDir(id: string): string | null
 }
 
 // ── Internal session record ──
@@ -82,6 +88,7 @@ interface SessionRecord {
   terminal: Terminal
   command?: string[]
   tracer: FrameTracer | null
+  traceDir: string | null
 }
 
 // ── Constants ──
@@ -135,7 +142,7 @@ export function createSessionManager(): SessionManager {
       throw error
     }
 
-    sessions.set(id, { terminal, command: opts.command, tracer: null })
+    sessions.set(id, { terminal, command: opts.command, tracer: null, traceDir: null })
     return { id, terminal }
   }
 
@@ -145,16 +152,23 @@ export function createSessionManager(): SessionManager {
     return record.terminal
   }
 
-  function attachTracer(id: string, tracer: FrameTracer): void {
+  function attachTracer(id: string, tracer: FrameTracer, dir: string): void {
     const record = sessions.get(id)
     if (!record) throw new Error(`Session not found: ${id}`)
     record.tracer = tracer
+    record.traceDir = dir
   }
 
   function getTracer(id: string): FrameTracer | null {
     const record = sessions.get(id)
     if (!record) throw new Error(`Session not found: ${id}`)
     return record.tracer
+  }
+
+  function getTraceDir(id: string): string | null {
+    const record = sessions.get(id)
+    if (!record) throw new Error(`Session not found: ${id}`)
+    return record.traceDir
   }
 
   function listSessions(): SessionInfo[] {
@@ -180,7 +194,16 @@ export function createSessionManager(): SessionManager {
     sessions.clear()
   }
 
-  return { createSession, getSession, listSessions, stopSession, stopAll, attachTracer, getTracer }
+  return {
+    createSession,
+    getSession,
+    listSessions,
+    stopSession,
+    stopAll,
+    attachTracer,
+    getTracer,
+    getTraceDir,
+  }
 }
 
 // ── Backend resolution ──
