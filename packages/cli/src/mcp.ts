@@ -55,13 +55,13 @@ export async function startMcpServer(): Promise<void> {
   const sessions = createSessionManager()
   const server = new McpServer({ name: "termless", version: "0.1.0" })
 
-  // start — Create terminal session
+  // start — Create terminal session (optionally with frame-trace recording)
   register(
     server,
     "start",
     {
       description:
-        "Start a terminal session with a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence.",
+        "Start a terminal session with a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to enable Visual Eyes Phase 2 frame-trace recording: every buffer mutation produces a debounced PNG + JSONL row capturing render-relevant state.",
       inputSchema: {
         command: z.array(z.string()).describe("Command to run (e.g. ['bun', 'km', 'view', '/path'])"),
         env: z.record(z.string(), z.string()).optional().describe("Environment variables"),
@@ -79,9 +79,35 @@ export async function startMcpServer(): Promise<void> {
           .describe(
             "Terminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect).",
           ),
+        trace: z
+          .object({
+            dir: z.string().describe("Directory to persist trace artifacts (index.jsonl + NNNNN.png)"),
+            debounceMs: z
+              .number()
+              .default(16)
+              .describe("Debounce window between captures (default 16ms = one render frame at 60fps)"),
+            maxFrames: z.number().default(10_000).describe("Safety cap; tracer halts after N frames"),
+            dedupe: z
+              .boolean()
+              .default(true)
+              .describe("Skip writing PNGs for hash-identical buffer states (still recorded in index)"),
+            fontPath: z
+              .string()
+              .optional()
+              .describe("Absolute path to a .ttf/.otf font for the renderer (improves glyph fidelity)"),
+          })
+          .optional()
+          .describe(
+            "Enable frame-trace recording for this session. When set, every buffer mutation is captured (debounced) and persisted as a PNG + index.jsonl row in `dir`. Read via the `trace` tool; finalize via `stop`.",
+          ),
       },
     },
     safeTool(async (args) => {
+      // Late-bound tracer reference so the `onAfterWrite` hook can dispatch to
+      // it once createSession() returns (mirrors the bearly tty pattern). The
+      // closure captures `tracer` by reference; the assignment below patches
+      // it in before any PTY data flows.
+      let tracer: FrameTracer | null = null
       const { id, terminal } = await sessions.createSession({
         command: args.command,
         env: args.env,
@@ -91,7 +117,23 @@ export async function startMcpServer(): Promise<void> {
         timeout: args.timeout,
         cwd: args.cwd,
         backend: args.backend,
+        onAfterWrite: args.trace ? (data: Uint8Array) => tracer?.onWrite(data) : undefined,
       })
+
+      if (args.trace) {
+        tracer = createFrameTracer(terminal, {
+          dir: args.trace.dir,
+          debounceMs: args.trace.debounceMs,
+          maxFrames: args.trace.maxFrames,
+          dedupe: args.trace.dedupe,
+          canvas: {
+            cols: args.cols,
+            rows: args.rows,
+            fontPath: args.trace.fontPath,
+          },
+        })
+        sessions.attachTracer(id, tracer, args.trace.dir)
+      }
 
       return textResult({
         sessionId: id,
@@ -99,23 +141,27 @@ export async function startMcpServer(): Promise<void> {
         rows: terminal.rows,
         alive: terminal.alive,
         text: terminal.getText(),
+        trace: args.trace ? { dir: args.trace.dir } : null,
       })
     }),
   )
 
-  // stop — Kill session
+  // stop — Kill session (finalize attached FrameTracer if present)
   register(
     server,
     "stop",
     {
-      description: "Stop a terminal session and kill the process",
+      description:
+        "Stop a terminal session and kill the process. If a FrameTracer was attached via `start({ trace: {...} })`, it is finalized first and its summary is returned in the `trace` field.",
       inputSchema: {
         sessionId: z.string().describe("Session ID to stop"),
       },
     },
     safeTool(async (args) => {
+      const tracer = sessions.getTracer(args.sessionId)
+      const traceSummary = tracer ? await tracer.stop() : null
       await sessions.stopSession(args.sessionId)
-      return textResult({ stopped: args.sessionId })
+      return textResult({ stopped: args.sessionId, trace: traceSummary })
     }),
   )
 
@@ -292,6 +338,68 @@ export async function startMcpServer(): Promise<void> {
       }
 
       return textResult({ text: terminal.getText() })
+    }),
+  )
+
+  // trace — Return frames captured since a sequence number (Visual Eyes Phase 2)
+  register(
+    server,
+    "trace",
+    {
+      description:
+        "Return frames captured since `since` (sequence number). Returns Frame[] from the in-memory ring buffer of the FrameTracer attached at start. The cursor does NOT auto-advance — the caller passes the seq of the last frame seen. Requires `start({ trace: {...} })` to have been called for this session.",
+      inputSchema: {
+        sessionId: z.string().describe("Session ID"),
+        since: z
+          .number()
+          .default(0)
+          .describe("Return frames with seq > since (default 0 = all). Mutually exclusive with sinceTs."),
+        sinceTs: z
+          .number()
+          .optional()
+          .describe("Return frames with ts >= sinceTs (ms epoch). When set, takes precedence over `since`."),
+        includePngBytes: z
+          .boolean()
+          .default(false)
+          .describe(
+            "Include base64-encoded PNG bytes inline with each frame (default false — only metadata + relative path).",
+          ),
+      },
+    },
+    safeTool(async (args) => {
+      const tracer = sessions.getTracer(args.sessionId)
+      if (!tracer) {
+        return textResult({
+          error:
+            "No tracer attached to this session. Pass `trace: { dir }` to mcp__tty__start to enable frame-trace recording.",
+        })
+      }
+      const frames =
+        args.sinceTs != null
+          ? tracer.framesSinceTime(args.sinceTs)
+          : tracer.framesSinceSeq(args.since ?? 0)
+
+      if (!args.includePngBytes) {
+        return textResult({ frames, count: frames.length })
+      }
+
+      // Resolve each frame's PNG against the trace `dir` captured at start.
+      // Duplicate frames have png === null; the consumer dereferences via
+      // duplicate_of. Read failures degrade gracefully (frame returned
+      // without pngBytes) instead of blowing up the entire response.
+      const dir = sessions.getTraceDir(args.sessionId)
+      const enriched = await Promise.all(
+        frames.map(async (f) => {
+          if (!f.png || !dir) return f
+          try {
+            const bytes = await readFile(join(dir, f.png))
+            return { ...f, pngBytes: Buffer.from(bytes).toString("base64") }
+          } catch {
+            return f
+          }
+        }),
+      )
+      return textResult({ frames: enriched, count: enriched.length })
     }),
   )
 
