@@ -27,6 +27,7 @@ import { registerRecordCommand } from "./record-cmd.ts"
 import { registerPlayCommand } from "./play-cmd.ts"
 import { registerBackendCommand } from "./backend-cmd.tsx"
 import { registerDoctorCommand } from "./doctor-cmd.tsx"
+import { registerCompatScreenshotCommand } from "./compat-screenshot-cmd.ts"
 
 const program = new Command()
   .name("termless")
@@ -53,12 +54,18 @@ program.addHelpSection("Backends:", [
   ["$ termless doctor", "Health check all installed backends"],
 ])
 
+program.addHelpSection("Real-terminal compat capture (macOS):", [
+  ["$ termless compat-screenshot -- bun km view ~/V", "Capture a TUI in the real desktop terminal"],
+  ["$ termless compat-screenshot -t ghostty -o c.png -- bun km", "Explicit terminal app + output path"],
+])
+
 program.addHelpSection("Docs:", [["https://termless.dev/guide/recording", ""]])
 
 registerRecordCommand(program)
 registerPlayCommand(program)
 registerBackendCommand(program)
 registerDoctorCommand(program)
+registerCompatScreenshotCommand(program)
 
 // ── themes ──
 

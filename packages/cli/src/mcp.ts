@@ -401,6 +401,48 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
+  // compat-screenshot — capture a TUI in a real desktop terminal app (Visual Eyes Phase 8)
+  register(
+    server,
+    "compat-screenshot",
+    {
+      description:
+        "Capture a TUI command running in the user's ACTUAL desktop terminal app (Ghostty / kitty / iTerm / Terminal.app) via macOS screencapture. Pixel-perfect for that specific terminal + the user's real font/theme config — the COMPAT path. Use this ONLY for terminal-specific compat bugs ('does it look right in Ghostty 1.3 with my Tokyo Night theme?'). For routine visual iteration use the `screenshot` tool (canvas renderer — fast, no GUI, cross-platform). macOS-only; needs a GUI session + Screen Recording permission. Spawns and then closes a real window.",
+      inputSchema: {
+        cmd: z.string().describe("TUI command to run as a shell string (e.g. 'bun km view ~/Vault')"),
+        terminal: z
+          .enum(["ghostty", "kitty", "iterm", "terminal"])
+          .optional()
+          .describe("Terminal app. Auto-detected (ghostty > kitty > iterm > terminal) if omitted."),
+        outputPath: z.string().optional().describe("Output PNG path. A temp file is used if omitted."),
+        cols: z.number().default(120).describe("Requested terminal columns (best-effort sizing; default 120)"),
+        rows: z.number().default(40).describe("Requested terminal rows (best-effort sizing; default 40)"),
+        cwd: z.string().optional().describe("Working directory for the TUI command"),
+        waitFor: z
+          .string()
+          .optional()
+          .describe("Text pattern to wait for before screenshotting (default: any non-empty text)"),
+        waitTimeoutMs: z.number().default(10_000).describe("First-paint wait timeout in ms (default 10000)"),
+        keep: z.boolean().default(false).describe("Keep the spawned terminal window open after the screenshot"),
+      },
+    },
+    safeTool(async (args) => {
+      const { compatScreenshot } = await import("@termless/peekaboo")
+      const result = await compatScreenshot({
+        cmd: args.cmd,
+        terminal: args.terminal,
+        outputPath: args.outputPath,
+        cols: args.cols,
+        rows: args.rows,
+        cwd: args.cwd,
+        waitFor: args.waitFor,
+        waitTimeoutMs: args.waitTimeoutMs,
+        keep: args.keep,
+      })
+      return textResult(result)
+    }),
+  )
+
   // ── Shutdown ──
 
   process.on("SIGINT", () => {
