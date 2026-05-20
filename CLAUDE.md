@@ -70,6 +70,12 @@ bun cli backend update                # Check upstream versions
 bun cli doctor                        # Health check installed backends
 ```
 
+### CI matrix
+
+CI runs the test suite on **darwin-arm64, darwin-x64, linux-x64-gnu, linux-arm64-gnu, and win32-x64-msvc** (`.github/workflows/ci.yml`). A dedicated `ghostty-canvas` job exercises `@napi-rs/canvas` + `ghostty-web` on every platform — proves the NAPI binding loads and the renderer produces valid PNG bytes outside macOS.
+
+The dHash regression tolerance is platform-aware via `TERMLESS_CI_PLATFORM` (set per matrix entry). Skia's font hinting differs across platforms (CoreText / libfontconfig / DirectWrite), so the per-platform ceiling lives in `packages/ghostty/tests/cross-platform.test.ts` — darwin 7/64, linux + win32 12/64. The canonical-Ghostty-reference test in `packages/ghostty/tests/render.test.ts` runs darwin-only (Mac-only font path + gold reference); non-darwin runners filter it out via vitest `--testNamePattern`.
+
 ## Backend Registry
 
 `backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/backends.ts` provides:
