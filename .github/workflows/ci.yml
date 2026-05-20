@@ -7,16 +7,93 @@ on:
     branches: [main]
 
 jobs:
+  # Core (root vitest config) — runs on every supported platform.
+  # Excludes packages/ghostty/tests/** by design; the canvas-engine matrix
+  # below picks those up explicitly with @napi-rs/canvas in scope.
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        bun-version: [latest]
+        os:
+          - ubuntu-latest        # linux-x64-gnu
+          - ubuntu-22.04-arm     # linux-arm64-gnu (GitHub's newer ARM runner)
+          - macos-latest         # darwin-x64 (Intel)
+          - macos-14             # darwin-arm64 (Apple Silicon)
+          - windows-latest       # win32-x64-msvc
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ matrix.bun-version }}
+          bun-version: latest
       - run: bun install
       - run: bun vitest run
       - run: bun run typecheck
+
+  # Canvas engine matrix — @napi-rs/canvas + ghostty-web cross-platform gate.
+  # Hard prerequisite for Phase 9 (Playwright deletion). Until this is green
+  # everywhere, the resvg fallback in Terminal.screenshot() is the safety net.
+  #
+  # Skips the canonical-render fixture test on non-darwin (the gold reference
+  # was captured on darwin-arm64 Ghostty + a Mac-only font path). The new
+  # cross-platform.test.ts uses a platform-aware dHash tolerance instead.
+  ghostty-canvas:
+    name: ghostty canvas (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest        # linux-x64-gnu
+          - ubuntu-22.04-arm     # linux-arm64-gnu
+          - macos-latest         # darwin-x64
+          - macos-14             # darwin-arm64
+          - windows-latest       # win32-x64-msvc
+    env:
+      TERMLESS_CI_PLATFORM: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      # @napi-rs/canvas + ghostty-web smoke — proves the native binding loads
+      # and produces real PNG bytes on this platform. Fails fast if NAPI
+      # bindings are missing or @napi-rs/canvas can't link Skia at runtime.
+      - name: render smoke (renderAnsiPng)
+        shell: bash
+        working-directory: packages/ghostty
+        run: |
+          bun --bun -e '
+            import { renderAnsiPng } from "./src/index.ts"
+            const png = await renderAnsiPng("\x1b[31mhello\x1b[0m", { cols: 20, rows: 4 })
+            console.log("PNG bytes:", png.length)
+            if (png.length < 1000) { console.error("PNG too small — encoder failed"); process.exit(1) }
+            // PNG magic
+            if (png[0] !== 0x89 || png[1] !== 0x50 || png[2] !== 0x4e || png[3] !== 0x47) {
+              console.error("PNG magic mismatch"); process.exit(1)
+            }
+            console.log("✓ @napi-rs/canvas + ghostty-web produced valid PNG on " + process.platform + "-" + process.arch)
+          '
+
+      # Full ghostty test suite — backend + render + auto-picker + window-ops
+      # + cross-platform.test.ts. On darwin runs everything (including the
+      # canonical-render fixture). On non-darwin filters out the canonical
+      # test (Mac-only font path); cross-platform.test.ts covers the gate
+      # there with platform-aware tolerance.
+      - name: ghostty tests (darwin — full incl. canonical)
+        if: runner.os == 'macOS'
+        working-directory: packages/ghostty
+        run: bun --bun vitest run
+
+      - name: ghostty tests (non-darwin — skip canonical fixture)
+        if: runner.os != 'macOS'
+        working-directory: packages/ghostty
+        # Negative lookahead: skip the render.test.ts canonical-Ghostty-reference
+        # test specifically (Mac-only font path + fixture). Matching the full
+        # phrase "canonical Ghostty reference" rather than bare "canonical"
+        # avoids collateral collisions with cross-platform.test.ts's notes.
+        run: bun --bun vitest run --testNamePattern '^(?!.*canonical Ghostty reference).*'
