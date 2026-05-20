@@ -36,9 +36,12 @@ import type {
   RGB,
   EmulatorWarning,
   WarningExtension,
+  ScreenshotOptions,
 } from "../../../src/types.ts"
 import { pushWarning } from "../../../src/warnings.ts"
 import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
+import { renderTerminalPng } from "./render.ts"
+import type { RenderOptions } from "./render.ts"
 
 // ═══════════════════════════════════════════════════════
 // Shared Ghostty WASM instance
@@ -603,6 +606,24 @@ export function createGhosttyBackend(
     warnings.length = 0
   }
 
+  /**
+   * Native screenshot path — render this backend's current cell state via
+   * `@termless/ghostty`'s `renderTerminalPng` (CanvasRenderer + napi-rs/canvas).
+   *
+   * Wires `Terminal.screenshot()`'s auto-picker step 1: when the backend is
+   * ghostty, we can render in-process without a cells round-trip detour
+   * through another parser. The renderer still consumes `cellsToAnsi(this)`
+   * internally — that's the same VT engine that produced these cells, so
+   * the round-trip is lossless.
+   */
+  async function screenshot(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    // ScreenshotOptions and RenderOptions are kept structurally compatible
+    // by hand (see core/types.ts § ScreenshotOptions). Cast through unknown
+    // to bridge the two declared types without dragging RenderOptions into
+    // core (which would cycle: core ← ghostty ← core).
+    return renderTerminalPng(backend, opts as RenderOptions | undefined)
+  }
+
   const backend: TerminalBackend & WarningExtension = {
     name: "ghostty",
     init,
@@ -624,6 +645,7 @@ export function createGhosttyBackend(
     capabilities,
     getWarnings,
     clearWarnings,
+    screenshot,
   }
 
   return backend

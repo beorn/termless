@@ -5,8 +5,11 @@
  * (xterm.js headless + Bun PTY). No Chromium dependency — screenshots are SVG or PNG.
  */
 
+import { readFile, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+import { createFrameTracer, type FrameTracer } from "@termless/core"
 import { z } from "zod"
 import { createSessionManager } from "./session.ts"
 
@@ -185,47 +188,84 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // screenshot — SVG or PNG screenshot
+  // screenshot — PNG (default, via Terminal.screenshot() auto-picker) or SVG
   register(
     server,
     "screenshot",
     {
-      description: "Capture a screenshot of the terminal (SVG or PNG, no browser needed)",
+      description:
+        "Capture a screenshot of the terminal. Defaults to high-fidelity PNG via the auto-picker (Terminal.screenshot — backend-native renderer → @termless/ghostty native canvas → resvg fallback). No Chromium / Playwright dependency. SVG output stays accessible via `.svg` extension on outputPath or `format: 'svg'`.",
       inputSchema: {
         sessionId: z.string().describe("Session ID"),
         outputPath: z
           .string()
           .optional()
-          .describe("File path to save screenshot (PNG if .png extension, otherwise SVG)"),
+          .describe(
+            "File path to save screenshot. PNG by default; `.svg` extension routes to vector output. When unset, PNG bytes are returned as base64 in the response.",
+          ),
         format: z
           .enum(["svg", "png"])
-          .default("svg")
-          .describe("Output format (default: svg). When outputPath is set, format is detected from extension."),
+          .optional()
+          .describe(
+            "Output format. Default 'png'. Overrides outputPath-extension detection. Use 'svg' for the deterministic vector path.",
+          ),
+        fontPath: z
+          .string()
+          .optional()
+          .describe(
+            "Absolute path to a .ttf/.otf font file to bundle for the render (improves glyph fidelity for Nerd Fonts, emojis, box-drawing).",
+          ),
+        fontSize: z.number().optional().describe("Font size in CSS pixels"),
+        fontFamily: z.string().optional().describe("CSS font-family list"),
+        cols: z.number().optional().describe("Override session cols for the render"),
+        rows: z.number().optional().describe("Override session rows for the render"),
+        dpr: z.number().optional().describe("Device pixel ratio (default 2)"),
+        cellWidth: z.number().optional().describe("Override per-cell pixel width (logical CSS pixels, pre-DPR)"),
+        cellHeight: z.number().optional().describe("Override per-cell pixel height (logical CSS pixels, pre-DPR)"),
+        theme: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe(
+            "Color palette override (foreground, background, cursor, black, red, green, yellow, blue, magenta, cyan, white, brightBlack, ...)",
+          ),
       },
     },
     safeTool(async (args) => {
       const terminal = sessions.getSession(args.sessionId)
-      const isPng = args.format === "png" || args.outputPath?.endsWith(".png")
+      const isSvg = args.format === "svg" || (args.format == null && args.outputPath?.endsWith(".svg"))
+
+      if (isSvg) {
+        const svg = terminal.screenshotSvg()
+        if (args.outputPath) {
+          await writeFile(args.outputPath, svg, "utf-8")
+          return textResult({ saved: args.outputPath, format: "svg", mimeType: "image/svg+xml" })
+        }
+        return { content: [{ type: "text", text: svg }] }
+      }
+
+      // PNG path — auto-picker on Terminal: backend-native (ghostty) →
+      // @termless/ghostty proxy → resvg fallback. Same fidelity contract as
+      // bearly's tty_screenshot but without the Chromium / Playwright launch.
+      const png = await terminal.screenshot({
+        fontPath: args.fontPath,
+        fontSize: args.fontSize,
+        fontFamily: args.fontFamily,
+        cols: args.cols,
+        rows: args.rows,
+        dpr: args.dpr,
+        cellWidth: args.cellWidth,
+        cellHeight: args.cellHeight,
+        theme: args.theme,
+      })
 
       if (args.outputPath) {
-        const { writeFile } = await import("node:fs/promises")
-        if (isPng) {
-          const png = await terminal.screenshotPng()
-          await writeFile(args.outputPath, png)
-        } else {
-          const svg = terminal.screenshotSvg()
-          await writeFile(args.outputPath, svg, "utf-8")
-        }
-        return textResult({ saved: args.outputPath, format: isPng ? "png" : "svg" })
+        await writeFile(args.outputPath, png)
+        return textResult({ saved: args.outputPath, format: "png", mimeType: "image/png" })
       }
 
-      if (isPng) {
-        const png = await terminal.screenshotPng()
-        const base64 = Buffer.from(png).toString("base64")
-        return { content: [{ type: "image", data: base64, mimeType: "image/png" }] }
+      return {
+        content: [{ type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" }],
       }
-
-      return { content: [{ type: "text", text: terminal.screenshotSvg() }] }
     }),
   )
 

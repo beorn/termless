@@ -199,6 +199,34 @@ export interface TerminalReadable {
 // TerminalBackend — all backends MUST implement this
 // ═══════════════════════════════════════════════════════
 
+/**
+ * Options accepted by {@link TerminalBackend.screenshot} and
+ * {@link Terminal.screenshot}.
+ *
+ * Mirrors `@termless/ghostty`'s `RenderOptions` shape — kept as a local minimal
+ * type here so `@termless/core` does not import from `@termless/ghostty` (which
+ * would create a peer-dep cycle: ghostty already depends on core). The two
+ * shapes are kept structurally compatible by hand.
+ *
+ * Fields are documented in `@termless/ghostty`'s `RenderOptions`.
+ */
+export interface ScreenshotOptions {
+  cols?: number
+  rows?: number
+  fontSize?: number
+  fontFamily?: string
+  fontPath?: string
+  dpr?: number
+  cursorStyle?: "block" | "underline" | "beam"
+  cursorBlink?: boolean
+  hideCursor?: boolean
+  cellWidth?: number
+  cellHeight?: number
+  targetWidth?: number
+  targetHeight?: number
+  theme?: Record<string, string>
+}
+
 export interface TerminalBackend extends TerminalReadable {
   readonly name: string
 
@@ -227,6 +255,18 @@ export interface TerminalBackend extends TerminalReadable {
 
   // Capabilities
   readonly capabilities: TerminalCapabilities
+
+  /**
+   * Optional native screenshot capability. Present iff the backend has its
+   * own raster renderer (today: only the ghostty backend, which renders via
+   * `@termless/ghostty.renderTerminalPng`).
+   *
+   * Parser-only backends (xtermjs / vt100 / vterm / libvterm / alacritty /
+   * wezterm) do NOT implement this; `Terminal.screenshot()` proxies them
+   * through `@termless/ghostty`'s renderer by re-emitting cells as ANSI via
+   * `cellsToAnsi` + `renderAnsiPng`.
+   */
+  screenshot?(opts?: ScreenshotOptions): Promise<Uint8Array>
 }
 
 // ═══════════════════════════════════════════════════════
@@ -321,6 +361,28 @@ export interface Terminal extends TerminalReadable {
   screenshotSvg(options?: SvgScreenshotOptions): string
   screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
   screenshotPlaywrightPng(options?: PlaywrightScreenshotOptions): Promise<Uint8Array>
+  /**
+   * Auto-picking PNG screenshot.
+   *
+   * Decision tree:
+   *   1. If the backend implements `screenshot()` natively (today: ghostty),
+   *      use it directly.
+   *   2. Otherwise, try the `@termless/ghostty` proxy path: serialize the
+   *      backend's cell grid via `cellsToAnsi`, feed to `renderAnsiPng`.
+   *   3. If `@termless/ghostty` is not installed, fall back to the resvg-based
+   *      SVG → PNG path (`screenshotPng`). Cross-platform safe; lower fidelity.
+   */
+  screenshot(options?: ScreenshotOptions): Promise<Uint8Array>
+  /**
+   * Explicit native-canvas PNG screenshot. Always goes through `@termless/ghostty`'s
+   * `renderAnsiPng` regardless of whether the backend has a native `screenshot()`
+   * method — useful when the caller wants the ghostty renderer's fidelity
+   * specifically (consistent fonts/theme/metrics) and doesn't want the
+   * auto-picker silently using a different path.
+   *
+   * Throws if `@termless/ghostty` is not installed.
+   */
+  screenshotCanvasPng(options?: ScreenshotOptions): Promise<Uint8Array>
 
   // Resize
   resize(cols: number, rows: number): void
