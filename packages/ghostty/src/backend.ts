@@ -294,6 +294,13 @@ export function createGhosttyBackend(
       scrollbackLimit: options.scrollbackLimit ?? 1000,
     })
 
+    // ghostty-web's WASM `createTerminal` recycles freed buffer memory, so a
+    // fresh terminal can inherit the previous one's cell grid. Send RIS
+    // (Reset to Initial State) immediately so every `init()` starts from a
+    // guaranteed-blank screen — critical when multiple ghostty-backed
+    // terminals run in one process (e.g. cross-backend canvas compare).
+    term.write("\x1bc")
+
     // Capture default colors so we can distinguish "default" from "explicitly set"
     term.update()
     const colors = term.getColors() as {
