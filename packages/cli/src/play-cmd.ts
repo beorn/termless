@@ -22,6 +22,8 @@ import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/tape/parser.ts"
 import { executeTape } from "../../../src/tape/executor.ts"
 import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
+import { compareCanvas } from "../../../src/tape/compare-canvas.ts"
+import { isReady as isBackendReadyForCanvas } from "../../../src/backends.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { resolveTheme } from "../../../src/tape/themes.ts"
 import { backends as listBackends, isReady as isBackendReady } from "../../../src/backends.ts"
@@ -331,6 +333,73 @@ async function playAction(
   // Multi-backend comparison mode
   if (opts.compare && backends && backends.length > 1) {
     const mode = opts.compare as CompareMode
+
+    // ── Phase 7: canvas-pipeline compare ──────────────────────
+    // `side-by-side` and `diff` route through compareCanvas — one renderer
+    // (ghostty-web canvas), N parsers. This isolates parser divergence:
+    // any pixel difference is attributable to a backend's VT parser, not
+    // to a rendering-engine difference.
+    if (mode === "side-by-side" || mode === "diff") {
+      // Skip-with-warning any backend that isn't built/installed.
+      const usable: string[] = []
+      for (const name of backends) {
+        let ready = false
+        try {
+          ready = isBackendReadyForCanvas(name)
+        } catch {
+          ready = false
+        }
+        if (ready) {
+          usable.push(name)
+        } else {
+          console.log(`  Warning: backend "${name}" is not installed/built — skipping`)
+        }
+      }
+      if (usable.length < 2) {
+        throw new Error(
+          `--compare ${mode} needs at least 2 installed backends; usable: ${usable.join(", ") || "(none)"}`,
+        )
+      }
+
+      console.log(`Canvas-comparing across ${usable.length} backends (${usable.join(", ")})...`)
+
+      const wantsGif = (firstOutput ?? "").toLowerCase().endsWith(".gif")
+      const canvasResult = await compareCanvas(tape, {
+        backends: usable,
+        mode,
+        ...(opts.cols ? { cols: opts.cols } : {}),
+        ...(opts.rows ? { rows: opts.rows } : {}),
+        animate: wantsGif,
+      })
+
+      if (mode === "diff" && canvasResult.divergentPixels != null) {
+        const pct = canvasResult.totalPixels
+          ? ((canvasResult.divergentPixels / canvasResult.totalPixels) * 100).toFixed(3)
+          : "0"
+        console.log(`Divergent pixels: ${canvasResult.divergentPixels}/${canvasResult.totalPixels} (${pct}%)`)
+      }
+
+      if (firstOutput) {
+        const resolved = resolve(firstOutput)
+        mkdirSync(dirname(resolved), { recursive: true })
+        if (wantsGif && canvasResult.composedFrames && canvasResult.composedFrames.length > 0) {
+          const { createGifFromPngs } = await import("../../../src/animation/gif.ts")
+          const gif = await createGifFromPngs(canvasResult.composedFrames.map((png) => ({ png, duration: 600 })))
+          writeFileSync(resolved, gif)
+          console.log(`Stitched GIF saved: ${firstOutput} (${canvasResult.composedFrames.length} frames)`)
+        } else if (canvasResult.composedPng) {
+          writeFileSync(resolved, canvasResult.composedPng)
+          console.log(`Composed comparison saved: ${firstOutput}`)
+        }
+      } else {
+        console.log("  (no -o output path; pass -o <file>.png or <file>.gif to save)")
+      }
+
+      console.log(`Text match: ${canvasResult.textMatch ? "yes" : "NO — output differs between backends"}`)
+      return
+    }
+
+    // ── Legacy SVG-composition compare (separate / grid) ──────
     console.log(`Comparing across ${backends.length} backends (${backends.join(", ")})...`)
 
     const result = await compareTape(tape, {
@@ -656,7 +725,7 @@ export function registerPlayCommand(program: Command): void {
     .argument("[file]", "Recording file to play (use - for stdin)")
     .option("-o, --output <path...>", "Output file(s), format by extension (repeat for multiple)")
     .option("-b, --backend <name>", "Backend(s), comma-separated (default: vterm)")
-    .option("--compare <mode>", "Comparison mode: separate, side-by-side, grid, diff")
+    .option("--compare <mode>", "Comparison mode: side-by-side, diff (canvas pipeline), separate, grid (legacy SVG)")
     .option("--cols <n>", "Terminal columns override", parseNum, 0)
     .option("--rows <n>", "Terminal rows override", parseNum, 0)
     .option("--show-keys", "Overlay keystroke badges on frames")
@@ -675,7 +744,8 @@ export function registerPlayCommand(program: Command): void {
     ["$ termless play demo.cast", "Play an asciicast recording"],
     ["$ termless play -o demo.gif demo.tape", "Convert tape to animated GIF"],
     ["$ termless play -o demo.svg demo.tape", "Convert to animated SVG"],
-    ["$ termless play -b vterm,ghostty demo.tape", "Cross-terminal comparison"],
+    ["$ termless play demo.tape -b ghostty,xtermjs --compare side-by-side -o c.png", "Cross-backend panels"],
+    ["$ termless play demo.tape -b ghostty,xtermjs --compare diff -o d.png", "Parser-divergence overlay"],
     ["$ cat demo.tape | termless play -", "Play from stdin"],
   ])
 

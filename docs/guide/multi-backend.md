@@ -176,6 +176,70 @@ All backends implement the same `TerminalBackend` interface, so `Terminal` behav
 
 See [Cross-Backend Conformance](/advanced/compat-matrix) for the 120+ conformance tests that Termless runs across backends.
 
+## Cross-Backend Canvas Compare
+
+Conformance tests catch divergence as a _test failure_ — but they don't show you
+what the divergence **looks like**. The `play --compare` modes do: they replay
+the same `.tape` through several backends and render the results into a single
+labelled image.
+
+### One renderer, N parsers
+
+The key design: every backend parses the tape with its **own** VT engine, but
+all of the resulting terminal states are painted through the **same** canvas
+renderer (Ghostty's `CanvasRenderer`, native Skia — no browser). Because the
+renderer is held constant, any pixel difference between two panels is
+attributable to a **parser divergence**, not a rendering-engine difference.
+
+```bash
+# Side-by-side: one labelled panel per backend.
+termless play demo.tape -b ghostty,xtermjs --compare side-by-side -o compare.png
+
+# Diff: the backend panels PLUS a "divergence" panel where every pixel that
+# differs between any pair of backends is highlighted red.
+termless play demo.tape -b ghostty,xtermjs --compare diff -o diff.png
+
+# Stitched GIF: when -o ends in .gif, every Screenshot command becomes a
+# time-synced frame across all backends.
+termless play demo.tape -b ghostty,xtermjs --compare diff -o compare.gif
+```
+
+`diff` mode prints the divergent-pixel count:
+
+```
+Canvas-comparing across 2 backends (ghostty, xtermjs)...
+Divergent pixels: 912/44928 (2.030%)
+Composed comparison saved: diff.png
+Text match: NO — output differs between backends
+```
+
+Backends that aren't installed/built (e.g. `wezterm`, which needs a Rust
+build) are skipped with a warning — the comparison runs with whatever is ready.
+
+### Programmatic API
+
+```typescript
+import { parseTape, compareCanvas } from "@termless/core"
+
+const tape = parseTape('Type "abcd"\nScreenshot')
+const result = await compareCanvas(tape, {
+  backends: ["ghostty", "xtermjs"],
+  mode: "diff",
+})
+
+result.textMatch // false — the C1 NEL byte is parsed differently
+result.divergentPixels // > 0 — the diff overlay lit up
+result.composedPng // Uint8Array — the labelled comparison image
+```
+
+### What it catches
+
+`--compare diff` makes real parser bugs visible at a glance — OSC8 hyperlink
+handling, wide-character width disagreements, DEC private mode interpretation,
+and C1 control-byte handling. For example, the C1 **NEL** byte (`U+0085`):
+xterm.js honours it as "next line", Ghostty treats it as inert — the diff
+overlay highlights exactly the rows that drift.
+
 ## How Termless Compares
 
 | System                        | What it matrices                           | How it works                                                                    |

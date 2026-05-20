@@ -86,3 +86,85 @@ export async function createGif(
   gif.finish()
   return gif.bytesView()
 }
+
+/** One PNG-backed animation frame: pre-rasterized bytes + a display duration. */
+export interface PngFrame {
+  /** PNG bytes of this frame. */
+  png: Uint8Array
+  /** Display duration in milliseconds. */
+  duration: number
+}
+
+/**
+ * Encode already-rasterized PNG frames as an animated GIF.
+ *
+ * Unlike {@link createGif}, the frames are pre-rendered PNGs — no SVG round-
+ * trip, no `@resvg/resvg-js`. Used by the cross-backend compositor
+ * (`../tape/compare-canvas.ts`), whose frames are composed PNGs.
+ *
+ * All frames are expected to share dimensions (the compositor guarantees this
+ * by time-syncing the panel layout); a mismatched frame is letterboxed onto
+ * the first frame's canvas size.
+ */
+export async function createGifFromPngs(
+  frames: PngFrame[],
+  options?: AnimationOptions & { decodePng?: (png: Uint8Array) => { width: number; height: number; data: Uint8Array } },
+): Promise<Uint8Array> {
+  if (frames.length === 0) {
+    throw new Error("createGifFromPngs requires at least one frame")
+  }
+  const { GIFEncoder, quantize, applyPalette } = await loadGifenc()
+  const defaultDuration = options?.defaultDuration ?? 100
+  const loop = options?.loop ?? 0
+
+  // Decoder: caller-supplied (the compositor passes its upng codec) or upng.
+  const decode =
+    options?.decodePng ??
+    (await (async () => {
+      const { decodePngRgba } = await import("../tape/png-codec.ts")
+      return decodePngRgba
+    })())
+
+  const gif = GIFEncoder()
+  let baseW = 0
+  let baseH = 0
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i]!
+    const decoded = decode(frame.png)
+    if (i === 0) {
+      baseW = decoded.width
+      baseH = decoded.height
+    }
+    let rgba = decoded.data
+    let width = decoded.width
+    let height = decoded.height
+    if (width !== baseW || height !== baseH) {
+      // Letterbox onto the base canvas (top-left aligned).
+      const padded = new Uint8Array(baseW * baseH * 4)
+      for (let y = 0; y < Math.min(height, baseH); y++) {
+        for (let x = 0; x < Math.min(width, baseW); x++) {
+          const si = (y * width + x) * 4
+          const di = (y * baseW + x) * 4
+          padded[di] = rgba[si]!
+          padded[di + 1] = rgba[si + 1]!
+          padded[di + 2] = rgba[si + 2]!
+          padded[di + 3] = rgba[si + 3]!
+        }
+      }
+      rgba = padded
+      width = baseW
+      height = baseH
+    }
+    const palette = quantize(rgba, 256)
+    const indexed = applyPalette(rgba, palette)
+    gif.writeFrame(indexed, width, height, {
+      palette,
+      delay: frame.duration || defaultDuration,
+      repeat: i === 0 ? (loop === 0 ? 0 : loop) : undefined,
+    })
+  }
+
+  gif.finish()
+  return gif.bytesView()
+}

@@ -87,13 +87,25 @@ export { executeTape } from "./tape/executor.ts"
 export type { TapeExecutorOptions, TapeFrame, TapeResult } from "./tape/executor.ts"
 export { compareTape } from "./tape/compare.ts"
 export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot, BackendSpec } from "./tape/compare.ts"
+export { compareCanvas, composeSideBySide, composeDiff } from "./tape/compare-canvas.ts"
+export type {
+  CanvasCompareMode,
+  CanvasCompareOptions,
+  CanvasCompareResult,
+  CanvasBackendSpec,
+  CanvasBackendResult,
+  CanvasBackendFrame,
+} from "./tape/compare-canvas.ts"
+export { decodePngRgba, encodePng } from "./tape/png-codec.ts"
+export type { RgbaImage } from "./tape/png-codec.ts"
 export { overlayKeystroke } from "./tape/overlay.ts"
 export type { KeyOverlayOptions } from "./tape/overlay.ts"
 export { resolveTheme, listThemes, listAliases } from "./tape/themes.ts"
 
 // Animation output formats (animated SVG, GIF, APNG)
 export { createAnimatedSvg } from "./animation/animated-svg.ts"
-export { createGif } from "./animation/gif.ts"
+export { createGif, createGifFromPngs } from "./animation/gif.ts"
+export type { PngFrame } from "./animation/gif.ts"
 export { createApng } from "./animation/apng.ts"
 export { renderAnimation, detectFormat } from "./animation/index.ts"
 export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation/types.ts"
