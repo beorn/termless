@@ -6,7 +6,7 @@
  */
 
 import { createTerminal } from "@termless/core"
-import type { Terminal, SvgScreenshotOptions, TerminalBackend } from "@termless/core"
+import type { FrameTracer, Terminal, TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 // ── Types ──
@@ -36,6 +36,13 @@ export interface SessionCreateOptions {
   waitFor?: string | "content" | "stable"
   timeout?: number
   backend?: SessionBackend
+  /**
+   * Hook fired after every successful write to the backend (both `feed()` calls
+   * and PTY-spawned data). Used by frame-trace mode and other observers that
+   * need to react to buffer mutations without polling. Forwarded to
+   * `createTerminal({ onAfterWrite })`.
+   */
+  onAfterWrite?: (data: Uint8Array) => void
 }
 
 export interface SessionInfo {
@@ -52,6 +59,21 @@ export interface SessionManager {
   listSessions(): SessionInfo[]
   stopSession(id: string): Promise<void>
   stopAll(): Promise<void>
+  /**
+   * Attach a {@link FrameTracer} to an existing session. The tracer's `onWrite`
+   * is invoked by the `onAfterWrite` hook passed to `createSession`; this just
+   * stores the tracer so callers can look it up by session id (and so that
+   * `stopSession` can finalize it before closing the terminal).
+   *
+   * For the wiring to work end-to-end, the caller must pass `onAfterWrite:
+   * (data) => tracer.onWrite(data)` to `createSession()` before calling
+   * `attachTracer()`. Attaching after the session is created (rather than at
+   * creation time) keeps the API symmetric with the bearly tty pattern, where
+   * the late-bound tracer reference is captured by closure.
+   */
+  attachTracer(id: string, tracer: FrameTracer): void
+  /** Get the tracer attached to a session, or `null` if none was attached. */
+  getTracer(id: string): FrameTracer | null
 }
 
 // ── Internal session record ──
@@ -59,6 +81,7 @@ export interface SessionManager {
 interface SessionRecord {
   terminal: Terminal
   command?: string[]
+  tracer: FrameTracer | null
 }
 
 // ── Constants ──
@@ -82,7 +105,7 @@ export function createSessionManager(): SessionManager {
     const backendName: SessionBackend = opts.backend ?? "xtermjs"
 
     const backend: TerminalBackend = await resolveBackend(backendName)
-    const terminal = createTerminal({ backend, cols, rows })
+    const terminal = createTerminal({ backend, cols, rows, onAfterWrite: opts.onAfterWrite })
 
     counter++
     const id = `session-${counter}`
@@ -112,7 +135,7 @@ export function createSessionManager(): SessionManager {
       throw error
     }
 
-    sessions.set(id, { terminal, command: opts.command })
+    sessions.set(id, { terminal, command: opts.command, tracer: null })
     return { id, terminal }
   }
 
@@ -120,6 +143,18 @@ export function createSessionManager(): SessionManager {
     const record = sessions.get(id)
     if (!record) throw new Error(`Session not found: ${id}`)
     return record.terminal
+  }
+
+  function attachTracer(id: string, tracer: FrameTracer): void {
+    const record = sessions.get(id)
+    if (!record) throw new Error(`Session not found: ${id}`)
+    record.tracer = tracer
+  }
+
+  function getTracer(id: string): FrameTracer | null {
+    const record = sessions.get(id)
+    if (!record) throw new Error(`Session not found: ${id}`)
+    return record.tracer
   }
 
   function listSessions(): SessionInfo[] {
@@ -145,7 +180,7 @@ export function createSessionManager(): SessionManager {
     sessions.clear()
   }
 
-  return { createSession, getSession, listSessions, stopSession, stopAll }
+  return { createSession, getSession, listSessions, stopSession, stopAll, attachTracer, getTracer }
 }
 
 // ── Backend resolution ──
