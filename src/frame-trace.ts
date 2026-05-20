@@ -19,6 +19,7 @@
  *     00001.png      — unique frames only; duplicates point to original via duplicate_of
  *     00002.png
  *     ...
+ *     viewer.html    — self-contained HTML trace viewer, written on stop()
  *
  * The tracer hooks into `terminal.onAfterWrite` (wired via TerminalCreateOptions)
  * and debounces frame captures by `debounceMs` so we get one frame per render
@@ -28,6 +29,7 @@
 import { appendFileSync, existsSync, mkdirSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { writeViewer } from "./frame-viewer.ts"
 import type { ScreenshotOptions, Terminal } from "./types.ts"
 
 export interface FrameTraceOptions {
@@ -65,6 +67,12 @@ export interface Frame {
   duration_since_prev_ms: number
   render_ms: number
   png: string | null
+  /**
+   * Optional silvery render-state snapshot. Populated by Phase 4 of the
+   * Visual Eyes epic; absent on traces recorded without a silvery hook.
+   * The viewer renders it when present and omits the section when absent.
+   */
+  silvery?: unknown
 }
 
 export interface FrameTraceSummary {
@@ -302,6 +310,15 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     const uniqueCount = hashToSeq.size
     const count = frames.length
     const totalBytes = frames.reduce((acc, f) => acc + f.bytes_in_since_last, 0)
+    // Emit a self-contained HTML viewer alongside the trace so every trace is
+    // immediately inspectable by double-clicking viewer.html — no server.
+    // Never let a viewer-generation failure kill the trace summary.
+    try {
+      writeViewer(dir)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[frame-trace] viewer generation failed:", (err as Error).message)
+    }
     return {
       count,
       uniqueCount,

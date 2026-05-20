@@ -98,6 +98,42 @@ When the tape executes, the executor wires up frame-tracing automatically and ex
 
 JSONL is chosen over a JSON array so partial traces from a crashed session remain parseable up to the last fully-flushed line.
 
+## HTML Viewer
+
+Every trace gets a self-contained `viewer.html` written alongside `index.jsonl` — a scrubbable timeline UI for inspecting frames locally, with **no server**. `createFrameTracer().stop()` generates it automatically; double-click the file to open it in any browser.
+
+```text
+/tmp/my-trace/
+  index.jsonl
+  00001.png
+  00002.png
+  viewer.html   ← generated on stop()
+```
+
+The viewer inlines everything — the jsonl rows as a JSON blob and every PNG as a base64 data URI — so it works from `file://` with no cross-origin fetch.
+
+Features:
+
+- **Horizontal timeline** — one tick per frame; deduped frames are dimmed, idle gaps (inter-frame time well above the median) shown as wider gray bars.
+- **Click to select** — a frame's PNG, ANSI-input preview, silvery state (when the row carries an optional `silvery` field), and bytes-in delta vs. the previous frame.
+- **Keyboard scrub** — arrow keys plus vim-style `j` / `k` advance/retreat; `Home` / `End` jump to ends.
+- **Find** — text search across the frames' ANSI-input previews; matching ticks are highlighted.
+- **Filter** — a free-text predicate over each row's JSON; non-matching frames are hidden from the timeline.
+- **Diff mode** — press `d`, pick two frames, and the viewer pixel-diffs them in-browser with a red overlay on changed pixels.
+
+A ~1000-frame trace scrubs smoothly because all images are inlined up front — no per-frame fetch.
+
+### Standalone generation
+
+`writeViewer` is exported so you can (re)generate a viewer for an existing trace directory:
+
+```ts
+import { writeViewer } from "@termless/core"
+
+const result = writeViewer("/tmp/my-trace/")
+// { viewerFile, frameCount, imageCount, bytes }
+```
+
 ## Design Notes
 
 - **Dedupe via xxHash64** — Bun's built-in `Bun.hash.xxHash64`, with an FNV-1a fallback for Node. Collision rate is fine for a 10k-frame trace lifetime.
