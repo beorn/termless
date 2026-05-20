@@ -26,7 +26,7 @@
  * pass rather than one per cell-write.
  */
 
-import { appendFileSync, existsSync, mkdirSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { writeViewer } from "./frame-viewer.ts"
@@ -49,6 +49,40 @@ export interface FrameTraceOptions {
    * the native canvas renderer / WASM.
    */
   renderFn?: (terminal: Terminal) => Promise<Uint8Array>
+  /**
+   * Path to a render-event sidecar JSONL written by silvery's render-trace
+   * (`SILVERY_TRACE_FRAMES` — Phase 4 of the Visual Eyes epic). When set,
+   * each captured frame is annotated with the silvery render event whose
+   * timestamp is the closest match (the `silvery` field on `Frame`).
+   *
+   * Default: `<dir>/render-events.jsonl` — the path silvery writes to when
+   * `SILVERY_TRACE_FRAMES` points at this same trace directory. Pass an
+   * explicit path to read events from elsewhere; pass `null` to disable the
+   * join entirely.
+   */
+  silveryEventsFile?: string | null
+}
+
+/**
+ * A silvery render-boundary event, as written by silvery's `render-trace`
+ * sidecar (`SILVERY_TRACE_FRAMES`). Mirrors silvery's `RenderDispatchedEvent`
+ * shape — kept structural (not an import) so `@termless/core` stays
+ * dependency-free of silvery.
+ */
+export interface SilveryRenderEvent {
+  type: "RENDER_DISPATCHED"
+  /** Wall-clock ms epoch — the join key. */
+  ts: number
+  renderCount: number
+  reason: string
+  dirtyRegions: { row: number; height: number }[]
+  signalDelta: {
+    nodesVisited: number
+    nodesRendered: number
+    nodesSkipped: number
+    incremental: boolean
+  }
+  fiberHash: string
 }
 
 export interface Frame {
@@ -69,10 +103,16 @@ export interface Frame {
   png: string | null
   /**
    * Optional silvery render-state snapshot. Populated by Phase 4 of the
-   * Visual Eyes epic; absent on traces recorded without a silvery hook.
-   * The viewer renders it when present and omits the section when absent.
+   * Visual Eyes epic — the silvery `RENDER_DISPATCHED` event whose timestamp
+   * is the closest match for this frame. Absent on traces recorded without a
+   * silvery render-event sidecar. The viewer renders it when present and
+   * omits the section when absent.
+   *
+   * Typed `SilveryRenderEvent | unknown` so older traces (or non-silvery
+   * sources) that wrote an arbitrary value still type-check; new traces
+   * populate it with a `SilveryRenderEvent`.
    */
-  silvery?: unknown
+  silvery?: SilveryRenderEvent | unknown
 }
 
 export interface FrameTraceSummary {
@@ -179,6 +219,99 @@ function padSeq(n: number, width = 5): string {
   return n.toString().padStart(width, "0")
 }
 
+// ── Silvery render-event join ────────────────────────────────────────────────
+//
+// silvery writes a `render-events.jsonl` sidecar (one RENDER_DISPATCHED event
+// per line) when `SILVERY_TRACE_FRAMES` is set. The frame tracer reads that
+// sidecar incrementally — re-reading the whole file each capture is fine; it's
+// small, append-only, and a capture happens at most every `debounceMs`.
+
+/**
+ * A reader that incrementally tails a silvery render-event sidecar and
+ * answers "which render event best matches a frame captured at ts T?".
+ */
+interface SilveryEventJoin {
+  /** Re-read the sidecar if it grew; return the event closest to `ts`. */
+  matchFor(ts: number): SilveryRenderEvent | null
+}
+
+/** Parse one JSONL line into a SilveryRenderEvent, or null if malformed. */
+function parseSilveryEvent(line: string): SilveryRenderEvent | null {
+  const trimmed = line.trim()
+  if (trimmed.length === 0) return null
+  try {
+    const obj = JSON.parse(trimmed) as Partial<SilveryRenderEvent>
+    if (obj.type !== "RENDER_DISPATCHED" || typeof obj.ts !== "number") return null
+    return obj as SilveryRenderEvent
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Create a join over the silvery render-event sidecar at `file`.
+ *
+ * The join is tolerant: a missing file, a truncated final line, or malformed
+ * rows are skipped — frame capture is never blocked by sidecar issues. The
+ * file is re-stat'd each `matchFor` call and only re-parsed when it grew.
+ *
+ * Matching rule: pick the event with the **largest `ts` ≤ frame `ts`** — the
+ * render that produced this frame happened at or before the frame's capture.
+ * If no event precedes the frame (clock skew, first frame), fall back to the
+ * single closest event by absolute `ts` distance within a small window so
+ * an early frame still gets annotated.
+ */
+function createSilveryEventJoin(file: string): SilveryEventJoin {
+  const events: SilveryRenderEvent[] = []
+  let lastSize = -1
+  // Window for the "no event precedes the frame" fallback — a frame should
+  // only borrow a later event if it's within one render-debounce or so.
+  const FALLBACK_WINDOW_MS = 64
+
+  function refresh(): void {
+    let size: number
+    try {
+      size = statSync(file).size
+    } catch {
+      return // sidecar not created yet — silvery may not have rendered.
+    }
+    if (size === lastSize) return
+    lastSize = size
+    let text: string
+    try {
+      text = readFileSync(file, "utf-8")
+    } catch {
+      return
+    }
+    events.length = 0
+    for (const line of text.split("\n")) {
+      const ev = parseSilveryEvent(line)
+      if (ev) events.push(ev)
+    }
+    // Sidecar is append-only in render order, but sort defensively so the
+    // closest-match scan below can rely on ascending ts.
+    events.sort((a, b) => a.ts - b.ts)
+  }
+
+  return {
+    matchFor(ts: number): SilveryRenderEvent | null {
+      refresh()
+      if (events.length === 0) return null
+      // Largest ts <= frame ts.
+      let best: SilveryRenderEvent | null = null
+      for (const ev of events) {
+        if (ev.ts <= ts) best = ev
+        else break
+      }
+      if (best) return best
+      // No event precedes the frame — borrow the earliest event if it's
+      // close enough (handles the first frame / coarse-clock skew).
+      const earliest = events[0]!
+      return earliest.ts - ts <= FALLBACK_WINDOW_MS ? earliest : null
+    },
+  }
+}
+
 export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions): FrameTracer {
   const debounceMs = options.debounceMs ?? 16
   const maxFrames = options.maxFrames ?? 10_000
@@ -203,6 +336,13 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   const indexFile = join(dir, "index.jsonl")
   // Truncate any prior index for this dir.
   appendFileSync(indexFile, "", { flag: "w" })
+
+  // Silvery render-event join. `silveryEventsFile` defaults to the sidecar
+  // silvery writes when `SILVERY_TRACE_FRAMES` points at this same dir;
+  // pass `null` to disable.
+  const silveryEventsFile =
+    options.silveryEventsFile === null ? null : (options.silveryEventsFile ?? join(dir, "render-events.jsonl"))
+  const silveryJoin = silveryEventsFile ? createSilveryEventJoin(silveryEventsFile) : null
 
   const frames: Frame[] = []
   const hashToSeq = new Map<string, number>()
@@ -276,6 +416,11 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
       render_ms: renderMs,
       png: pngRelPath,
     }
+    // Join the closest silvery render event onto the frame. Absent when no
+    // sidecar exists or no event matches — the `silvery` field stays
+    // undefined and the viewer omits the section.
+    const silveryEvent = silveryJoin?.matchFor(ts)
+    if (silveryEvent) frame.silvery = silveryEvent
     frames.push(frame)
     appendFileSync(indexFile, JSON.stringify(frame) + "\n")
     if (firstTs == null) firstTs = ts

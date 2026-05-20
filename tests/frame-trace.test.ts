@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs"
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createTerminal } from "../src/terminal.ts"
 import { createFrameTracer } from "../src/frame-trace.ts"
+import type { Frame, SilveryRenderEvent } from "../src/frame-trace.ts"
 import type { Terminal } from "../src/types.ts"
 
 // Use the vt100 backend — pure-TS, no native deps, fast for tests.
@@ -140,6 +141,188 @@ describe("createFrameTracer", () => {
       expect(summary.truncated).toBe(true)
     } finally {
       rmSync(dir3, { recursive: true, force: true })
+    }
+  })
+
+  test("joins silvery render events onto frames by ts", async () => {
+    const dirS = mkdtempSync(join(tmpdir(), "frame-trace-silvery-"))
+    try {
+      // Write a render-event sidecar BEFORE capturing any frame, simulating
+      // silvery's SILVERY_TRACE_FRAMES output. Two events with timestamps
+      // well in the past so any captured frame's ts is >= both.
+      const t0 = Date.now() - 10_000
+      const evA: SilveryRenderEvent = {
+        type: "RENDER_DISPATCHED",
+        ts: t0,
+        renderCount: 1,
+        reason: "initial",
+        dirtyRegions: [{ row: 0, height: 5 }],
+        signalDelta: { nodesVisited: 12, nodesRendered: 12, nodesSkipped: 0, incremental: false },
+        fiberHash: "12:0",
+      }
+      const evB: SilveryRenderEvent = {
+        type: "RENDER_DISPATCHED",
+        ts: t0 + 1, // 1ms later — still in the past relative to the frame
+        renderCount: 2,
+        reason: "content,subtree",
+        dirtyRegions: [{ row: 2, height: 1 }],
+        signalDelta: { nodesVisited: 12, nodesRendered: 3, nodesSkipped: 9, incremental: true },
+        fiberHash: "12:7",
+      }
+      writeFileSync(join(dirS, "render-events.jsonl"), JSON.stringify(evA) + "\n" + JSON.stringify(evB) + "\n")
+
+      let hook: ((data: Uint8Array) => void) | undefined
+      const term = createTerminal({
+        backend: createVt100Backend(),
+        cols: 10,
+        rows: 5,
+        onAfterWrite: (data) => hook?.(data),
+      })
+      const tracer = createFrameTracer(term, { dir: dirS, debounceMs: 5, renderFn: stubRender })
+      hook = tracer.onWrite
+
+      term.feed("hi")
+      await new Promise((r) => setTimeout(r, 30))
+
+      const frames = tracer.framesSinceSeq(0) as Frame[]
+      expect(frames.length).toBeGreaterThanOrEqual(1)
+      // Frame ts > both events → joins the latest preceding event (evB).
+      const joined = frames[0]!.silvery as SilveryRenderEvent
+      expect(joined).toBeDefined()
+      expect(joined.type).toBe("RENDER_DISPATCHED")
+      expect(joined.reason).toBe("content,subtree")
+      expect(joined.renderCount).toBe(2)
+      expect(joined.signalDelta.nodesRendered).toBe(3)
+      expect(joined.fiberHash).toBe("12:7")
+
+      const summary = await tracer.stop()
+      // The index.jsonl row carries the joined silvery field.
+      const indexLines = readFileSync(summary.indexFile, "utf-8").trim().split("\n")
+      const row = JSON.parse(indexLines[0]!)
+      expect(row.silvery).toBeDefined()
+      expect(row.silvery.reason).toBe("content,subtree")
+      expect(row.silvery.signalDelta.incremental).toBe(true)
+    } finally {
+      rmSync(dirS, { recursive: true, force: true })
+    }
+  })
+
+  test("frames have no silvery field when no sidecar exists", async () => {
+    const dirN = mkdtempSync(join(tmpdir(), "frame-trace-nosilvery-"))
+    try {
+      let hook: ((data: Uint8Array) => void) | undefined
+      const term = createTerminal({
+        backend: createVt100Backend(),
+        cols: 10,
+        rows: 3,
+        onAfterWrite: (data) => hook?.(data),
+      })
+      // No render-events.jsonl in dirN → join is a no-op.
+      const tracer = createFrameTracer(term, { dir: dirN, debounceMs: 5, renderFn: stubRender })
+      hook = tracer.onWrite
+
+      term.feed("x")
+      await new Promise((r) => setTimeout(r, 30))
+
+      const frames = tracer.framesSinceSeq(0) as Frame[]
+      expect(frames.length).toBeGreaterThanOrEqual(1)
+      expect(frames[0]!.silvery).toBeUndefined()
+
+      await tracer.stop()
+    } finally {
+      rmSync(dirN, { recursive: true, force: true })
+    }
+  })
+
+  test("silveryEventsFile: null disables the join even when a sidecar exists", async () => {
+    const dirD = mkdtempSync(join(tmpdir(), "frame-trace-silvery-off-"))
+    try {
+      const ev: SilveryRenderEvent = {
+        type: "RENDER_DISPATCHED",
+        ts: Date.now() - 5000,
+        renderCount: 1,
+        reason: "initial",
+        dirtyRegions: [],
+        signalDelta: { nodesVisited: 1, nodesRendered: 1, nodesSkipped: 0, incremental: false },
+        fiberHash: "1:0",
+      }
+      writeFileSync(join(dirD, "render-events.jsonl"), JSON.stringify(ev) + "\n")
+
+      let hook: ((data: Uint8Array) => void) | undefined
+      const term = createTerminal({
+        backend: createVt100Backend(),
+        cols: 8,
+        rows: 3,
+        onAfterWrite: (data) => hook?.(data),
+      })
+      const tracer = createFrameTracer(term, {
+        dir: dirD,
+        debounceMs: 5,
+        renderFn: stubRender,
+        silveryEventsFile: null,
+      })
+      hook = tracer.onWrite
+
+      term.feed("z")
+      await new Promise((r) => setTimeout(r, 30))
+
+      const frames = tracer.framesSinceSeq(0) as Frame[]
+      expect(frames.length).toBeGreaterThanOrEqual(1)
+      expect(frames[0]!.silvery).toBeUndefined()
+
+      await tracer.stop()
+    } finally {
+      rmSync(dirD, { recursive: true, force: true })
+    }
+  })
+
+  test("malformed sidecar lines are skipped without breaking the trace", async () => {
+    const dirM = mkdtempSync(join(tmpdir(), "frame-trace-silvery-bad-"))
+    try {
+      const good: SilveryRenderEvent = {
+        type: "RENDER_DISPATCHED",
+        ts: Date.now() - 5000,
+        renderCount: 9,
+        reason: "dims-changed",
+        dirtyRegions: [{ row: 0, height: 3 }],
+        signalDelta: { nodesVisited: 4, nodesRendered: 4, nodesSkipped: 0, incremental: false },
+        fiberHash: "4:2",
+      }
+      // A truncated line, a non-JSON line, a JSON line of the wrong type,
+      // then one valid event.
+      writeFileSync(
+        join(dirM, "render-events.jsonl"),
+        '{"type":"RENDER_DISPAT\n' +
+          "not json at all\n" +
+          '{"type":"SOMETHING_ELSE","ts":1}\n' +
+          JSON.stringify(good) +
+          "\n",
+      )
+
+      let hook: ((data: Uint8Array) => void) | undefined
+      const term = createTerminal({
+        backend: createVt100Backend(),
+        cols: 8,
+        rows: 3,
+        onAfterWrite: (data) => hook?.(data),
+      })
+      const tracer = createFrameTracer(term, { dir: dirM, debounceMs: 5, renderFn: stubRender })
+      hook = tracer.onWrite
+
+      term.feed("q")
+      await new Promise((r) => setTimeout(r, 30))
+
+      const frames = tracer.framesSinceSeq(0) as Frame[]
+      expect(frames.length).toBeGreaterThanOrEqual(1)
+      // Only the one valid event survives parsing and gets joined.
+      const joined = frames[0]!.silvery as SilveryRenderEvent
+      expect(joined).toBeDefined()
+      expect(joined.reason).toBe("dims-changed")
+      expect(joined.renderCount).toBe(9)
+
+      await tracer.stop()
+    } finally {
+      rmSync(dirM, { recursive: true, force: true })
     }
   })
 
