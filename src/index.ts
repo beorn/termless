@@ -9,11 +9,6 @@ export type {
   MouseModifiers,
   MouseOptions,
   OutputView,
-  PlaywrightBrowserLike,
-  PlaywrightModuleLike,
-  PlaywrightNewPageOptions,
-  PlaywrightPageLike,
-  PlaywrightScreenshotOptions,
   PngScreenshotOptions,
   RegionView,
   RGB,
@@ -39,9 +34,12 @@ export { hasExtension } from "./types.ts"
 export { createTerminal } from "./terminal.ts"
 export { screenshotSvg } from "./svg.ts"
 export { screenshotPng } from "./png.ts"
-export { screenshotPlaywrightPng } from "./playwright.ts"
-export { screenshotCanvasPng, cellsToAnsi } from "./canvas-render.ts"
-export type { CanvasScreenshotOptions, CanvasScreenshotMeta, CanvasTheme } from "./canvas-render.ts"
+// Backwards-compat re-export: @termless/ghostty owns the cellsToAnsi + canvas
+// renderer surface in Phase 9+. The barrel re-exports cellsToAnsi so any
+// caller still doing `import { cellsToAnsi } from "@termless/core"` keeps
+// working without pulling the full ghostty backend.
+export { cellsToAnsi } from "@termless/ghostty"
+export type { CanvasTheme } from "@termless/ghostty"
 export { createFrameTracer } from "./frame-trace.ts"
 export type { Frame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from "./frame-trace.ts"
 export { captureCrossRenderer, pngDimensions } from "./cross-renderer.ts"

@@ -28,8 +28,7 @@
 import { appendFileSync, existsSync, mkdirSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import type { CanvasScreenshotOptions } from "./canvas-render.ts"
-import type { Terminal } from "./types.ts"
+import type { ScreenshotOptions, Terminal } from "./types.ts"
 
 export interface FrameTraceOptions {
   /** Output directory. Created if missing. */
@@ -40,11 +39,12 @@ export interface FrameTraceOptions {
   maxFrames?: number
   /** Skip writing PNGs for duplicate hashes (still records in index). Default: true. */
   dedupe?: boolean
-  /** Override canvas-render options. */
-  canvas?: Pick<CanvasScreenshotOptions, "cols" | "rows" | "fontSize" | "fontPath" | "theme" | "dpr">
+  /** Override canvas-render options forwarded to @termless/ghostty's renderTerminalPng. */
+  canvas?: Pick<ScreenshotOptions, "cols" | "rows" | "fontSize" | "fontPath" | "theme" | "dpr">
   /**
-   * If provided, called instead of `screenshotCanvasPng` to produce the
-   * frame PNG bytes. Useful for tests that don't want a real browser launch.
+   * If provided, called instead of `@termless/ghostty.renderTerminalPng` to
+   * produce the frame PNG bytes. Useful for tests that don't want to spin up
+   * the native canvas renderer / WASM.
    */
   renderFn?: (terminal: Terminal) => Promise<Uint8Array>
 }

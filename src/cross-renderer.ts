@@ -5,7 +5,8 @@
  * put it into its current state, captures three renderings of the same
  * buffer state:
  *
- *   1. Canvas — ghostty-web's CanvasRenderer in headless Chromium
+ *   1. Canvas — ghostty-web's CanvasRenderer via @termless/ghostty's native
+ *      canvas pipeline (@napi-rs/canvas + ghostty-web WASM, no Chromium)
  *      (real-fidelity truecolor + glyph shaping)
  *   2. SVG    — termless's deterministic SVG renderer (text-tags + rects)
  *   3. Peekaboo — a real terminal app (Ghostty, iTerm2, Terminal.app)
@@ -18,15 +19,15 @@
  * - All three renderers see the same buffer state via the same source
  *   (xterm.js for canvas+SVG; the real terminal's own parser for peekaboo).
  * - A unified theme + font config is applied to all three when possible.
- *   Canvas: passes theme + fontPath to ghostty-web. SVG: passes theme +
- *   cellWidth/Height. Peekaboo: launches the terminal app with whatever
- *   the user's config dictates — we can't override that in-flight.
+ *   Canvas: passes theme + fontPath to @termless/ghostty's renderTerminalPng.
+ *   SVG: passes theme + cellWidth/Height. Peekaboo: launches the terminal app
+ *   with whatever the user's config dictates — we can't override that in-flight.
  * - Peekaboo is opt-in (set `includePeekaboo: true`) because it requires
  *   GUI access + spawns a real window.
  */
 
 import type { Terminal, SvgScreenshotOptions } from "./types.ts"
-import { screenshotCanvasPng, type CanvasTheme, type CanvasScreenshotOptions } from "./canvas-render.ts"
+import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
 
 export interface CrossRendererOptions {
   /**
@@ -115,7 +116,11 @@ export async function captureCrossRenderer(
   // Capture with returnMeta so we can pass measured cell dimensions to
   // SVG for unification — otherwise SVG's 9.6×20 defaults won't match
   // canvas's font-measured ~10×17 metrics and dimension comparisons fail.
-  const canvasOptions: CanvasScreenshotOptions & { returnMeta: true } = {
+  //
+  // Phase 9: routes through @termless/ghostty's renderTerminalPng (native
+  // canvas via @napi-rs/canvas + ghostty-web WASM). Replaces the deleted
+  // screenshotCanvasPng (Playwright + Chromium) path.
+  const canvasOptions: RenderOptions & { returnMeta: true } = {
     returnMeta: true,
     ...(options.cols != null ? { cols: options.cols } : {}),
     ...(options.rows != null ? { rows: options.rows } : {}),
@@ -124,9 +129,9 @@ export async function captureCrossRenderer(
     ...(options.fontSize ? { fontSize: options.fontSize } : {}),
     ...(options.fontFamily ? { fontFamily: options.fontFamily } : {}),
   }
-  const canvasResult = (await screenshotCanvasPng(terminal, canvasOptions)) as unknown as {
+  const canvasResult = (await renderTerminalPng(terminal, canvasOptions)) as unknown as {
     png: Uint8Array
-    meta: import("./canvas-render.ts").CanvasScreenshotMeta
+    meta: RenderMeta
   }
   const canvasBytes = canvasResult.png
   const canvasMeta = canvasResult.meta
@@ -134,9 +139,9 @@ export async function captureCrossRenderer(
   // (logical) pixels — same units SVG uses for `cellWidth`/`cellHeight`.
   // The canvas's actual pixel dimensions ARE multiplied by DPR (so a 40×6
   // grid at 10×17 logical = 400×102 logical = 800×204 canvas at DPR 2),
-  // but charWidth/charHeight stay in logical px.
-  const measuredCellWidth = canvasMeta.charWidth || 9.6
-  const measuredCellHeight = canvasMeta.charHeight || 20
+  // but cellWidth/cellHeight stay in logical px.
+  const measuredCellWidth = canvasMeta.cellWidth || 9.6
+  const measuredCellHeight = canvasMeta.cellHeight || 20
 
   // ── svg ────────────────────────────────────────────────
   // The SVG renderer emits an SVG string; pass canvas's measured cell

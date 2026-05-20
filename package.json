@@ -38,9 +38,7 @@
     ".": "./src/index.ts",
     "./registry": "./src/backends-advanced.ts",
     "./svg": "./src/svg.ts",
-    "./png": "./src/png.ts",
-    "./playwright": "./src/playwright.ts",
-    "./canvas": "./src/canvas-render.ts"
+    "./png": "./src/png.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -60,14 +58,6 @@
       "./png": {
         "types": "./dist/png.d.mts",
         "import": "./dist/png.mjs"
-      },
-      "./playwright": {
-        "types": "./dist/playwright.d.mts",
-        "import": "./dist/playwright.mjs"
-      },
-      "./canvas": {
-        "types": "./dist/canvas-render.d.mts",
-        "import": "./dist/canvas-render.mjs"
       }
     }
   },
@@ -109,14 +99,10 @@
     "vue": "^3.5.31"
   },
   "peerDependencies": {
-    "node-pty": ">=1.0.0",
-    "playwright": ">=1.52.0"
+    "node-pty": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "node-pty": {
-      "optional": true
-    },
-    "playwright": {
       "optional": true
     }
   },
@@ -133,9 +119,7 @@
       "src/index.ts",
       "src/backends-advanced.ts",
       "src/svg.ts",
-      "src/png.ts",
-      "src/playwright.ts",
-      "src/canvas-render.ts"
+      "src/png.ts"
     ],
     "format": "esm"
   },
