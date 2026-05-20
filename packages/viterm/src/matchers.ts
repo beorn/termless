@@ -417,5 +417,7 @@ export const terminalMatchers = {
   },
 }
 
-// Auto-register matchers when this module is imported
-expect.extend(terminalMatchers)
+// Auto-register matchers when this module is imported.
+// Cast: each matcher uses `received: unknown` for input validation, which is
+// narrower than vitest's `RawMatcherFn` `actual: any` — runtime-compatible.
+expect.extend(terminalMatchers as unknown as Parameters<typeof expect.extend>[0])

@@ -152,7 +152,7 @@ export function cellsToAnsi(terminal: TerminalReadable, opts: { rows?: number; c
   for (let r = 0; r < screenRows.length; r++) {
     const row = screenRows[r]
     for (let c = 0; c < colCount; c++) {
-      const cell = row[c]
+      const cell = row?.[c]
       if (!cell) {
         // Blank cell — emit space with default attrs (after a reset if needed).
         if (prev !== INITIAL_SGR && nonDefault(prev)) {

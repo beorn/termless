@@ -59,17 +59,19 @@ const PLATFORM_TOLERANCE: Record<string, PlatformTolerance> = {
 
 function resolvePlatform(): { key: string; tolerance: PlatformTolerance } {
   const ci = process.env.TERMLESS_CI_PLATFORM
-  if (ci && ci in PLATFORM_TOLERANCE) {
-    return { key: ci, tolerance: PLATFORM_TOLERANCE[ci] }
+  const ciTolerance = ci ? PLATFORM_TOLERANCE[ci] : undefined
+  if (ci && ciTolerance) {
+    return { key: ci, tolerance: ciTolerance }
   }
   // Fall back to a guess from process.platform when not in CI. We bias
   // toward the wider tolerance to avoid flaky local runs on Linux/Windows
   // without an explicit CI variable. Darwin local runs still use 7/64.
   if (process.platform === "darwin") {
     const key = process.arch === "arm64" ? "macos-14" : "macos-latest"
-    return { key, tolerance: PLATFORM_TOLERANCE[key] }
+    const tolerance = PLATFORM_TOLERANCE[key] ?? PLATFORM_TOLERANCE.local!
+    return { key, tolerance }
   }
-  return { key: "local", tolerance: PLATFORM_TOLERANCE.local }
+  return { key: "local", tolerance: PLATFORM_TOLERANCE.local! }
 }
 
 describe("cross-platform render gate", () => {

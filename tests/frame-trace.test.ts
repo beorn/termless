@@ -76,9 +76,9 @@ describe("createFrameTracer", () => {
     // Index is line-delimited JSON.
     const indexLines = readFileSync(summary.indexFile, "utf-8").trim().split("\n")
     expect(indexLines.length).toBe(summary.count)
-    const parsed = indexLines.map((l) => JSON.parse(l))
-    expect(parsed[0].seq).toBe(1)
-    expect(parsed[0].hash).toMatch(/^(xxh64|fnv1a):/)
+    const parsed = indexLines.map((l) => JSON.parse(l) as { seq: number; hash: string })
+    expect(parsed[0]!.seq).toBe(1)
+    expect(parsed[0]!.hash).toMatch(/^(xxh64|fnv1a):/)
   })
 
   test("identical buffer state yields duplicate_of without writing a new PNG", async () => {
@@ -198,7 +198,9 @@ describe("createFrameTracer", () => {
       const summary = await tracer.stop()
       // The index.jsonl row carries the joined silvery field.
       const indexLines = readFileSync(summary.indexFile, "utf-8").trim().split("\n")
-      const row = JSON.parse(indexLines[0]!)
+      const row = JSON.parse(indexLines[0]!) as {
+        silvery: { reason: string; signalDelta: { incremental: boolean } }
+      }
       expect(row.silvery).toBeDefined()
       expect(row.silvery.reason).toBe("content,subtree")
       expect(row.silvery.signalDelta.incremental).toBe(true)

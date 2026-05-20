@@ -81,10 +81,13 @@ describe("writeViewer + frame-trace integration", () => {
     // Inlined data payload is parseable JSON with the recorded frames.
     const m = html.match(/<script type="application\/json" id="trace-data">([\s\S]*?)<\/script>/)
     expect(m).not.toBeNull()
-    const payload = JSON.parse(m![1]!.replace(/<\\\//g, "</"))
+    const payload = JSON.parse(m![1]!.replace(/<\\\//g, "</")) as {
+      frames: { seq: number }[]
+      images: Record<string, string>
+    }
     expect(Array.isArray(payload.frames)).toBe(true)
     expect(payload.frames.length).toBe(summary.count)
-    expect(payload.frames[0].seq).toBe(1)
+    expect(payload.frames[0]!.seq).toBe(1)
 
     // PNGs inlined as base64 data URIs (not file:// references).
     const imageKeys = Object.keys(payload.images)

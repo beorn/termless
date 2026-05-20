@@ -119,7 +119,7 @@ describe("session manager — FrameTracer integration (MCP tool surface)", () =>
       const lines = readFileSync(indexPath, "utf-8").trim().split("\n")
       expect(lines.length).toBeGreaterThanOrEqual(1)
       for (const line of lines) {
-        const parsed = JSON.parse(line)
+        const parsed = JSON.parse(line) as { seq: number; hash: string }
         expect(parsed.seq).toBeGreaterThanOrEqual(1)
         expect(parsed.hash).toBeTruthy()
       }

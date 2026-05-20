@@ -280,8 +280,12 @@ async function loadGhosttyWeb(): Promise<{ mod: GhosttyWebModule; wasmPath: stri
     const wasmPath = req.resolve("ghostty-web/ghostty-vt.wasm")
     const pkgRoot = wasmPath.slice(0, wasmPath.length - "/ghostty-vt.wasm".length)
     const pkgJsonPath = `${pkgRoot}/package.json`
-    const pkgJson = JSON.parse((await readFile(pkgJsonPath)).toString())
-    const esmRel: string = pkgJson.exports?.["."]?.import ?? pkgJson.module ?? pkgJson.main
+    const pkgJson = JSON.parse((await readFile(pkgJsonPath)).toString()) as {
+      exports?: { ["."]?: { import?: string } }
+      module?: string
+      main?: string
+    }
+    const esmRel: string = pkgJson.exports?.["."]?.import ?? pkgJson.module ?? pkgJson.main ?? ""
     if (!esmRel) throw new Error("ghostty-web: no ESM export entry resolvable from package.json")
     const jsPath = `${pkgRoot}/${esmRel.replace(/^\.\//, "")}`
     const mod = (await import(jsPath)) as GhosttyWebModule
@@ -532,7 +536,7 @@ function inferCols(terminal: TerminalReadable): number | null {
   try {
     const lines = terminal.getLines()
     if (lines.length === 0) return null
-    return lines[lines.length - 1].length || null
+    return lines[lines.length - 1]?.length || null
   } catch {
     return null
   }
