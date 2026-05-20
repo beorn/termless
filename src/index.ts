@@ -18,6 +18,7 @@ export type {
   RegionView,
   RGB,
   RowView,
+  ScreenshotOptions,
   ScrollbackState,
   SpawnOptions,
   SvgScreenshotOptions,

@@ -12,6 +12,7 @@ import type {
   PngScreenshotOptions,
   RegionView,
   RowView,
+  ScreenshotOptions,
   ScrollbackState,
   SvgScreenshotOptions,
   Terminal,
@@ -364,6 +365,56 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return screenshotPlaywrightPng(terminal, options)
   }
 
+  /**
+   * Auto-picking screenshot — see Terminal.screenshot in types.ts for the
+   * decision tree.
+   *
+   * 1. Backend has its own raster renderer (ghostty) — use it directly.
+   * 2. `@termless/ghostty` is installed — proxy via cellsToAnsi + renderAnsiPng.
+   * 3. Fall back to resvg-based SVG → PNG (cross-platform safe; lower fidelity).
+   */
+  async function screenshotAuto(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    // 1. Backend's own renderer.
+    if (backend.screenshot) {
+      return backend.screenshot(opts)
+    }
+
+    // 2. Try the @termless/ghostty proxy path.
+    try {
+      const ghosttyMod = (await import("@termless/ghostty")) as {
+        renderAnsiPng: (ansi: string | Uint8Array, opts?: unknown) => Promise<Uint8Array>
+        cellsToAnsi: (term: TerminalBackend, opts?: { cols?: number; rows?: number }) => string
+      }
+      const ansi = ghosttyMod.cellsToAnsi(backend, {
+        cols: opts?.cols ?? cols,
+        rows: opts?.rows ?? rows,
+      })
+      return ghosttyMod.renderAnsiPng(ansi, { cols, rows, ...opts })
+    } catch (err) {
+      if (err instanceof Error && /Cannot find (module|package)|MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/.test(err.message)) {
+        // 3. resvg fallback.
+        return screenshotPng(terminal, opts as PngScreenshotOptions | undefined)
+      }
+      throw err
+    }
+  }
+
+  /**
+   * Explicit native-canvas path — always routes through `@termless/ghostty`'s
+   * `renderAnsiPng`. Fails loudly if the package is missing.
+   */
+  async function screenshotAsCanvasPng(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    const ghosttyMod = (await import("@termless/ghostty")) as {
+      renderAnsiPng: (ansi: string | Uint8Array, opts?: unknown) => Promise<Uint8Array>
+      cellsToAnsi: (term: TerminalBackend, opts?: { cols?: number; rows?: number }) => string
+    }
+    const ansi = ghosttyMod.cellsToAnsi(backend, {
+      cols: opts?.cols ?? cols,
+      rows: opts?.rows ?? rows,
+    })
+    return ghosttyMod.renderAnsiPng(ansi, { cols, rows, ...opts })
+  }
+
   // ── Resize ──
 
   function resize(newCols: number, newRows: number): void {
@@ -494,6 +545,8 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     screenshotSvg: screenshot,
     screenshotPng: screenshotAsPng,
     screenshotPlaywrightPng: screenshotAsPlaywrightPng,
+    screenshot: screenshotAuto,
+    screenshotCanvasPng: screenshotAsCanvasPng,
 
     // Resize
     resize,
