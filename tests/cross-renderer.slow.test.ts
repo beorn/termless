@@ -25,7 +25,7 @@ describe("toMatchAcrossRenderers", () => {
   test("plain text — canvas and SVG agree on cell-grid dimensions", async () => {
     const term = createTerminal({ backend: createVt100Backend(), cols: 40, rows: 6 })
     term.feed("Hello, world!\nLine two.\n")
-    await expect(term as unknown).toMatchAcrossRenderers({
+    await expect(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/plain-text",
       dimensionTolerance: 0.01,
     })
@@ -39,7 +39,7 @@ describe("toMatchAcrossRenderers", () => {
         "\x1b[31mred\x1b[0m \x1b[32mgreen\x1b[0m \x1b[34mblue\x1b[0m\n" +
         "\x1b[38;2;255;128;64mtruecolor\x1b[0m\n",
     )
-    await expect(term as unknown).toMatchAcrossRenderers({
+    await expect(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/ansi-styles",
       dimensionTolerance: 0.01,
     })
@@ -49,7 +49,7 @@ describe("toMatchAcrossRenderers", () => {
   test("box-drawing characters — canvas and SVG agree", async () => {
     const term = createTerminal({ backend: createVt100Backend(), cols: 30, rows: 8 })
     term.feed("┌─────────┐\n│  cell   │\n│  align  │\n└─────────┘\n")
-    await expect(term as unknown).toMatchAcrossRenderers({
+    await expect(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/box-drawing",
       dimensionTolerance: 0.01,
     })
@@ -57,34 +57,34 @@ describe("toMatchAcrossRenderers", () => {
   }, 30_000)
 
   // ── Peekaboo three-way (opt-in) ───────────────────────────────
-  test.skipIf(!ENABLE_PEEKABOO)("peekaboo three-way — canvas/svg/real-Ghostty agree", async () => {
-    const term = createTerminal({ backend: createVt100Backend(), cols: 40, rows: 12 })
-    const command = [
-      "/bin/bash",
-      "-c",
-      `printf '\\x1b[H\\x1b[2J'; printf '\\x1b[1mhello\\x1b[0m\\n'; sleep 30`,
-    ]
-    term.feed("\x1b[H\x1b[2J\x1b[1mhello\x1b[0m\n")
-    const FONT = "/Users/beorn/Library/Fonts/FiraMonoNerdFontMono-Regular.otf"
-    const fontPath = existsSync(FONT) ? FONT : undefined
-    await expect(term as unknown).toMatchAcrossRenderers({
-      command,
-      saveTo: "/tmp/cross-renderer-test/peekaboo-three-way",
-      includePeekaboo: true,
-      peekabooApp: "ghostty",
-      // Match the user's Ghostty config in the spawned window so all
-      // three renderers paint with the same theme/font.
-      ghosttyConfig: {
-        theme: "Espresso",
-        fontFamily: "FiraMono Nerd Font Mono",
-        fontSize: 12,
-      },
-      cropChrome: true,
-      dimensionTolerance: 0.20,
-      ...(fontPath ? { fontPath } : {}),
-      // Pass matching theme to canvas + SVG.
-      theme: { background: "#323232", foreground: "#ffffff" },
-    })
-    await term.close()
-  }, 120_000)
+  test.skipIf(!ENABLE_PEEKABOO)(
+    "peekaboo three-way — canvas/svg/real-Ghostty agree",
+    async () => {
+      const term = createTerminal({ backend: createVt100Backend(), cols: 40, rows: 12 })
+      const command = ["/bin/bash", "-c", `printf '\\x1b[H\\x1b[2J'; printf '\\x1b[1mhello\\x1b[0m\\n'; sleep 30`]
+      term.feed("\x1b[H\x1b[2J\x1b[1mhello\x1b[0m\n")
+      const FONT = "/Users/beorn/Library/Fonts/FiraMonoNerdFontMono-Regular.otf"
+      const fontPath = existsSync(FONT) ? FONT : undefined
+      await expect(term).toMatchAcrossRenderers({
+        command,
+        saveTo: "/tmp/cross-renderer-test/peekaboo-three-way",
+        includePeekaboo: true,
+        peekabooApp: "ghostty",
+        // Match the user's Ghostty config in the spawned window so all
+        // three renderers paint with the same theme/font.
+        ghosttyConfig: {
+          theme: "Espresso",
+          fontFamily: "FiraMono Nerd Font Mono",
+          fontSize: 12,
+        },
+        cropChrome: true,
+        dimensionTolerance: 0.2,
+        ...(fontPath ? { fontPath } : {}),
+        // Pass matching theme to canvas + SVG.
+        theme: { background: "#323232", foreground: "#ffffff" },
+      })
+      await term.close()
+    },
+    120_000,
+  )
 })

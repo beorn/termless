@@ -56,6 +56,20 @@ function toMatcherResult(result: AssertionResult) {
 }
 
 /**
+ * Options accepted by the {@link termlessMatchers.toMatchAcrossRenderers}
+ * matcher. The matcher forwards these straight to `captureCrossRenderer`, so
+ * the surface is `CrossRendererOptions` (minus `cols`/`rows` — the matcher
+ * fills those from the terminal) plus the matcher-only `dimensionTolerance`.
+ */
+export type ToMatchAcrossRenderersOptions = Omit<
+  import("./cross-renderer.ts").CrossRendererOptions,
+  "cols" | "rows"
+> & {
+  /** Max canvas-vs-svg dimension drift before the matcher fails. Default 0.10. */
+  dimensionTolerance?: number
+}
+
+/**
  * Terminal matchers compatible with Jest's `expect.extend()`.
  * Also works with Bun test and any Jest-compatible expect implementation.
  *
@@ -225,19 +239,7 @@ export const termlessMatchers = {
    */
   async toMatchAcrossRenderers(
     received: unknown,
-    options: {
-      command?: string[]
-      theme?: { background?: string; foreground?: string }
-      fontPath?: string
-      fontSize?: number
-      cellWidth?: number
-      cellHeight?: number
-      fontFamily?: string
-      saveTo?: string
-      includePeekaboo?: boolean
-      peekabooApp?: "ghostty" | "iterm2" | "terminal" | "wezterm" | "kitty"
-      dimensionTolerance?: number
-    } = {},
+    options: ToMatchAcrossRenderersOptions = {},
   ): Promise<{ pass: boolean; message: () => string }> {
     assertTerminalReadable(received, "toMatchAcrossRenderers")
     const { captureCrossRenderer } = await import("./cross-renderer.ts")
@@ -297,4 +299,26 @@ export const termlessMatchers = {
         `Expected canvas + svg to differ by more than ${tol}, got widthDrift=${(widthRatio * 100).toFixed(1)}%, heightDrift=${(heightRatio * 100).toFixed(1)}%`,
     }
   },
+}
+
+// ── Vitest type augmentation ────────────────────────────────────
+// `toMatchAcrossRenderers` is the only termless matcher consumed via
+// `expect(x).toMatchAcrossRenderers(...)` (the rest are plain assertion
+// functions in assertions.ts). Augment vitest's Assertion + Matchers
+// interfaces so `tsc` knows about it once `expect.extend(termlessMatchers)`
+// has run. Without this, typecheck fails with TS2339 on every call site.
+// `toMatchAcrossRenderers` is registered via `expect.extend(termlessMatchers)`
+// at runtime; this augmentation tells `tsc` about it. The `Matchers<T>`
+// interface is the custom-matcher extension point — it is *declared* in
+// `@vitest/expect` (vitest only re-exports the type), and `Assertion<T>`
+// (what `expect()` returns) extends it. Augmenting `"vitest"` would create a
+// fresh, unmerged interface and TS2339 would persist on every call site, so
+// the augmentation must target `@vitest/expect` directly — declared as a
+// devDependency for that reason. The `<T = any>` default must match vitest's
+// own declaration exactly, otherwise TS2428 ("identical type parameters").
+declare module "@vitest/expect" {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Matchers<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
 }
