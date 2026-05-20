@@ -77,8 +77,12 @@
     "publish:core": "pnpm publish --access public --no-git-checks",
     "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/viterm packages/peekaboo packages/web-player packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust; do (cd $pkg && pnpm publish --access public --no-git-checks); done"
   },
+  "overrides": {
+    "@termless/core": "link:."
+  },
   "devDependencies": {
     "@termless/alacritty": "workspace:*",
+    "@termless/ghostty": "workspace:*",
     "@termless/kitty": "workspace:*",
     "@termless/libvterm": "workspace:*",
     "@termless/peekaboo": "workspace:*",

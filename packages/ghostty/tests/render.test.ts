@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, beforeAll } from "vitest"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
   renderAnsiPng,
@@ -28,7 +28,10 @@ import { dHash, hashDistance } from "../../../src/cross-renderer.ts"
 // Path to the canonical fixture in km-tui. We don't import via the test file —
 // just load the bytes. This dependency is acceptable because the fixture is
 // km-owned data, and the ghostty package's tests are run from the km monorepo
-// via the workspace's vitest configuration. Standalone clones skip this test.
+// via the workspace's vitest configuration. The fixture lives outside the
+// termless repo, so standalone clones (github.com/beorn/termless without km)
+// won't have it — the canonical test below is gated on its existence and
+// skips cleanly in that case.
 const KM_TUI_FIXTURE_DIR = join(__dirname, "..", "..", "..", "..", "..", "apps", "km-tui", "tests", "fixtures", "canonical")
 const FIXTURE_ANSI = join(KM_TUI_FIXTURE_DIR, "km-view-140x36.ansi")
 const FIXTURE_PNG = join(KM_TUI_FIXTURE_DIR, "km-view-140x36.png")
@@ -99,7 +102,10 @@ describe("renderAnsiPng", () => {
     expect(png.length).toBeGreaterThan(0)
   })
 
-  test("matches the canonical Ghostty reference within tolerance", async () => {
+  // Gated on the km-owned fixture: standalone termless clones don't have
+  // apps/km-tui/tests/fixtures, so this canonical regression test skips there.
+  const hasCanonicalFixture = existsSync(FIXTURE_ANSI) && existsSync(FIXTURE_PNG)
+  test.skipIf(!hasCanonicalFixture)("matches the canonical Ghostty reference within tolerance", async () => {
     // Use the same parameter set as the legacy canonical test (cellHeight 14,
     // targetWidth 1680, targetHeight 756, fontSize 10) so the dHash gate
     // measures apples-to-apples.
