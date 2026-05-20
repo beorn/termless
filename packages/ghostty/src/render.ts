@@ -34,6 +34,8 @@
 import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas"
 import type { TerminalReadable } from "../../../src/types.ts"
 import { cellsToAnsi } from "./cells-to-ansi.ts"
@@ -78,9 +80,12 @@ export interface RenderOptions {
   /** Font size in CSS pixels. Default 16. */
   fontSize?: number
   /**
-   * Font family as a CSS string. If `fontPath` is given, the bundled font is
-   * registered under "TermlessCanvasFont" and prepended to this list. Default
-   * "monospace".
+   * Font family as a CSS string, used as the primary face. If `fontPath` is
+   * given, that font is registered and takes precedence over this. When
+   * neither is supplied the renderer uses its bundled JetBrains Mono face —
+   * NOT the platform `monospace` alias — so cell geometry is deterministic
+   * across platforms. The bundled symbol + emoji fallback faces are always
+   * appended after whatever primary face is in effect.
    */
   fontFamily?: string
   /**
@@ -350,6 +355,105 @@ function registerFontIfNeeded(fontPath: string): void {
   registeredFontPaths.add(fontPath)
 }
 
+// ── Bundled fallback fonts ──
+//
+// `@napi-rs/canvas`'s built-in `monospace` alias resolves, per platform, to
+// whatever Skia's font manager picks — and that face has unstable cell metrics
+// (on a stock napi-canvas install the advance for "monospace" at 16px measures
+// ~13px, aspect ~0.81, far wider than a real terminal font's ~0.6). Rendering
+// against it produces a uniform "letter-spacing" stretch: glyphs are painted at
+// their natural advance inside cells that are ~35% too wide. Worse, the alias is
+// not guaranteed to exist at all on minimal Linux CI runners, where it can fall
+// through to a sans-serif (proportional) face — different metrics on every OS.
+//
+// So instead of trusting `monospace`, termless bundles its own monospace face
+// and registers it process-wide. This makes the canvas geometry **deterministic
+// and identical on every platform and every render path** (Terminal.screenshot,
+// renderTerminalPng, the frame tracer) — which is the contract a visual-
+// regression tool must keep.
+//
+//   - JetBrains Mono — the primary monospace face. OFL-licensed, true fixed
+//     pitch, broad Latin + box-drawing + geometric-shape coverage.
+
+/** Family names the bundled fonts are registered under (CSS `font-family`). */
+const BUNDLED_PRIMARY_FAMILY = "TermlessMono"
+
+/**
+ * The fallback chain appended to every render, after the caller's primary
+ * face. Empty for now — emoji/symbol fallback faces land in a follow-up.
+ */
+const BUNDLED_FALLBACK_CHAIN = ""
+
+interface BundledFont {
+  file: string
+  family: string
+}
+
+const BUNDLED_FONTS: readonly BundledFont[] = [{ file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY }]
+
+/**
+ * Resolve the bundled `assets/fonts` directory in both layouts:
+ *   - dev:       `<pkg>/src/render.ts`        → `<pkg>/assets/fonts`
+ *   - published: `<pkg>/dist/index.mjs`       → `<pkg>/assets/fonts`
+ * In both, the fonts dir is one level up from the file's directory + `assets`.
+ */
+function bundledFontsDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url))
+  return join(here, "..", "assets", "fonts")
+}
+
+let bundledFontsRegistered = false
+
+/**
+ * Register the bundled fallback fonts process-wide. Idempotent — the first
+ * call registers, later calls are no-ops. Missing files are skipped with a
+ * warning rather than throwing: a render with a partial fallback chain still
+ * beats a hard failure, and the bundled-font test pins the happy path.
+ */
+function ensureBundledFonts(): void {
+  if (bundledFontsRegistered) return
+  bundledFontsRegistered = true
+  const dir = bundledFontsDir()
+  for (const { file, family } of BUNDLED_FONTS) {
+    const path = join(dir, file)
+    if (!existsSync(path)) {
+      // eslint-disable-next-line no-console
+      console.warn(`[termless/ghostty] bundled font missing, skipping: ${path}`)
+      continue
+    }
+    GlobalFonts.registerFromPath(path, family)
+  }
+}
+
+/**
+ * Build the final `font-family` CSS list for a render.
+ *
+ * - The bundled monospace face (`TermlessMono`) is the default primary when
+ *   the caller passes neither `fontPath` nor an explicit `fontFamily` — this
+ *   is what makes the geometry deterministic instead of leaning on the
+ *   platform `monospace` alias.
+ * - A caller-supplied `fontPath` is registered and still takes precedence.
+ * - The bundled fallback chain (`BUNDLED_FALLBACK_CHAIN`, when non-empty) is
+ *   always appended last so per-glyph fallback covers coverage gaps in
+ *   whatever the primary face is.
+ */
+function buildFontFamily(opts: Pick<RenderOptions, "fontFamily" | "fontPath">): string {
+  const parts: string[] = []
+  if (opts.fontPath) {
+    registerFontIfNeeded(opts.fontPath)
+    parts.push(BUNDLED_FONT_NAME)
+  }
+  if (opts.fontFamily) {
+    parts.push(opts.fontFamily)
+  }
+  // The bundled monospace face is the default primary — used when the caller
+  // gave no font of their own. Appending it unconditionally is also harmless:
+  // it just acts as one more fallback when a caller font is present.
+  parts.push(BUNDLED_PRIMARY_FAMILY)
+  if (BUNDLED_FALLBACK_CHAIN) parts.push(BUNDLED_FALLBACK_CHAIN)
+  return parts.join(", ")
+}
+
 // ── Cursor style mapping ──
 
 function mapCursorStyle(s: RenderOptions["cursorStyle"]): "block" | "underline" | "bar" {
@@ -419,12 +523,12 @@ export async function renderAnsiPng(
   // 1. DOM shim (idempotent).
   ensureDomShim(dpr)
 
-  // 2. Font registration (idempotent).
-  let fontFamily = opts.fontFamily ?? "monospace"
-  if (opts.fontPath) {
-    registerFontIfNeeded(opts.fontPath)
-    fontFamily = `${BUNDLED_FONT_NAME}, ${fontFamily}`
-  }
+  // 2. Font registration (idempotent). The bundled monospace + symbol + emoji
+  //    faces are registered process-wide and woven into the font-family chain
+  //    so geometry is deterministic and emoji/symbols never fall to tofu —
+  //    regardless of platform or whether the caller supplied a font.
+  ensureBundledFonts()
+  const fontFamily = buildFontFamily(opts)
 
   // 3. Load ghostty-web ESM bundle + WASM.
   const { mod, wasmPath } = await loadGhosttyWeb()
