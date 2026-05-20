@@ -25,6 +25,23 @@ async function stubRender(_term: Terminal): Promise<Uint8Array> {
   return new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])
 }
 
+// Frame captures are debounced and run as fire-and-forget async work, so a
+// fixed sleep races them on slow runners. Poll until the tracer has recorded
+// at least `n` frames (or time out) — deterministic across platforms.
+async function waitForFrames(
+  tracer: { framesSinceSeq(seq: number): unknown[] },
+  n: number,
+  timeoutMs = 2000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (tracer.framesSinceSeq(0).length < n) {
+    if (Date.now() > deadline) {
+      throw new Error(`waitForFrames: only ${tracer.framesSinceSeq(0).length}/${n} frames after ${timeoutMs}ms`)
+    }
+    await new Promise((r) => setTimeout(r, 2))
+  }
+}
+
 describe("createFrameTracer", () => {
   test("captures a frame after debounce when writes arrive", async () => {
     let onAfterWrite: ((data: Uint8Array) => void) | undefined
@@ -139,12 +156,22 @@ describe("createFrameTracer", () => {
       const tracer = createFrameTracer(term, { dir: dir4, debounceMs: 2, renderFn: stubRender })
       hook = tracer.onWrite
 
+      // Frame captures are debounced + async (`void captureFrame()`), so
+      // blind `setTimeout` sleeps race the capture on slow runners — on
+      // Windows CI the post-feed("b") capture had not run when the assertion
+      // fired, yielding `after.length === 0`. Wait deterministically for the
+      // expected frame count instead of guessing a sleep duration.
       term.feed("a")
-      await new Promise((r) => setTimeout(r, 15))
+      await waitForFrames(tracer, 1)
+      // tMid must sit strictly between frame 1 and frame 2's wall-clock
+      // capture times. Date.now() is coarse on Windows (~15.6ms granularity),
+      // so sleep well past one tick before sampling it so frame 2 — captured
+      // even later — reliably lands at ts >= tMid.
+      await new Promise((r) => setTimeout(r, 25))
       const tMid = Date.now()
-      await new Promise((r) => setTimeout(r, 10))
+      await new Promise((r) => setTimeout(r, 25))
       term.feed("b")
-      await new Promise((r) => setTimeout(r, 15))
+      await waitForFrames(tracer, 2)
 
       const after = tracer.framesSinceTime(tMid)
       const all = tracer.framesSinceSeq(0)
