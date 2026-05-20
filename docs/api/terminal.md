@@ -92,7 +92,8 @@ interface Terminal extends TerminalReadable {
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
   screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
-  screenshotPlaywrightPng(options?: PlaywrightScreenshotOptions): Promise<Uint8Array>
+  screenshot(options?: ScreenshotOptions): Promise<Uint8Array>          // auto-picker
+  screenshotCanvasPng(options?: ScreenshotOptions): Promise<Uint8Array> // explicit native canvas
 
   // Resize
   resize(cols: number, rows: number): void
@@ -435,13 +436,26 @@ const png = await term.screenshotPng()
 const png = await term.screenshotPng({ scale: 3, theme: { background: "#282a36" } })
 ```
 
-### `screenshotPlaywrightPng(options?)`
+### `screenshot(options?)` — auto-picker (recommended)
 
-Capture the terminal as a PNG buffer through Playwright/Chromium. Requires `playwright` (`bun add -d playwright`). Use this for browser-shaped text rendering in docs or marketing screenshots; keep `screenshotPng()` for fast deterministic test snapshots.
+Capture the terminal as a PNG, picking the best renderer available:
+
+1. If the backend has a native `screenshot()` (today: `@termless/ghostty`'s ghostty backend), use it directly.
+2. Else if `@termless/ghostty` is installed, serialize the cell grid via `cellsToAnsi` and feed to `renderAnsiPng` (native canvas + ghostty-web WASM).
+3. Else fall back to the resvg-based `screenshotPng()` path — cross-platform, lower fidelity.
 
 ```typescript
-const png = await term.screenshotPlaywrightPng()
-const png = await term.screenshotPlaywrightPng({ scale: 2, fontFamily: "'Fira Code', monospace" })
+const png = await term.screenshot()
+const png = await term.screenshot({ fontPath: "/path/to/iosevka.ttf", theme: { background: "#1a1b26" } })
+```
+
+### `screenshotCanvasPng(options?)` — explicit native canvas
+
+Always routes through `@termless/ghostty`'s `renderTerminalPng`, regardless of the backend. Use when the caller needs the ghostty renderer's fidelity specifically and doesn't want the auto-picker silently choosing a different path. Throws if `@termless/ghostty` is not installed.
+
+```typescript
+const png = await term.screenshotCanvasPng()
+const png = await term.screenshotCanvasPng({ fontSize: 14, fontFamily: "'Fira Code', monospace" })
 ```
 
 ## Resize

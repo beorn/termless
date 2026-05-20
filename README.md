@@ -60,8 +60,9 @@ console.log(term.lastRow().getText()) // last row
 console.log(term.out.getText()) // raw output bytes, including OSC/APC/CSI protocols
 
 const svg = term.screenshotSvg()
-const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
-const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright && bunx playwright install chromium
+const png = await term.screenshot() // auto-picker: native canvas (@napi-rs/canvas + ghostty-web) with resvg fallback
+const canvasPng = await term.screenshotCanvasPng() // explicit native-canvas (requires @termless/ghostty)
+const resvgPng = await term.screenshotPng() // explicit resvg (requires @resvg/resvg-js)
 await term.close()
 ```
 

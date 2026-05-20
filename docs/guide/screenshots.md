@@ -1,11 +1,11 @@
 ---
 title: Screenshots
-description: Generate SVG and PNG screenshots from terminal state, with a fast default renderer and an optional Playwright renderer for browser-shaped text.
+description: Generate SVG and PNG screenshots from terminal state via native canvas (@napi-rs/canvas + ghostty-web) with resvg as a cross-platform fallback.
 ---
 
 # Screenshots
 
-Termless generates screenshots from terminal state. SVG is built in with zero dependencies. The default PNG renderer uses optional `@resvg/resvg-js` and does not need Chromium. A separate Playwright renderer is available for docs and marketing screenshots where browser font shaping matters more than startup cost.
+Termless generates screenshots from terminal state. SVG is built in with zero dependencies. PNG output flows through `Terminal.screenshot()` — an auto-picker that prefers the native canvas pipeline (`@napi-rs/canvas` + ghostty-web WASM, via `@termless/ghostty`) and falls back to `@resvg/resvg-js` on hosts where the native canvas isn't available. There's no Chromium dependency anywhere in the pipeline.
 
 For one-off command-output images, use `termless record --screenshot`. For reproducible docs, demos, and regression fixtures, write a `.tape` and render it with `termless play`. Both paths render from parsed terminal state, so ANSI styling, cursor state, and screen geometry stay inspectable before they become an image.
 
@@ -19,8 +19,9 @@ const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 
 term.feed("\x1b[1;38;2;255;85;85mError:\x1b[0m file not found")
 
 const svg = term.screenshotSvg()
-const png = await term.screenshotPng() // requires: bun add -d @resvg/resvg-js
-const browserPng = await term.screenshotPlaywrightPng() // requires: bun add -d playwright && bunx playwright install chromium
+const png = await term.screenshot() // auto-picker: native canvas with resvg fallback
+const canvasPng = await term.screenshotCanvasPng() // explicit native canvas (requires @termless/ghostty)
+const resvgPng = await term.screenshotPng() // explicit resvg (requires @resvg/resvg-js)
 ```
 
 ## Saving to File
@@ -32,13 +33,9 @@ import { writeFile } from "node:fs/promises"
 const svg = term.screenshotSvg()
 await writeFile("/tmp/terminal.svg", svg, "utf-8")
 
-// PNG (requires @resvg/resvg-js)
-const png = await term.screenshotPng()
+// PNG via the auto-picker (preferred for routine use)
+const png = await term.screenshot()
 await writeFile("/tmp/terminal.png", png)
-
-// Browser-shaped PNG (requires playwright + Chromium)
-const browserPng = await term.screenshotPlaywrightPng()
-await writeFile("/tmp/terminal-browser.png", browserPng)
 ```
 
 ## Options
@@ -156,45 +153,49 @@ const png = await term.screenshotPng({
 
 All `SvgScreenshotOptions` (`fontFamily`, `fontSize`, `cellWidth`, `cellHeight`, `theme`) are also accepted.
 
-## Playwright PNG Options
+## Native Canvas Options
 
-`screenshotPlaywrightPng()` accepts a `PlaywrightScreenshotOptions` object. It extends `SvgScreenshotOptions`, uses the same `scale` default as `screenshotPng()`, and passes `launchOptions` through to `chromium.launch()`.
+`screenshot()` (auto-picker) and `screenshotCanvasPng()` accept a `ScreenshotOptions` object. When the native canvas path is selected (the default whenever `@termless/ghostty` is installed), bytes go through ghostty-web's CanvasRenderer + `@napi-rs/canvas` — same renderer ghostty.org's terminal uses, just driven by JS.
 
-Install both the Playwright package and the Chromium browser binary:
+Install `@termless/ghostty` to enable the native canvas path:
 
 ```bash
-bun add -d playwright
-bunx playwright install chromium
+bun add -d @termless/ghostty
 ```
 
 ```typescript
-const png = await term.screenshotPlaywrightPng({
-  scale: 2,
+const png = await term.screenshot({
+  fontSize: 14,
   fontFamily: "'Fira Code', monospace",
-  launchOptions: { channel: "chrome" },
+  fontPath: "/path/to/iosevka.ttf",
+  theme: { background: "#1a1b26", foreground: "#c0caf5" },
+  dpr: 2,
 })
 ```
 
-Use this path when browser font rendering or ligature shaping is the point of the screenshot. Use `screenshotPng()` for deterministic test snapshots and fast CI output.
+Use the auto-picker for routine work. Use `screenshotCanvasPng()` when you specifically need the native canvas path and don't want a silent fallback to resvg (e.g., visual-regression tests that pin the ghostty renderer's output).
 
-| Option          | Type      | Default | Description                                      |
-| --------------- | --------- | ------- | ------------------------------------------------ |
-| `scale`         | `number`  | `2`     | Browser device scale factor                      |
-| `launchOptions` | `unknown` | --      | Passed through to Playwright `chromium.launch()` |
-| `playwright`    | `object`  | --      | Inject a loaded Playwright module                |
+| Option       | Type           | Default                  | Description                                          |
+| ------------ | -------------- | ------------------------ | ---------------------------------------------------- |
+| `cols`       | `number`       | _backend cols_           | Override grid width                                  |
+| `rows`       | `number`       | _backend rows_           | Override grid height                                 |
+| `fontSize`   | `number`       | `16`                     | Glyph size in CSS px                                 |
+| `fontFamily` | `string`       | `"monospace"`            | CSS font family                                      |
+| `fontPath`   | `string`       | --                       | Path to .ttf/.otf bundled as the first family        |
+| `dpr`        | `number`       | `2`                      | Device pixel ratio                                   |
+| `theme`      | `CanvasTheme`  | _Tokyo Night Storm_      | Color palette                                        |
 
 ## Standalone Functions
 
 You can also use the screenshot functions directly on any `TerminalReadable`:
 
 ```typescript
-import { screenshotSvg } from "@termless/core/svg"
-import { screenshotPng } from "@termless/core/png"
-import { screenshotPlaywrightPng } from "@termless/core/playwright"
+import { screenshotSvg, screenshotPng } from "@termless/core"
+import { renderTerminalPng } from "@termless/ghostty"
 
 const svg = screenshotSvg(term, { theme: { background: "#000" } })
-const png = await screenshotPng(term, { scale: 3 })
-const browserPng = await screenshotPlaywrightPng(term, { scale: 2 })
+const resvgPng = await screenshotPng(term, { scale: 3 })          // explicit resvg path
+const canvasPng = await renderTerminalPng(term, { fontSize: 14 }) // explicit native canvas path
 ```
 
 ## What Gets Rendered
