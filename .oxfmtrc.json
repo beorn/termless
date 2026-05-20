@@ -6,11 +6,5 @@
   "printWidth": 120,
   "tabWidth": 2,
   "useTabs": false,
-  "ignorePatterns": [
-    "dist/",
-    "build/",
-    "out/",
-    "node_modules/",
-    "docs/.vitepress/dist/"
-  ]
+  "ignorePatterns": ["dist/", "build/", "out/", "node_modules/", "docs/.vitepress/dist/"]
 }
