@@ -115,7 +115,13 @@ function hashBytes(bytes: Uint8Array | string): string {
   return `fnv1a:${h.toString(16)}`
 }
 
-function bufferFingerprint(terminal: Terminal): { hash: string; cols: number; rows: number; cursorRow: number; cursorCol: number } {
+function bufferFingerprint(terminal: Terminal): {
+  hash: string
+  cols: number
+  rows: number
+  cursorRow: number
+  cursorCol: number
+} {
   const lines = terminal.getLines()
   // Hash visible text per row + cursor position. Lightweight enough to call
   // on every debounced tick; differentiates render passes that change attrs

@@ -157,9 +157,7 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
 
   // Resolve frame-trace dir (option override → Set Frames in tape).
   const framesDir = options?.framesDir ?? tape.settings.Frames ?? null
-  const frameDebounceMs = tape.settings.FrameDebounceMs
-    ? Number.parseInt(tape.settings.FrameDebounceMs, 10)
-    : undefined
+  const frameDebounceMs = tape.settings.FrameDebounceMs ? Number.parseInt(tape.settings.FrameDebounceMs, 10) : undefined
 
   let frameTracer: FrameTracer | null = null
   const terminal = createTerminal({

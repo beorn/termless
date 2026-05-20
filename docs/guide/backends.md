@@ -21,16 +21,16 @@ $ bunx termless doctor
 
 ## Which Backend Should I Use?
 
-| Need                                   | Start with                                 |
-| -------------------------------------- | ------------------------------------------ |
-| Default Vitest unit-style tests         | `xtermjs` via `@termless/test`             |
-| Zero-dependency CI smoke tests          | `vt100`                                    |
-| Modern parser and Kitty keyboard checks | `ghostty` or `ghostty-native`              |
+| Need                                    | Start with                                             |
+| --------------------------------------- | ------------------------------------------------------ |
+| Default Vitest unit-style tests         | `xtermjs` via `@termless/test`                         |
+| Zero-dependency CI smoke tests          | `vt100`                                                |
+| Modern parser and Kitty keyboard checks | `ghostty` or `ghostty-native`                          |
 | Reflow behavior                         | `xtermjs`, `alacritty`, `wezterm`, or `ghostty-native` |
-| Sixel graphics                          | `wezterm`                                  |
-| Kitty graphics protocol                 | `kitty`                                    |
-| Real terminal app automation            | `peekaboo`                                 |
-| Independent parser cross-checks         | `libvterm`, `vt100-rust`, or another native backend |
+| Sixel graphics                          | `wezterm`                                              |
+| Kitty graphics protocol                 | `kitty`                                                |
+| Real terminal app automation            | `peekaboo`                                             |
+| Independent parser cross-checks         | `libvterm`, `vt100-rust`, or another native backend    |
 
 Fast unit tests and high-fidelity terminal tests are different tools. Use in-memory backends for feed/assert loops, then add PTY, native, or OS-level backends where terminal-specific behavior matters.
 

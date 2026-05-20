@@ -385,7 +385,10 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       })
       return ghosttyMod.renderAnsiPng(ansi, { cols, rows, ...opts })
     } catch (err) {
-      if (err instanceof Error && /Cannot find (module|package)|MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/.test(err.message)) {
+      if (
+        err instanceof Error &&
+        /Cannot find (module|package)|MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/.test(err.message)
+      ) {
         // 3. resvg fallback.
         return screenshotPng(terminal, opts as PngScreenshotOptions | undefined)
       }

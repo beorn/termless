@@ -175,15 +175,15 @@ const png = await term.screenshot({
 
 Use the auto-picker for routine work. Use `screenshotCanvasPng()` when you specifically need the native canvas path and don't want a silent fallback to resvg (e.g., visual-regression tests that pin the ghostty renderer's output).
 
-| Option       | Type           | Default                  | Description                                          |
-| ------------ | -------------- | ------------------------ | ---------------------------------------------------- |
-| `cols`       | `number`       | _backend cols_           | Override grid width                                  |
-| `rows`       | `number`       | _backend rows_           | Override grid height                                 |
-| `fontSize`   | `number`       | `16`                     | Glyph size in CSS px                                 |
-| `fontFamily` | `string`       | `"monospace"`            | CSS font family                                      |
-| `fontPath`   | `string`       | --                       | Path to .ttf/.otf bundled as the first family        |
-| `dpr`        | `number`       | `2`                      | Device pixel ratio                                   |
-| `theme`      | `CanvasTheme`  | _Tokyo Night Storm_      | Color palette                                        |
+| Option       | Type          | Default             | Description                                   |
+| ------------ | ------------- | ------------------- | --------------------------------------------- |
+| `cols`       | `number`      | _backend cols_      | Override grid width                           |
+| `rows`       | `number`      | _backend rows_      | Override grid height                          |
+| `fontSize`   | `number`      | `16`                | Glyph size in CSS px                          |
+| `fontFamily` | `string`      | `"monospace"`       | CSS font family                               |
+| `fontPath`   | `string`      | --                  | Path to .ttf/.otf bundled as the first family |
+| `dpr`        | `number`      | `2`                 | Device pixel ratio                            |
+| `theme`      | `CanvasTheme` | _Tokyo Night Storm_ | Color palette                                 |
 
 ## Standalone Functions
 
@@ -194,7 +194,7 @@ import { screenshotSvg, screenshotPng } from "@termless/core"
 import { renderTerminalPng } from "@termless/ghostty"
 
 const svg = screenshotSvg(term, { theme: { background: "#000" } })
-const resvgPng = await screenshotPng(term, { scale: 3 })          // explicit resvg path
+const resvgPng = await screenshotPng(term, { scale: 3 }) // explicit resvg path
 const canvasPng = await renderTerminalPng(term, { fontSize: 14 }) // explicit native canvas path
 ```
 

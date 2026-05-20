@@ -244,10 +244,10 @@ Set Frames "/tmp/my-trace/"
 Set FrameDebounceMs 16
 ```
 
-| Setting            | Meaning                                                   |
-| ------------------ | --------------------------------------------------------- |
-| `Frames`           | Directory to write `NNNNN.png` + `index.jsonl` into       |
-| `FrameDebounceMs`  | Debounce interval in ms (default 16 = 60fps render-pass) |
+| Setting           | Meaning                                                  |
+| ----------------- | -------------------------------------------------------- |
+| `Frames`          | Directory to write `NNNNN.png` + `index.jsonl` into      |
+| `FrameDebounceMs` | Debounce interval in ms (default 16 = 60fps render-pass) |
 
 The `index.jsonl` is append-only and streaming-readable — partial traces from a crashed session remain parseable up to the last fully-flushed line. Identical buffer states (by xxHash64) are recorded with `duplicate_of` but skip the PNG to save disk.
 

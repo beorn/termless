@@ -288,10 +288,7 @@ async function loadGhosttyWeb(): Promise<{ mod: GhosttyWebModule; wasmPath: stri
     ghosttyModuleCache = { mod, wasmPath }
     return ghosttyModuleCache
   } catch (cause) {
-    throw new Error(
-      "renderAnsiPng() requires the ghostty-web package. Install it:\n  bun add ghostty-web",
-      { cause },
-    )
+    throw new Error("renderAnsiPng() requires the ghostty-web package. Install it:\n  bun add ghostty-web", { cause })
   }
 }
 
@@ -515,10 +512,7 @@ export async function renderTerminalPng(
   terminal: TerminalReadable,
   opts: RenderOptions & { returnMeta: true },
 ): Promise<{ png: Uint8Array; meta: RenderMeta }>
-export async function renderTerminalPng(
-  terminal: TerminalReadable,
-  opts?: RenderOptions,
-): Promise<Uint8Array>
+export async function renderTerminalPng(terminal: TerminalReadable, opts?: RenderOptions): Promise<Uint8Array>
 export async function renderTerminalPng(
   terminal: TerminalReadable,
   opts: RenderOptions = {},

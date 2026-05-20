@@ -13,12 +13,7 @@
 import { describe, test, expect, beforeAll } from "vitest"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import {
-  renderAnsiPng,
-  renderTerminalPng,
-  _resetDomShimForTesting,
-  type CanvasTheme,
-} from "../src/render.ts"
+import { renderAnsiPng, renderTerminalPng, _resetDomShimForTesting, type CanvasTheme } from "../src/render.ts"
 import { cellsToAnsi } from "../src/cells-to-ansi.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import type { Ghostty } from "ghostty-web"
@@ -32,7 +27,19 @@ import { dHash, hashDistance } from "../../../src/cross-renderer.ts"
 // termless repo, so standalone clones (github.com/beorn/termless without km)
 // won't have it — the canonical test below is gated on its existence and
 // skips cleanly in that case.
-const KM_TUI_FIXTURE_DIR = join(__dirname, "..", "..", "..", "..", "..", "apps", "km-tui", "tests", "fixtures", "canonical")
+const KM_TUI_FIXTURE_DIR = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "apps",
+  "km-tui",
+  "tests",
+  "fixtures",
+  "canonical",
+)
 const FIXTURE_ANSI = join(KM_TUI_FIXTURE_DIR, "km-view-140x36.ansi")
 const FIXTURE_PNG = join(KM_TUI_FIXTURE_DIR, "km-view-140x36.png")
 
@@ -105,39 +112,43 @@ describe("renderAnsiPng", () => {
   // Gated on the km-owned fixture: standalone termless clones don't have
   // apps/km-tui/tests/fixtures, so this canonical regression test skips there.
   const hasCanonicalFixture = existsSync(FIXTURE_ANSI) && existsSync(FIXTURE_PNG)
-  test.skipIf(!hasCanonicalFixture)("matches the canonical Ghostty reference within tolerance", async () => {
-    // Use the same parameter set as the legacy canonical test (cellHeight 14,
-    // targetWidth 1680, targetHeight 756, fontSize 10) so the dHash gate
-    // measures apples-to-apples.
-    const ansi = readFileSync(FIXTURE_ANSI, "utf-8")
-    const png = await renderAnsiPng(ansi, {
-      cols: 140,
-      rows: 36,
-      fontSize: 10,
-      fontPath: FONT_PATH,
-      theme: ESPRESSO,
-      cellHeight: 14,
-      targetWidth: 1680,
-      targetHeight: 756,
-    })
+  test.skipIf(!hasCanonicalFixture)(
+    "matches the canonical Ghostty reference within tolerance",
+    async () => {
+      // Use the same parameter set as the legacy canonical test (cellHeight 14,
+      // targetWidth 1680, targetHeight 756, fontSize 10) so the dHash gate
+      // measures apples-to-apples.
+      const ansi = readFileSync(FIXTURE_ANSI, "utf-8")
+      const png = await renderAnsiPng(ansi, {
+        cols: 140,
+        rows: 36,
+        fontSize: 10,
+        fontPath: FONT_PATH,
+        theme: ESPRESSO,
+        cellHeight: 14,
+        targetWidth: 1680,
+        targetHeight: 756,
+      })
 
-    const refBytes = readFileSync(FIXTURE_PNG)
-    const refHash = await dHash(new Uint8Array(refBytes.buffer, refBytes.byteOffset, refBytes.byteLength))
-    const actHash = await dHash(png)
-    const distance = hashDistance(refHash, actHash)
+      const refBytes = readFileSync(FIXTURE_PNG)
+      const refHash = await dHash(new Uint8Array(refBytes.buffer, refBytes.byteOffset, refBytes.byteLength))
+      const actHash = await dHash(png)
+      const distance = hashDistance(refHash, actHash)
 
-    // Write artifact for visual inspection regardless of pass/fail.
-    const { mkdirSync, writeFileSync } = await import("node:fs")
-    mkdirSync("/tmp/native-canvas-render", { recursive: true })
-    writeFileSync("/tmp/native-canvas-render/actual.png", png)
+      // Write artifact for visual inspection regardless of pass/fail.
+      const { mkdirSync, writeFileSync } = await import("node:fs")
+      mkdirSync("/tmp/native-canvas-render", { recursive: true })
+      writeFileSync("/tmp/native-canvas-render/actual.png", png)
 
-    expect(
-      distance,
-      `native canvas render hash distance ${distance}/64 exceeds tolerance ` +
-        `${CANVAS_MAX_HAMMING}/64. reference=${refHash} actual=${actHash}. ` +
-        `see /tmp/native-canvas-render/actual.png`,
-    ).toBeLessThanOrEqual(CANVAS_MAX_HAMMING)
-  }, 30_000)
+      expect(
+        distance,
+        `native canvas render hash distance ${distance}/64 exceeds tolerance ` +
+          `${CANVAS_MAX_HAMMING}/64. reference=${refHash} actual=${actHash}. ` +
+          `see /tmp/native-canvas-render/actual.png`,
+      ).toBeLessThanOrEqual(CANVAS_MAX_HAMMING)
+    },
+    30_000,
+  )
 })
 
 describe("renderTerminalPng", () => {

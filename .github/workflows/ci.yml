@@ -17,11 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest        # linux-x64-gnu
-          - ubuntu-22.04-arm     # linux-arm64-gnu (GitHub's newer ARM runner)
-          - macos-latest         # darwin-x64 (Intel)
-          - macos-14             # darwin-arm64 (Apple Silicon)
-          - windows-latest       # win32-x64-msvc
+          - ubuntu-latest # linux-x64-gnu
+          - ubuntu-22.04-arm # linux-arm64-gnu (GitHub's newer ARM runner)
+          - macos-latest # darwin-x64 (Intel)
+          - macos-14 # darwin-arm64 (Apple Silicon)
+          - windows-latest # win32-x64-msvc
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -45,11 +45,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest        # linux-x64-gnu
-          - ubuntu-22.04-arm     # linux-arm64-gnu
-          - macos-latest         # darwin-x64
-          - macos-14             # darwin-arm64
-          - windows-latest       # win32-x64-msvc
+          - ubuntu-latest # linux-x64-gnu
+          - ubuntu-22.04-arm # linux-arm64-gnu
+          - macos-latest # darwin-x64
+          - macos-14 # darwin-arm64
+          - windows-latest # win32-x64-msvc
     env:
       TERMLESS_CI_PLATFORM: ${{ matrix.os }}
     steps:

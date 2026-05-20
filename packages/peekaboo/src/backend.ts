@@ -172,7 +172,10 @@ async function listGhosttyWindowIds(): Promise<string[]> {
     if (r.exitCode !== 0) return []
     const out = r.stdout.trim()
     if (!out) return []
-    return out.split(", ").map((s) => s.trim()).filter(Boolean)
+    return out
+      .split(", ")
+      .map((s) => s.trim())
+      .filter(Boolean)
   } catch {
     return []
   }
@@ -339,10 +342,9 @@ async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
 
   if (boundsResult.exitCode === 0 && boundsResult.stdout.trim()) {
     // bounds = "x,y,w,h" in screen points
-    const captureResult = await exec(
-      ["screencapture", "-R", boundsResult.stdout.trim(), "-o", "-x", tmpPath],
-      { stderr: "pipe" },
-    )
+    const captureResult = await exec(["screencapture", "-R", boundsResult.stdout.trim(), "-o", "-x", tmpPath], {
+      stderr: "pipe",
+    })
     if (captureResult.exitCode !== 0) {
       throw new Error(`screencapture failed with exit code ${captureResult.exitCode}: ${captureResult.stderr.trim()}`)
     }
@@ -351,7 +353,11 @@ async function captureAppWindow(app: TerminalApp): Promise<Buffer> {
     // when they don't, fall through to interactive `-w` which prompts the
     // user to click a window — last resort.
     const idResult = await exec(
-      ["osascript", "-e", `tell application "System Events" to tell process "${bundleName}" to return id of front window`],
+      [
+        "osascript",
+        "-e",
+        `tell application "System Events" to tell process "${bundleName}" to return id of front window`,
+      ],
       { stdout: "pipe", stderr: "pipe" },
     )
     const windowId = idResult.stdout.trim()

@@ -4,7 +4,7 @@ Capture every render-relevant buffer change with timestamp + content-hash dedupe
 
 ## When to Use
 
-Static screenshots capture a single moment. Frame-trace captures *every* render-relevant moment so visual bugs become investigable in one pass instead of a five-round-trip "does this look right?" interaction.
+Static screenshots capture a single moment. Frame-trace captures _every_ render-relevant moment so visual bugs become investigable in one pass instead of a five-round-trip "does this look right?" interaction.
 
 Typical uses:
 
@@ -30,9 +30,9 @@ const terminal = createTerminal({
 
 tracer = createFrameTracer(terminal, {
   dir: "/tmp/my-trace/",
-  debounceMs: 16,        // one frame interval — default
-  maxFrames: 10_000,     // safety cap — default
-  dedupe: true,          // skip PNG for identical hashes — default
+  debounceMs: 16, // one frame interval — default
+  maxFrames: 10_000, // safety cap — default
+  dedupe: true, // skip PNG for identical hashes — default
   canvas: { cols: 140, rows: 40 },
 })
 
@@ -112,7 +112,8 @@ The `mcp__tty` MCP server exposes frame-trace via three tools:
 ```ts
 mcp__tty__start({
   command: ["bun", "km", "view", "~/Vault"],
-  cols: 140, rows: 40,
+  cols: 140,
+  rows: 40,
   frames: {
     dir: "/tmp/trace-15290/",
     debounceMs: 16,
@@ -121,5 +122,5 @@ mcp__tty__start({
 
 mcp__tty__trace({ sessionId, sinceSeq: 0 }) // poll live
 
-mcp__tty__stop({ sessionId })               // returns summary
+mcp__tty__stop({ sessionId }) // returns summary
 ```

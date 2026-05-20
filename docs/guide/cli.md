@@ -103,13 +103,13 @@ $ termless play -b all --compare grid -o all-backends.svg demo.tape
 
 ### Options
 
-| Option                 | Description                                                 | Default |
-| ---------------------- | ----------------------------------------------------------- | ------- |
-| `-o, --output <path>`  | Output file, format detected from extension                 | --      |
+| Option                 | Description                                                    | Default |
+| ---------------------- | -------------------------------------------------------------- | ------- |
+| `-o, --output <path>`  | Output file, format detected from extension                    | --      |
 | `-b, --backend <name>` | Backend(s), comma-separated; use `all` for every ready backend | vterm   |
-| `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff` | --      |
-| `--cols <n>`           | Override terminal columns                                   | --      |
-| `--rows <n>`           | Override terminal rows                                      | --      |
+| `--compare <mode>`     | Comparison mode: `separate`, `side-by-side`, `grid`, `diff`    | --      |
+| `--cols <n>`           | Override terminal columns                                      | --      |
+| `--rows <n>`           | Override terminal rows                                         | --      |
 
 See [Recording & Playback](/guide/recording) for detailed usage and comparison modes.
 

@@ -147,11 +147,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function waitForPlaybackDelay(
-  ms: number,
-  isActive: () => boolean,
-  isPaused: () => boolean,
-): Promise<void> {
+async function waitForPlaybackDelay(ms: number, isActive: () => boolean, isPaused: () => boolean): Promise<void> {
   let remaining = ms
   let lastTick = Date.now()
   while (remaining > 0 && isActive()) {

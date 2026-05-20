@@ -375,9 +375,7 @@ export async function startMcpServer(): Promise<void> {
         })
       }
       const frames =
-        args.sinceTs != null
-          ? tracer.framesSinceTime(args.sinceTs)
-          : tracer.framesSinceSeq(args.since ?? 0)
+        args.sinceTs != null ? tracer.framesSinceTime(args.sinceTs) : tracer.framesSinceSeq(args.since ?? 0)
 
       if (!args.includePngBytes) {
         return textResult({ frames, count: frames.length })

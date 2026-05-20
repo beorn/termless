@@ -156,16 +156,16 @@ Most test suites start with `@termless/test`. Add backend packages for [multi-ba
 
 ## Start Here
 
-| If you need...                 | Read                                                                                   |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| First install and first test    | [Getting Started](/guide/getting-started)                                              |
-| Locator-style terminal regions  | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal) |
+| If you need...                   | Read                                                                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| First install and first test     | [Getting Started](/guide/getting-started)                                                                                           |
+| Locator-style terminal regions   | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal)                                   |
 | Assertions and matchers          | [Writing Tests](/guide/writing-tests#assertions-matchers-reference), [Matchers](/api/matchers), and [Matcher Reference](/matchers/) |
-| Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                      |
-| Real process / PTY tests        | [Getting Started: Spawning Real Processes](/guide/getting-started#spawning-real-processes) |
-| Cross-backend coverage          | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends) |
-| Less flaky terminal tests       | [Best Practices](/guide/best-practices)                                                |
-| Full API surface                | [Terminal](/api/terminal), [Backend](/api/backend), [Cell & Types](/api/cell)          |
+| Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                                                                   |
+| Real process / PTY tests         | [Getting Started: Spawning Real Processes](/guide/getting-started#spawning-real-processes)                                          |
+| Cross-backend coverage           | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends)                                           |
+| Less flaky terminal tests        | [Best Practices](/guide/best-practices)                                                                                             |
+| Full API surface                 | [Terminal](/api/terminal), [Backend](/api/backend), [Cell & Types](/api/cell)                                                       |
 
 ### Backend Management CLI
 

@@ -303,9 +303,7 @@ async function captureRealTerminal(opts: {
   const tmpDir = mkdtempSync(join(tmpdir(), "term-real-"))
   const script = join(tmpDir, "payload.sh")
   // Build the script: prepend env exports + cd, then the command.
-  const envLines = opts.env
-    ? Object.entries(opts.env).map(([k, v]) => `export ${k}=${JSON.stringify(v)}`)
-    : []
+  const envLines = opts.env ? Object.entries(opts.env).map(([k, v]) => `export ${k}=${JSON.stringify(v)}`) : []
   const cdLine = opts.cwd ? `cd ${JSON.stringify(opts.cwd)}` : ""
   // Build the command line. For bash -c shape (["/bin/bash", "-c", "..."]),
   // unwrap to the inner shell command. For other shapes, shell-quote each
@@ -317,10 +315,7 @@ async function captureRealTerminal(opts: {
   // Append a sleep so the window doesn't auto-close before screencapture
   // fires. The harness's `pkill -f <script>` in finally{} kills bash mid-
   // sleep, triggering Ghostty's wait-after-command=false → window closes.
-  writeFileSync(
-    script,
-    `#!/bin/bash\n${envLines.join("\n")}\n${cdLine}\n${cmdLine}\nsleep 60\n`,
-  )
+  writeFileSync(script, `#!/bin/bash\n${envLines.join("\n")}\n${cdLine}\n${cmdLine}\nsleep 60\n`)
   chmodSync(script, 0o755)
 
   // Ghostty on macOS doesn't accept `-e <command>` via `open --args` —
@@ -548,11 +543,11 @@ for w in windows {
     }
   }
 }`
-  const r = spawnSync(
-    "env",
-    ["-i", "PATH=/usr/bin:/bin", "xcrun", "swift", "-"],
-    { input: swiftSnippet, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8" },
-  )
+  const r = spawnSync("env", ["-i", "PATH=/usr/bin:/bin", "xcrun", "swift", "-"], {
+    input: swiftSnippet,
+    stdio: ["pipe", "pipe", "pipe"],
+    encoding: "utf-8",
+  })
   if (r.status !== 0) return []
   return (r.stdout ?? "")
     .trim()
@@ -581,5 +576,8 @@ function listWindowIds(app: keyof typeof APP_BUNDLE_NAMES): string[] {
   if (r.status !== 0) return []
   const out = (r.stdout ?? "").trim()
   if (!out) return []
-  return out.split(", ").map((s: string) => s.trim()).filter(Boolean)
+  return out
+    .split(", ")
+    .map((s: string) => s.trim())
+    .filter(Boolean)
 }

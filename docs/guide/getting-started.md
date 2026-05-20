@@ -31,17 +31,17 @@ yarn add -D @termless/test
 
 ### Which Package Do I Need?
 
-| You want to...                                  | Install                                                   |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| Test a terminal UI in Vitest                    | `@termless/test` (bundles the default xterm.js fixture)   |
-| Use the core Terminal API without test matchers | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
-| Test against Ghostty's VT parser                | `@termless/ghostty`                                       |
-| Test with a zero-dependency emulator            | `@termless/vt100`                                         |
-| Take SVG/PNG screenshots                        | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
-| Spawn and test real processes via PTY           | Built into `@termless/core` (used via any backend)        |
-| Automate a real terminal app (OS-level)         | `@termless/peekaboo`                                      |
-| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                   |
-| Use the CLI or MCP server                       | `@termless/cli`                                           |
+| You want to...                                   | Install                                                   |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| Test a terminal UI in Vitest                     | `@termless/test` (bundles the default xterm.js fixture)   |
+| Use the core Terminal API without test matchers  | `@termless/core` + a backend (`@termless/xtermjs`, etc.)  |
+| Test against Ghostty's VT parser                 | `@termless/ghostty`                                       |
+| Test with a zero-dependency emulator             | `@termless/vt100`                                         |
+| Take SVG/PNG screenshots                         | Built into `@termless/core` (PNG needs `@resvg/resvg-js`) |
+| Spawn and test real processes via PTY            | Built into `@termless/core` (used via any backend)        |
+| Automate a real terminal app (OS-level)          | `@termless/peekaboo`                                      |
+| Embed `.cast` / `.tape` playback in browser docs | `@termless/web-player`                                    |
+| Use the CLI or MCP server                        | `@termless/cli`                                           |
 
 Most test suites start with `@termless/test`. To add extra backends, use the CLI:
 
@@ -57,16 +57,16 @@ See [Backend Capabilities](/guide/backends) for a full comparison of all backend
 
 ## Start Here
 
-| If you need...                  | Read                                                                                   |
-| ------------------------------- | -------------------------------------------------------------------------------------- |
-| First install and first test     | This page                                                                              |
-| Locator-style terminal regions   | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal) |
+| If you need...                   | Read                                                                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| First install and first test     | This page                                                                                                                           |
+| Locator-style terminal regions   | [Writing Tests](/guide/writing-tests#locators-region-selectors) and [Terminal API](/api/terminal)                                   |
 | Assertions and matchers          | [Writing Tests](/guide/writing-tests#assertions-matchers-reference), [Matchers](/api/matchers), and [Matcher Reference](/matchers/) |
-| Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                      |
-| Real process / PTY tests         | [Spawning Real Processes](#spawning-real-processes)                                    |
-| Cross-backend coverage           | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends) |
-| Less flaky terminal tests        | [Best Practices](/guide/best-practices)                                                |
-| Full API surface                 | [Terminal](/api/terminal), [Backend](/api/backend), [Cell & Types](/api/cell)          |
+| Screenshots and visual snapshots | [Screenshots](/guide/screenshots)                                                                                                   |
+| Real process / PTY tests         | [Spawning Real Processes](#spawning-real-processes)                                                                                 |
+| Cross-backend coverage           | [Multi-Backend Testing](/guide/multi-backend) and [Backend Capabilities](/guide/backends)                                           |
+| Less flaky terminal tests        | [Best Practices](/guide/best-practices)                                                                                             |
+| Full API surface                 | [Terminal](/api/terminal), [Backend](/api/backend), [Cell & Types](/api/cell)                                                       |
 
 ## First Test
 

@@ -92,7 +92,7 @@ interface Terminal extends TerminalReadable {
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
   screenshotPng(options?: PngScreenshotOptions): Promise<Uint8Array>
-  screenshot(options?: ScreenshotOptions): Promise<Uint8Array>          // auto-picker
+  screenshot(options?: ScreenshotOptions): Promise<Uint8Array> // auto-picker
   screenshotCanvasPng(options?: ScreenshotOptions): Promise<Uint8Array> // explicit native canvas
 
   // Resize
