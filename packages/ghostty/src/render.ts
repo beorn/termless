@@ -366,30 +366,45 @@ function registerFontIfNeeded(fontPath: string): void {
 // not guaranteed to exist at all on minimal Linux CI runners, where it can fall
 // through to a sans-serif (proportional) face — different metrics on every OS.
 //
-// So instead of trusting `monospace`, termless bundles its own monospace face
-// and registers it process-wide. This makes the canvas geometry **deterministic
+// So instead of trusting `monospace`, termless bundles its own fonts and
+// registers them process-wide. This makes the canvas geometry **deterministic
 // and identical on every platform and every render path** (Terminal.screenshot,
 // renderTerminalPng, the frame tracer) — which is the contract a visual-
 // regression tool must keep.
 //
+// Three faces, each earning its place:
 //   - JetBrains Mono — the primary monospace face. OFL-licensed, true fixed
 //     pitch, broad Latin + box-drawing + geometric-shape coverage.
+//   - Noto Sans Symbols2 — fallback for terminal symbol glyphs JetBrains Mono
+//     lacks (hourglass U+29D7, rarer geometric shapes, arrows).
+//   - Noto Emoji (monochrome) — fallback for emoji (📁 📋 📄 and friends).
+//     Monochrome, not color: a terminal-faithful look, and it composes with the
+//     truecolor SGR fg the renderer already applies.
+//
+// All three are appended to *every* render's `fontFamily` chain so per-glyph
+// fallback Just Works regardless of what primary face the caller requested.
 
 /** Family names the bundled fonts are registered under (CSS `font-family`). */
 const BUNDLED_PRIMARY_FAMILY = "TermlessMono"
+const BUNDLED_SYMBOL_FAMILY = "TermlessSymbols"
+const BUNDLED_EMOJI_FAMILY = "TermlessEmoji"
 
 /**
- * The fallback chain appended to every render, after the caller's primary
- * face. Empty for now — emoji/symbol fallback faces land in a follow-up.
+ * The fallback chain appended to every render. Order matters: symbols then
+ * emoji, both after whatever the caller's primary face is.
  */
-const BUNDLED_FALLBACK_CHAIN = ""
+const BUNDLED_FALLBACK_CHAIN = `${BUNDLED_SYMBOL_FAMILY}, ${BUNDLED_EMOJI_FAMILY}`
 
 interface BundledFont {
   file: string
   family: string
 }
 
-const BUNDLED_FONTS: readonly BundledFont[] = [{ file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY }]
+const BUNDLED_FONTS: readonly BundledFont[] = [
+  { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY },
+  { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY },
+  { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY },
+]
 
 /**
  * Resolve the bundled `assets/fonts` directory in both layouts:
@@ -433,9 +448,8 @@ function ensureBundledFonts(): void {
  *   is what makes the geometry deterministic instead of leaning on the
  *   platform `monospace` alias.
  * - A caller-supplied `fontPath` is registered and still takes precedence.
- * - The bundled fallback chain (`BUNDLED_FALLBACK_CHAIN`, when non-empty) is
- *   always appended last so per-glyph fallback covers coverage gaps in
- *   whatever the primary face is.
+ * - The bundled symbol + emoji faces are always appended last so per-glyph
+ *   fallback covers coverage gaps in whatever the primary face is.
  */
 function buildFontFamily(opts: Pick<RenderOptions, "fontFamily" | "fontPath">): string {
   const parts: string[] = []
@@ -450,7 +464,7 @@ function buildFontFamily(opts: Pick<RenderOptions, "fontFamily" | "fontPath">): 
   // gave no font of their own. Appending it unconditionally is also harmless:
   // it just acts as one more fallback when a caller font is present.
   parts.push(BUNDLED_PRIMARY_FAMILY)
-  if (BUNDLED_FALLBACK_CHAIN) parts.push(BUNDLED_FALLBACK_CHAIN)
+  parts.push(BUNDLED_FALLBACK_CHAIN)
   return parts.join(", ")
 }
 

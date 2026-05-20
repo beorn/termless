@@ -1,15 +1,20 @@
 /**
- * Bundled-font tests — pins canvas-renderer geometry determinism.
+ * Bundled fallback-font tests — pins the two fidelity fixes:
  *
- * The canvas renderer must NOT lean on the platform `monospace` alias (whose
- * advance metric is wide and unstable per-OS). With the bundled JetBrains Mono
- * face as the default primary, a no-`fontPath` render produces a deterministic,
- * narrow cell width on every platform — and every render path
- * (Terminal.screenshot, renderTerminalPng, the frame tracer's default renderFn)
- * shares it.
+ *   1. Geometry determinism. The canvas renderer must NOT lean on the
+ *      platform `monospace` alias (whose advance metric is wide and unstable
+ *      per-OS). With the bundled JetBrains Mono face as the default primary,
+ *      a no-`fontPath` render produces a deterministic, narrow cell width on
+ *      every platform — and every render path (Terminal.screenshot,
+ *      renderTerminalPng, the frame tracer's default renderFn) shares it.
  *
- * Emoji / symbol fallback coverage is pinned by sibling tests added when those
- * fallback faces land.
+ *   2. Emoji / symbol coverage. Code points outside JetBrains Mono's range
+ *      (📁 U+1F4C1, the hourglass ⧗ U+29D7) must render as real glyphs via
+ *      the bundled Noto Emoji / Noto Sans Symbols 2 fallbacks — not as
+ *      `.notdef` tofu boxes.
+ *
+ * Both fixes share one mechanism: termless bundles its own fonts and registers
+ * them process-wide, woven into every render's font-family chain.
  */
 
 import { describe, test, expect, beforeAll } from "vitest"
@@ -17,7 +22,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { loadImage } from "@napi-rs/canvas"
+import { createCanvas, loadImage, type ImageData } from "@napi-rs/canvas"
 import { renderAnsiPng, renderTerminalPng } from "../src/render.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import { createTerminal, createFrameTracer } from "../../../src/index.ts"
@@ -32,9 +37,12 @@ beforeAll(async () => {
 })
 
 describe("bundled fonts are present", () => {
-  test("JetBrainsMono-Regular.ttf exists in assets/fonts", () => {
-    expect(existsSync(join(FONTS_DIR, "JetBrainsMono-Regular.ttf"))).toBe(true)
-  })
+  test.each(["JetBrainsMono-Regular.ttf", "NotoSansSymbols2-Regular.ttf", "NotoEmoji-Regular.ttf"])(
+    "%s exists in assets/fonts",
+    (file) => {
+      expect(existsSync(join(FONTS_DIR, file))).toBe(true)
+    },
+  )
 })
 
 describe("geometry determinism (bug: frame-trace canvas cell pitch)", () => {
@@ -116,5 +124,80 @@ describe("geometry determinism (bug: frame-trace canvas cell pitch)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+// ── Tofu detection helper ────────────────────────────────────────────────────
+//
+// A `.notdef` tofu glyph is a hollow rectangle: ink only on the cell's
+// perimeter, an empty interior. A real glyph (📁, ⧗) puts ink in the
+// interior too. So: render one glyph alone, crop the first cell, and measure
+// the ratio of inked interior pixels. Tofu ≈ 0 interior ink; a real glyph is
+// well above zero.
+
+interface InkStats {
+  interiorInk: number
+  totalInterior: number
+}
+
+/** Decode PNG bytes to an ImageData via @napi-rs/canvas (no extra dep). */
+async function decodePng(bytes: Uint8Array): Promise<ImageData> {
+  const img = await loadImage(Buffer.from(bytes))
+  const canvas = createCanvas(img.width, img.height)
+  const ctx = canvas.getContext("2d")
+  ctx.drawImage(img as unknown as never, 0, 0)
+  return ctx.getImageData(0, 0, img.width, img.height)
+}
+
+function interiorInkRatio(
+  img: ImageData,
+  cellW: number,
+  cellH: number,
+  bg: { r: number; g: number; b: number },
+): InkStats {
+  // Inspect the first cell's interior, inset by 25% on every side so the
+  // perimeter (where a tofu box draws its outline) is excluded.
+  const insetX = Math.floor(cellW * 0.25)
+  const insetY = Math.floor(cellH * 0.25)
+  let interiorInk = 0
+  let totalInterior = 0
+  for (let y = insetY; y < cellH - insetY; y++) {
+    for (let x = insetX; x < cellW - insetX; x++) {
+      const idx = (y * img.width + x) * 4
+      const r = img.data[idx]!
+      const g = img.data[idx + 1]!
+      const b = img.data[idx + 2]!
+      totalInterior++
+      const dist = Math.abs(r - bg.r) + Math.abs(g - bg.g) + Math.abs(b - bg.b)
+      if (dist > 60) interiorInk++
+    }
+  }
+  return { interiorInk, totalInterior }
+}
+
+describe("emoji + symbol coverage (bug: canvas renderer tofu)", () => {
+  // dpr 1 keeps the math simple: physical px == logical px.
+  const BG = { r: 0x1a, g: 0x1b, b: 0x26 }
+
+  test.each([
+    ["📁", "folder emoji U+1F4C1"],
+    ["📋", "clipboard emoji U+1F4CB"],
+    ["📄", "page emoji U+1F4C4"],
+    ["⧗", "hourglass symbol U+29D7"],
+  ])("renders %s (%s) as a real glyph, not tofu", async (glyph, _label) => {
+    const { png: bytes, meta } = await renderAnsiPng(glyph, {
+      cols: 4,
+      rows: 2,
+      fontSize: 32,
+      dpr: 1,
+      returnMeta: true,
+    })
+    const img = await decodePng(bytes)
+    const { interiorInk, totalInterior } = interiorInkRatio(img, meta.cellWidth, meta.cellHeight, BG)
+    const ratio = interiorInk / totalInterior
+    // A real glyph fills a meaningful fraction of its cell interior. A `.notdef`
+    // tofu box leaves the interior empty (≈ 0). 5% is a comfortable floor that
+    // separates "drew a glyph" from "drew a hollow box / nothing".
+    expect(ratio, `interior ink ratio ${(ratio * 100).toFixed(1)}% — looks like tofu / blank`).toBeGreaterThan(0.05)
   })
 })
