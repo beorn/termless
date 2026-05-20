@@ -295,6 +295,46 @@ async function loadGhosttyWeb(): Promise<{ mod: GhosttyWebModule; wasmPath: stri
   }
 }
 
+/**
+ * Load the ghostty-web WASM in a way that works under both Bun and Node
+ * (vitest's default pool). ghostty-web's `Ghostty.load(path)` calls a
+ * try-chain of Bun.file → vite-browser-external readFile (no-op shim under
+ * node) → fetch(path). On Node, the first two fail and fetch can't handle a
+ * raw filesystem path ("Failed to parse URL"); even a `file://` URL trips
+ * node's fetch implementation. Pre-reading the bytes via fs and stubbing
+ * globalThis.fetch for the duration of load() keeps the engine's contract
+ * (works regardless of runtime) without forking ghostty-web.
+ *
+ * Bun gets the fast path: `Ghostty.load(wasmPath)` hits Bun.file directly.
+ */
+async function loadGhosttyInstance(
+  mod: GhosttyWebModule,
+  wasmPath: string,
+): Promise<Awaited<ReturnType<GhosttyWebModule["Ghostty"]["load"]>>> {
+  const hasBun = typeof (globalThis as { Bun?: unknown }).Bun !== "undefined"
+  if (hasBun) {
+    return mod.Ghostty.load(wasmPath)
+  }
+  // Node path: pre-read bytes, stub fetch for the wasmPath, call load.
+  const bytes = await readFile(wasmPath)
+  const originalFetch = (globalThis as { fetch?: typeof fetch }).fetch
+  ;(globalThis as { fetch?: typeof fetch }).fetch = (async (input: unknown) => {
+    if (input === wasmPath) {
+      return new Response(
+        new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer]),
+        { status: 200 },
+      )
+    }
+    if (!originalFetch) throw new Error("global fetch not available")
+    return originalFetch(input as RequestInfo)
+  }) as typeof fetch
+  try {
+    return await mod.Ghostty.load(wasmPath)
+  } finally {
+    ;(globalThis as { fetch?: typeof fetch }).fetch = originalFetch
+  }
+}
+
 // ── Font registration ──
 
 const registeredFontPaths = new Set<string>()
@@ -387,7 +427,7 @@ export async function renderAnsiPng(
 
   // 3. Load ghostty-web ESM bundle + WASM.
   const { mod, wasmPath } = await loadGhosttyWeb()
-  const ghostty = await mod.Ghostty.load(wasmPath)
+  const ghostty = await loadGhosttyInstance(mod, wasmPath)
 
   // 4. Create the WASM terminal.
   const terminal = ghostty.createTerminal(cols, rows)

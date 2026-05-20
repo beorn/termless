@@ -29,7 +29,6 @@ import { appendFileSync, existsSync, mkdirSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { CanvasScreenshotOptions } from "./canvas-render.ts"
-import { screenshotCanvasPng } from "./canvas-render.ts"
 import type { Terminal } from "./types.ts"
 
 export interface FrameTraceOptions {
@@ -171,7 +170,18 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   const maxFrames = options.maxFrames ?? 10_000
   const dedupe = options.dedupe ?? true
   const dir = options.dir
-  const renderFn = options.renderFn ?? ((t: Terminal) => screenshotCanvasPng(t, options.canvas))
+  // Default renderer: route through @termless/ghostty's renderTerminalPng.
+  // Dynamic import keeps @termless/core install-independent of @termless/ghostty;
+  // a missing module surfaces from the import itself, not from a top-level
+  // dependency. Tests inject `renderFn` to avoid the WASM cost entirely.
+  const renderFn =
+    options.renderFn ??
+    (async (t: Terminal): Promise<Uint8Array> => {
+      const { renderTerminalPng } = (await import("@termless/ghostty")) as {
+        renderTerminalPng: (term: Terminal, opts?: unknown) => Promise<Uint8Array>
+      }
+      return renderTerminalPng(t, options.canvas)
+    })
 
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
