@@ -37,6 +37,7 @@ import { executeTape } from "../../../src/recording/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveOutputTargets } from "./output-targets.ts"
 import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
+import { createFrameGate } from "./frame-gate.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
 export const collectOutputPath = (value: string, previous: string[] = []): string[] => [...previous, value]
@@ -406,14 +407,26 @@ async function interactiveRecord(
   let stdinHandler: ((chunk: Buffer) => void) | null = null
 
   try {
-    // Frame capture timer — ~12 fps, capped at FRAME_CAP frames.
+    // Frame capture timer — ~12 fps, capped at FRAME_CAP frames. A first-paint
+    // gate (see ./frame-gate.ts) drops pre-UI lead-in noise so frame 0 is the
+    // first real painted frame, not a shell echo or a blank buffer.
     let lastCaptureTime = Date.now()
+    const frameGate = createFrameGate()
     frameTimer = setInterval(() => {
       if (animationFrames.length >= FRAME_CAP) {
         frameCapped = true
         return
       }
       const currentText = headlessTerminal.getText()
+      const { capture, resetPrior } = frameGate.observe(currentText, headlessTerminal.getMode("altScreen"))
+      if (resetPrior) {
+        // The command just entered the alt screen — everything captured so far
+        // was pre-UI noise. Discard it; this paint becomes frame 0.
+        animationFrames.length = 0
+        lastFrameText = ""
+        lastCaptureTime = Date.now()
+      }
+      if (!capture) return
       if (currentText !== lastFrameText) {
         let svg = headlessTerminal.screenshotSvg(svgOpts)
         if (showKeys && currentKeystrokeLabel) {
@@ -467,9 +480,17 @@ async function interactiveRecord(
       }, 100)
     })
 
-    // Capture final frame if headless terminal has changed
+    // Capture final frame if the headless terminal changed since the last
+    // tick — but skip the post-exit screen: a TUI that exits restores the
+    // shell, and that restored primary screen is not a real recording frame.
     const finalText = headlessTerminal.getText()
-    if (finalText !== lastFrameText && animationFrames.length < FRAME_CAP) {
+    const tuiExited = frameGate.enteredAltScreen() && !headlessTerminal.getMode("altScreen")
+    if (
+      finalText.trim().length > 0 &&
+      !tuiExited &&
+      finalText !== lastFrameText &&
+      animationFrames.length < FRAME_CAP
+    ) {
       const svg = headlessTerminal.screenshotSvg(svgOpts)
       animationFrames.push({ svg, duration: FRAME_INTERVAL_MS })
     }
