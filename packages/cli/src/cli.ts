@@ -33,6 +33,7 @@ import { Command } from "@silvery/commander"
 import { registerRecordCommand } from "./record-cmd.ts"
 import { registerViewCommand } from "./view-cmd.ts"
 import { registerPlayCommand } from "./play-cmd.ts"
+import { registerCompareCommand } from "./compare-cmd.ts"
 import { registerBackendCommand } from "./backend-cmd.tsx"
 import { registerDoctorCommand } from "./doctor-cmd.tsx"
 
@@ -47,7 +48,7 @@ program.addHelpSection("Recording verbs:", [
   ["$ termless view ./mysession.trec", "view — scrub a recording in the browser"],
   ["$ termless view ./trace --format gif -o demo.gif", "view — animate a recording to a GIF"],
   ["$ termless play demo.tape", "play — re-execute a recording"],
-  ["$ termless play demo.tape --compare side-by-side -b vterm,ghostty", "compare — diff a recording across backends"],
+  ["$ termless compare demo.tape -b vterm,ghostty", "compare — diff a recording across backends"],
 ])
 
 program.addHelpSection("Config & diagnostics:", [
@@ -63,6 +64,7 @@ program.addHelpSection("Docs:", [["https://termless.dev/guide/recording", ""]])
 registerRecordCommand(program)
 registerViewCommand(program)
 registerPlayCommand(program)
+registerCompareCommand(program)
 registerBackendCommand(program)
 registerDoctorCommand(program)
 

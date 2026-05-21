@@ -21,9 +21,6 @@ import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import { executeTape } from "../../../src/recording/tape/executor.ts"
-import { compareTape, type CompareMode } from "../../../src/recording/tape/compare.ts"
-import { compareCanvas } from "../../../src/recording/tape/compare-canvas.ts"
-import { isReady as isBackendReadyForCanvas } from "../../../src/backend/backends.ts"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveTheme } from "../../../src/recording/tape/themes.ts"
 import { backends as listBackends, isReady as isBackendReady } from "../../../src/backend/backends.ts"
@@ -330,102 +327,17 @@ async function playAction(
 
   const backends = resolveBackendNames(opts.backend)
 
-  // Multi-backend comparison mode
+  // Multi-backend comparison mode — `play --compare` is a thin alias that
+  // delegates to the first-class `compare` verb.
   if (opts.compare && backends && backends.length > 1) {
-    const mode = opts.compare as CompareMode
-
-    // ── Phase 7: canvas-pipeline compare ──────────────────────
-    // `side-by-side` and `diff` route through compareCanvas — one renderer
-    // (ghostty-web canvas), N parsers. This isolates parser divergence:
-    // any pixel difference is attributable to a backend's VT parser, not
-    // to a rendering-engine difference.
-    if (mode === "side-by-side" || mode === "diff") {
-      // Skip-with-warning any backend that isn't built/installed.
-      const usable: string[] = []
-      for (const name of backends) {
-        let ready = false
-        try {
-          ready = isBackendReadyForCanvas(name)
-        } catch {
-          ready = false
-        }
-        if (ready) {
-          usable.push(name)
-        } else {
-          console.log(`  Warning: backend "${name}" is not installed/built — skipping`)
-        }
-      }
-      if (usable.length < 2) {
-        throw new Error(
-          `--compare ${mode} needs at least 2 installed backends; usable: ${usable.join(", ") || "(none)"}`,
-        )
-      }
-
-      console.log(`Canvas-comparing across ${usable.length} backends (${usable.join(", ")})...`)
-
-      const wantsGif = (firstOutput ?? "").toLowerCase().endsWith(".gif")
-      const canvasResult = await compareCanvas(tape, {
-        backends: usable,
-        mode,
-        ...(opts.cols ? { cols: opts.cols } : {}),
-        ...(opts.rows ? { rows: opts.rows } : {}),
-        animate: wantsGif,
-      })
-
-      if (mode === "diff" && canvasResult.divergentPixels != null) {
-        const pct = canvasResult.totalPixels
-          ? ((canvasResult.divergentPixels / canvasResult.totalPixels) * 100).toFixed(3)
-          : "0"
-        console.log(`Divergent pixels: ${canvasResult.divergentPixels}/${canvasResult.totalPixels} (${pct}%)`)
-      }
-
-      if (firstOutput) {
-        const resolved = resolve(firstOutput)
-        mkdirSync(dirname(resolved), { recursive: true })
-        if (wantsGif && canvasResult.composedFrames && canvasResult.composedFrames.length > 0) {
-          const { createGifFromPngs } = await import("../../../src/view/gif.ts")
-          const gif = await createGifFromPngs(canvasResult.composedFrames.map((png) => ({ png, duration: 600 })))
-          writeFileSync(resolved, gif)
-          console.log(`Stitched GIF saved: ${firstOutput} (${canvasResult.composedFrames.length} frames)`)
-        } else if (canvasResult.composedPng) {
-          writeFileSync(resolved, canvasResult.composedPng)
-          console.log(`Composed comparison saved: ${firstOutput}`)
-        }
-      } else {
-        console.log("  (no -o output path; pass -o <file>.png or <file>.gif to save)")
-      }
-
-      console.log(`Text match: ${canvasResult.textMatch ? "yes" : "NO — output differs between backends"}`)
-      return
-    }
-
-    // ── Legacy SVG-composition compare (separate / grid) ──────
-    console.log(`Comparing across ${backends.length} backends (${backends.join(", ")})...`)
-
-    const result = await compareTape(tape, {
-      backends,
-      mode,
+    const { compareAction } = await import("./compare-cmd.ts")
+    await compareAction(file, {
+      backend: opts.backend,
+      mode: opts.compare,
       output: firstOutput,
+      cols: opts.cols || undefined,
+      rows: opts.rows || undefined,
     })
-
-    // Save composed comparison if output specified and composition was produced
-    if (firstOutput && result.composedSvg) {
-      await writeComparisonOutput(firstOutput, result.composedSvg)
-      console.log(`Composed comparison saved: ${firstOutput}`)
-    }
-
-    // Save individual screenshots
-    if (mode === "separate") {
-      for (const s of result.screenshots) {
-        const outputDir = compareSeparateOutputDir(firstOutput)
-        mkdirSync(outputDir, { recursive: true })
-        const path = `${outputDir}/${s.backend}.png`
-        writeFileSync(path, s.png)
-        console.log(`Screenshot saved: ${path}`)
-      }
-    }
-
-    console.log(`Text match: ${result.textMatch ? "yes" : "NO — output differs between backends"}`)
     return
   }
 
