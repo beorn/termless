@@ -304,9 +304,26 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     const buf: string[] = [SGR_RESET, CSI_CLEAR_SCREEN]
     paintChrome(buf)
     paintGrid(buf)
-    // Park the cursor in the bottom-right of the host so any stray glyph
-    // emission lands somewhere harmless instead of mid-frame.
-    buf.push(ansiCursorTo(layout.hostRows, layout.hostCols) + SGR_RESET)
+    // Mirror the headless terminal's cursor INTO the chrome — position the
+    // host cursor at the cell corresponding to the recorded shell's cursor
+    // and show it. Without this the user sees a frozen, cursor-less grid
+    // while typing into the recorded shell and assumes input is dead.
+    const cursor = terminal.getCursor()
+    const cursorVisible = cursor.visible !== false
+    if (
+      cursorVisible &&
+      cursor.x >= 0 &&
+      cursor.x < layout.visibleCols &&
+      cursor.y >= 0 &&
+      cursor.y < layout.visibleRows
+    ) {
+      buf.push(ansiCursorTo(layout.gridTop + cursor.y, layout.gridLeft + cursor.x) + SGR_RESET + CSI_SHOW_CURSOR)
+    } else {
+      // Out-of-bounds cursor (e.g. headless reports beyond visibleRows when
+      // host is too small) — park it in the host's bottom-right so any
+      // stray glyph emission lands somewhere harmless and stays hidden.
+      buf.push(ansiCursorTo(layout.hostRows, layout.hostCols) + SGR_RESET + CSI_HIDE_CURSOR)
+    }
     out.write(buf.join(""))
     dirty = false
   }
