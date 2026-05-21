@@ -104,9 +104,16 @@ describe("startRecLiveOverlay — public handle", () => {
 // Mock stream — captures writes so the tests can assert on host bytes
 // without actually emitting to a real stdout.
 // ────────────────────────────────────────────────────────────────────────────
-function makeMockStream(): NodeJS.WriteStream & { written: string[] } {
+type MockStream = NodeJS.WriteStream & { written: string[] }
+
+function makeMockStream(): MockStream {
   const written: string[] = []
-  const stream = {
+  // `stream` is typed via the `MockStream` annotation below — the chained
+  // methods (`on`/`off`/…) return `stream` itself. Annotating the binding
+  // (rather than letting TS infer it) avoids a TS7022 circular-inference
+  // error: `typeof stream` inside a method can't reference the binding
+  // whose type is still being inferred.
+  const stream: MockStream = {
     written,
     columns: 80,
     rows: 24,
@@ -116,18 +123,18 @@ function makeMockStream(): NodeJS.WriteStream & { written: string[] } {
       written.push(typeof data === "string" ? data : Buffer.from(data).toString("utf8"))
       return true
     },
-    on(): typeof stream {
+    on(): MockStream {
       return stream
     },
-    off(): typeof stream {
+    off(): MockStream {
       return stream
     },
-    removeListener(): typeof stream {
+    removeListener(): MockStream {
       return stream
     },
-    removeAllListeners(): typeof stream {
+    removeAllListeners(): MockStream {
       return stream
     },
-  }
-  return stream as unknown as NodeJS.WriteStream & { written: string[] }
+  } as unknown as MockStream
+  return stream
 }

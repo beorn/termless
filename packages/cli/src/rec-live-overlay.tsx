@@ -166,7 +166,7 @@ function Overlay(props: OverlayProps): React.ReactElement {
     <Box flexDirection="row">
       <Text color={blinkOn ? "red" : undefined}>{blinkOn ? "●" : " "}</Text>
       <Text>{` REC ${elapsedStr}  `}</Text>
-      <Text dimColor>· Ctrl+D to stop</Text>
+      <Text color="$fg-muted">· Ctrl+D to stop</Text>
     </Box>
   )
 
@@ -197,7 +197,7 @@ function Overlay(props: OverlayProps): React.ReactElement {
                 <Text> </Text>
                 <Text color="green">●</Text>
                 <Text>{"  "}</Text>
-                <Text dimColor>·</Text>
+                <Text color="$fg-muted">·</Text>
                 <Text>{"  "}</Text>
               </>
             )}
@@ -205,9 +205,9 @@ function Overlay(props: OverlayProps): React.ReactElement {
             {preset.showControls && (
               <>
                 <Box flexGrow={1} />
-                <Text dimColor>−</Text>
+                <Text color="$fg-muted">−</Text>
                 <Text>{"  "}</Text>
-                <Text dimColor>□</Text>
+                <Text color="$fg-muted">□</Text>
                 <Text>{"  "}</Text>
                 <Text color="red">×</Text>
               </>
