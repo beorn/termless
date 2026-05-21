@@ -66,14 +66,15 @@ export function HelpGate({ shell, cols, rows, outputs }: HelpGateProps): React.R
 /**
  * Render the help gate and wait for the user to press Enter.
  *
- * Resolves once Enter is pressed; the panel is unmounted before resolving so
- * the recording starts on a clean terminal — the help text is never part of
- * the recording (frame 0 is the fresh shell).
+ * Resolves once Enter is pressed (the `HelpGate` calls `useApp().exit()`,
+ * which resolves `waitUntilExit`). The panel is unmounted on exit so the
+ * recording starts on a clean terminal — the help text is never part of the
+ * recording (frame 0 is the fresh shell).
  *
  * @returns A promise that resolves when the user confirms.
  */
 export async function runHelpGate(props: HelpGateProps): Promise<void> {
-  const instance = render(<HelpGate {...props} />, undefined, { mode: "inline" })
-  await instance.waitUntilExit()
-  instance.unmount()
+  // `render(...).run()` mounts inline, waits for the app to exit (Enter →
+  // useApp().exit()), then unmounts.
+  await render(<HelpGate {...props} />, undefined, { mode: "inline" }).run()
 }
