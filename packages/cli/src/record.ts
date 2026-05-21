@@ -8,6 +8,7 @@
 
 import { createSessionManager } from "./session.ts"
 import { snapshotVisualState } from "../../../src/recording.ts"
+import { generateSlideshow, type SlideshowFrame } from "../../../src/view/slideshow.ts"
 import { mkdir, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 
@@ -23,11 +24,11 @@ export interface RecordOptions {
   format: "frames" | "html"
 }
 
-export interface RecordedFrame {
-  index: number
-  timestamp: number
-  svg: string
-}
+/**
+ * A captured SVG frame. Alias of the `view/` module's `SlideshowFrame` — the
+ * slideshow generator now lives there (Recording-domain unification Phase 3).
+ */
+export type RecordedFrame = SlideshowFrame
 
 // ── Frame change detection ──
 
@@ -43,121 +44,12 @@ export function hasFrameChanged(currentText: string, previousText: string | null
 // ── HTML slideshow generation ──
 
 /**
- * Generates a self-contained HTML file with all SVG frames as an auto-playing slideshow.
- * Includes play/pause, frame navigation, frame counter, and timestamp display.
+ * Generates a self-contained HTML file with all SVG frames as an auto-playing
+ * slideshow. Thin re-export of the `view/` module's `generateSlideshow` — the
+ * slideshow is one `view` mode (Recording-domain unification Phase 3).
  */
 export function generateHtmlSlideshow(frames: RecordedFrame[], intervalMs: number): string {
-  if (frames.length === 0) {
-    return `<!DOCTYPE html>
-<html><head><title>termless recording</title></head>
-<body><p>No frames recorded.</p></body></html>`
-  }
-
-  const escapedFrames = frames.map((f) => ({
-    index: f.index,
-    timestamp: f.timestamp,
-    svg: f.svg,
-  }))
-
-  // Build inline SVG divs — one per frame, hidden by default except the first
-  const frameDivs = escapedFrames
-    .map((f, i) => `<div class="frame" id="frame-${i}" style="display:${i === 0 ? "block" : "none"}">${f.svg}</div>`)
-    .join("\n")
-
-  const timestamps = JSON.stringify(escapedFrames.map((f) => f.timestamp))
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>termless recording</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #1e1e1e; color: #d4d4d4; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-  .player { position: relative; }
-  .frame svg { display: block; }
-  .controls { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 8px 16px; background: #2d2d2d; border-radius: 6px; }
-  .controls button { background: #3d3d3d; color: #d4d4d4; border: 1px solid #555; border-radius: 4px; padding: 4px 12px; cursor: pointer; font-size: 14px; }
-  .controls button:hover { background: #4d4d4d; }
-  .info { font-size: 13px; color: #888; }
-  kbd { background: #3d3d3d; border: 1px solid #555; border-radius: 3px; padding: 1px 5px; font-size: 12px; }
-</style>
-</head>
-<body>
-<div class="player">
-${frameDivs}
-</div>
-<div class="controls">
-  <button id="prev-btn" title="Previous frame">&larr;</button>
-  <button id="play-btn" title="Play/Pause">Pause</button>
-  <button id="next-btn" title="Next frame">&rarr;</button>
-  <span class="info" id="frame-info">Frame 1 / ${frames.length}</span>
-  <span class="info" id="time-info">0ms</span>
-  <span class="info"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> <kbd>Space</kbd></span>
-</div>
-<script>
-(function() {
-  const totalFrames = ${frames.length};
-  const timestamps = ${timestamps};
-  const interval = ${intervalMs};
-  let current = 0;
-  let playing = true;
-  let timer = null;
-
-  const playBtn = document.getElementById("play-btn");
-  const prevBtn = document.getElementById("prev-btn");
-  const nextBtn = document.getElementById("next-btn");
-  const frameInfo = document.getElementById("frame-info");
-  const timeInfo = document.getElementById("time-info");
-
-  function showFrame(idx) {
-    document.getElementById("frame-" + current).style.display = "none";
-    current = idx;
-    document.getElementById("frame-" + current).style.display = "block";
-    frameInfo.textContent = "Frame " + (current + 1) + " / " + totalFrames;
-    timeInfo.textContent = timestamps[current] + "ms";
-  }
-
-  function nextFrame() {
-    showFrame((current + 1) % totalFrames);
-  }
-
-  function prevFrame() {
-    showFrame((current - 1 + totalFrames) % totalFrames);
-  }
-
-  function startPlayback() {
-    if (timer) return;
-    playing = true;
-    playBtn.textContent = "Pause";
-    timer = setInterval(nextFrame, interval);
-  }
-
-  function stopPlayback() {
-    playing = false;
-    playBtn.textContent = "Play";
-    if (timer) { clearInterval(timer); timer = null; }
-  }
-
-  function togglePlayback() {
-    if (playing) stopPlayback(); else startPlayback();
-  }
-
-  playBtn.addEventListener("click", togglePlayback);
-  prevBtn.addEventListener("click", function() { stopPlayback(); prevFrame(); });
-  nextBtn.addEventListener("click", function() { stopPlayback(); nextFrame(); });
-
-  document.addEventListener("keydown", function(e) {
-    if (e.key === "ArrowLeft") { stopPlayback(); prevFrame(); }
-    else if (e.key === "ArrowRight") { stopPlayback(); nextFrame(); }
-    else if (e.key === " ") { e.preventDefault(); togglePlayback(); }
-  });
-
-  startPlayback();
-})();
-</script>
-</body>
-</html>`
+  return generateSlideshow(frames, intervalMs)
 }
 
 // ── Record command ──

@@ -29,7 +29,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { writeViewer } from "./frame-viewer.ts"
+import { writeViewer } from "./view/viewer.ts"
 import { traceToRecording } from "./frame-trace-recording.ts"
 import type { Recording } from "./recording-model.ts"
 import type { ScreenshotOptions, Terminal } from "./types.ts"

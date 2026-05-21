@@ -26,8 +26,8 @@ import type {
 } from "./types.ts"
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
-import { screenshotSvg } from "./svg.ts"
-import { screenshotPng } from "./png.ts"
+import { screenshotSvg } from "./render/svg.ts"
+import { screenshotPng } from "./render/png.ts"
 import {
   createBufferView,
   createCellView,

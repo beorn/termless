@@ -4,7 +4,7 @@
  */
 import { describe, test, expect } from "vitest"
 import { createTerminal } from "../src/terminal.ts"
-import { screenshotSvg } from "../src/svg.ts"
+import { screenshotSvg } from "../src/render/svg.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import "../packages/viterm/src/matchers.ts"
 import { terminalSnapshot, terminalSerializer } from "../packages/viterm/src/serializer.ts"

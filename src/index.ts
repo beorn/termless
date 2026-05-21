@@ -32,8 +32,9 @@ export type {
 
 export { hasExtension } from "./types.ts"
 export { createTerminal } from "./terminal.ts"
-export { screenshotSvg } from "./svg.ts"
-export { screenshotPng } from "./png.ts"
+// Renderer strategy (Phase 3): buffer → pixels (svg/png). Not a domain object.
+export { screenshotSvg, screenshotPng } from "./render/index.ts"
+export type { Renderer, VectorRenderer, RasterRenderer } from "./render/index.ts"
 // Backwards-compat re-export: @termless/ghostty owns the cellsToAnsi + canvas
 // renderer surface in Phase 9+. The barrel re-exports cellsToAnsi so any
 // caller still doing `import { cellsToAnsi } from "@termless/core"` keeps
@@ -45,8 +46,13 @@ export type { Frame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from ".
 // Recording-domain adapter (Phase 2): frame-trace → Recording frames projection.
 export { traceToRecording, fingerprintFromCanvas } from "./frame-trace-recording.ts"
 export type { TraceToRecordingInput, TraceCanvasOptions } from "./frame-trace-recording.ts"
-export { writeViewer, writeViewerFromRecording } from "./frame-viewer.ts"
-export type { WriteViewerResult } from "./frame-viewer.ts"
+// view verb + view/ module (Phase 3): one verb, one viewer, all presentation.
+export { view } from "./view.ts"
+export type { ViewMode, ViewOptions, ScrubViewOptions, AnimateViewOptions } from "./view.ts"
+export { writeViewer, writeViewerFromRecording } from "./view/viewer.ts"
+export type { WriteViewerResult } from "./view/viewer.ts"
+export { generateSlideshow } from "./view/slideshow.ts"
+export type { SlideshowFrame } from "./view/slideshow.ts"
 export { captureCrossRenderer, pngDimensions } from "./cross-renderer.ts"
 export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } from "./cross-renderer.ts"
 export { parseKey, keyToAnsi } from "./key-mapping.ts"
@@ -110,16 +116,16 @@ export type { CompileTapeOptions, CompileTapeResult } from "./tape/compile.ts"
 export { generateTape } from "./tape/codegen.ts"
 export type { GenerateTapeOptions } from "./tape/codegen.ts"
 
-// Animation output formats (animated SVG, GIF, APNG)
-export { createAnimatedSvg } from "./animation/animated-svg.ts"
-export { createGif, createGifFromPngs } from "./animation/gif.ts"
-export type { PngFrame } from "./animation/gif.ts"
-export { createApng } from "./animation/apng.ts"
-export { renderAnimation, detectFormat } from "./animation/index.ts"
-export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation/types.ts"
+// Animation output formats (animated SVG, GIF, APNG) — view/ module (Phase 3)
+export { createAnimatedSvg } from "./view/animated-svg.ts"
+export { createGif, createGifFromPngs } from "./view/gif.ts"
+export type { PngFrame } from "./view/gif.ts"
+export { createApng } from "./view/apng.ts"
+export { renderAnimation, detectFormat } from "./view/animation.ts"
+export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./view/animation-types.ts"
 // Recording-domain bridge (Phase 2): derive animation frames from a Recording.
-export { recordingToPngFrames, recordingToAnimationFrames } from "./animation/from-recording.ts"
-export type { FromRecordingOptions } from "./animation/from-recording.ts"
+export { recordingToPngFrames, recordingToAnimationFrames } from "./view/from-recording.ts"
+export type { FromRecordingOptions } from "./view/from-recording.ts"
 
 // Asciicast v2 format
 export { parseAsciicast, replayAsciicast } from "./asciicast/reader.ts"

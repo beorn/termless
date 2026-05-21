@@ -337,7 +337,7 @@ async function interactiveRecord(
 
   // If image output is requested, create a headless terminal that mirrors PTY output
   let headlessTerminal: import("../../../src/types.ts").Terminal | null = null
-  const animationFrames: import("../../../src/animation/types.ts").AnimationFrame[] = []
+  const animationFrames: import("../../../src/view/animation-types.ts").AnimationFrame[] = []
   let frameTimer: ReturnType<typeof setInterval> | null = null
   let lastFrameText = ""
 
@@ -529,7 +529,7 @@ async function interactiveRecord(
  */
 async function writeImageOutput(
   path: string,
-  frames: import("../../../src/animation/types.ts").AnimationFrame[],
+  frames: import("../../../src/view/animation-types.ts").AnimationFrame[],
 ): Promise<number | null> {
   if (frames.length === 0) {
     console.error(`Warning: no frames captured for ${path}`)
@@ -540,15 +540,15 @@ async function writeImageOutput(
   mkdirSync(dir, { recursive: true })
 
   if (path.endsWith(".gif")) {
-    const { createGif } = await import("../../../src/animation/gif.ts")
+    const { createGif } = await import("../../../src/view/gif.ts")
     const gif = await createGif(frames)
     writeFileSync(resolve(path), gif)
   } else if (path.endsWith(".apng") || (path.endsWith(".png") && frames.length > 1)) {
-    const { createApng } = await import("../../../src/animation/apng.ts")
+    const { createApng } = await import("../../../src/view/apng.ts")
     const apng = await createApng(frames)
     writeFileSync(resolve(path), apng)
   } else if (path.endsWith(".svg")) {
-    const { createAnimatedSvg } = await import("../../../src/animation/animated-svg.ts")
+    const { createAnimatedSvg } = await import("../../../src/view/animated-svg.ts")
     const svg = createAnimatedSvg(frames)
     writeFileSync(resolve(path), svg, "utf-8")
   } else if (path.endsWith(".png")) {

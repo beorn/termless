@@ -8,7 +8,7 @@
  */
 
 // Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
-import type { AnimationFrame, AnimationOptions } from "./types.ts"
+import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
 
 // Lazy-cached imports
 let gifencModule: typeof import("gifenc") | null = null

@@ -20,8 +20,8 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { Frame } from "./frame-trace.ts"
-import type { Frame as ModelFrame, Recording } from "./recording-model.ts"
+import type { Frame } from "../frame-trace.ts"
+import type { Frame as ModelFrame, Recording } from "../recording-model.ts"
 
 export interface WriteViewerResult {
   /** Absolute path to the generated viewer.html. */

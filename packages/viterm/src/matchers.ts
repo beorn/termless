@@ -29,7 +29,7 @@ import type {
   SvgScreenshotOptions,
   SvgTheme,
 } from "../../../src/types.ts"
-import { screenshotSvg } from "../../../src/svg.ts"
+import { screenshotSvg } from "../../../src/render/svg.ts"
 import {
   assertRegionView,
   assertOutputView,

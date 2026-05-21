@@ -5,7 +5,7 @@
  * Individual encoders are also exported directly for fine-grained control.
  */
 
-export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./types.ts"
+export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation-types.ts"
 export { createAnimatedSvg } from "./animated-svg.ts"
 export { createGif } from "./gif.ts"
 export { createApng } from "./apng.ts"
@@ -13,7 +13,7 @@ export { createApng } from "./apng.ts"
 export { recordingToPngFrames, recordingToAnimationFrames } from "./from-recording.ts"
 export type { FromRecordingOptions } from "./from-recording.ts"
 
-import type { AnimationFrame, AnimationFormat, AnimationOptions } from "./types.ts"
+import type { AnimationFrame, AnimationFormat, AnimationOptions } from "./animation-types.ts"
 import { createAnimatedSvg } from "./animated-svg.ts"
 
 /**

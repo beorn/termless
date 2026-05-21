@@ -14,9 +14,9 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { writeViewerFromRecording } from "../src/frame-viewer.ts"
-import { recordingToPngFrames, recordingToAnimationFrames } from "../src/animation/from-recording.ts"
-import { type Frame, type Recording, createRecording, micros } from "../src/recording-model.ts"
+import { writeViewerFromRecording } from "../../src/view/viewer.ts"
+import { recordingToPngFrames, recordingToAnimationFrames } from "../../src/view/from-recording.ts"
+import { type Frame, type Recording, createRecording, micros } from "../../src/recording-model.ts"
 
 let dir: string
 

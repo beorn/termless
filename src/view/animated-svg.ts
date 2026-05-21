@@ -8,7 +8,7 @@
  * The output is a self-contained SVG that animates in any modern browser.
  */
 
-import type { AnimationFrame, AnimationOptions } from "./types.ts"
+import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
 
 /** Extract the inner content of an SVG element (everything between <svg ...> and </svg>). */
 function stripSvgWrapper(svg: string): string {

@@ -27,7 +27,7 @@ import { isReady as isBackendReadyForCanvas } from "../../../src/backends.ts"
 import { overlayKeystroke } from "../../../src/tape/overlay.ts"
 import { resolveTheme } from "../../../src/tape/themes.ts"
 import { backends as listBackends, isReady as isBackendReady } from "../../../src/backends.ts"
-import type { AnimationFrame } from "../../../src/animation/types.ts"
+import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { SvgScreenshotOptions, WindowBar } from "../../../src/types.ts"
 
 /** Read all of stdin as a string. */
@@ -158,15 +158,15 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
   mkdirSync(dir, { recursive: true })
 
   if (path.endsWith(".gif")) {
-    const { createGif } = await import("../../../src/animation/gif.ts")
+    const { createGif } = await import("../../../src/view/gif.ts")
     const gif = await createGif(frames)
     writeFileSync(resolve(path), gif)
   } else if (path.endsWith(".apng")) {
-    const { createApng } = await import("../../../src/animation/apng.ts")
+    const { createApng } = await import("../../../src/view/apng.ts")
     const apng = await createApng(frames)
     writeFileSync(resolve(path), apng)
   } else if (path.endsWith(".svg") && frames.length > 1) {
-    const { createAnimatedSvg } = await import("../../../src/animation/animated-svg.ts")
+    const { createAnimatedSvg } = await import("../../../src/view/animated-svg.ts")
     const svg = createAnimatedSvg(frames)
     writeFileSync(resolve(path), svg, "utf-8")
   } else if (path.endsWith(".svg")) {
@@ -383,7 +383,7 @@ async function playAction(
         const resolved = resolve(firstOutput)
         mkdirSync(dirname(resolved), { recursive: true })
         if (wantsGif && canvasResult.composedFrames && canvasResult.composedFrames.length > 0) {
-          const { createGifFromPngs } = await import("../../../src/animation/gif.ts")
+          const { createGifFromPngs } = await import("../../../src/view/gif.ts")
           const gif = await createGifFromPngs(canvasResult.composedFrames.map((png) => ({ png, duration: 600 })))
           writeFileSync(resolved, gif)
           console.log(`Stitched GIF saved: ${firstOutput} (${canvasResult.composedFrames.length} frames)`)
@@ -557,7 +557,7 @@ async function playAction(
           // Write screenshot to first matching output or default
           for (const output of outputs) {
             if (!isImagePath(output)) {
-              const { screenshotPng } = await import("../../../src/png.ts")
+              const { screenshotPng } = await import("../../../src/render/png.ts")
               const png = await screenshotPng(term, shellSvgOpts)
               const outPath = cmd.path ?? output ?? "screenshot.png"
               mkdirSync(dirname(resolve(outPath)), { recursive: true })

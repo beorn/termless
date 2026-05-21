@@ -2,13 +2,13 @@ import { afterEach, describe, expect, test } from "vitest"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { createTerminal } from "../src/terminal.ts"
-import { createFrameTracer } from "../src/frame-trace.ts"
-import { writeViewer } from "../src/frame-viewer.ts"
-import type { Terminal } from "../src/types.ts"
+import { createTerminal } from "../../src/terminal.ts"
+import { createFrameTracer } from "../../src/frame-trace.ts"
+import { writeViewer } from "../../src/view/viewer.ts"
+import type { Terminal } from "../../src/types.ts"
 
 // Pure-TS backend — no native deps, fast for tests.
-import { createVt100Backend } from "../packages/vt100/src/index.ts"
+import { createVt100Backend } from "../../packages/vt100/src/index.ts"
 
 // A real (tiny) 1×1 PNG so base64-inlining + diff-canvas decoding has valid bytes.
 const ONE_PX_PNG = new Uint8Array([

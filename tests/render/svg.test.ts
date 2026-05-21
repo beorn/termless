@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest"
-import { screenshotSvg, rgbToHex, rgbToString } from "../src/svg.ts"
+import { screenshotSvg, rgbToHex, rgbToString } from "../../src/render/svg.ts"
 import type {
   TerminalReadable,
   Cell,
@@ -8,7 +8,7 @@ import type {
   TerminalMode,
   ScrollbackState,
   UnderlineStyle,
-} from "../src/types.ts"
+} from "../../src/types.ts"
 
 // ── Helpers ──
 

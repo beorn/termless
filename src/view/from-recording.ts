@@ -5,7 +5,7 @@
  * encoders ({@link "./gif.ts"}, {@link "./apng.ts"}, {@link "./animated-svg.ts"})
  * consume low-level frame lists — `PngFrame[]` (pre-rasterized) or
  * `AnimationFrame[]` (SVG). This bridge derives those lists from a unified
- * {@link Recording}'s `frames` projection so `animation/*` consumes a
+ * {@link Recording}'s `frames` projection so the animation encoders consume a
  * `Recording` rather than an ad-hoc shape assembled by each caller.
  *
  * Per-frame **duration** is derived from the recording's µs timeline: a
@@ -20,7 +20,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import type { Frame as ModelFrame, Recording } from "../recording-model.ts"
-import type { AnimationFrame } from "./types.ts"
+import type { AnimationFrame } from "./animation-types.ts"
 import type { PngFrame } from "./gif.ts"
 
 /** Options for deriving animation frames from a {@link Recording}. */

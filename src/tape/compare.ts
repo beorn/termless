@@ -21,7 +21,7 @@
 import type { TapeFile } from "./parser.ts"
 import type { TerminalBackend } from "../types.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
-import { screenshotPng } from "../png.ts"
+import { screenshotPng } from "../render/png.ts"
 
 let upngModule: typeof import("upng-js") | null = null
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { createApng } from "../../src/animation/apng.ts"
-import type { AnimationFrame } from "../../src/animation/types.ts"
+import { createApng } from "../../src/view/apng.ts"
+import type { AnimationFrame } from "../../src/view/animation-types.ts"
 
 const frame1: AnimationFrame = {
   svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="#1e1e1e"/><text x="10" y="30" fill="#d4d4d4" font-family="monospace" font-size="14">Hello</text></svg>',
