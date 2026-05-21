@@ -248,14 +248,19 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
   }
   // auto — prefer resvg, fall back to canvas.
   //
-  // resvg is the correct SVG rasterizer: it is handed the bundled fallback
-  // fonts via `font.fontFiles` and does per-glyph fallback, so symbol /
-  // emoji / box-drawing glyphs resolve. The `canvas` rasterizer rasterizes
-  // the SVG through `@napi-rs/canvas`'s `drawImage`, which does NOT consult
-  // registered fonts for SVG `<text>` — so glyphs the system font lacks
-  // (rounded box corners ╭╮╰╯, sigil icons) render as `.notdef` tofu.
-  // resvg is therefore the safe default; `canvas` stays available via an
-  // explicit `--renderer canvas` for callers who want it.
+  // resvg is the safe default: handed the bundled fonts via `font.fontFiles`,
+  // it resolves symbol / emoji / box-drawing glyphs with per-glyph fallback,
+  // and renders a km board cleanly (rounded corners, sigil icons — verified).
+  //
+  // swash is NOT in the `auto` chain yet — it is the cell-native,
+  // color-emoji renderer, but its font chain still lacks coverage for some
+  // marker glyphs (they render as `.notdef` tofu — see
+  // @km/termless/swash-font-coverage). Until that closes, swash is reachable
+  // only via an explicit `--renderer swash`; promoting it to the `auto`
+  // default would regress frames resvg already renders correctly.
+  //
+  // The `canvas` rasterizer is last — its `drawImage` SVG path ignores
+  // registered fonts, so glyphs the system font lacks render as tofu.
   try {
     return createResvgRasterizer(await loadResvg())
   } catch {
@@ -264,8 +269,8 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
     } catch {
       throw new Error(
         "createGif/screenshot requires a renderer. Install one:\n" +
-          "  bun add @resvg/resvg-js   (resvg — cross-platform, default)\n" +
-          "  bun add @napi-rs/canvas   (canvas — fallback)",
+          "  bun add @resvg/resvg-js  (resvg — cross-platform, default)\n" +
+          "  bun add @napi-rs/canvas  (canvas — fallback)",
       )
     }
   }

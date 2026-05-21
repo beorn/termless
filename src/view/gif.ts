@@ -63,7 +63,16 @@ export async function createGif(
     const frame = frames[i]!
     const duration = frame.duration || defaultDuration
 
-    const { pixels: rgba, width, height } = await rasterizer.rasterize(frame.svg, scale)
+    // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
+    // the SVG round-trip when the frame carries a snapshot — that is what makes
+    // color emoji and exact glyph coverage survive into the GIF.
+    const {
+      pixels: rgba,
+      width,
+      height,
+    } = frame.snapshot && rasterizer.rasterizeCells
+      ? await rasterizer.rasterizeCells(frame.snapshot, scale)
+      : await rasterizer.rasterize(frame.svg, scale)
 
     const palette = quantize(rgba, 256)
     const indexed = applyPalette(rgba, palette)

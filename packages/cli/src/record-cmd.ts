@@ -38,6 +38,7 @@ import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveOutputTargets } from "./output-targets.ts"
 import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
 import { createFrameGate } from "./frame-gate.ts"
+import { snapshotTerminal, snapshotReadable } from "../../../src/terminal/snapshot.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
 export const collectOutputPath = (value: string, previous: string[] = []): string[] => [...previous, value]
@@ -436,7 +437,11 @@ async function interactiveRecord(
         if (animationFrames.length > 0) {
           animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
         }
-        animationFrames.push({ svg, duration: FRAME_INTERVAL_MS })
+        animationFrames.push({
+          svg,
+          snapshot: snapshotReadable(snapshotTerminal(headlessTerminal)),
+          duration: FRAME_INTERVAL_MS,
+        })
         lastFrameText = currentText
         lastCaptureTime = now
       }
@@ -492,7 +497,11 @@ async function interactiveRecord(
       animationFrames.length < FRAME_CAP
     ) {
       const svg = headlessTerminal.screenshotSvg(svgOpts)
-      animationFrames.push({ svg, duration: FRAME_INTERVAL_MS })
+      animationFrames.push({
+        svg,
+        snapshot: snapshotReadable(snapshotTerminal(headlessTerminal)),
+        duration: FRAME_INTERVAL_MS,
+      })
     }
 
     const durationMs = Date.now() - startTime

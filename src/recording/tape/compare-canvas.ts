@@ -31,6 +31,7 @@
 
 import type { TapeFile } from "./parser.ts"
 import type { Cell, CursorState, Terminal, TerminalBackend, TerminalReadable } from "../../terminal/types.ts"
+import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../../terminal/snapshot.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
 import { pngDimensions } from "../../compare.ts"
@@ -217,85 +218,6 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
     textMatch,
     ...(mode === "diff" ? { divergentPixels: lastDivergent, totalPixels: lastTotal } : {}),
   }
-}
-
-// =============================================================================
-// Terminal snapshot → TerminalReadable adapter
-// =============================================================================
-
-/** A frozen copy of a terminal's visible cell grid + cursor. */
-interface TerminalSnapshot {
-  grid: Cell[][]
-  cursor: CursorState
-  cols: number
-  rows: number
-  title: string
-}
-
-const BLANK_CELL: Cell = {
-  char: " ",
-  fg: null,
-  bg: null,
-  bold: false,
-  dim: false,
-  italic: false,
-  underline: false,
-  underlineColor: null,
-  strikethrough: false,
-  inverse: false,
-  blink: false,
-  hidden: false,
-  wide: false,
-  continuation: false,
-  hyperlink: null,
-}
-
-/** Deep-copy a terminal's current visible state. */
-function snapshotTerminal(term: Terminal): TerminalSnapshot {
-  const grid = term.getLines().map((row) => row.map((cell) => ({ ...cell })))
-  let cursor: CursorState
-  try {
-    cursor = term.getCursor()
-  } catch {
-    cursor = { x: 0, y: 0, visible: false, style: null }
-  }
-  let title = ""
-  try {
-    title = term.getTitle()
-  } catch {
-    // ignore — title is optional
-  }
-  return { grid, cursor, cols: term.cols, rows: term.rows, title }
-}
-
-/**
- * Wrap a {@link TerminalSnapshot} as a `TerminalReadable` so
- * `renderTerminalPng` (→ `cellsToAnsi`) can paint it. The snapshot is a frozen
- * copy, so this view is stable even though the source terminal has closed.
- */
-function snapshotReadable(snap: TerminalSnapshot): TerminalReadable {
-  const cellAt = (row: number, col: number): Cell => snap.grid[row]?.[col] ?? BLANK_CELL
-  return {
-    getText: () => snap.grid.map((row) => row.map((c) => c.char || " ").join("")).join("\n"),
-    getTextRange: (r1: number, c1: number, r2: number, c2: number) => {
-      const out: string[] = []
-      for (let r = r1; r <= r2; r++) {
-        let line = ""
-        for (let c = c1; c <= c2; c++) line += cellAt(r, c).char || " "
-        out.push(line)
-      }
-      return out.join("\n")
-    },
-    getCell: cellAt,
-    getLine: (row: number) => snap.grid[row] ?? [],
-    getLines: () => snap.grid,
-    getCursor: () => snap.cursor,
-    getMode: () => false,
-    getTitle: () => snap.title,
-    getScrollback: () => ({ lines: [], total: 0 }),
-    cols: snap.cols,
-    rows: snap.rows,
-  } as unknown as TerminalReadable
 }
 
 // =============================================================================
