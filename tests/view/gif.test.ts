@@ -43,4 +43,17 @@ describe("createGif", () => {
   it("throws on empty frames array", async () => {
     await expect(createGif([])).rejects.toThrow("at least one frame")
   })
+
+  it("inter-frame delta encoding keeps repeated frames cheap", async () => {
+    // 20 identical frames: after frame 0 every frame is an all-transparent
+    // delta, which LZW-compresses to almost nothing. Without delta encoding
+    // each frame would re-store the full indexed bitmap. Pin the size win:
+    // 20 identical frames must stay well under a per-frame full-bitmap budget.
+    const many: AnimationFrame[] = Array.from({ length: 20 }, () => ({ ...frame1 }))
+    const result = await createGif(many, { scale: 1 })
+    // A single 100×50 frame's indexed bitmap is ~5000 bytes pre-LZW; 20 of
+    // them un-delta'd would be tens of KB. Delta-encoded, the 19 repeats add
+    // near-nothing — assert the whole thing stays small.
+    expect(result.byteLength).toBeLessThan(8_000)
+  })
 })
