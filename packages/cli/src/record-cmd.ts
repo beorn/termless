@@ -609,22 +609,13 @@ async function interactiveRecord(
       process.stderr.write(faint(`  frame cap (${FRAME_CAP}) reached — recording truncated\n`))
     }
 
-    // ── One-line recording summary ─────────────────────────────────────────
+    // ── Post-exit summary — silvery inline render ──────────────────────────
     //
-    // Shape: `Recorded 15.4s for \`/bin/zsh\` (80×30 · 36 keystrokes · 30 frames)`
-    // Then per-file `  ◌ out.gif Writing...` with an animated braille spinner
-    // that swaps to `  ✓ out.gif 188 KB` in place when the write completes.
-    const stats = [
-      `${opts.cols}×${opts.rows}`,
-      plural(inputEvents.length, "keystroke"),
-      plural(animationFrames.length, "frame"),
-    ]
-    process.stderr.write(
-      `\nRecorded ${formatDuration(durationMs)} for \x1b[1m${cmdLabel}\x1b[0m ` +
-        faint(`(${stats.join(" · ")})`) +
-        "\n",
-    )
-
+    // PTY is dead, overlay has been torn down, host is back on the normal
+    // screen. Render the recording summary as a silvery component (Box +
+    // Text + Spinner + theme tokens) inline at the cursor. The component
+    // owns the per-file lifecycle: starts every row at `◌`, swaps to an
+    // animated <Spinner> when phase=start, lands at `✓ size` on phase=done.
     const session: CapturedSession = {
       cols: opts.cols,
       rows: opts.rows,
@@ -636,43 +627,18 @@ async function interactiveRecord(
       renderer,
     }
 
-    // Animated spinner for the in-flight file. Braille chars cycle smoothly
-    // at ~12 fps; each phase=done call clears the timer and prints the final
-    // `✓ path size` line in place.
-    const SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-    let spinIdx = 0
-    let spinTimer: ReturnType<typeof setInterval> | null = null
-
-    const savedOutputs = await writeOutputs(
+    const { runRecordSummary } = await import("./rec-summary.tsx")
+    await runRecordSummary({
+      cmdLabel,
+      durationMs,
+      cols: opts.cols,
+      rows: opts.rows,
+      keystrokeCount: inputEvents.length,
+      frameCount: animationFrames.length,
       targets,
       session,
-      (s) => eventsToTape(s.inputEvents, s.command.join(" "), raw),
-      (event) => {
-        if (event.phase === "start") {
-          const paint = (): void => {
-            const ch = SPINNER[spinIdx++ % SPINNER.length]
-            process.stderr.write(`\r\x1b[2K  \x1b[33m${ch}\x1b[0m ${event.target.path} ${faint("Writing...")}`)
-          }
-          paint()
-          spinTimer = setInterval(paint, 80)
-        } else {
-          if (spinTimer) {
-            clearInterval(spinTimer)
-            spinTimer = null
-          }
-          const sizeStr = event.bytes != null ? formatBytes(event.bytes) : ""
-          process.stderr.write(`\r\x1b[2K  \x1b[32m✓\x1b[0m ${event.target.path} ${faint(sizeStr)}\n`)
-        }
-      },
-    )
-    if (spinTimer) {
-      clearInterval(spinTimer)
-      spinTimer = null
-    }
-
-    // No closing banner — the one-line header + per-file rows ARE the summary.
-    // Reference the unused `savedOutputs` to keep call-sites compile-clean.
-    void savedOutputs
+      eventsToTape: (s) => eventsToTape(s.inputEvents, s.command.join(" "), raw),
+    })
   } finally {
     // Best-effort cleanup for the unhappy path (exception before teardown).
     clearInterval(titleTimer)
