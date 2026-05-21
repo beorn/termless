@@ -144,6 +144,8 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 | `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
 | `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
 | `--text`                 | Print terminal text to stdout                                                       | off         |
+| `--chrome <style>`       | Window chrome on rendered output: `none`, `macos`, `windows`                        | `none`      |
+| `--title <text>`         | Title text in the window chrome bar                                                 | the command |
 | `--compat`               | Compat capture — record in a real desktop terminal app                              | off         |
 | `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`                        | auto-detect |
 | `--cwd <path>`           | Working directory for the recorded command (with `--compat`)                        | --          |
@@ -152,6 +154,32 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 backend (truecolor + real glyph shaping), `80×30` (GitHub renders README
 images at ~880px content width), ~12 fps, and a ~300-frame cap so a long
 session never produces a 50 MB GIF. Power users override every default.
+
+### Window chrome {#chrome}
+
+`--chrome` wraps the rendered output in a window frame — the finishing touch
+for a README or blog image. It composites uniformly across PNG, SVG, and GIF
+output (the frame is baked into every captured frame).
+
+| Style     | Look                                                                              |
+| --------- | --------------------------------------------------------------------------------- |
+| `none`    | No chrome — the bare terminal grid (default; byte-identical to omitting the flag) |
+| `macos`   | Rounded top corners, three traffic-light dots, a soft drop shadow, a small margin |
+| `windows` | A flat title bar with minimize / maximize / close glyphs                          |
+
+The bar background is derived from the terminal theme (a touch lighter on dark
+themes, darker on light ones). `--title` sets the bar's title text; it defaults
+to the recorded command. The macOS preset centers the title, the Windows preset
+left-aligns it.
+
+```bash
+# A framed GIF, ready to drop into a README
+$ termless record --chrome macos -o demo.gif -- bun km view ~/Vault
+
+# A Windows-style framed still, with a custom title
+$ termless record --chrome windows --title "km — Knowledge Machine" \
+    --keys "j,j,Enter" -o shot.png -- bun km view ~/Vault
+```
 
 ### Compat capture (macOS) {#compat}
 

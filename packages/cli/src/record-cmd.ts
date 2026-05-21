@@ -39,6 +39,8 @@ import { resolveOutputTargets } from "./output-targets.ts"
 import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
 import { createFrameGate } from "./frame-gate.ts"
 import { snapshotTerminal, snapshotReadable } from "../../../src/terminal/snapshot.ts"
+import { CHROME_STYLES, isChromeStyle, chromeOptions, type ChromeStyle } from "../../../src/render/chrome.ts"
+import type { SvgScreenshotOptions } from "../../../src/terminal/types.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
 export const collectOutputPath = (value: string, previous: string[] = []): string[] => [...previous, value]
@@ -332,7 +334,16 @@ export function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>,
  */
 async function interactiveRecord(
   command: string[] | undefined,
-  opts: { output?: string[]; cols: number; rows: number; raw?: boolean; showKeys?: boolean; renderer?: string },
+  opts: {
+    output?: string[]
+    cols: number
+    rows: number
+    raw?: boolean
+    showKeys?: boolean
+    renderer?: string
+    chrome?: ChromeStyle
+    title?: string
+  },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
   const cmd = command ?? [shell]
@@ -342,9 +353,18 @@ async function interactiveRecord(
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
-  const svgOpts = termFont ? { fontFamily: `'${termFont}', monospace` } : undefined
 
   const cmdLabel = cmd.join(" ")
+
+  // Window chrome — composited into every captured frame's SVG. The chrome is
+  // baked at screenshot time, so it applies uniformly to PNG, SVG, and GIF
+  // output (each frame carries it). `--title` defaults to the recorded command.
+  const chromeStyle: ChromeStyle = opts.chrome ?? "none"
+  const chrome = chromeStyle === "none" ? {} : chromeOptions(chromeStyle, opts.title ?? cmdLabel)
+  const svgOpts: SvgScreenshotOptions | undefined =
+    termFont || chromeStyle !== "none"
+      ? { ...(termFont ? { fontFamily: `'${termFont}', monospace` } : {}), ...chrome }
+      : undefined
 
   // ── Bare `record` → pre-flight help gate, then record on Enter ──
   if (command === undefined) {
@@ -644,8 +664,17 @@ async function recordAction(
     compat?: boolean
     terminal?: string
     cwd?: string
+    chrome?: string
+    title?: string
   },
 ): Promise<void> {
+  // Validate --chrome up front so a typo fails fast with the valid set.
+  if (opts.chrome != null && !isChromeStyle(opts.chrome)) {
+    console.error(`Error: unknown --chrome "${opts.chrome}". Valid: ${CHROME_STYLES.join(", ")}.`)
+    process.exitCode = 1
+    return
+  }
+  const chromeStyle: ChromeStyle = (opts.chrome as ChromeStyle | undefined) ?? "none"
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -709,15 +738,22 @@ async function recordAction(
       }
       await terminal.waitForStable(200, opts.timeout)
       const targets = resolveOutputTargets(opts.output ?? [])
+      // Window chrome for the still — `--title` defaults to the command label.
+      const stillChrome: SvgScreenshotOptions =
+        chromeStyle === "none" ? {} : chromeOptions(chromeStyle, opts.title ?? command.join(" "))
       for (const target of targets) {
         mkdirSync(dirname(resolve(target.path)), { recursive: true })
         if (target.format === "png") {
-          writeFileSync(
-            resolve(target.path),
-            await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto" }),
-          )
+          // With chrome, render via the SVG → PNG path (`screenshotPng`) — it
+          // accepts the full SvgScreenshotOptions, so the window frame is baked
+          // in. Without chrome, keep the auto-picker for best raster fidelity.
+          const png =
+            chromeStyle === "none"
+              ? await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto" })
+              : await terminal.screenshotPng(stillChrome)
+          writeFileSync(resolve(target.path), png)
         } else if (target.format === "svg") {
-          writeFileSync(resolve(target.path), terminal.screenshotSvg(), "utf-8")
+          writeFileSync(resolve(target.path), terminal.screenshotSvg(stillChrome), "utf-8")
         } else {
           console.error(`Error: --keys produces a still — use -o <file>.png or .svg, not .${target.format}.`)
           process.exitCode = 1
@@ -744,6 +780,8 @@ async function recordAction(
     raw: opts.raw,
     showKeys: opts.showKeys,
     renderer: opts.renderer,
+    chrome: chromeStyle,
+    title: opts.title,
   })
 }
 
@@ -780,6 +818,8 @@ export function registerRecordCommand(program: Command): void {
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
+    .option("--chrome <style>", `Window chrome on rendered output: ${CHROME_STYLES.join(", ")} (default: none)`, "none")
+    .option("--title <text>", "Title text in the window chrome bar (default: the recorded command)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")
     .option("--terminal <name>", "Compat terminal app: ghostty, kitty, iterm, terminal (with --compat)")
     .option("--cwd <path>", "Working directory for the recorded command (with --compat)")
