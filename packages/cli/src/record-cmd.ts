@@ -1,43 +1,66 @@
 /**
  * `termless record` — tape recorder for terminal sessions.
  *
- * Combines the old `capture`, `record`, and `tape record` commands into one.
- * Supports scripted mode (-t) for inline tape commands, or interactive mode
- * for recording a live session.
+ * `record` captures a terminal session and writes it to one or more output
+ * files. The **only** output flag is `-o`; the *shape* of each value picks the
+ * mode:
  *
  * @example
  * ```bash
- * # Record a command (scripted)
- * termless record -t 'Type "hello"\nEnter\nScreenshot' bash
+ * # Bare record — shows a help gate, then records a live $SHELL on Enter.
+ * termless record
  *
- * # Record with output file (format detected from extension)
- * termless record -o demo.tape bash
+ * # Record a command. No -o → out.gif in the cwd.
+ * termless record -- bun km view ~/Vault
  *
- * # Capture-style: run a command, press keys, take a screenshot
- * termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
+ * # Folder bundle — a trailing slash writes out.{rec,gif,cast,tape}.
+ * termless record -o demos/ -- bun km view ~/Vault
  *
- * # SVG frame recording (replaces old `termless record --format frames`)
- * termless record -o ./frames/ --interval 100 --duration 5 htop
+ * # Named files — -o is repeatable; the extension picks the format.
+ * termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
  *
- * # Compat capture — record against the peekaboo backend (a real desktop
- * # terminal app on macOS), the pixel-perfect compat path
+ * # A single still PNG.
+ * termless record -o shot.png -- bun km view ~/Vault
+ *
+ * # Compat capture — record in a real desktop terminal app (macOS).
  * termless record --compat -o c.png -- bun km view ~/Vault
  * ```
+ *
+ * README-fit defaults: backend `ghostty`, 80×30, ~12 fps, a ~300-frame cap.
  */
 
 import type { Command } from "@silvery/commander"
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import { executeTape } from "../../../src/recording/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
-import { createSessionManager } from "./session.ts"
+import { resolveOutputTargets } from "./output-targets.ts"
+import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
 export const collectOutputPath = (value: string, previous: string[] = []): string[] => [...previous, value]
 
 export const SAVE_TITLE_SEQUENCE = "\x1b[22;0t"
 export const RESTORE_TITLE_SEQUENCE = "\x1b[23;0t"
+
+// ── README-fit defaults ──────────────────────────────────────────────────────
+//
+// `record`'s defaults yield an artifact you can drop straight into a GitHub
+// README or blog post. GitHub renders README images at ~880px content width —
+// 80 columns keeps text readable; 30 rows fits real apps without dominating
+// the page. ~12 fps reads smoothly and keeps file size down; the frame cap
+// stops a long session producing a 50 MB GIF.
+/** Default terminal columns — README content fits ~80. */
+export const DEFAULT_COLS = 80
+/** Default terminal rows — room for real apps without dominating the page. */
+export const DEFAULT_ROWS = 30
+/** Default capture frame rate, in frames per second (~12 fps). */
+export const DEFAULT_FPS = 12
+/** Hard cap on frames captured — a long session must not produce a 50 MB GIF. */
+export const FRAME_CAP = 300
+/** Frame-capture interval in ms, derived from {@link DEFAULT_FPS}. */
+const FRAME_INTERVAL_MS = Math.round(1000 / DEFAULT_FPS)
 
 const BANNER_WIDTH = 60
 const BANNER_LINE = "─".repeat(BANNER_WIDTH)
@@ -114,7 +137,7 @@ export function formatRecordingSummary(opts: RecordingSummaryOptions): string {
 
   const lines = [faint(BANNER_LINE), `\x1b[32m✓\x1b[0m Done (${parts.join(", ")})`]
   for (const output of opts.savedOutputs ?? []) {
-    lines.push(`Saved: ${output.path} (${formatBytes(output.bytes)})`)
+    lines.push(`\x1b[32m✓\x1b[0m ${output.path} (${formatBytes(output.bytes)})`)
   }
   const preview = previewCommandFor(opts.savedOutputs ?? [])
   if (preview) lines.push(`Preview: ${preview}`)
@@ -296,28 +319,41 @@ export function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>,
 // Interactive recording
 // =============================================================================
 
-/** Check if any output path has an image extension */
-function hasImageOutput(paths: string[]): boolean {
-  return paths.some((p) => /\.(gif|svg|png|apng)$/i.test(p))
-}
-
+/**
+ * Interactive recording — spawn a command (or a bare `$SHELL`) under a real
+ * PTY, capture input + output + SVG frames, then project the capture into
+ * every requested {@link "./output-targets.ts".OutputTarget}.
+ *
+ * When `command` is `undefined` (bare `record`), a help gate runs first: it
+ * explains what is about to be recorded and waits for Enter. The help is
+ * pre-flight UI on the real terminal — never part of the recording.
+ */
 async function interactiveRecord(
   command: string[] | undefined,
-  opts: { output?: string[]; cols: number; rows: number; raw?: boolean; showKeys?: boolean },
+  opts: { output?: string[]; cols: number; rows: number; raw?: boolean; showKeys?: boolean; renderer?: string },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
   const cmd = command ?? [shell]
-  const outputPaths = opts.output ?? []
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
-  const wantImages = hasImageOutput(outputPaths)
+  const renderer = (opts.renderer as "canvas" | "resvg" | "auto" | undefined) ?? "auto"
+  const targets = resolveOutputTargets(opts.output ?? [])
+  const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
   const svgOpts = termFont ? { fontFamily: `'${termFont}', monospace` } : undefined
 
   const cmdLabel = cmd.join(" ")
 
+  // ── Bare `record` → pre-flight help gate, then record on Enter ──
+  if (command === undefined) {
+    const { runHelpGate } = await import("./help-gate.tsx")
+    await runHelpGate({ shell, cols: opts.cols, rows: opts.rows, outputs: outputPaths })
+  }
+
   // Styled separator + info (stderr, won't appear in .tape stdout).
-  process.stderr.write(formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages }))
+  process.stderr.write(
+    formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages: true }),
+  )
 
   const { spawnPty } = await import("../../../src/terminal/pty.ts")
 
@@ -339,18 +375,16 @@ async function interactiveRecord(
     setTitle(recordingTitle(cmdLabel, Date.now() - startTime))
   }, 1000)
 
-  // If image output is requested, create a headless terminal that mirrors PTY output
-  let headlessTerminal: import("../../../src/terminal/types.ts").Terminal | null = null
+  // Headless terminal that mirrors PTY output — the source for frame capture.
+  const { createTerminal } = await import("../../../src/terminal/terminal.ts")
+  const { backend } = await import("../../../src/backend/backends.ts")
+  const b = await backend("ghostty")
+  const headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
+
   const animationFrames: import("../../../src/view/animation-types.ts").AnimationFrame[] = []
   let frameTimer: ReturnType<typeof setInterval> | null = null
   let lastFrameText = ""
-
-  if (wantImages) {
-    const { createTerminal } = await import("../../../src/terminal/terminal.ts")
-    const { backend } = await import("../../../src/backend/backends.ts")
-    const b = await backend("vterm")
-    headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
-  }
+  let frameCapped = false
 
   // Spawn with real PTY — capture output AND forward to terminal
   const pty = spawnPty({
@@ -363,9 +397,7 @@ async function interactiveRecord(
       // Forward to real terminal
       process.stdout.write(data)
       // Feed into headless terminal for image capture
-      if (headlessTerminal) {
-        headlessTerminal.feed(new TextDecoder().decode(data))
-      }
+      headlessTerminal.feed(new TextDecoder().decode(data))
     },
   })
 
@@ -374,30 +406,28 @@ async function interactiveRecord(
   let stdinHandler: ((chunk: Buffer) => void) | null = null
 
   try {
-    // Start frame capture timer for image output
-    if (headlessTerminal) {
-      const captureInterval = 100 // ms
-      let lastCaptureTime = Date.now()
-
-      frameTimer = setInterval(() => {
-        if (!headlessTerminal) return
-        const currentText = headlessTerminal.getText()
-        if (currentText !== lastFrameText) {
-          let svg = headlessTerminal.screenshotSvg(svgOpts)
-          if (showKeys && currentKeystrokeLabel) {
-            svg = overlayKeystroke(svg, currentKeystrokeLabel)
-          }
-          const now = Date.now()
-          // Set duration of previous frame
-          if (animationFrames.length > 0) {
-            animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
-          }
-          animationFrames.push({ svg, duration: captureInterval })
-          lastFrameText = currentText
-          lastCaptureTime = now
+    // Frame capture timer — ~12 fps, capped at FRAME_CAP frames.
+    let lastCaptureTime = Date.now()
+    frameTimer = setInterval(() => {
+      if (animationFrames.length >= FRAME_CAP) {
+        frameCapped = true
+        return
+      }
+      const currentText = headlessTerminal.getText()
+      if (currentText !== lastFrameText) {
+        let svg = headlessTerminal.screenshotSvg(svgOpts)
+        if (showKeys && currentKeystrokeLabel) {
+          svg = overlayKeystroke(svg, currentKeystrokeLabel)
         }
-      }, captureInterval)
-    }
+        const now = Date.now()
+        if (animationFrames.length > 0) {
+          animationFrames[animationFrames.length - 1]!.duration = now - lastCaptureTime
+        }
+        animationFrames.push({ svg, duration: FRAME_INTERVAL_MS })
+        lastFrameText = currentText
+        lastCaptureTime = now
+      }
+    }, FRAME_INTERVAL_MS)
 
     // Intercept stdin in raw mode, forward to PTY, record keystrokes
     if (process.stdin.isTTY) {
@@ -415,7 +445,6 @@ async function interactiveRecord(
         if (tapeCmdStr !== null && tapeCmdStr !== SKIP) {
           currentKeystrokeLabel = tapeCmdStr
         } else if (tapeCmdStr === null && bytes.length === 1 && bytes[0]! >= 0x20 && bytes[0]! < 0x7f) {
-          // Printable character
           currentKeystrokeLabel = new TextDecoder().decode(bytes)
         }
       }
@@ -429,81 +458,49 @@ async function interactiveRecord(
     process.stdin.on("data", stdinHandler)
 
     // Wait for PTY to exit
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolveExit) => {
       const check = setInterval(() => {
         if (!pty.alive) {
           clearInterval(check)
-          resolve()
+          resolveExit()
         }
       }, 100)
     })
 
     // Capture final frame if headless terminal has changed
-    if (headlessTerminal) {
-      const finalText = headlessTerminal.getText()
-      if (finalText !== lastFrameText) {
-        const svg = headlessTerminal.screenshotSvg(svgOpts)
-        animationFrames.push({ svg, duration: 100 })
-      }
+    const finalText = headlessTerminal.getText()
+    if (finalText !== lastFrameText && animationFrames.length < FRAME_CAP) {
+      const svg = headlessTerminal.screenshotSvg(svgOpts)
+      animationFrames.push({ svg, duration: FRAME_INTERVAL_MS })
     }
 
-    const duration = (Date.now() - startTime) / 1000
+    const durationMs = Date.now() - startTime
 
     // Restore the previous terminal title before writing summaries or artifacts.
     restoreTitle()
 
-    // Write to output files (or stdout)
-    const savedOutputs: RecordingSavedOutput[] = []
-    if (outputPaths.length === 0) {
-      // No -o: output .tape to stdout
-      process.stdout.write(eventsToTape(inputEvents, cmd.join(" "), raw))
-    } else {
-      for (const path of outputPaths) {
-        if (/\.(gif|svg|png|apng)$/i.test(path)) {
-          // Image output — render animation frames
-          const bytes = await writeImageOutput(path, animationFrames)
-          if (bytes != null) savedOutputs.push({ path, bytes })
-        } else if (path.endsWith(".cast")) {
-          // asciicast v2 format — JSON-lines with output events
-          const lines: string[] = []
-          lines.push(
-            JSON.stringify({
-              version: 2,
-              width: opts.cols,
-              height: opts.rows,
-              timestamp: Math.floor(Date.now() / 1000),
-              duration,
-              env: { SHELL: cmd[0] ?? "", TERM: "xterm-256color" },
-            }),
-          )
-          for (const event of outputEvents) {
-            lines.push(JSON.stringify([event.time / 1000, "o", event.data]))
-          }
-          for (const event of inputEvents) {
-            lines.push(JSON.stringify([event.time / 1000, "i", new TextDecoder().decode(event.bytes)]))
-          }
-          // Sort by timestamp
-          const header = lines[0]!
-          const events = lines.slice(1).sort((a, b) => {
-            const ta = (JSON.parse(a) as number[])[0]!
-            const tb = (JSON.parse(b) as number[])[0]!
-            return ta - tb
-          })
-          writeFileSync(path, [header, ...events].join("\n") + "\n")
-          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
-        } else if (path.endsWith(".tape")) {
-          writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
-          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
-        } else {
-          writeFileSync(path, eventsToTape(inputEvents, cmd.join(" "), raw))
-          savedOutputs.push({ path, bytes: statSync(resolve(path)).size })
-        }
-      }
+    if (frameCapped) {
+      process.stderr.write(faint(`  frame cap (${FRAME_CAP}) reached — recording truncated\n`))
     }
+
+    // Project the capture into every requested output.
+    const session: CapturedSession = {
+      cols: opts.cols,
+      rows: opts.rows,
+      durationMs,
+      command: cmd,
+      inputEvents,
+      outputEvents,
+      frames: animationFrames,
+      renderer,
+    }
+    const savedOutputs = await writeOutputs(targets, session, (s) =>
+      eventsToTape(s.inputEvents, s.command.join(" "), raw),
+    )
 
     process.stderr.write(
       formatRecordingSummary({
-        durationMs: duration * 1000,
+        durationMs,
         inputEventCount: inputEvents.length,
         outputEventCount: outputEvents.length,
         frameCount: animationFrames.length,
@@ -521,54 +518,8 @@ async function interactiveRecord(
     }
     process.stdin.pause()
     restoreTitle()
-    if (headlessTerminal) {
-      headlessTerminal.close()
-    }
+    headlessTerminal.close()
   }
-}
-
-/**
- * Write animation frames to an image output file.
- * Detects format from extension and uses the appropriate encoder.
- */
-async function writeImageOutput(
-  path: string,
-  frames: import("../../../src/view/animation-types.ts").AnimationFrame[],
-): Promise<number | null> {
-  if (frames.length === 0) {
-    console.error(`Warning: no frames captured for ${path}`)
-    return null
-  }
-
-  const dir = dirname(resolve(path))
-  mkdirSync(dir, { recursive: true })
-
-  if (path.endsWith(".gif")) {
-    const { createGif } = await import("../../../src/view/gif.ts")
-    const gif = await createGif(frames)
-    writeFileSync(resolve(path), gif)
-  } else if (path.endsWith(".apng") || (path.endsWith(".png") && frames.length > 1)) {
-    const { createApng } = await import("../../../src/view/apng.ts")
-    const apng = await createApng(frames)
-    writeFileSync(resolve(path), apng)
-  } else if (path.endsWith(".svg")) {
-    const { createAnimatedSvg } = await import("../../../src/view/animated-svg.ts")
-    const svg = createAnimatedSvg(frames)
-    writeFileSync(resolve(path), svg, "utf-8")
-  } else if (path.endsWith(".png")) {
-    // Single frame PNG — rasterize the SVG
-    const resvg = await import("@resvg/resvg-js")
-    const { bundledFontFiles } = await import("../../../src/render/fonts.ts")
-    const renderer = new resvg.Resvg(frames[frames.length - 1]!.svg, {
-      fitTo: { mode: "zoom" as const, value: 2 },
-      // Bundled emoji + symbol fallback faces — see src/render/fonts.ts.
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles: bundledFontFiles() },
-    })
-    const rendered = renderer.render()
-    writeFileSync(resolve(path), rendered.asPng())
-  }
-
-  return statSync(resolve(path)).size
 }
 
 // =============================================================================
@@ -643,15 +594,11 @@ async function recordAction(
     timeout: number
     text?: boolean
     keys?: string
-    screenshot?: string
     waitFor?: string
-    interval?: number
-    duration?: string
-    outputDir?: string
-    format?: string
     raw?: boolean
     showKeys?: boolean
     theme?: string
+    renderer?: string
     compat?: boolean
     terminal?: string
     cwd?: string
@@ -692,7 +639,6 @@ async function recordAction(
       },
     })
 
-    // Print terminal text if requested
     if (opts.text) {
       console.error(result.terminal.getText())
     }
@@ -702,85 +648,61 @@ async function recordAction(
     return
   }
 
-  // ── SVG frame recording mode (--interval or --duration or --output-dir or --format) ──
-  if (opts.interval || opts.duration || opts.outputDir || opts.format) {
-    const { recordCommand } = await import("./record.ts")
-    const cmd = command.length > 0 ? command : ["bash"]
-    await recordCommand({
-      command: cmd,
-      cols: opts.cols,
-      rows: opts.rows,
-      interval: opts.interval ?? 100,
-      duration: opts.duration ? Number.parseFloat(opts.duration) : null,
-      outputDir: opts.outputDir ?? "./termless-recording/",
-      format: (opts.format as "frames" | "html") ?? "frames",
-    })
-    return
-  }
-
-  // ── Interactive recording mode: -o <file> with a command (or shell) ──
-  const hasOutputFile = opts.output && opts.output.length > 0
-  const cmd = command.length > 0 ? command : undefined
-  if (hasOutputFile && !opts.keys && !opts.screenshot && !opts.text) {
-    await interactiveRecord(cmd, { ...opts, raw: opts.raw, showKeys: opts.showKeys })
-    return
-  }
-
-  if (!cmd && !opts.keys && !opts.screenshot && !opts.text) {
-    // No command, no output, no flags — show help
-    console.error("Usage:")
-    console.error("  termless record -o demo.tape ls -la         Record a command to .tape")
-    console.error("  termless record -o demo.tape                Record shell session to .tape")
-    console.error("  termless rec -t 'Type \"hello\"\\nEnter' bash  Scripted recording")
-    console.error("  termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view")
-    console.error("")
-    console.error("  termless record --help                      Full options")
-    process.exitCode = 1
-    return
-  }
-
-  const manager = createSessionManager()
-
-  try {
-    const { terminal } = await manager.createSession({
-      command: cmd,
-      cols: opts.cols,
-      rows: opts.rows,
-      waitFor: opts.waitFor ?? "content",
-      timeout: opts.timeout,
-    })
-
-    // Press keys if specified
-    if (opts.keys) {
+  // ── --keys mode: spawn, press keys, capture a single still ──
+  if (opts.keys) {
+    const { createSessionManager } = await import("./session.ts")
+    const manager = createSessionManager()
+    try {
+      const { terminal } = await manager.createSession({
+        command: command.length > 0 ? command : undefined,
+        cols: opts.cols,
+        rows: opts.rows,
+        waitFor: opts.waitFor ?? "content",
+        timeout: opts.timeout,
+      })
       const keys = opts.keys.split(",").map((k: string) => k.trim())
       for (const key of keys) {
         terminal.press(key)
-        await new Promise((resolve) => setTimeout(resolve, 50))
+        await new Promise((r) => setTimeout(r, 50))
       }
-      // Wait for content to settle after key presses
       await terminal.waitForStable(200, opts.timeout)
-    }
-
-    // Save screenshot if requested (PNG if .png extension, otherwise SVG)
-    if (opts.screenshot) {
-      const { writeFile } = await import("node:fs/promises")
-      if (opts.screenshot.endsWith(".png")) {
-        const png = await terminal.screenshotPng()
-        await writeFile(opts.screenshot, png)
-      } else {
-        const svg = terminal.screenshotSvg()
-        await writeFile(opts.screenshot, svg, "utf-8")
+      const targets = resolveOutputTargets(opts.output ?? [])
+      for (const target of targets) {
+        mkdirSync(dirname(resolve(target.path)), { recursive: true })
+        if (target.format === "png") {
+          writeFileSync(
+            resolve(target.path),
+            await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto" }),
+          )
+        } else if (target.format === "svg") {
+          writeFileSync(resolve(target.path), terminal.screenshotSvg(), "utf-8")
+        } else {
+          console.error(`Error: --keys produces a still — use -o <file>.png or .svg, not .${target.format}.`)
+          process.exitCode = 1
+          return
+        }
+        console.error(`Saved: ${target.path}`)
       }
-      console.error(`Screenshot saved: ${opts.screenshot}`)
+      if (opts.text) console.error(terminal.getText())
+    } finally {
+      await manager.stopAll()
     }
-
-    // Print text if requested
-    if (opts.text) {
-      console.error(terminal.getText())
-    }
-  } finally {
-    await manager.stopAll()
+    return
   }
+
+  // ── Interactive recording — the default path ──
+  //
+  // A bare `record` (no command) shows a help gate, then records `$SHELL`;
+  // `record -- <cmd>` records the command directly with no gate.
+  const cmd = command.length > 0 ? command : undefined
+  await interactiveRecord(cmd, {
+    output: opts.output,
+    cols: opts.cols,
+    rows: opts.rows,
+    raw: opts.raw,
+    showKeys: opts.showKeys,
+    renderer: opts.renderer,
+  })
 }
 
 // =============================================================================
@@ -791,28 +713,36 @@ export function registerRecordCommand(program: Command): void {
   const cmd = program
     .command("record")
     .alias("rec")
-    .description("Record a terminal session — to a tape, frames, or compat capture")
-    .argument("[command...]", "Command to record")
-    .option("-o, --output <path>", "Output file(s), format by extension (repeat for multiple)", collectOutputPath, [])
+    .description("Record a terminal session — to a GIF, a .rec, a folder bundle, or more")
+    .argument("[command...]", "Command to record (after `--`). Omit to record a live $SHELL.")
+    .option(
+      "-o, --output <path>",
+      "Output path — extension picks the format, trailing / a folder bundle (repeatable)",
+      collectOutputPath,
+      [],
+    )
     .option("-t, --tape <commands>", "Inline tape commands (scripted mode)")
-    .option("-b, --backend <name>", "Backend name (default: vterm)")
-    .option("--cols <n>", "Terminal columns", parseNum, 80)
-    .option("--rows <n>", "Terminal rows", parseNum, 24)
+    .option("-b, --backend <name>", "Backend name for scripted mode (default: vterm)")
+    .option("--renderer <kind>", "Raster renderer: canvas, resvg, or auto (default: auto)", "auto")
+    .option("--cols <n>", "Terminal columns", parseNum, DEFAULT_COLS)
+    .option("--rows <n>", "Terminal rows", parseNum, DEFAULT_ROWS)
     .option("--timeout <ms>", "Wait timeout in ms", parseNum, 5000)
     .option("--text", "Print terminal text to stdout")
-    .option("--keys <keys>", "Comma-separated key names to press")
-    .option("--screenshot <path>", "Save screenshot to path (SVG or PNG)")
+    .option("--keys <keys>", "Comma-separated key names to press, then capture a still")
     .option("--wait-for <text>", "Wait for text before pressing keys")
-    .option("--interval <ms>", "Capture interval in ms (enables frame recording)", parseNum, 0)
-    .option("--duration <seconds>", "Stop after N seconds (enables frame recording)", parseNum, 0)
-    .option("--output-dir <path>", "Output directory for frame recording")
-    .option("--format <type>", "Frame recording format: frames or html")
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")
     .option("--terminal <name>", "Compat terminal app: ghostty, kitty, iterm, terminal (with --compat)")
     .option("--cwd <path>", "Working directory for the recorded command (with --compat)")
+
+  cmd.addHelpSection("Output (-o picks the mode by path shape):", [
+    ["$ termless record -- bun km view ~/V", "No -o → out.gif in the cwd"],
+    ["$ termless record -o demos/ -- bun km view", "Trailing / → folder: out.{rec,gif,cast,tape}"],
+    ["$ termless record -o a.gif -o a.cast -- km", "Repeatable, extensioned → exactly those files"],
+    ["$ termless record -o shot.png -- bun km view", "An extension → that single file"],
+  ])
 
   cmd.addHelpSection("Compat capture (macOS, --compat):", [
     ["$ termless record --compat -- bun km view ~/Vault", "Capture a TUI in the real desktop terminal"],

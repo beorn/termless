@@ -15,18 +15,19 @@ export type { FromRecordingOptions } from "./from-recording.ts"
 
 import type { AnimationFrame, AnimationFormat, AnimationOptions } from "./animation-types.ts"
 import { createAnimatedSvg } from "./animated-svg.ts"
+import type { RendererKind } from "./rasterizer.ts"
 
 /**
  * Render animation frames in the specified format.
  *
- * - `"svg"` → animated SVG string (CSS keyframes, synchronous)
- * - `"gif"` → animated GIF Uint8Array (requires gifenc + @resvg/resvg-js)
- * - `"apng"` → animated PNG Uint8Array (requires upng-js + @resvg/resvg-js)
+ * - `"svg"` → animated SVG string (CSS keyframes, synchronous — no renderer)
+ * - `"gif"` → animated GIF Uint8Array (gifenc + the `options.renderer` raster path)
+ * - `"apng"` → animated PNG Uint8Array (upng-js + the `options.renderer` raster path)
  */
 export async function renderAnimation(
   frames: AnimationFrame[],
   format: AnimationFormat,
-  options?: AnimationOptions & { scale?: number },
+  options?: AnimationOptions & { scale?: number; renderer?: RendererKind },
 ): Promise<Uint8Array | string> {
   switch (format) {
     case "svg":

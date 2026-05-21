@@ -1,19 +1,20 @@
 /**
  * Animated PNG (APNG) encoder for termless.
  *
- * Converts SVG frames to an APNG using upng-js for APNG encoding
- * and @resvg/resvg-js for SVG→pixel rasterization.
+ * Converts SVG frames to an APNG using upng-js for APNG encoding. SVG → pixel
+ * rasterization goes through the **renderer** (`./rasterizer.ts`): `canvas`
+ * (`@napi-rs/canvas`) when its binding loads, `resvg` as the fallback.
  *
- * Both are optional/lazy-loaded dependencies — throws clear errors if missing.
+ * `upng-js` is an optional/lazy-loaded dependency — throws a clear error if
+ * missing.
  */
 
 // Module declarations live in ./upng.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
-import { bundledFontFiles } from "../render/fonts.ts"
+import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
 
 // Lazy-cached imports
 let upngModule: typeof import("upng-js") | null = null
-let resvgModule: { Resvg: any } | null = null
 
 async function loadUpng() {
   if (upngModule) return upngModule
@@ -25,35 +26,26 @@ async function loadUpng() {
   }
 }
 
-async function loadResvg() {
-  if (resvgModule) return resvgModule
-  try {
-    resvgModule = await import("@resvg/resvg-js")
-    return resvgModule
-  } catch {
-    throw new Error("createApng() requires @resvg/resvg-js. Install it:\n  bun add @resvg/resvg-js")
-  }
-}
-
 /**
  * Encode animation frames as an animated PNG (APNG).
  *
- * Each SVG frame is rasterized to RGBA pixels via @resvg/resvg-js,
- * then combined into a single APNG file via upng-js.
+ * Each SVG frame is rasterized to RGBA pixels via the selected renderer
+ * (`options.renderer`, default `auto`), then combined into a single APNG file
+ * via upng-js.
  *
  * @param frames - SVG frames with durations
- * @param options - Animation options plus optional `scale` for rasterization
+ * @param options - Animation options plus optional `scale` and `renderer`
  * @returns APNG file as Uint8Array
  */
 export async function createApng(
   frames: AnimationFrame[],
-  options?: AnimationOptions & { scale?: number },
+  options?: AnimationOptions & { scale?: number; renderer?: RendererKind },
 ): Promise<Uint8Array> {
   if (frames.length === 0) {
     throw new Error("createApng requires at least one frame")
   }
 
-  const [UPNG, { Resvg }] = await Promise.all([loadUpng(), loadResvg()])
+  const [UPNG, rasterizer] = await Promise.all([loadUpng(), selectRasterizer(options?.renderer ?? "auto")])
 
   const defaultDuration = options?.defaultDuration ?? 100
   const scale = options?.scale ?? 2
@@ -63,19 +55,10 @@ export async function createApng(
   let width = 0
   let height = 0
 
-  // Bundled emoji + symbol fallback faces — see gif.ts for the rationale.
-  // Without `font.fontFiles`, resvg-js renders emoji / rarer symbol code
-  // points as `.notdef` tofu.
-  const fontFiles = bundledFontFiles()
-
   for (const frame of frames) {
     const duration = frame.duration || defaultDuration
 
-    const resvg = new Resvg(frame.svg, {
-      fitTo: { mode: "zoom" as const, value: scale },
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles },
-    })
-    const rendered = resvg.render()
+    const rendered = await rasterizer.rasterize(frame.svg, scale)
 
     // Use first frame's dimensions as the canvas size
     if (width === 0) {

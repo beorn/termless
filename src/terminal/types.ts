@@ -225,6 +225,13 @@ export interface ScreenshotOptions {
   targetWidth?: number
   targetHeight?: number
   theme?: Record<string, string>
+  /**
+   * Which renderer rasterizes the screenshot — `canvas` (`@napi-rs/canvas`,
+   * high fidelity), `resvg` (`@resvg/resvg-js`, cross-platform), or `auto`
+   * (canvas when its native binding loads, else resvg). Default `auto`. A
+   * *force* override consulted by {@link Terminal.screenshot}.
+   */
+  renderer?: "canvas" | "resvg" | "auto"
 }
 
 export interface TerminalBackend extends TerminalReadable {

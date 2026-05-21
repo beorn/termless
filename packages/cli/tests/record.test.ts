@@ -231,8 +231,8 @@ describe("recording UX formatting", () => {
     )
 
     expect(summary).toContain("✓ Done (22 keystrokes, 40 output events, 7.0s, 12 frames)")
-    expect(summary).toContain("Saved: km2.gif (471 KB)")
-    expect(summary).toContain("Saved: session.cast (2 KB)")
+    expect(summary).toContain("✓ km2.gif (471 KB)")
+    expect(summary).toContain("✓ session.cast (2 KB)")
     expect(summary).toContain("Preview: open km2.gif")
   })
 

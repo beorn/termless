@@ -363,11 +363,19 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
    * Auto-picking screenshot — see Terminal.screenshot in types.ts for the
    * decision tree.
    *
-   * 1. Backend has its own raster renderer (ghostty) — use it directly.
-   * 2. `@termless/ghostty` is installed — proxy via cellsToAnsi + renderAnsiPng.
-   * 3. Fall back to resvg-based SVG → PNG (cross-platform safe; lower fidelity).
+   * `opts.renderer` is a *force* override:
+   *  - `canvas` — always the native-canvas path (`screenshotCanvasPng`).
+   *  - `resvg`  — always the resvg SVG → PNG path (`screenshotPng`).
+   *  - `auto` / unset — the decision tree below:
+   *    1. Backend has its own raster renderer (ghostty) — use it directly.
+   *    2. `@termless/ghostty` is installed — proxy via cellsToAnsi + renderAnsiPng.
+   *    3. Fall back to resvg-based SVG → PNG (cross-platform safe; lower fidelity).
    */
   async function screenshotAuto(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    // Forced renderer — bypass the decision tree.
+    if (opts?.renderer === "canvas") return screenshotAsCanvasPng(opts)
+    if (opts?.renderer === "resvg") return screenshotPng(terminal, opts as PngScreenshotOptions)
+
     // 1. Backend's own renderer.
     if (backend.screenshot) {
       return backend.screenshot(opts)

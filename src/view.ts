@@ -51,6 +51,11 @@ export interface AnimateViewOptions {
   sink: string
   /** Frame-derivation options (trailing duration, duplicate handling). */
   frames?: FromRecordingOptions
+  /**
+   * The raster renderer for `gif` / `apng` output — `canvas` (high fidelity),
+   * `resvg` (cross-platform), or `auto` (default). Ignored for `svg` (vector).
+   */
+  renderer?: "canvas" | "resvg" | "auto"
 }
 
 /** All `view` verb options, discriminated by `mode`. */
@@ -75,7 +80,7 @@ export async function view(recording: Recording, options: ViewOptions): Promise<
   }
   // mode: "animate"
   const frames = recordingToAnimationFrames(recording, options.renderSvg, options.frames)
-  const artifact = await renderAnimation(frames, options.format)
+  const artifact = await renderAnimation(frames, options.format, { renderer: options.renderer ?? "auto" })
   const bytes = typeof artifact === "string" ? Buffer.from(artifact, "utf-8") : artifact
   writeFileSync(options.sink, bytes)
   return bytes.byteLength

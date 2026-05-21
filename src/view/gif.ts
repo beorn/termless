@@ -2,18 +2,22 @@
  * Animated GIF encoder for termless.
  *
  * Converts SVG frames to an animated GIF using gifenc (pure JS, no binary deps)
- * for GIF encoding and @resvg/resvg-js for SVG→pixel rasterization.
+ * for GIF encoding. SVG → pixel rasterization goes through the **renderer**
+ * (`./rasterizer.ts`): `canvas` (`@napi-rs/canvas`, high fidelity) when its
+ * native binding loads, `resvg` (`@resvg/resvg-js`) as the cross-platform
+ * fallback. The renderer is *not* hardwired — a default `out.gif` gets
+ * `canvas` fidelity when the binding is available.
  *
- * Both are optional/lazy-loaded dependencies — throws clear errors if missing.
+ * `gifenc` is an optional/lazy-loaded dependency — throws a clear error if
+ * missing.
  */
 
 // Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
-import { bundledFontFiles } from "../render/fonts.ts"
+import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
 
 // Lazy-cached imports
 let gifencModule: typeof import("gifenc") | null = null
-let resvgModule: { Resvg: any } | null = null
 
 async function loadGifenc() {
   if (gifencModule) return gifencModule
@@ -25,35 +29,29 @@ async function loadGifenc() {
   }
 }
 
-async function loadResvg() {
-  if (resvgModule) return resvgModule
-  try {
-    resvgModule = await import("@resvg/resvg-js")
-    return resvgModule
-  } catch {
-    throw new Error("createGif() requires @resvg/resvg-js. Install it:\n  bun add @resvg/resvg-js")
-  }
-}
-
 /**
  * Encode animation frames as an animated GIF.
  *
- * Each SVG frame is rasterized to RGBA pixels via @resvg/resvg-js,
- * then quantized to 256 colors and written to a GIF stream via gifenc.
+ * Each SVG frame is rasterized to RGBA pixels via the selected renderer
+ * (`options.renderer`, default `auto`), then quantized to 256 colors and
+ * written to a GIF stream via gifenc.
  *
  * @param frames - SVG frames with durations
- * @param options - Animation options plus optional `scale` for rasterization
+ * @param options - Animation options plus optional `scale` and `renderer`
  * @returns GIF file as Uint8Array
  */
 export async function createGif(
   frames: AnimationFrame[],
-  options?: AnimationOptions & { scale?: number },
+  options?: AnimationOptions & { scale?: number; renderer?: RendererKind },
 ): Promise<Uint8Array> {
   if (frames.length === 0) {
     throw new Error("createGif requires at least one frame")
   }
 
-  const [{ GIFEncoder, quantize, applyPalette }, { Resvg }] = await Promise.all([loadGifenc(), loadResvg()])
+  const [{ GIFEncoder, quantize, applyPalette }, rasterizer] = await Promise.all([
+    loadGifenc(),
+    selectRasterizer(options?.renderer ?? "auto"),
+  ])
 
   const defaultDuration = options?.defaultDuration ?? 100
   const loop = options?.loop ?? 0
@@ -61,26 +59,11 @@ export async function createGif(
 
   const gif = GIFEncoder()
 
-  // Bundled emoji + symbol fallback faces. resvg-js with only
-  // `loadSystemFonts` + `defaultFontFamily` does not resolve a face with
-  // coverage for emoji / rarer symbol code points — those render as `.notdef`
-  // tofu. Passing the bundled font files through `font.fontFiles` registers
-  // JetBrains Mono + Noto Sans Symbols 2 + Noto Emoji so per-glyph fallback
-  // covers the title-bar / footer glyphs (📋 📄 counters, status markers).
-  const fontFiles = bundledFontFiles()
-
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i]!
     const duration = frame.duration || defaultDuration
 
-    const resvg = new Resvg(frame.svg, {
-      fitTo: { mode: "zoom" as const, value: scale },
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles },
-    })
-    const rendered = resvg.render()
-    const rgba = new Uint8Array(rendered.pixels)
-    const width = rendered.width
-    const height = rendered.height
+    const { pixels: rgba, width, height } = await rasterizer.rasterize(frame.svg, scale)
 
     const palette = quantize(rgba, 256)
     const indexed = applyPalette(rgba, palette)

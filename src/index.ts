@@ -35,6 +35,9 @@ export { createTerminal } from "./terminal/terminal.ts"
 // Renderer strategy (Phase 3): buffer → pixels (svg/png). Not a domain object.
 export { screenshotSvg, screenshotPng } from "./render/index.ts"
 export type { Renderer, VectorRenderer, RasterRenderer } from "./render/index.ts"
+// The raster renderer — canvas / resvg / auto SVG → pixels strategy.
+export { selectRasterizer } from "./view/rasterizer.ts"
+export type { RendererKind, Rasterizer, RasterBitmap } from "./view/rasterizer.ts"
 // Backwards-compat re-export: @termless/ghostty owns the cellsToAnsi + canvas
 // renderer surface in Phase 9+. The barrel re-exports cellsToAnsi so any
 // caller still doing `import { cellsToAnsi } from "@termless/core"` keeps
