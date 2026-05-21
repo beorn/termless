@@ -131,10 +131,12 @@ export function RecordSummary({
  * The recording session is over — PTY dead, overlay torn down. This renders
  * the summary INLINE at the host's normal-screen cursor (no alt-screen).
  */
-export async function runRecordSummary(props: Omit<RecordSummaryProps, "writeFiles"> & {
-  session: CapturedSession
-  eventsToTape: (s: CapturedSession) => string
-}): Promise<void> {
+export async function runRecordSummary(
+  props: Omit<RecordSummaryProps, "writeFiles"> & {
+    session: CapturedSession
+    eventsToTape: (s: CapturedSession) => string
+  },
+): Promise<void> {
   const writeFiles: RecordSummaryProps["writeFiles"] = (onProgress) =>
     writeOutputs(props.targets, props.session, props.eventsToTape, onProgress)
 
