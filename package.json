@@ -36,10 +36,7 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./registry": "./src/backends-advanced.ts",
-    "./svg": "./src/svg.ts",
-    "./png": "./src/png.ts"
+    ".": "./src/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -47,18 +44,6 @@
       ".": {
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
-      },
-      "./registry": {
-        "types": "./dist/backends-advanced.d.mts",
-        "import": "./dist/backends-advanced.mjs"
-      },
-      "./svg": {
-        "types": "./dist/svg.d.mts",
-        "import": "./dist/svg.mjs"
-      },
-      "./png": {
-        "types": "./dist/png.d.mts",
-        "import": "./dist/png.mjs"
       }
     }
   },
@@ -123,10 +108,7 @@
     "clean": true,
     "dts": true,
     "entry": [
-      "src/index.ts",
-      "src/backends-advanced.ts",
-      "src/svg.ts",
-      "src/png.ts"
+      "src/index.ts"
     ],
     "format": "esm"
   },

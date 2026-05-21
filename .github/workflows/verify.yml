@@ -30,7 +30,7 @@ jobs:
             [ "$private" = "true" ] && continue
             [ "$has_tsdown" = "false" ] && continue
             echo "📦 Building $name..."
-            (cd "$dir" && npx tsdown --no-dts 2>&1) || echo "⚠ Build failed for $name"
+            (cd "$dir" && npx tsdown --no-dts 2>&1) || { echo "❌ Build FAILED for $name"; exit 1; }
           done
 
       - name: Pack all tarballs
