@@ -302,6 +302,8 @@ interface ResolvedOptions {
   borderRadius: number
   windowBar: WindowBar
   windowBarSize: number
+  windowTitle: string | null
+  shadow: number
   margin: number
   marginFill: string | null
   embedFonts: boolean
@@ -320,6 +322,8 @@ function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
     borderRadius: options?.borderRadius ?? 0,
     windowBar: options?.windowBar ?? "none",
     windowBarSize: options?.windowBarSize ?? 40,
+    windowTitle: options?.windowTitle ?? null,
+    shadow: options?.shadow ?? 0,
     margin: options?.margin ?? 0,
     marginFill: options?.marginFill ?? null,
     embedFonts: options?.embedFonts ?? false,
@@ -419,21 +423,106 @@ function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null
 
 // ── Window bar rendering ──
 
-function renderWindowBar(barWidth: number, barHeight: number, style: WindowBar, borderRadius: number): string[] {
+/**
+ * Parse a `#rrggbb` hex string into an RGB triple. Returns null for any
+ * non-hex input (named colors, `transparent`, etc.) so callers can fall back.
+ */
+function parseHex(color: string): RGB | null {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(color.trim())
+  if (!m) return null
+  const n = parseInt(m[1]!, 16)
+  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
+}
+
+/** Relative luminance (0..1) of an RGB color, per the sRGB perceptual weights. */
+function luminance(c: RGB): number {
+  return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255
+}
+
+/**
+ * Derive a window-bar background that sits naturally against the terminal
+ * background: a touch lighter on dark themes, a touch darker on light themes.
+ * Falls back to the classic macOS-grey `#333333` when the theme bg is not a
+ * parseable hex color.
+ */
+function deriveBarColor(themeBg: string): string {
+  const rgb = parseHex(themeBg)
+  if (!rgb) return "#333333"
+  const dark = luminance(rgb) < 0.5
+  const shift = dark ? 28 : -28
+  const clamp = (v: number) => Math.max(0, Math.min(255, v + shift))
+  return rgbToHex({ r: clamp(rgb.r), g: clamp(rgb.g), b: clamp(rgb.b) })
+}
+
+/** Title text color that contrasts a given bar background. */
+function titleColorFor(barColor: string): string {
+  const rgb = parseHex(barColor)
+  if (!rgb) return "#cccccc"
+  return luminance(rgb) < 0.5 ? "#cccccc" : "#333333"
+}
+
+function renderWindowBar(
+  barWidth: number,
+  barHeight: number,
+  style: WindowBar,
+  borderRadius: number,
+  themeBg: string,
+  title: string | null,
+): string[] {
   if (style === "none") return []
 
   const parts: string[] = []
+  const barColor = deriveBarColor(themeBg)
 
   // Window bar background — use only top border radius
   parts.push(
-    `<rect width="${barWidth}" height="${barHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#333333"/>`,
+    `<rect width="${barWidth}" height="${barHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="${barColor}"/>`,
   )
   // Cover the bottom corners so only top has border radius
   if (borderRadius > 0) {
-    parts.push(`<rect y="${barHeight - borderRadius}" width="${barWidth}" height="${borderRadius}" fill="#333333"/>`)
+    parts.push(
+      `<rect y="${barHeight - borderRadius}" width="${barWidth}" height="${borderRadius}" fill="${barColor}"/>`,
+    )
   }
 
-  // Traffic light dots
+  const titleColor = titleColorFor(barColor)
+
+  if (style === "windows") {
+    // Flat Windows-style title bar — minimize / maximize / close glyphs at the
+    // right edge. The glyphs are drawn as line art so they render identically
+    // in every rasterizer (no glyph-font dependency).
+    const slot = 46 // px per control slot
+    const glyphSize = 10
+    const cy = barHeight / 2
+    const closeX = barWidth - slot / 2
+    const maxX = barWidth - slot * 1.5
+    const minX = barWidth - slot * 2.5
+    const half = glyphSize / 2
+    // Minimize — a horizontal bar.
+    parts.push(
+      `<line x1="${minX - half}" y1="${cy}" x2="${minX + half}" y2="${cy}" stroke="${titleColor}" stroke-width="1.4"/>`,
+    )
+    // Maximize — a hollow square.
+    parts.push(
+      `<rect x="${maxX - half}" y="${cy - half}" width="${glyphSize}" height="${glyphSize}" fill="none" stroke="${titleColor}" stroke-width="1.4"/>`,
+    )
+    // Close — an X, drawn on a red hover-style ground for visual weight.
+    parts.push(
+      `<line x1="${closeX - half}" y1="${cy - half}" x2="${closeX + half}" y2="${cy + half}" stroke="#e81123" stroke-width="1.6"/>`,
+    )
+    parts.push(
+      `<line x1="${closeX - half}" y1="${cy + half}" x2="${closeX + half}" y2="${cy - half}" stroke="#e81123" stroke-width="1.6"/>`,
+    )
+    // Title text — left-aligned, the Windows convention.
+    if (title) {
+      parts.push(
+        `<text x="14" y="${cy}" font-size="13" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
+      )
+    }
+    return parts
+  }
+
+  // macOS traffic-light dots
   const dotRadius = 6
   const dotY = barHeight / 2
   const dotStartX = 20
@@ -456,6 +545,13 @@ function renderWindowBar(barWidth: number, barHeight: number, style: WindowBar, 
     parts.push(`<circle cx="${dotStartX + 40}" cy="${dotY}" r="${dotRadius}" fill="#28c840"/>`)
   }
 
+  // macOS title — centered.
+  if (title) {
+    parts.push(
+      `<text x="${barWidth / 2}" y="${dotY}" font-size="13" font-family="'Helvetica Neue', Arial, sans-serif" fill="${titleColor}" text-anchor="middle" dominant-baseline="central">${escapeXml(title)}</text>`,
+    )
+  }
+
   return parts
 }
 
@@ -472,6 +568,8 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
     borderRadius,
     windowBar,
     windowBarSize,
+    windowTitle,
+    shadow,
     margin,
     marginFill,
   } = opts
@@ -485,7 +583,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   const contentHeight = rows * cellHeight
 
   // Detect whether any visual chrome is active
-  const hasChrome = padding > 0 || borderRadius > 0 || windowBar !== "none" || margin > 0
+  const hasChrome = padding > 0 || borderRadius > 0 || windowBar !== "none" || margin > 0 || shadow > 0
 
   // Fast path: no chrome — produce the classic minimal SVG (backward-compatible)
   if (!hasChrome) {
@@ -538,20 +636,45 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   )
   if (opts.embedFonts) parts.push(embeddedFontFaceDefs())
 
+  // Defs: a soft drop-shadow filter + (optionally) the border-radius clip path.
+  // The shadow is a gaussian-blurred dark copy of the alpha channel, offset
+  // slightly downward — the standard "floating window" look that Freeze / VHS
+  // produce. It is rendered renderer-agnostically (resvg + browsers both
+  // honour feDropShadow), so it survives the GIF/PNG rasterization path.
+  const hasDefs = shadow > 0 || borderRadius > 0
+  if (hasDefs) parts.push(`<defs>`)
+  if (shadow > 0) {
+    parts.push(
+      `<filter id="window-shadow" x="-50%" y="-50%" width="200%" height="200%">` +
+        `<feDropShadow dx="0" dy="${coord(shadow * 0.35)}" stdDeviation="${coord(shadow)}" flood-color="#000000" flood-opacity="0.45"/>` +
+        `</filter>`,
+    )
+  }
+  if (borderRadius > 0) {
+    parts.push(
+      `<clipPath id="terminal-clip">` +
+        `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"/>` +
+        `</clipPath>`,
+    )
+  }
+  if (hasDefs) parts.push(`</defs>`)
+
   // Outer margin fill
   if (margin > 0 && marginFill) {
     parts.push(`<rect width="100%" height="100%" fill="${marginFill}"/>`)
   }
 
-  // Clip path for border radius
+  // Drop shadow — a rounded rect matching the window outline, blurred via the
+  // filter above. Drawn before (under) the window itself.
+  if (shadow > 0) {
+    const shAttrs =
+      borderRadius > 0
+        ? `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"`
+        : `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}"`
+    parts.push(`<rect ${shAttrs} fill="${themeBg}" filter="url(#window-shadow)"/>`)
+  }
+
   if (borderRadius > 0) {
-    parts.push(`<defs>`)
-    parts.push(`<clipPath id="terminal-clip">`)
-    parts.push(
-      `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"/>`,
-    )
-    parts.push(`</clipPath>`)
-    parts.push(`</defs>`)
     parts.push(`<g clip-path="url(#terminal-clip)">`)
   }
 
@@ -565,7 +688,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   // Window bar
   if (windowBar !== "none") {
     parts.push(`<g transform="translate(${margin}, ${margin})">`)
-    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius))
+    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius, themeBg, windowTitle))
     parts.push(`</g>`)
   }
 

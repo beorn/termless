@@ -409,7 +409,16 @@ export interface Terminal extends TerminalReadable {
 // SVG Screenshot Options
 // ═══════════════════════════════════════════════════════
 
-export type WindowBar = "none" | "rings" | "colorful"
+/**
+ * Window bar style on a rendered screenshot.
+ *
+ * - `none` — no bar.
+ * - `colorful` — macOS traffic-light dots, filled (active window).
+ * - `rings` — macOS traffic-light dots, outlined (inactive window).
+ * - `windows` — a flat Windows-style title bar with minimize / maximize /
+ *   close glyphs at the right edge.
+ */
+export type WindowBar = "none" | "rings" | "colorful" | "windows"
 
 export interface SvgScreenshotOptions {
   fontFamily?: string
@@ -425,6 +434,14 @@ export interface SvgScreenshotOptions {
   windowBar?: WindowBar
   /** Height of the window bar area in pixels (default: 40). */
   windowBarSize?: number
+  /** Optional title text rendered centered in the window bar. */
+  windowTitle?: string
+  /**
+   * Soft drop shadow blur radius in pixels for the window frame (default: 0
+   * — no shadow). Needs a `margin` large enough to contain the blur, else the
+   * shadow is clipped at the SVG edge.
+   */
+  shadow?: number
   /** Outer margin around the SVG in pixels (default: 0). */
   margin?: number
   /** Fill color for the outer margin area (default: transparent). */
