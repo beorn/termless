@@ -46,6 +46,13 @@ export type { Frame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from ".
 // Recording-domain adapter (Phase 2): frame-trace → Recording frames projection.
 export { traceToRecording, fingerprintFromCanvas } from "./frame-trace-recording.ts"
 export type { TraceToRecordingInput, TraceCanvasOptions } from "./frame-trace-recording.ts"
+// Visual-trace disk I/O (Phase 4): own the frame-trace directory layout so
+// consumers (km's `toMatchVisualTrace`) read/write through these APIs instead
+// of parsing the on-disk shape directly.
+export { loadVisualTrace } from "./load-visual-trace.ts"
+export type { LoadVisualTraceOptions } from "./load-visual-trace.ts"
+export { writeVisualTrace } from "./write-visual-trace.ts"
+export type { WriteVisualTraceOptions } from "./write-visual-trace.ts"
 // view verb + view/ module (Phase 3): one verb, one viewer, all presentation.
 export { view } from "./view.ts"
 export type { ViewMode, ViewOptions, ScrubViewOptions, AnimateViewOptions } from "./view.ts"
