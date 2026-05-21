@@ -450,6 +450,18 @@ async function interactiveRecord(
       outputEvents.push({ time: Date.now() - startTime, data: text })
       // Feed into headless terminal for image capture
       headlessTerminal.feed(text)
+      // Mouse-mode mirroring: snoop PTY output for `\x1b[?1000h/?1002h/
+      // ?1003h/?1006h/?1015h` (and their `l` disable variants). The
+      // recorded program enables mouse mode when it expects mouse events;
+      // we mirror exactly those enables/disables to the HOST terminal so
+      // the host emits mouse bytes only when the recorded program wants
+      // them. Without this, the host either: (a) never sees mouse events
+      // (no enable) or (b) always emits them, turning trackpad motion
+      // into raw text that flows into non-mouse-aware shells.
+      if (liveView) {
+        const mouseSeqs = text.match(/\x1b\[\?(?:1000|1002|1003|1005|1006|1015)[hl]/g)
+        if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
+      }
       // Live preview routing: when the chrome overlay is mounted, render the
       // headless grid through Silvery instead of piping raw bytes to the host
       // terminal. `--live-chrome none` keeps the historical raw-stdout-pipe

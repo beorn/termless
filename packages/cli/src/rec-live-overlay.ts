@@ -53,6 +53,8 @@ export interface ChromeMetrics {
   showTitleBar: boolean
   /** Show macOS-style traffic-light dots in the title bar? */
   showDots: boolean
+  /** Show Windows-style window controls (− □ ×) at the right of the title bar? */
+  showControls: boolean
   /** Border style — single chars chosen from each preset. */
   border: {
     tl: string
@@ -75,6 +77,7 @@ export function chromeMetrics(style: ChromeStyle): ChromeMetrics {
         rightCols: 1,
         showTitleBar: true,
         showDots: true,
+        showControls: false,
         border: { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
       }
     case "windows":
@@ -85,6 +88,7 @@ export function chromeMetrics(style: ChromeStyle): ChromeMetrics {
         rightCols: 1,
         showTitleBar: true,
         showDots: false,
+        showControls: true,
         border: { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" },
       }
     case "none":
@@ -96,6 +100,7 @@ export function chromeMetrics(style: ChromeStyle): ChromeMetrics {
         rightCols: 0,
         showTitleBar: false,
         showDots: false,
+        showControls: false,
         border: null,
       }
   }
@@ -237,12 +242,14 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
   let stopped = false
   let layout = computeLayout(hostCols(), hostRows(), terminal.cols, terminal.rows, metrics)
 
-  // Enter alt screen + clear + hide cursor + enable mouse reporting on the
-  // host. Any-event SGR mouse mode means the host emits mouse bytes on
-  // stdin, which the existing stdinHandler forwards verbatim to the PTY —
-  // so a TUI inside the recording (km view, htop, etc.) sees trackpad +
-  // click events without any extra wiring.
-  out.write(CSI_ENTER_ALT_SCREEN + CSI_HIDE_CURSOR + CSI_CLEAR_SCREEN + CSI_MOUSE_ON)
+  // Enter alt screen + clear + hide cursor. Mouse mode is NOT enabled
+  // unconditionally — that turned host trackpad motion into raw SGR bytes
+  // that flowed stdin → PTY → typed into non-mouse-aware shells (zsh
+  // showed `[<35;120;5M[<35;121;5M...` text). The recording loop snoops
+  // PTY output for `\x1b[?1000h/?1002h/?1003h/?1006h/...l` and mirrors
+  // exactly the mouse mode the recorded program asked for. See
+  // record-cmd.ts onData handler.
+  out.write(CSI_ENTER_ALT_SCREEN + CSI_HIDE_CURSOR + CSI_CLEAR_SCREEN)
 
   function paintChrome(buf: string[]): void {
     const blinkOn = Math.floor(elapsedMs / 500) % 2 === 0
@@ -266,19 +273,26 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     if (metrics.showTitleBar) {
       const titleRow = layout.frameTop + 1
       const titleSgr = "\x1b[1;97m"
+
+      // Left cluster: dots (macOS) or just leading padding.
       const dotsStr = metrics.showDots ? "\x1b[31m●\x1b[33m ●\x1b[32m ●\x1b[0m" : ""
       const dotsVisibleLen = metrics.showDots ? 5 : 0 // "● ● ●" = 5 cells
-      // " ● ● ●  " — 1 leading space + dots + 2 trailing spaces before title.
-      // When dots are absent (chromeStyle === "windows"), drop the dot block
-      // and start the title right after the left border + 1 padding space.
       const dotsBlock = metrics.showDots ? ` ${dotsStr}  ` : " "
       const dotsBlockVisibleLen = metrics.showDots ? 1 + dotsVisibleLen + 2 : 1
-      const maxTitleLen = Math.max(0, innerWidth - dotsBlockVisibleLen - 1)
+
+      // Right cluster: Windows-style window controls "− □ ×" (minimize,
+      // maximize, close) — the canonical mental model for Windows users.
+      // SGR for close = bright red, the rest default. 7 visible cells:
+      // " − □ × " (4 glyphs + 3 spaces).
+      const controlsStr = metrics.showControls ? `  \x1b[2m−\x1b[0m  \x1b[2m□\x1b[0m  \x1b[91m×\x1b[0m ` : ""
+      const controlsVisibleLen = metrics.showControls ? 9 : 0
+
+      const maxTitleLen = Math.max(0, innerWidth - dotsBlockVisibleLen - controlsVisibleLen - 1)
       const titleText = title.slice(0, maxTitleLen)
-      const titleLine = `${dotsBlock}${titleSgr}${titleText}\x1b[0m`
-      const visible = dotsBlockVisibleLen + titleText.length
-      const pad = Math.max(0, innerWidth - visible)
-      buf.push(ansiCursorTo(titleRow, layout.frameLeft) + b.v + titleLine + " ".repeat(pad) + b.v)
+      const titleVisible = dotsBlockVisibleLen + titleText.length
+      const pad = Math.max(0, innerWidth - titleVisible - controlsVisibleLen)
+      const titleLine = `${dotsBlock}${titleSgr}${titleText}\x1b[0m${" ".repeat(pad)}${controlsStr}`
+      buf.push(ansiCursorTo(titleRow, layout.frameLeft) + b.v + titleLine + b.v)
     }
 
     // Bottom border
@@ -391,6 +405,10 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
       if (out === process.stdout) {
         process.stdout.removeListener("resize", handleResize)
       }
+      // Force-disable mouse mode on stop — the recorded program may have
+      // enabled it and exited without disabling (TUI crash, Ctrl-C, etc.),
+      // which leaves the host in a state where every trackpad move emits
+      // bytes the shell types as text.
       out.write(CSI_MOUSE_OFF + SGR_RESET + CSI_LEAVE_ALT_SCREEN + CSI_SHOW_CURSOR)
     },
   }
