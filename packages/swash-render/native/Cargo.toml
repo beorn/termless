@@ -1,0 +1,22 @@
+[package]
+name = "termless-swash-render-native"
+version = "0.1.0"
+edition = "2021"
+description = "napi-rs binding wrapping the swash crate — rasterizes a termless cell grid to RGBA"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", features = ["napi8"] }
+napi-derive = "3"
+swash = "0.2"
+zeno = "0.3"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+opt-level = 3

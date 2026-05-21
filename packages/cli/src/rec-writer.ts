@@ -39,8 +39,8 @@ export interface CapturedSession {
   outputEvents: Array<{ time: number; data: string }>
   /** Captured SVG frames with per-frame display durations. */
   frames: AnimationFrame[]
-  /** The renderer for raster output (`canvas` / `resvg` / `auto`). */
-  renderer: "canvas" | "resvg" | "auto"
+  /** The renderer for raster output (`canvas` / `resvg` / `swash` / `auto`). */
+  renderer: "canvas" | "resvg" | "swash" | "auto"
 }
 
 // =============================================================================

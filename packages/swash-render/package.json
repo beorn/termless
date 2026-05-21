@@ -1,0 +1,62 @@
+{
+  "name": "@termless/swash-render",
+  "version": "0.1.0",
+  "description": "Pure-native swash text rasterizer for termless — cell grid → RGBA via napi-rs, browser-grade color-emoji fidelity with no Skia",
+  "keywords": [
+    "headless",
+    "napi-rs",
+    "rasterizer",
+    "rust",
+    "swash",
+    "terminal",
+    "terminal-testing",
+    "tui"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/swash-render"
+  },
+  "files": [
+    "dist",
+    "native",
+    "*.node"
+  ],
+  "type": "module",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build:native": "cd native && cargo build --release",
+    "postbuild:native": "node -e \"const fs=require('fs'),p='native/target/release/';for(const f of fs.readdirSync(p))if(/^libtermless_swash_render_native\\.(dylib|so)$/.test(f)||f==='termless_swash_render_native.dll')fs.copyFileSync(p+f,'termless-swash-render.node')\""
+  },
+  "peerDependencies": {
+    "@termless/core": "*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": true,
+    "entry": "src/index.ts",
+    "format": "esm"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=23.6.0"
+  }
+}

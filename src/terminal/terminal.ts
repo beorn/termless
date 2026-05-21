@@ -375,6 +375,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     // Forced renderer — bypass the decision tree.
     if (opts?.renderer === "canvas") return screenshotAsCanvasPng(opts)
     if (opts?.renderer === "resvg") return screenshotPng(terminal, opts as PngScreenshotOptions)
+    if (opts?.renderer === "swash") return screenshotAsSwashPng(opts)
 
     // 1. Backend's own renderer.
     if (backend.screenshot) {
@@ -402,6 +403,23 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       }
       throw err
     }
+  }
+
+  /**
+   * Explicit swash path — rasterizes the cell grid directly via
+   * `@termless/swash-render` (pure-Rust swash). The cells path is swash's
+   * fidelity edge: color-emoji glyphs composite their native color bitmaps,
+   * which the SVG-flattening canvas / resvg paths lose. Fails loudly if the
+   * native binding is not built.
+   */
+  async function screenshotAsSwashPng(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    const { selectRasterizer } = await import("../view/rasterizer.ts")
+    const rasterizer = await selectRasterizer("swash")
+    if (!rasterizer.cellsToPng) {
+      throw new Error("swash renderer did not expose a cells path")
+    }
+    const scale = (opts as { scale?: number } | undefined)?.scale ?? 2
+    return rasterizer.cellsToPng(terminal, scale)
   }
 
   /**

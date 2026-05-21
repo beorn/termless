@@ -8,6 +8,12 @@
  *   glyph shaping. Needs the native `@napi-rs/canvas` binding.
  * - **`resvg`** — `@resvg/resvg-js`. Cross-platform, no native binding,
  *   lower fidelity.
+ * - **`swash`** — `@termless/swash-render` (pure-Rust swash via napi-rs).
+ *   Browser-grade text + **color emoji** (sbix / CBDT / COLR), ~1.3 MB native
+ *   binding. swash rasterizes the *cell grid* directly (no SVG round-trip), so
+ *   its `Rasterizer` exposes {@link Rasterizer.rasterizeCells}; the SVG-input
+ *   methods delegate to `resvg` (swash does not parse SVG). The cells path is
+ *   the fidelity win — `Terminal.screenshot({ renderer: "swash" })` uses it.
  *
  * `auto` (the default) uses `canvas` when its native binding loads, and falls
  * back to `resvg` otherwise. `--renderer` is a *force* override — the common
@@ -23,7 +29,10 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 
 /** How a raster frame is rasterized from SVG. */
-export type RendererKind = "canvas" | "resvg" | "auto"
+export type RendererKind = "canvas" | "resvg" | "swash" | "auto"
+
+/** A terminal whose cell grid a {@link Rasterizer} can read directly. */
+export type CellGridSource = import("../terminal/types.ts").TerminalReadable
 
 /** A rasterized RGBA bitmap. */
 export interface RasterBitmap {
@@ -38,11 +47,19 @@ export interface RasterBitmap {
 /** A renderer: rasterizes one SVG frame into an RGBA bitmap. */
 export interface Rasterizer {
   /** The concrete renderer this resolved to (`auto` collapses to one of these). */
-  readonly kind: "canvas" | "resvg"
+  readonly kind: "canvas" | "resvg" | "swash"
   /** Rasterize `svg` at `scale`× into an RGBA bitmap. */
   rasterize(svg: string, scale: number): Promise<RasterBitmap>
   /** Rasterize `svg` at `scale`× directly into PNG bytes. */
   toPng(svg: string, scale: number): Promise<Uint8Array>
+  /**
+   * Rasterize a terminal's cell grid directly into an RGBA bitmap — no SVG
+   * round-trip. Present only on the `swash` renderer, whose fidelity edge
+   * (color emoji) depends on consuming cells, not a flattened SVG.
+   */
+  rasterizeCells?(terminal: CellGridSource, scale: number): Promise<RasterBitmap>
+  /** Rasterize a terminal's cell grid directly into PNG bytes. */
+  cellsToPng?(terminal: CellGridSource, scale: number): Promise<Uint8Array>
 }
 
 // =============================================================================
@@ -139,6 +156,60 @@ function createCanvasRasterizer(mod: { createCanvas: any; Image: any }): Rasteri
 }
 
 // =============================================================================
+// swash renderer (@termless/swash-render — pure-Rust swash via napi-rs)
+// =============================================================================
+
+type SwashModule = typeof import("../../packages/swash-render/src/index.ts")
+
+let swashModule: SwashModule | null = null
+
+async function loadSwash(): Promise<SwashModule> {
+  if (swashModule) return swashModule
+  const mod = (await import("../../packages/swash-render/src/index.ts")) as SwashModule
+  // Probe the native binding now so `selectRasterizer` can fail fast.
+  if (!mod.swashRenderAvailable()) {
+    throw new Error("@termless/swash-render native binding is not built")
+  }
+  swashModule = mod
+  return mod
+}
+
+/**
+ * The swash rasterizer. Its fidelity edge — color emoji — lives in the
+ * **cells path** ({@link Rasterizer.rasterizeCells}); swash does not parse
+ * SVG, so the SVG-input methods delegate to `resvg` as a faithful fallback
+ * for the SVG-based gif / apng pipelines.
+ */
+async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
+  // resvg is the SVG-input fallback — swash only consumes the cell grid.
+  const svgFallback = createResvgRasterizer(await loadResvg())
+  const toBitmap = (terminal: CellGridSource, scale: number): RasterBitmap => {
+    const s = Math.max(1, scale)
+    const bmp = mod.renderCells(terminal, {
+      cellWidth: 9.6 * s,
+      cellHeight: 20 * s,
+      fontSize: 16 * s,
+      baseline: 20 * 0.78 * s,
+    })
+    return { pixels: new Uint8Array(bmp.pixels), width: bmp.width, height: bmp.height }
+  }
+  return {
+    kind: "swash",
+    rasterize: svgFallback.rasterize,
+    toPng: svgFallback.toPng,
+    async rasterizeCells(terminal, scale) {
+      return toBitmap(terminal, scale)
+    },
+    async cellsToPng(terminal, scale) {
+      const { pixels, width, height } = toBitmap(terminal, scale)
+      const UPNG = (await import("upng-js")) as typeof import("upng-js")
+      const ab = pixels.buffer.slice(pixels.byteOffset, pixels.byteOffset + pixels.byteLength) as ArrayBuffer
+      return new Uint8Array(UPNG.encode([ab], width, height, 0))
+    },
+  }
+}
+
+// =============================================================================
 // Selection
 // =============================================================================
 
@@ -162,6 +233,17 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
       return createResvgRasterizer(await loadResvg())
     } catch {
       throw new Error("--renderer resvg requires @resvg/resvg-js. Install it:\n  bun add @resvg/resvg-js")
+    }
+  }
+  if (kind === "swash") {
+    try {
+      return await createSwashRasterizer(await loadSwash())
+    } catch (e) {
+      throw new Error(
+        "--renderer swash requires the @termless/swash-render native binding. Build it:\n" +
+          "  cd packages/swash-render && bun run build:native && bun run postbuild:native\n" +
+          `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
+      )
     }
   }
   // auto — prefer canvas, fall back to resvg.
