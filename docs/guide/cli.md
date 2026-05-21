@@ -5,7 +5,7 @@ description: Use the Termless CLI for recording, playback, backend management, a
 
 # CLI & MCP Server
 
-The `@termless/cli` package provides a command-line tool for recording terminal sessions, playing back tape files, managing backends, and an MCP server for AI agent integration.
+The `@termless/cli` package provides a command-line tool built around the four recording-domain verbs — **`record`**, **`view`**, **`play`**, and **`compare`** (`compare` runs as `play --compare`) — plus the config and diagnostic surfaces `backends`, `doctor`, `themes`, and the `mcp` server for AI agent integration.
 
 ## Installation
 
@@ -57,25 +57,73 @@ $ termless record -o demo.tape -o demo.gif my-app
 
 # Capture mode: run command, press keys, take screenshot
 $ termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
+
+# Compat capture: record in a real desktop terminal app (macOS)
+$ termless record --compat -o c.png -- bun km view ~/Vault
 ```
 
 ### Options
 
-| Option                   | Description                                    | Default   |
-| ------------------------ | ---------------------------------------------- | --------- |
-| `-o, --output <path...>` | Output file(s), format detected from extension | stdout    |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)           | --        |
-| `--fmt <format>`         | Output format for stdout: `tape`, `cast`       | `tape`    |
-| `-b, --backend <name>`   | Backend for scripted mode                      | vterm     |
-| `--cols <n>`             | Terminal columns                               | `80`      |
-| `--rows <n>`             | Terminal rows                                  | `24`      |
-| `--timeout <ms>`         | Wait timeout in ms                             | `5000`    |
-| `--keys <keys>`          | Comma-separated key names to press             | --        |
-| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)      | --        |
-| `--wait-for <text>`      | Wait for text before pressing keys             | `content` |
-| `--text`                 | Print terminal text to stdout                  | off       |
+| Option                   | Description                                                                    | Default     |
+| ------------------------ | ------------------------------------------------------------------------------ | ----------- |
+| `-o, --output <path...>` | Output file(s), format detected from extension                                 | stdout      |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                           | --          |
+| `-b, --backend <name>`   | Backend for scripted mode                                                      | vterm       |
+| `--cols <n>`             | Terminal columns                                                               | `80`        |
+| `--rows <n>`             | Terminal rows                                                                  | `24`        |
+| `--timeout <ms>`         | Wait timeout in ms                                                             | `5000`      |
+| `--keys <keys>`          | Comma-separated key names to press                                             | --          |
+| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)                                      | --          |
+| `--wait-for <text>`      | Wait for text before pressing keys                                             | `content`   |
+| `--text`                 | Print terminal text to stdout                                                  | off         |
+| `--compat`               | Compat capture — record in a real desktop terminal app                         | off         |
+| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal` (with `--compat`) | auto-detect |
+| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)                   | --          |
+
+### Compat capture (macOS) {#compat}
+
+`termless record --compat` is `record` against the **peekaboo** backend — it spawns
+the user's real desktop terminal app (Ghostty / kitty / iTerm / Terminal.app), runs
+the command after `--`, screenshots the window, and cleans up. Pixel-perfect for that
+terminal plus the user's font and theme — the compat path.
+
+```bash
+# Auto-detect terminal, capture
+$ termless record --compat -- bun km view ~/Vault
+
+# Explicit terminal app, sized, with an output path
+$ termless record --compat --terminal ghostty --cols 140 --rows 40 -o c.png -- bun km
+```
+
+Compat capture is macOS-only and needs a GUI session plus Screen Recording permission.
+For routine visual iteration use plain `record` / `play` (the canvas renderer) — the
+compat path is slow and pops a real window.
 
 See [Recording & Playback](/guide/recording) for detailed usage.
+
+## `termless view` {#view}
+
+Present a recording on disk — a `.trec` directory or a bare frame-trace directory.
+By default `view` writes a self-contained scrubbable `viewer.html` alongside the
+recording; with `--format gif` it animates the recording's frames into a GIF.
+
+```bash
+# Scrub a recording in the browser (writes viewer.html next to it)
+$ termless view ./mysession.trec
+
+# Animate a recording to a GIF
+$ termless view ./trace --format gif -o demo.gif
+```
+
+### Options
+
+| Option                | Description                            | Default |
+| --------------------- | -------------------------------------- | ------- |
+| `-o, --output <path>` | Output file for `--format`             | --      |
+| `--format <type>`     | Animate the recording to a file: `gif` | scrub   |
+
+Writing a GIF is not a separate "export" command — it is `view` with an animation
+format and a file sink.
 
 ## `termless play` {#play}
 
@@ -163,6 +211,17 @@ Check installation health: verify installed backends load correctly, detect vers
 ```bash
 $ termless doctor
 ```
+
+## `termless themes` {#themes}
+
+List the color themes available for recording screenshots and animations.
+
+```bash
+$ termless themes
+```
+
+Use a theme with `termless play --theme dracula demo.tape`, or `Set Theme "dracula"`
+inside a `.tape` file.
 
 ## `termless mcp` {#mcp}
 

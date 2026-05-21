@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 /**
- * termless CLI — headless terminal capture, recording, and playback.
+ * termless CLI — record, view, play, and compare terminal sessions.
+ *
+ * The four recording-domain verbs are `record`, `view`, `play`, and
+ * `compare`; `backends`, `doctor`, `themes`, and `mcp` are the
+ * config / diagnostic surfaces.
  *
  * @example
  * ```bash
  * # Record a terminal session (scripted)
  * termless record -t 'Type "hello"\nEnter\nScreenshot' bash
  *
- * # Play back a tape file
- * termless play demo.tape -o demo.png
+ * # Play back a recording
+ * termless play demo.tape
+ *
+ * # View a recording — scrub it in the browser
+ * termless view ./mysession.trec
  *
  * # Manage backends
  * termless backends list
@@ -24,48 +31,40 @@
 
 import { Command } from "@silvery/commander"
 import { registerRecordCommand } from "./record-cmd.ts"
+import { registerViewCommand } from "./view-cmd.ts"
 import { registerPlayCommand } from "./play-cmd.ts"
 import { registerBackendCommand } from "./backend-cmd.tsx"
 import { registerDoctorCommand } from "./doctor-cmd.tsx"
-import { registerCompatScreenshotCommand } from "./compat-screenshot-cmd.ts"
 
 const program = new Command()
   .name("termless")
-  .description("Headless terminal capture, recording, and playback")
-  .version("0.3.0")
+  .description("Record, view, play, and compare terminal sessions")
+  .version("0.3.1")
 
-program.addHelpSection("Recording & Playback:", [
-  ["$ termless record km view", "Record a command (outputs .tape to stdout)"],
-  ["$ termless record -o demo.tape km view", "Record to .tape file"],
-  ["$ termless record -o demo.gif km view", "Record + render animated GIF"],
-  ["$ termless record -o demo.cast km view", "Record to asciicast format"],
-  ["$ termless rec -t 'Type \"hello\"\\nEnter' bash", "Scripted recording (inline tape)"],
-  ["$ termless play demo.tape", "Play back a .tape file"],
-  ["$ termless play demo.cast", "Play back an asciicast recording"],
-  ["$ termless play -o demo.gif demo.tape", "Convert .tape to GIF"],
-  ["$ termless play -b vterm,ghostty demo.tape", "Cross-terminal comparison"],
+program.addHelpSection("Recording verbs:", [
+  ["$ termless record -o demo.tape km view", "record — capture a session to a recording"],
+  ["$ termless record --compat -- bun km view ~/V", "record — compat capture in a real terminal (macOS)"],
+  ["$ termless view ./mysession.trec", "view — scrub a recording in the browser"],
+  ["$ termless view ./trace --format gif -o demo.gif", "view — animate a recording to a GIF"],
+  ["$ termless play demo.tape", "play — re-execute a recording"],
+  ["$ termless play demo.tape --compare side-by-side -b vterm,ghostty", "compare — diff a recording across backends"],
 ])
 
-program.addHelpSection("Backends:", [
-  ["$ termless backends", "Show all 11 backends + install status"],
-  ["$ termless backends install", "Install default backends"],
+program.addHelpSection("Config & diagnostics:", [
+  ["$ termless backends", "Show all backends + install status"],
   ["$ termless backends install ghostty alacritty", "Install specific backends"],
-  ["$ termless backends update", "Check upstream for newer versions"],
   ["$ termless doctor", "Health check all installed backends"],
-])
-
-program.addHelpSection("Real-terminal compat capture (macOS):", [
-  ["$ termless compat-screenshot -- bun km view ~/V", "Capture a TUI in the real desktop terminal"],
-  ["$ termless compat-screenshot -t ghostty -o c.png -- bun km", "Explicit terminal app + output path"],
+  ["$ termless themes", "List color themes for recordings"],
+  ["$ termless mcp", "Start the MCP stdio server"],
 ])
 
 program.addHelpSection("Docs:", [["https://termless.dev/guide/recording", ""]])
 
 registerRecordCommand(program)
+registerViewCommand(program)
 registerPlayCommand(program)
 registerBackendCommand(program)
 registerDoctorCommand(program)
-registerCompatScreenshotCommand(program)
 
 // ── themes ──
 

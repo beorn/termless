@@ -18,6 +18,10 @@
  *
  * # SVG frame recording (replaces old `termless record --format frames`)
  * termless record -o ./frames/ --interval 100 --duration 5 htop
+ *
+ * # Compat capture — record against the peekaboo backend (a real desktop
+ * # terminal app on macOS), the pixel-perfect compat path
+ * termless record --compat -o c.png -- bun km view ~/Vault
  * ```
  */
 
@@ -566,6 +570,63 @@ async function writeImageOutput(
 }
 
 // =============================================================================
+// Compat recording — record against the peekaboo backend (a real desktop
+// terminal app). Folds in the old `compat-screenshot` command: it was never a
+// distinct verb, just `record` against the peekaboo backend.
+// =============================================================================
+
+/** Valid terminal-app names for `record --compat`. */
+export const COMPAT_TERMINALS = ["ghostty", "kitty", "iterm", "terminal"] as const
+
+/**
+ * Compat recording — `record` against the peekaboo backend (a real desktop
+ * terminal app). Folds in the old `compat-screenshot` command. Exported for
+ * unit testing of the input-validation guards.
+ */
+export async function compatRecord(
+  command: string[],
+  opts: { terminal?: string; output?: string[]; cols: number; rows: number; cwd?: string; waitFor?: string },
+): Promise<void> {
+  if (command.length === 0) {
+    console.error("Error: --compat needs a command. Pass the TUI command after `--`.")
+    console.error("  termless record --compat -- bun km view ~/Vault")
+    process.exitCode = 1
+    return
+  }
+
+  if (opts.terminal && !(COMPAT_TERMINALS as readonly string[]).includes(opts.terminal)) {
+    console.error(`Error: unknown --terminal "${opts.terminal}". Valid: ${COMPAT_TERMINALS.join(", ")}.`)
+    process.exitCode = 1
+    return
+  }
+
+  const { compatScreenshot } = await import("@termless/peekaboo")
+
+  try {
+    const result = await compatScreenshot({
+      cmd: command.join(" "),
+      terminal: opts.terminal as (typeof COMPAT_TERMINALS)[number] | undefined,
+      outputPath: opts.output?.[0],
+      cols: opts.cols,
+      rows: opts.rows,
+      cwd: opts.cwd,
+      waitFor: opts.waitFor,
+    })
+
+    console.log(`Saved: ${result.path}`)
+    console.log("Captured terminal:")
+    console.log(`  app:     ${result.terminal.name}`)
+    console.log(`  version: ${result.terminal.version ?? "(unknown)"}`)
+    console.log(`  font:    ${result.terminal.font ?? "(unknown)"}`)
+    console.log(`  theme:   ${result.terminal.theme ?? "(unknown)"}`)
+    console.log(`  resized: ${result.terminal.resized ? "yes" : "no (used app default size)"}`)
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    process.exitCode = 1
+  }
+}
+
+// =============================================================================
 // Action
 // =============================================================================
 
@@ -574,7 +635,6 @@ async function recordAction(
   opts: {
     output?: string[]
     tape?: string
-    fmt?: string
     backend?: string
     cols: number
     rows: number
@@ -590,8 +650,24 @@ async function recordAction(
     raw?: boolean
     showKeys?: boolean
     theme?: string
+    compat?: boolean
+    terminal?: string
+    cwd?: string
   },
 ): Promise<void> {
+  // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
+  if (opts.compat) {
+    await compatRecord(command, {
+      terminal: opts.terminal,
+      output: opts.output,
+      cols: opts.cols,
+      rows: opts.rows,
+      cwd: opts.cwd,
+      waitFor: opts.waitFor,
+    })
+    return
+  }
+
   // ── Scripted mode: inline tape commands ──
   if (opts.tape) {
     const source = opts.tape.replace(/\\n/g, "\n")
@@ -710,14 +786,13 @@ async function recordAction(
 // =============================================================================
 
 export function registerRecordCommand(program: Command): void {
-  program
+  const cmd = program
     .command("record")
     .alias("rec")
-    .description("Tape recorder — record terminal sessions")
+    .description("Record a terminal session — to a tape, frames, or compat capture")
     .argument("[command...]", "Command to record")
     .option("-o, --output <path>", "Output file(s), format by extension (repeat for multiple)", collectOutputPath, [])
     .option("-t, --tape <commands>", "Inline tape commands (scripted mode)")
-    .option("--fmt <format>", "Output format for stdout: tape, cast (default: tape)")
     .option("-b, --backend <name>", "Backend name (default: vterm)")
     .option("--cols <n>", "Terminal columns", parseNum, 80)
     .option("--rows <n>", "Terminal rows", parseNum, 24)
@@ -733,8 +808,17 @@ export function registerRecordCommand(program: Command): void {
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
-    .actionMerged(async (opts: { command: string[] } & Record<string, any>) => {
-      const { command, ...rest } = opts
-      await recordAction(command, rest as any)
-    })
+    .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")
+    .option("--terminal <name>", "Compat terminal app: ghostty, kitty, iterm, terminal (with --compat)")
+    .option("--cwd <path>", "Working directory for the recorded command (with --compat)")
+
+  cmd.addHelpSection("Compat capture (macOS, --compat):", [
+    ["$ termless record --compat -- bun km view ~/Vault", "Capture a TUI in the real desktop terminal"],
+    ["$ termless record --compat --terminal ghostty -o c.png -- bun km", "Explicit terminal app + output path"],
+  ])
+
+  cmd.actionMerged(async (opts: { command: string[] } & Record<string, any>) => {
+    const { command, ...rest } = opts
+    await recordAction(command, rest as any)
+  })
 }

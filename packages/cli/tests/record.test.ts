@@ -12,6 +12,8 @@ import {
   recordingTitle,
   setTitleSequence,
   collectOutputPath,
+  compatRecord,
+  COMPAT_TERMINALS,
 } from "../src/record-cmd.ts"
 
 function stripAnsi(text: string): string {
@@ -474,5 +476,33 @@ describe("eventsToTape", () => {
     expect(tape).not.toContain("?0u")
     expect(tape).not.toContain("[I")
     expect(tape).not.toContain("62;4c")
+  })
+})
+
+// ── Compat recording (record --compat, formerly compat-screenshot) ──
+
+describe("record --compat", () => {
+  it("exposes the four real-terminal apps", () => {
+    expect([...COMPAT_TERMINALS]).toEqual(["ghostty", "kitty", "iterm", "terminal"])
+  })
+
+  it("rejects an empty command with exit code 1", async () => {
+    const prevExit = process.exitCode
+    try {
+      await compatRecord([], { cols: 120, rows: 40 })
+      expect(process.exitCode).toBe(1)
+    } finally {
+      process.exitCode = prevExit
+    }
+  })
+
+  it("rejects an unknown --terminal with exit code 1", async () => {
+    const prevExit = process.exitCode
+    try {
+      await compatRecord(["bun", "km"], { cols: 120, rows: 40, terminal: "alacritty" })
+      expect(process.exitCode).toBe(1)
+    } finally {
+      process.exitCode = prevExit
+    }
   })
 })
