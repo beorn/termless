@@ -25,6 +25,8 @@ import {
   CSI_ENTER_ALT_SCREEN,
   CSI_HIDE_CURSOR,
   CSI_LEAVE_ALT_SCREEN,
+  CSI_MOUSE_OFF,
+  CSI_MOUSE_ON,
   CSI_SHOW_CURSOR,
   rowToAnsi,
   SGR_RESET,
@@ -235,8 +237,12 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
   let stopped = false
   let layout = computeLayout(hostCols(), hostRows(), terminal.cols, terminal.rows, metrics)
 
-  // Enter alt screen + clear + hide cursor.
-  out.write(CSI_ENTER_ALT_SCREEN + CSI_HIDE_CURSOR + CSI_CLEAR_SCREEN)
+  // Enter alt screen + clear + hide cursor + enable mouse reporting on the
+  // host. Any-event SGR mouse mode means the host emits mouse bytes on
+  // stdin, which the existing stdinHandler forwards verbatim to the PTY —
+  // so a TUI inside the recording (km view, htop, etc.) sees trackpad +
+  // click events without any extra wiring.
+  out.write(CSI_ENTER_ALT_SCREEN + CSI_HIDE_CURSOR + CSI_CLEAR_SCREEN + CSI_MOUSE_ON)
 
   function paintChrome(buf: string[]): void {
     const blinkOn = Math.floor(elapsedMs / 500) % 2 === 0
@@ -299,15 +305,20 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     }
   }
 
-  function paint(): void {
-    if (stopped) return
-    const buf: string[] = [SGR_RESET, CSI_CLEAR_SCREEN]
-    paintChrome(buf)
-    paintGrid(buf)
-    // Mirror the headless terminal's cursor INTO the chrome — position the
-    // host cursor at the cell corresponding to the recorded shell's cursor
-    // and show it. Without this the user sees a frozen, cursor-less grid
-    // while typing into the recorded shell and assumes input is dead.
+  /**
+   * Park the host cursor inside the mirrored grid at the cell that
+   * corresponds to the recorded shell's cursor. Called as the LAST step
+   * of every paint (full + chrome-only) so the cursor stays anchored to
+   * the shell's input position. Without this, the chrome-only blink/clock
+   * repaint would leave the cursor wherever the last chrome emission
+   * landed (typically bottom-right) — visible to the user as a cursor
+   * that briefly appears in the right cell then jumps off-grid.
+   *
+   * Out-of-bounds cursors (host too small for the grid, cursor scrolled
+   * outside the visible region) get parked in the host's bottom-right
+   * + hidden, so any stray glyph emission lands somewhere safe.
+   */
+  function paintCursor(buf: string[]): void {
     const cursor = terminal.getCursor()
     const cursorVisible = cursor.visible !== false
     if (
@@ -319,11 +330,16 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     ) {
       buf.push(ansiCursorTo(layout.gridTop + cursor.y, layout.gridLeft + cursor.x) + SGR_RESET + CSI_SHOW_CURSOR)
     } else {
-      // Out-of-bounds cursor (e.g. headless reports beyond visibleRows when
-      // host is too small) — park it in the host's bottom-right so any
-      // stray glyph emission lands somewhere harmless and stays hidden.
       buf.push(ansiCursorTo(layout.hostRows, layout.hostCols) + SGR_RESET + CSI_HIDE_CURSOR)
     }
+  }
+
+  function paint(): void {
+    if (stopped) return
+    const buf: string[] = [SGR_RESET, CSI_CLEAR_SCREEN]
+    paintChrome(buf)
+    paintGrid(buf)
+    paintCursor(buf)
     out.write(buf.join(""))
     dirty = false
   }
@@ -334,10 +350,14 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     // Always refresh chrome each second (for the blinking dot + clock); the
     // grid only refreshes when `rerender()` was called since the last paint.
     else if (Math.floor(Date.now() / 500) % 2 === 0) {
-      // Chrome-only repaint for the blink/clock. Less expensive than full repaint.
+      // Chrome-only repaint for the blink/clock. Reposition the cursor
+      // back inside the grid AFTER the chrome emission — otherwise the
+      // chrome writes leave the cursor wherever the last border / title
+      // text landed, and the user sees the shell cursor jump off-grid
+      // every 500ms.
       const buf: string[] = []
       paintChrome(buf)
-      buf.push(ansiCursorTo(layout.hostRows, layout.hostCols) + SGR_RESET)
+      paintCursor(buf)
       out.write(buf.join(""))
     }
   }, tickMs)
@@ -371,7 +391,7 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
       if (out === process.stdout) {
         process.stdout.removeListener("resize", handleResize)
       }
-      out.write(SGR_RESET + CSI_LEAVE_ALT_SCREEN + CSI_SHOW_CURSOR)
+      out.write(CSI_MOUSE_OFF + SGR_RESET + CSI_LEAVE_ALT_SCREEN + CSI_SHOW_CURSOR)
     },
   }
 }

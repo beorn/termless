@@ -37,6 +37,23 @@ export const CSI_LEAVE_ALT_SCREEN = "\x1b[?1049l"
 export const CSI_CLEAR_SCREEN = "\x1b[2J"
 
 /**
+ * Enable SGR-encoded any-event mouse reporting on the host terminal.
+ *
+ * `?1003h` — report button presses, releases, AND motion (any-event mode).
+ * `?1006h` — SGR encoding (`\x1b[<button;col;rowM/m`) so coordinates
+ * survive past column 95 (the default X10 protocol uses single bytes).
+ *
+ * Pair with {@link CSI_MOUSE_OFF} on teardown. The recorded child program
+ * can independently enable/disable its own modes; this host-side enable
+ * just guarantees the terminal EMITS mouse bytes on stdin, which then get
+ * forwarded to the child via the existing stdin → PTY pipe.
+ */
+export const CSI_MOUSE_ON = "\x1b[?1006h\x1b[?1003h"
+
+/** Disable SGR-encoded any-event mouse reporting. Inverse of {@link CSI_MOUSE_ON}. */
+export const CSI_MOUSE_OFF = "\x1b[?1003l\x1b[?1006l"
+
+/**
  * Move the cursor to a 1-based (row, col) on the host terminal.
  * Out-of-bounds values are clamped to a minimum of 1.
  */

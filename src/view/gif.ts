@@ -122,6 +122,13 @@ export async function createGif(
         dispose: 1,
       })
 
+      // Yield to the event loop every frame so external progress UIs
+      // (spinners, ProgressBar) can tick. `gif.writeFrame` is CPU-bound
+      // (LZW encoding); without a yield the encoding loop monopolises
+      // the loop for the entire run and any silvery/react Spinner timer
+      // in the host process freezes mid-animation.
+      if ((i & 3) === 3) await new Promise<void>((r) => setImmediate(r))
+
       // Compare the NEXT frame against this frame's full (un-delta'd) content.
       prevIndexed = indexed
     }
