@@ -34,15 +34,15 @@ Add to your Claude Code MCP configuration:
 A session is a live [Terminal](../concepts/terminal) — a backend plus a PTY. The
 agent opens one with `start`, drives it, and closes it with `stop`.
 
-| Tool    | Maps to    | Does                                                            |
-| ------- | ---------- | --------------------------------------------------------------- |
-| `start` | record     | Open a live terminal session; optionally record it (`trace`)    |
-| `stop`  | record     | Close a session; finalize the recording if one was started      |
-| `list`  | —          | List active sessions                                            |
-| `press` | —          | Press a keyboard key (Playwright key format)                    |
-| `type`  | —          | Type text into the terminal                                     |
-| `text`  | —          | Read the terminal's current text                                |
-| `wait`  | —          | Wait for a text pattern or for the terminal to settle           |
+| Tool    | Maps to | Does                                                         |
+| ------- | ------- | ------------------------------------------------------------ |
+| `start` | record  | Open a live terminal session; optionally record it (`trace`) |
+| `stop`  | record  | Close a session; finalize the recording if one was started   |
+| `list`  | —       | List active sessions                                         |
+| `press` | —       | Press a keyboard key (Playwright key format)                 |
+| `type`  | —       | Type text into the terminal                                  |
+| `text`  | —       | Read the terminal's current text                             |
+| `wait`  | —       | Wait for a text pattern or for the terminal to settle        |
 
 ### `start`
 
@@ -72,10 +72,10 @@ recording is finalized first and its summary is returned.
 
 ## View tools
 
-| Tool         | Maps to | Does                                                        |
-| ------------ | ------- | ----------------------------------------------------------- |
-| `screenshot` | view    | View the live terminal as a single-frame image (PNG / SVG)  |
-| `trace`      | view    | View the frames recorded for a session                      |
+| Tool         | Maps to | Does                                                       |
+| ------------ | ------- | ---------------------------------------------------------- |
+| `screenshot` | view    | View the live terminal as a single-frame image (PNG / SVG) |
+| `trace`      | view    | View the frames recorded for a session                     |
 
 ### `screenshot`
 

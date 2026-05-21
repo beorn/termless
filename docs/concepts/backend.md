@@ -9,7 +9,7 @@ A **Backend** is a VT-emulator implementation: the engine that takes a stream of
 bytes (text and ANSI escape sequences) and maintains a terminal buffer — cells,
 colors, cursor, scrollback, modes.
 
-A Backend is the *live* side's foundation. It does one job: parse bytes into
+A Backend is the _live_ side's foundation. It does one job: parse bytes into
 state. It does not own a PTY, does not spawn processes, does not render pixels —
 a [Terminal](./terminal) wraps a Backend to add those.
 
@@ -21,14 +21,14 @@ colors differently, and scroll differently. Termless ships **multiple backends**
 so you can run the same test or recording against each one and find exactly where
 they diverge.
 
-| Backend     | Engine                          | Notes                                        |
-| ----------- | ------------------------------- | -------------------------------------------- |
-| `xtermjs`   | `@xterm/headless`               | Fast, portable — the default                 |
-| `ghostty`   | ghostty-web (WASM)              | Truecolor + full glyph coverage; visual work |
-| `vt100`     | pure TypeScript                 | Minimal VT100-era subset, zero native deps   |
-| `vterm`     | pure TypeScript                 | Full standards coverage                      |
-| `alacritty` | `alacritty_terminal` (napi-rs)  | Needs a Rust build                           |
-| `wezterm`   | `wezterm-term` (napi-rs)        | Needs a Rust build                           |
+| Backend     | Engine                           | Notes                                        |
+| ----------- | -------------------------------- | -------------------------------------------- |
+| `xtermjs`   | `@xterm/headless`                | Fast, portable — the default                 |
+| `ghostty`   | ghostty-web (WASM)               | Truecolor + full glyph coverage; visual work |
+| `vt100`     | pure TypeScript                  | Minimal VT100-era subset, zero native deps   |
+| `vterm`     | pure TypeScript                  | Full standards coverage                      |
+| `alacritty` | `alacritty_terminal` (napi-rs)   | Needs a Rust build                           |
+| `wezterm`   | `wezterm-term` (napi-rs)         | Needs a Rust build                           |
 | `peekaboo`  | OS automation against a real app | macOS only — pixel-perfect, slowest          |
 
 See the [Backends guide](../guide/backends) for the full capability matrix and

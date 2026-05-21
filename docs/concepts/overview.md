@@ -11,11 +11,11 @@ nothing else is a concept.
 
 ## The three objects
 
-| Object        | Is                                                            | Side     |
-| ------------- | ------------------------------------------------------------- | -------- |
-| **Backend**   | a VT-emulator implementation (xterm.js, Ghostty, vt100, …)    | live     |
-| **Terminal**  | a *live* session — Backend + PTY + buffer + a readable API   | live     |
-| **Recording** | a *captured* session — its commands, I/O, and frames over time | captured |
+| Object        | Is                                                             | Side     |
+| ------------- | -------------------------------------------------------------- | -------- |
+| **Backend**   | a VT-emulator implementation (xterm.js, Ghostty, vt100, …)     | live     |
+| **Terminal**  | a _live_ session — Backend + PTY + buffer + a readable API     | live     |
+| **Recording** | a _captured_ session — its commands, I/O, and frames over time | captured |
 
 Backend and Terminal are the **live** side: a program running right now, its
 output flowing into an emulator you can inspect. Recording is the **captured**
@@ -27,14 +27,14 @@ That is the entire noun vocabulary. There is no `Recorder`, no `Viewer`, no
 
 ## The four verbs
 
-Everything you *do* with a Recording is one of four verbs:
+Everything you _do_ with a Recording is one of four verbs:
 
-| Verb        | Does                                       | Direction               |
-| ----------- | ------------------------------------------ | ----------------------- |
-| **record**  | capture a Terminal into a Recording        | Terminal → Recording    |
+| Verb        | Does                                        | Direction                |
+| ----------- | ------------------------------------------- | ------------------------ |
+| **record**  | capture a Terminal into a Recording         | Terminal → Recording     |
 | **view**    | present a Recording (scrub / animate / web) | Recording → presentation |
-| **play**    | re-execute a Recording into a Terminal     | Recording → Terminal    |
-| **compare** | diff one Recording across N backends       | Recording → diff        |
+| **play**    | re-execute a Recording into a Terminal      | Recording → Terminal     |
+| **compare** | diff one Recording across N backends        | Recording → diff         |
 
 The same four verbs appear in the CLI (`termless record`, `termless view`,
 `termless play`, `termless compare`), in the library API, and in the MCP server.
@@ -43,9 +43,9 @@ Learn them once.
 ## Renderer is a strategy, not an object
 
 Turning a terminal buffer into pixels (PNG, SVG, canvas) is done by a
-**Renderer** — but a Renderer is an internal *strategy*, not a fifth domain
+**Renderer** — but a Renderer is an internal _strategy_, not a fifth domain
 object. Both `record` (frame capture) and `view` (per-frame display) use one
-internally. You pick a Renderer the way you pick a backend; you never *learn*
+internally. You pick a Renderer the way you pick a backend; you never _learn_
 it as a concept. Keeping it pluggable is what lets termless target the terminal
 today and canvas/DOM surfaces later without moving the three objects.
 

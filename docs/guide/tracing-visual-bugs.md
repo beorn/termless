@@ -6,12 +6,12 @@ description: Capture every render-relevant frame of a terminal session and scrub
 # Tracing Visual Bugs
 
 A static screenshot captures one moment. The **frames** projection of a
-[Recording](../concepts/recording) captures *every* render-relevant moment — so a
+[Recording](../concepts/recording) captures _every_ render-relevant moment — so a
 visual bug becomes investigable in one pass instead of a five-round-trip "does
 this look right?" interaction.
 
-This is the answer to questions like *"the border disappeared after frame 47 —
-what ANSI input caused it?"*
+This is the answer to questions like _"the border disappeared after frame 47 —
+what ANSI input caused it?"_
 
 ## When to use it
 

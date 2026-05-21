@@ -37,7 +37,7 @@ bun run postbuild:native   # copy the dylib/so/dll to termless-swash-render.node
 import { renderCells } from "@termless/swash-render"
 
 // `term` is any termless TerminalReadable
-const bitmap = renderCells(term)            // { pixels, width, height }
+const bitmap = renderCells(term) // { pixels, width, height }
 ```
 
 Or via the termless renderer enum:

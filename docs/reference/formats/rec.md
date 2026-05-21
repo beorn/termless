@@ -33,15 +33,15 @@ single-file API.
 
 ## `manifest.json`
 
-| Field              | Type                  | Meaning                                                     |
-| ------------------ | --------------------- | ----------------------------------------------------------- |
-| `recVersion`       | `number`              | The `.rec` format version.                                  |
-| `recordingVersion` | `1`                   | The Recording-model version.                                |
-| `cols` / `rows`    | `number`              | Terminal size at recording start.                           |
-| `durationMicros`   | `number`              | Total duration, integer microseconds.                       |
-| `reproducible`     | `boolean`             | Whether the frames projection can be regenerated from io.   |
-| `tracks`           | `{commands,io,frames}` | Which track files are present.                              |
-| `fingerprint`      | `RendererFingerprint` | The Renderer fingerprint the frames were rendered against.  |
+| Field              | Type                   | Meaning                                                    |
+| ------------------ | ---------------------- | ---------------------------------------------------------- |
+| `recVersion`       | `number`               | The `.rec` format version.                                 |
+| `recordingVersion` | `1`                    | The Recording-model version.                               |
+| `cols` / `rows`    | `number`               | Terminal size at recording start.                          |
+| `durationMicros`   | `number`               | Total duration, integer microseconds.                      |
+| `reproducible`     | `boolean`              | Whether the frames projection can be regenerated from io.  |
+| `tracks`           | `{commands,io,frames}` | Which track files are present.                             |
+| `fingerprint`      | `RendererFingerprint`  | The Renderer fingerprint the frames were rendered against. |
 
 The presence of `manifest.json` is what distinguishes a full `.rec` container
 from a bare legacy frame-trace directory.
@@ -49,7 +49,7 @@ from a bare legacy frame-trace directory.
 ## Superset of the frame-trace layout
 
 The `frames/` subtree is **byte-identical** to a bare frame-trace directory —
-`index.jsonl` plus `NNNNN.png` files. An existing frame-trace directory *is* a
+`index.jsonl` plus `NNNNN.png` files. An existing frame-trace directory _is_ a
 valid `.rec` `frames/` subtree: `readRecording` loads a bare frame-trace
 directory (no `manifest.json`) as a frames-only Recording. That superset
 relationship keeps existing visual-regression goldens valid.
@@ -80,13 +80,7 @@ the PNG skipped, to save disk.
 ## API
 
 ```typescript
-import {
-  writeRecording,
-  readRecording,
-  packRecording,
-  unpackRecording,
-  isRecPath,
-} from "@termless/core"
+import { writeRecording, readRecording, packRecording, unpackRecording, isRecPath } from "@termless/core"
 
 // Write a Recording to a single .rec file
 writeRecording("mysession.rec", recording, { pngSourceDir: "/tmp/my-trace" })

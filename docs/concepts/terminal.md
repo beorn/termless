@@ -5,7 +5,7 @@ description: A Terminal is a live session — a Backend plus an optional PTY, a 
 
 # Terminal
 
-A **Terminal** is a *live* terminal session. It wraps a [Backend](./backend) and
+A **Terminal** is a _live_ terminal session. It wraps a [Backend](./backend) and
 adds everything you need to run a real program and inspect what it draws:
 
 - an optional **PTY** — spawn a process and connect it to the emulator;
@@ -15,7 +15,7 @@ adds everything you need to run a real program and inspect what it draws:
 - **region selectors** + **matchers** — the testing surface.
 
 A Terminal is the live counterpart of a [Recording](./recording): a Terminal is
-a session happening *now*; a Recording is a session captured *over time*.
+a session happening _now_; a Recording is a session captured _over time_.
 
 ## Creating a Terminal
 
@@ -35,7 +35,7 @@ A Terminal exposes its buffer as queryable values, never as a flat string:
 - **`RegionView`** — a lazy view over part of the screen that recomputes on access.
 - **`RowView`** — a single row with cell-level access.
 
-These are *value types within* a Terminal — not separate domain objects. You
+These are _value types within_ a Terminal — not separate domain objects. You
 read them; you don't construct a session out of them.
 
 ## Region selectors + matchers
@@ -51,7 +51,7 @@ expect(term).toHaveCursorAt(14, 2)
 
 Region selectors — `term.screen`, `term.scrollback`, `term.buffer`,
 `term.viewport`, `term.row(n)`, `term.cell(r, c)`, `term.range(...)` — are an
-*API over* a Terminal, not a noun of their own.
+_API over_ a Terminal, not a noun of their own.
 
 See the [Terminal API](../api/terminal) for the full method list, the
 [Writing Tests guide](../guide/writing-tests) for the testing workflow, and the

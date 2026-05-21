@@ -5,13 +5,13 @@ description: A Recording is a captured terminal session — a timeline of comman
 
 # Recording
 
-A **Recording** is a captured terminal session: the *captured* counterpart of a
+A **Recording** is a captured terminal session: the _captured_ counterpart of a
 live [Terminal](./terminal). Where a Terminal is a session happening now, a
 Recording is that session frozen onto a timeline you can replay, scrub, animate,
 and diff.
 
 A Recording is **one concept** — not five. The file formats it serializes to
-(`.tape`, `.cast`, `.rec`) are *encodings*, not separate things. Naming the
+(`.tape`, `.cast`, `.rec`) are _encodings_, not separate things. Naming the
 concept after a serialization would be the JPEG-vs-Photo error: the photo is the
 thing; JPEG is one way to store it.
 
@@ -20,15 +20,15 @@ thing; JPEG is one way to store it.
 A Recording is a timeline carrying up to three tracks. Two are **sources** — the
 session itself — and one is a **projection** — a derived view of it.
 
-| Track        | Tier                  | Holds                                                                  |
-| ------------ | --------------------- | ---------------------------------------------------------------------- |
-| **commands** | source — *intent*     | timed high-level instructions: key presses, `Type`, `Sleep`, `Resize`  |
-| **io**       | source — *observed*   | timed raw byte events, direction-tagged `in` / `out`                   |
-| **frames**   | projection — *derived* | rendered visual states + capture metadata (dirty regions, ANSI, PNG)   |
+| Track        | Tier                   | Holds                                                                 |
+| ------------ | ---------------------- | --------------------------------------------------------------------- |
+| **commands** | source — _intent_      | timed high-level instructions: key presses, `Type`, `Sleep`, `Resize` |
+| **io**       | source — _observed_    | timed raw byte events, direction-tagged `in` / `out`                  |
+| **frames**   | projection — _derived_ | rendered visual states + capture metadata (dirty regions, ANSI, PNG)  |
 
-**commands** and **io** are *causal* — they *are* the session. **commands** is
+**commands** and **io** are _causal_ — they _are_ the session. **commands** is
 the intent (what you asked the terminal to do); **io** is the observed truth (the
-exact bytes that flowed). **frames** is an *effect* — a materialized view of
+exact bytes that flowed). **frames** is an _effect_ — a materialized view of
 `io × Renderer`. A frame can be regenerated; mutating one does not change the
 session.
 
@@ -40,9 +40,9 @@ trace adds the frames projection.
 
 When more than one track is present:
 
-- **io** is the authoritative *observation* — `play` uses it for byte-exact
+- **io** is the authoritative _observation_ — `play` uses it for byte-exact
   reproduction.
-- **commands** is the authoritative *intent* — `play` defaults to it because it
+- **commands** is the authoritative _intent_ — `play` defaults to it because it
   is editable.
 
 All tracks share **one monotonic clock in integer microseconds**. Float
@@ -63,16 +63,16 @@ Everything you do with a Recording is one of the [four verbs](./overview):
 ## Formats
 
 A Recording serializes to and from three on-disk formats. Formats are
-*encodings* — see the [Formats reference](../reference/formats/) for full specs.
+_encodings_ — see the [Formats reference](../reference/formats/) for full specs.
 
-| Format     | Role                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------- |
-| **`.tape`** | charm/VHS interop. A *compiler* input — `.tape` → commands track. Round-trip is lossy. |
-| **`.cast`** | asciinema interop. A symmetric *codec* — `.cast` ⇄ io track, lossless.                 |
-| **`.rec`** | termless's own native format — a single-file container carrying all three tracks losslessly. |
+| Format      | Role                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| **`.tape`** | charm/VHS interop. A _compiler_ input — `.tape` → commands track. Round-trip is lossy.       |
+| **`.cast`** | asciinema interop. A symmetric _codec_ — `.cast` ⇄ io track, lossless.                       |
+| **`.rec`**  | termless's own native format — a single-file container carrying all three tracks losslessly. |
 
-`.tape` is special: it is a *scenario compiler*, not a symmetric codec. `Type "hi"`
-*expands* into key events with timing; `Sleep` is a player directive. Going back
+`.tape` is special: it is a _scenario compiler_, not a symmetric codec. `Type "hi"`
+_expands_ into key events with timing; `Sleep` is a player directive. Going back
 out (Recording → `.tape`) is best-effort. `.cast` is a true codec — the io track
 round-trips losslessly. `.rec` is termless's lossless canonical form.
 

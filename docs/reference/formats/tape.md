@@ -6,11 +6,11 @@ description: Complete reference for the .tape recording format -- commands, sett
 # `.tape` Format Reference
 
 `.tape` is one of the three on-disk [formats](./) a [Recording](../../concepts/recording)
-serializes to. It is a line-based DSL for *scripting* a terminal session, compatible
+serializes to. It is a line-based DSL for _scripting_ a terminal session, compatible
 with [VHS](https://github.com/charmbracelet/vhs) by Charmbracelet — termless adds
 headless execution and multi-backend playback.
 
-`.tape` is a **compiler input**, not a symmetric codec: a `.tape` file *compiles*
+`.tape` is a **compiler input**, not a symmetric codec: a `.tape` file _compiles_
 into a Recording's **commands** track (`Type "hi"` expands into key events with
 timing; `Sleep` is a player directive). Going the other way — Recording → `.tape` —
 is best-effort. For lossless storage of all tracks, use [`.rec`](./rec).
@@ -117,8 +117,8 @@ Sleep 0.5s
 
 ### Screenshot
 
-Capture a screenshot of the current terminal state. `Screenshot` is a *render
-directive* — it tells the player to rasterize the current buffer:
+Capture a screenshot of the current terminal state. `Screenshot` is a _render
+directive_ — it tells the player to rasterize the current buffer:
 
 ```tape
 # Screenshot with auto-generated path
