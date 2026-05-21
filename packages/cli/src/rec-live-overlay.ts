@@ -252,26 +252,25 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     // Top border
     buf.push(ansiCursorTo(layout.frameTop, layout.frameLeft) + b.tl + b.h.repeat(innerWidth) + b.tr)
 
-    // Title-bar row — title on the LEFT (bold + bright white for contrast),
-    // optional traffic-light dots tucked to the RIGHT of the title cluster.
-    // Earlier layout put dots first and the title mid-bar, which read as
-    // "title is centred" — the user wants the title pinned left for fast
-    // scanning while the dots stay decorative on the right.
+    // Title-bar row — traffic-light dots on the LEFT (the macOS / Mission
+    // Control mental model), title to the RIGHT of the dots, pinned LEFT
+    // (no centring) so it reads as "this window is X" instead of floating.
+    // Title rendered in bold + bright-white SGR (\x1b[1;97m) — the heaviest
+    // weight most terminals honour.
     if (metrics.showTitleBar) {
       const titleRow = layout.frameTop + 1
-      // ANSI 1 = bold, 97 = bright-white foreground. The dual code is what
-      // most terminals interpret as "as bold as you have" — visibly heavier
-      // than plain bold against the inner padding.
       const titleSgr = "\x1b[1;97m"
       const dotsStr = metrics.showDots ? "\x1b[31m●\x1b[33m ●\x1b[32m ●\x1b[0m" : ""
       const dotsVisibleLen = metrics.showDots ? 5 : 0 // "● ● ●" = 5 cells
-      // Leave space for "  · " separator + dots if showing.
-      const dotsBlock = metrics.showDots ? `  \x1b[2m·\x1b[0m  ${dotsStr}` : ""
-      const dotsBlockVisibleLen = metrics.showDots ? 2 + 1 + 2 + dotsVisibleLen : 0
-      const maxTitleLen = Math.max(0, innerWidth - 2 - dotsBlockVisibleLen)
+      // " ● ● ●  " — 1 leading space + dots + 2 trailing spaces before title.
+      // When dots are absent (chromeStyle === "windows"), drop the dot block
+      // and start the title right after the left border + 1 padding space.
+      const dotsBlock = metrics.showDots ? ` ${dotsStr}  ` : " "
+      const dotsBlockVisibleLen = metrics.showDots ? 1 + dotsVisibleLen + 2 : 1
+      const maxTitleLen = Math.max(0, innerWidth - dotsBlockVisibleLen - 1)
       const titleText = title.slice(0, maxTitleLen)
-      const titleLine = ` ${titleSgr}${titleText}\x1b[0m${dotsBlock}`
-      const visible = 1 + titleText.length + dotsBlockVisibleLen
+      const titleLine = `${dotsBlock}${titleSgr}${titleText}\x1b[0m`
+      const visible = dotsBlockVisibleLen + titleText.length
       const pad = Math.max(0, innerWidth - visible)
       buf.push(ansiCursorTo(titleRow, layout.frameLeft) + b.v + titleLine + " ".repeat(pad) + b.v)
     }

@@ -368,13 +368,14 @@ async function interactiveRecord(
       ? { ...(termFont ? { fontFamily: `'${termFont}', monospace` } : {}), ...chrome }
       : undefined
 
-  // ── Bare `record` → pre-flight help gate, then record on Enter ──
-  if (command === undefined) {
-    const { runHelpGate } = await import("./help-gate.ts")
-    await runHelpGate({ shell, cols: opts.cols, rows: opts.rows, outputs: outputPaths })
-  }
-
-  // Styled separator + info (stderr, won't appear in .tape stdout).
+  // No pre-recording gate. The live overlay's status line above the chrome
+  // (`● REC m:ss · Ctrl+D to stop`) is enough inline help; making the user
+  // hit Enter before a shell session is gratuitous friction. Bare `record`
+  // (no command) spawns $SHELL straight into the chrome.
+  //
+  // Styled separator + recording-start banner still goes to stderr — it
+  // won't appear in .tape stdout, and it carries the size + output paths
+  // for users running `record` from a shell script.
   process.stderr.write(
     formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages: true }),
   )
