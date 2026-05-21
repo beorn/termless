@@ -389,17 +389,25 @@ async function interactiveRecord(
   let frameCapped = false
 
   // Spawn with real PTY — capture output AND forward to terminal
+  // ONE streaming decoder for the whole PTY byte stream. A fresh
+  // new-TextDecoder per chunk corrupts any multi-byte UTF-8 sequence
+  // (box-drawing, arrows, emoji) that straddles a chunk boundary - each half
+  // decodes to U+FFFD, surfacing as stray '?'-like marks on card borders. A
+  // persistent decoder with { stream: true } buffers the partial sequence
+  // until the next chunk completes it.
+  const ptyDecoder = new TextDecoder()
   const pty = spawnPty({
     command: cmd,
     cols: opts.cols,
     rows: opts.rows,
     onData: (data: Uint8Array) => {
+      const text = ptyDecoder.decode(data, { stream: true })
       // Record output event for asciicast
-      outputEvents.push({ time: Date.now() - startTime, data: new TextDecoder().decode(data) })
-      // Forward to real terminal
+      outputEvents.push({ time: Date.now() - startTime, data: text })
+      // Forward to real terminal (raw bytes - no decode round-trip)
       process.stdout.write(data)
       // Feed into headless terminal for image capture
-      headlessTerminal.feed(new TextDecoder().decode(data))
+      headlessTerminal.feed(text)
     },
   })
 

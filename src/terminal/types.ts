@@ -431,6 +431,14 @@ export interface SvgScreenshotOptions {
   playbackSpeed?: number
   /** Output framerate in frames per second (default: 50). */
   framerate?: number
+  /**
+   * Embed the bundled fonts into the SVG as base64 `@font-face` rules, and
+   * point `font-family` at them (default: false). A self-contained SVG renders
+   * identically everywhere — no host-font dependency. Use for standalone
+   * `.svg` output; leave off for the GIF pipeline (the rasterizer supplies
+   * fonts, and per-frame embedding would bloat the in-memory frame set).
+   */
+  embedFonts?: boolean
 }
 
 export interface PngScreenshotOptions extends SvgScreenshotOptions {

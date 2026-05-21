@@ -43,9 +43,11 @@ describe("createAnimatedSvg", () => {
     expect(result).toContain("</svg>")
     expect(result).toContain("Hello")
 
-    // No animation CSS needed for single frame
-    expect(result).not.toContain("<style>")
+    // No animation CSS needed for single frame. A `<style>` may still be
+    // present — it carries the embedded `@font-face` rules that make the SVG
+    // self-contained — so assert on the animation-specific markers instead.
     expect(result).not.toContain("@keyframes")
+    expect(result).not.toContain("animation:")
   })
 
   it("uses correct visibility timing for frames", () => {

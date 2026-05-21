@@ -17,10 +17,44 @@ import type {
   CursorState,
   WindowBar,
 } from "../terminal/types.ts"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import {
+  BUNDLED_FONTS,
+  bundledFontsDir,
+  BUNDLED_PRIMARY_FAMILY,
+  BUNDLED_SYMBOL_FAMILY,
+  BUNDLED_NERD_FAMILY,
+  BUNDLED_EMOJI_FAMILY,
+} from "./fonts.ts"
 
 // ── Defaults ──
 
-const DEFAULT_FONT_FAMILY = "'Menlo', 'Monaco', 'Courier New', monospace"
+/** font-family stack naming the bundled faces — used when `embedFonts` is set. */
+const BUNDLED_FONT_FAMILY = `'${BUNDLED_PRIMARY_FAMILY}', '${BUNDLED_SYMBOL_FAMILY}', '${BUNDLED_NERD_FAMILY}', '${BUNDLED_EMOJI_FAMILY}', 'Menlo', 'Monaco', monospace`
+
+let cachedFontDefs: string | null = null
+/**
+ * A `<defs><style>` block embedding the bundled fonts as base64 `@font-face`
+ * rules. Makes an SVG self-contained — it renders identically in any
+ * rasterizer or browser, with no host-font dependency. Cached (the fonts are
+ * ~1.8 MB; build the data URIs once per process).
+ */
+export function embeddedFontFaceDefs(): string {
+  if (cachedFontDefs !== null) return cachedFontDefs
+  const dir = bundledFontsDir()
+  const faces: string[] = []
+  for (const { file, family } of BUNDLED_FONTS) {
+    try {
+      const b64 = readFileSync(join(dir, file)).toString("base64")
+      faces.push(`@font-face{font-family:'${family}';src:url(data:font/ttf;base64,${b64});}`)
+    } catch {
+      // a missing bundled font is non-fatal — skip it
+    }
+  }
+  cachedFontDefs = faces.length > 0 ? `<defs><style>${faces.join("")}</style></defs>` : ""
+  return cachedFontDefs
+}
 const DEFAULT_FONT_SIZE = 16
 const DEFAULT_CELL_WIDTH = 9.6
 const DEFAULT_CELL_HEIGHT = 20
@@ -270,11 +304,12 @@ interface ResolvedOptions {
   windowBarSize: number
   margin: number
   marginFill: string | null
+  embedFonts: boolean
 }
 
 function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
   return {
-    fontFamily: options?.fontFamily ?? DEFAULT_FONT_FAMILY,
+    fontFamily: options?.fontFamily ?? BUNDLED_FONT_FAMILY,
     fontSize: options?.fontSize ?? DEFAULT_FONT_SIZE,
     cellWidth: options?.cellWidth ?? DEFAULT_CELL_WIDTH,
     cellHeight: options?.cellHeight ?? DEFAULT_CELL_HEIGHT,
@@ -287,6 +322,7 @@ function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
     windowBarSize: options?.windowBarSize ?? 40,
     margin: options?.margin ?? 0,
     marginFill: options?.marginFill ?? null,
+    embedFonts: options?.embedFonts ?? false,
   }
 }
 
@@ -468,6 +504,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
     parts.push(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
     )
+    if (opts.embedFonts) parts.push(embeddedFontFaceDefs())
     parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
 
     for (const rect of buildBgRects(lines, cellWidth, cellHeight, themeFg, themeBg)) {
@@ -499,6 +536,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
   )
+  if (opts.embedFonts) parts.push(embeddedFontFaceDefs())
 
   // Outer margin fill
   if (margin > 0 && marginFill) {

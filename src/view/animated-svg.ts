@@ -9,6 +9,7 @@
  */
 
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
+import { embeddedFontFaceDefs } from "../render/svg.ts"
 
 /** Extract the inner content of an SVG element (everything between <svg ...> and </svg>). */
 function stripSvgWrapper(svg: string): string {
@@ -57,9 +58,12 @@ export function createAnimatedSvg(frames: AnimationFrame[], options?: AnimationO
   // Single frame — no animation needed
   if (frames.length === 1) {
     const content = stripSvgWrapper(frames[0]!.svg)
-    return [`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`, content, `</svg>`].join(
-      "\n",
-    )
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
+      embeddedFontFaceDefs(),
+      content,
+      `</svg>`,
+    ].join("\n")
   }
 
   // Calculate total duration and cumulative timing
@@ -115,6 +119,7 @@ export function createAnimatedSvg(frames: AnimationFrame[], options?: AnimationO
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
+    embeddedFontFaceDefs(),
     `<style>`,
     ...styleLines,
     `</style>`,
