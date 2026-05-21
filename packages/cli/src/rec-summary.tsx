@@ -97,7 +97,7 @@ export function RecordSummary({
   return (
     <Box flexDirection="column">
       <Text>
-        Cmd <Strong>`{cmdLabel}`</Strong>
+        Cmd <Strong>{cmdLabel}</Strong>
       </Text>
       <Text>
         Rec <Strong>{formatDuration(durationMs)}</Strong> at {cols}x{rows}, {plural(keystrokeCount, "keystroke")},{" "}
