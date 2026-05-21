@@ -30,6 +30,8 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "n
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { writeViewer } from "./frame-viewer.ts"
+import { traceToRecording } from "./frame-trace-recording.ts"
+import type { Recording } from "./recording-model.ts"
 import type { ScreenshotOptions, Terminal } from "./types.ts"
 
 export interface FrameTraceOptions {
@@ -135,6 +137,18 @@ export interface FrameTracer {
   framesSinceTime(ts: number): Frame[]
   /** Flush pending debounced frame, close index file, return summary. */
   stop(): Promise<FrameTraceSummary>
+  /**
+   * Project the frames captured so far into the unified in-memory
+   * {@link Recording} model — a `Recording` whose `frames` projection is
+   * populated (Phase 2 of the Recording-domain unification).
+   *
+   * This is a pure in-memory projection: it touches no disk and does not
+   * alter the `index.jsonl` + `NNNNN.png` layout. Call after `stop()` for the
+   * complete trace, or any time for a snapshot.
+   *
+   * @throws {Error} when no frames have been captured.
+   */
+  toRecording(): Recording
   /** Was the trace truncated by maxFrames cap. */
   readonly truncated: boolean
   /** Total frames recorded (unique + duplicate). */
@@ -485,6 +499,21 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
       return frames.filter((f) => f.ts >= ts)
     },
     stop,
+    toRecording(): Recording {
+      // Pure in-memory projection — re-shapes the captured `frames` into the
+      // unified Recording model. The on-disk `index.jsonl` + PNG layout is
+      // untouched. Buffer geometry comes from the first frame (or the
+      // tracer's canvas opts as a fallback for a 0-frame edge).
+      const cols = frames[0]?.buffer.cols ?? options.canvas?.cols ?? terminal.cols
+      const rows = frames[0]?.buffer.rows ?? options.canvas?.rows ?? terminal.rows
+      return traceToRecording({
+        frames,
+        cols,
+        rows,
+        backend: terminal.backend.name,
+        ...(options.canvas !== undefined ? { canvas: options.canvas } : {}),
+      })
+    },
     get truncated() {
       return truncated
     },
