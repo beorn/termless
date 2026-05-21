@@ -5,9 +5,9 @@
  * title) as a deterministic string, so frame recorders can detect non-text
  * changes like cursor style, color, and mode transitions.
  *
- * The captured-session model itself lives in `recording-model.ts` (the unified
+ * The captured-session model itself lives in `recording.ts` (the unified
  * `Recording` type) and its format codecs (`asciicast/recording-codec.ts`,
- * `tape/compile.ts`, `native-trec.ts`). This module is only the
+ * `tape/compile.ts`, `native/native-trec.ts`). This module is only the
  * buffer-snapshot helper used by the `record` verb's change-detection loop.
  */
 
