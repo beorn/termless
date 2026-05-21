@@ -205,13 +205,29 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
  *
  * @returns The written paths with their byte sizes, for the `✓` summary.
  */
+/**
+ * Per-target progress hook. The recorder uses this to draw a "writing N
+ * files..." progress block in the host terminal AFTER it has torn down the
+ * live overlay — so the user can see writes happening on the normal screen
+ * instead of staring at a frozen recording overlay.
+ *
+ * `phase: "start"` fires just before the file is written.
+ * `phase: "done"`  fires after the file is written, with `bytes` populated.
+ */
+export interface WriteOutputsProgress {
+  (event: { phase: "start" | "done"; target: OutputTarget; index: number; total: number; bytes?: number }): void
+}
+
 export async function writeOutputs(
   targets: readonly OutputTarget[],
   session: CapturedSession,
   eventsToTape: (s: CapturedSession) => string,
+  onProgress?: WriteOutputsProgress,
 ): Promise<Array<{ path: string; bytes: number }>> {
   const written: Array<{ path: string; bytes: number }> = []
-  for (const target of targets) {
+  for (let i = 0; i < targets.length; i++) {
+    const target = targets[i]!
+    onProgress?.({ phase: "start", target, index: i, total: targets.length })
     mkdirSync(dirname(resolve(target.path)), { recursive: true })
     switch (target.format) {
       case "cast":
@@ -227,7 +243,9 @@ export async function writeOutputs(
         await writeImage(target.path, target.format, session)
         break
     }
-    written.push({ path: target.path, bytes: statSync(resolve(target.path)).size })
+    const bytes = statSync(resolve(target.path)).size
+    onProgress?.({ phase: "done", target, index: i, total: targets.length, bytes })
+    written.push({ path: target.path, bytes })
   }
   return written
 }

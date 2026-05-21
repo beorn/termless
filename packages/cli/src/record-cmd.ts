@@ -573,14 +573,47 @@ async function interactiveRecord(
 
     const durationMs = Date.now() - startTime
 
-    // Restore the previous terminal title before writing summaries or artifacts.
+    // ── Tear down the recording UI BEFORE writing artifacts ────────────────
+    //
+    // The recording session is over the moment the PTY exits. Output
+    // rendering (GIF encoding, PNG rasterization) can take several seconds
+    // on a 300-frame capture — long enough that an idle, frozen-looking
+    // overlay reads as "hung" and trips users into Ctrl-C. Restore the host
+    // terminal to its normal state NOW and let the writes happen visibly on
+    // the normal screen, with a per-file progress block.
+
+    clearInterval(titleTimer)
+    if (frameTimer) {
+      clearInterval(frameTimer)
+      frameTimer = null
+    }
+    if (stdinHandler) {
+      process.stdin.removeListener("data", stdinHandler)
+      stdinHandler = null
+    }
+    if (process.stdin.isTTY) {
+      try {
+        process.stdin.setRawMode(false)
+      } catch {
+        // Best-effort — non-TTY env.
+      }
+    }
+    process.stdin.pause()
     restoreTitle()
+    if (liveView) {
+      try {
+        liveView.stop()
+      } catch {
+        // Best-effort.
+      }
+      liveView = null
+    }
 
     if (frameCapped) {
       process.stderr.write(faint(`  frame cap (${FRAME_CAP}) reached — recording truncated\n`))
     }
 
-    // Project the capture into every requested output.
+    // Project the capture into every requested output, with per-file progress.
     const session: CapturedSession = {
       cols: opts.cols,
       rows: opts.rows,
@@ -591,8 +624,25 @@ async function interactiveRecord(
       frames: animationFrames,
       renderer,
     }
-    const savedOutputs = await writeOutputs(targets, session, (s) =>
-      eventsToTape(s.inputEvents, s.command.join(" "), raw),
+
+    if (targets.length > 0) {
+      const plural = targets.length === 1 ? "" : "s"
+      process.stderr.write(faint(`\n  Writing ${targets.length} output file${plural}...\n`))
+    }
+
+    const savedOutputs = await writeOutputs(
+      targets,
+      session,
+      (s) => eventsToTape(s.inputEvents, s.command.join(" "), raw),
+      (event) => {
+        if (event.phase === "start") {
+          process.stderr.write(faint(`  \x1b[2K  ◌ ${event.target.path}...\r`))
+        } else {
+          // Overwrite the "◌ writing..." line with the final "✓ name (size)".
+          const sizeStr = event.bytes != null ? ` ${formatBytes(event.bytes)}` : ""
+          process.stderr.write(`  \x1b[2K\x1b[32m✓\x1b[0m ${event.target.path}${faint(sizeStr)}\n`)
+        }
+      },
     )
 
     process.stderr.write(
@@ -605,13 +655,16 @@ async function interactiveRecord(
       }),
     )
   } finally {
+    // Best-effort cleanup for the unhappy path (exception before teardown).
     clearInterval(titleTimer)
     if (frameTimer) clearInterval(frameTimer)
-    if (stdinHandler) {
-      process.stdin.removeListener("data", stdinHandler)
-    }
+    if (stdinHandler) process.stdin.removeListener("data", stdinHandler)
     if (process.stdin.isTTY) {
-      process.stdin.setRawMode(false)
+      try {
+        process.stdin.setRawMode(false)
+      } catch {
+        // Best-effort.
+      }
     }
     process.stdin.pause()
     restoreTitle()
@@ -619,7 +672,7 @@ async function interactiveRecord(
       try {
         liveView.stop()
       } catch {
-        // Best-effort restore — host terminal cleanup still proceeds.
+        // Best-effort.
       }
     }
     headlessTerminal.close()
