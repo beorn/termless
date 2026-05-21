@@ -20,7 +20,7 @@
 
 import { spawnSync } from "node:child_process"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
-import { spawnPty, type PtyHandle } from "../../../src/pty.ts"
+import { spawnPty, type PtyHandle } from "../../../src/terminal/pty.ts"
 import { exec, execDetached, readFileAsBuffer } from "./exec.ts"
 import type {
   TerminalBackend,
@@ -31,7 +31,7 @@ import type {
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-} from "../../../src/types.ts"
+} from "../../../src/terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Types

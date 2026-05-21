@@ -24,7 +24,7 @@
 
 import { describe, expect, test } from "vitest"
 import { renderAnsiPng } from "../src/render.ts"
-import { dHash, hashDistance } from "../../../src/cross-renderer.ts"
+import { dHash, hashDistance } from "../../../src/compare.ts"
 
 // ── Platform-aware dHash tolerance ──
 //

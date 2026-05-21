@@ -6,7 +6,7 @@
  * @resvg/resvg-js is not installed.
  */
 
-import type { TerminalReadable, SvgScreenshotOptions } from "../types.ts"
+import type { TerminalReadable, SvgScreenshotOptions } from "../terminal/types.ts"
 import { screenshotSvg } from "./svg.ts"
 
 export interface PngScreenshotOptions extends SvgScreenshotOptions {

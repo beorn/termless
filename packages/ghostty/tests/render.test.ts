@@ -17,8 +17,8 @@ import { renderAnsiPng, renderTerminalPng, _resetDomShimForTesting, type CanvasT
 import { cellsToAnsi } from "../src/cells-to-ansi.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import type { Ghostty } from "ghostty-web"
-import type { TerminalBackend } from "../../../src/types.ts"
-import { dHash, hashDistance } from "../../../src/cross-renderer.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
+import { dHash, hashDistance } from "../../../src/compare.ts"
 
 // Path to the canonical fixture in km-tui. We don't import via the test file —
 // just load the bytes. This dependency is acceptable because the fixture is

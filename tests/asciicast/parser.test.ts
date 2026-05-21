@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseAsciicast } from "../../src/asciicast/reader.ts"
+import { parseAsciicast } from "../../src/recording/asciicast/reader.ts"
 
 describe("parseAsciicast", () => {
   test("parses a simple asciicast v2 file", () => {

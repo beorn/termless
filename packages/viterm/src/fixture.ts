@@ -41,10 +41,10 @@
  */
 
 import { afterEach, describe } from "vitest"
-import type { Terminal, TerminalCreateOptions } from "../../../src/types.ts"
+import type { Terminal, TerminalCreateOptions } from "../../../src/terminal/types.ts"
 import { createTerminal } from "../../../src/index.ts"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
-import { backend, backends, isReady } from "../../../src/backends.ts"
+import { backend, backends, isReady } from "../../../src/backend/backends.ts"
 
 // ═══════════════════════════════════════════════════════
 // Option types

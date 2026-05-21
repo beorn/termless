@@ -7,7 +7,7 @@
  */
 
 import { createSessionManager } from "./session.ts"
-import { snapshotVisualState } from "../../../src/recording.ts"
+import { snapshotVisualState } from "../../../src/recording/visual-snapshot.ts"
 import { generateSlideshow, type SlideshowFrame } from "../../../src/view/slideshow.ts"
 import { mkdir, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"

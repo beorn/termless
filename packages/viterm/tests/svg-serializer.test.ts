@@ -11,7 +11,7 @@
 import { describe, test, expect } from "vitest"
 import { svgTerminalSerializer, svgTerminalSnapshot } from "../src/svg-serializer.ts"
 import "../src/matchers.ts" // Auto-register matchers (includes toMatchSvgSnapshot)
-import type { TerminalReadable, Cell, CursorState, ScrollbackState, TerminalMode } from "../../../src/types.ts"
+import type { TerminalReadable, Cell, CursorState, ScrollbackState, TerminalMode } from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Terminal

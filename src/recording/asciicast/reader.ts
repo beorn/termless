@@ -5,7 +5,7 @@
  * a termless Terminal or TerminalBackend.
  */
 
-import type { Terminal, TerminalBackend } from "../types.ts"
+import type { Terminal, TerminalBackend } from "../../terminal/types.ts"
 import type { AsciicastEvent, AsciicastEventType, AsciicastHeader, AsciicastRecording } from "./types.ts"
 
 /** Options for replaying an asciicast recording. */

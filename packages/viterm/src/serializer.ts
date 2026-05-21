@@ -10,7 +10,7 @@
  *   expect.addSnapshotSerializer(terminalSerializer)
  */
 
-import type { TerminalReadable, Cell, RGB } from "../../../src/types.ts"
+import type { TerminalReadable, Cell, RGB } from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Snapshot Marker

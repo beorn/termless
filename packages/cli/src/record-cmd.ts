@@ -24,9 +24,9 @@
 import type { Command } from "@silvery/commander"
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { parseTape } from "../../../src/tape/parser.ts"
-import { executeTape } from "../../../src/tape/executor.ts"
-import { overlayKeystroke } from "../../../src/tape/overlay.ts"
+import { parseTape } from "../../../src/recording/tape/parser.ts"
+import { executeTape } from "../../../src/recording/tape/executor.ts"
+import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { createSessionManager } from "./session.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
@@ -315,7 +315,7 @@ async function interactiveRecord(
   // Styled separator + info (stderr, won't appear in .tape stdout).
   process.stderr.write(formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages }))
 
-  const { spawnPty } = await import("../../../src/pty.ts")
+  const { spawnPty } = await import("../../../src/terminal/pty.ts")
 
   const inputEvents: Array<{ time: number; bytes: Uint8Array }> = []
   const outputEvents: Array<{ time: number; data: string }> = []
@@ -336,14 +336,14 @@ async function interactiveRecord(
   }, 1000)
 
   // If image output is requested, create a headless terminal that mirrors PTY output
-  let headlessTerminal: import("../../../src/types.ts").Terminal | null = null
+  let headlessTerminal: import("../../../src/terminal/types.ts").Terminal | null = null
   const animationFrames: import("../../../src/view/animation-types.ts").AnimationFrame[] = []
   let frameTimer: ReturnType<typeof setInterval> | null = null
   let lastFrameText = ""
 
   if (wantImages) {
-    const { createTerminal } = await import("../../../src/terminal.ts")
-    const { backend } = await import("../../../src/backends.ts")
+    const { createTerminal } = await import("../../../src/terminal/terminal.ts")
+    const { backend } = await import("../../../src/backend/backends.ts")
     const b = await backend("vterm")
     headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
   }

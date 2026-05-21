@@ -17,7 +17,7 @@ import type {
   TerminalMode,
   KeyDescriptor,
   TerminalCapabilities,
-} from "../../../src/types.ts"
+} from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Minimal Mock Backend

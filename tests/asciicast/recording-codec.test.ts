@@ -8,9 +8,13 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseAsciicast } from "../../src/asciicast/reader.ts"
-import { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "../../src/asciicast/recording-codec.ts"
-import { createRecording, micros, secondsToMicros } from "../../src/recording-model.ts"
+import { parseAsciicast } from "../../src/recording/asciicast/reader.ts"
+import {
+  decodeAsciicast,
+  decodeAsciicastSource,
+  encodeAsciicast,
+} from "../../src/recording/asciicast/recording-codec.ts"
+import { createRecording, micros, secondsToMicros } from "../../src/recording/recording.ts"
 
 const CAST =
   [

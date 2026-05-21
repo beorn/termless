@@ -1,8 +1,8 @@
-import { parseKey, keyToAnsi } from "../../../src/key-mapping.ts"
-import { parseAsciicast } from "../../../src/asciicast/reader.ts"
-import { parseTape, parseDuration } from "../../../src/tape/parser.ts"
-import type { AsciicastEvent } from "../../../src/asciicast/types.ts"
-import type { TapeCommand, TapeFile } from "../../../src/tape/parser.ts"
+import { parseKey, keyToAnsi } from "../../../src/terminal/key-mapping.ts"
+import { parseAsciicast } from "../../../src/recording/asciicast/reader.ts"
+import { parseTape, parseDuration } from "../../../src/recording/tape/parser.ts"
+import type { AsciicastEvent } from "../../../src/recording/asciicast/types.ts"
+import type { TapeCommand, TapeFile } from "../../../src/recording/tape/parser.ts"
 import type { CompiledPlayback, CompilePlaybackOptions, PlaybackEvent } from "./types.ts"
 
 const DEFAULT_COLS = 80

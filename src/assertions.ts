@@ -19,7 +19,7 @@ import type {
   TerminalMode,
   TerminalReadable,
   UnderlineStyle,
-} from "./types.ts"
+} from "./terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Result Type

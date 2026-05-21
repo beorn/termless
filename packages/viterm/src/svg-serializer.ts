@@ -10,7 +10,7 @@
  *   expect.addSnapshotSerializer(svgTerminalSerializer)
  */
 
-import type { TerminalReadable, SvgScreenshotOptions } from "../../../src/types.ts"
+import type { TerminalReadable, SvgScreenshotOptions } from "../../../src/terminal/types.ts"
 import { screenshotSvg } from "../../../src/render/svg.ts"
 
 // =============================================================================

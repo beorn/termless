@@ -16,7 +16,7 @@ import {
   isReady,
   backend,
   getInstalledVersion,
-} from "../../../src/backends.ts"
+} from "../../../src/backend/backends.ts"
 import { printComponent } from "./render.tsx"
 import { Header, StatusLine, Summary } from "./ui.tsx"
 

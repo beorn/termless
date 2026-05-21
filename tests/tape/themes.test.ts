@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { resolveTheme, listThemes, listAliases } from "../../src/tape/themes.ts"
+import { resolveTheme, listThemes, listAliases } from "../../src/recording/tape/themes.ts"
 
 // =============================================================================
 // resolveTheme

@@ -29,11 +29,11 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { writeViewer } from "./view/viewer.ts"
+import { writeViewer } from "../view/viewer.ts"
 import { traceToRecording } from "./frame-trace-recording.ts"
-import { writeRecording } from "./native-trec.ts"
-import type { Recording } from "./recording-model.ts"
-import type { ScreenshotOptions, Terminal } from "./types.ts"
+import { writeRecording } from "./native/native-trec.ts"
+import type { Recording } from "./recording.ts"
+import type { ScreenshotOptions, Terminal } from "../terminal/types.ts"
 
 export interface FrameTraceOptions {
   /** Output directory. Created if missing. */

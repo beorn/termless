@@ -20,7 +20,7 @@ import type {
   RegionView,
   CellView,
   RowView,
-} from "../../../src/types.ts"
+} from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Factories

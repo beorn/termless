@@ -11,7 +11,7 @@
  * buffer-snapshot helper used by the `record` verb's change-detection loop.
  */
 
-import type { Cell, RGB, TerminalReadable, TerminalMode, UnderlineStyle } from "./types.ts"
+import type { Cell, RGB, TerminalReadable, TerminalMode, UnderlineStyle } from "../terminal/types.ts"
 
 // =============================================================================
 // Visual State Snapshotting

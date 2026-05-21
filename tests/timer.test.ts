@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { createMockTimer } from "../src/timer.ts"
+import { createMockTimer } from "../src/terminal/timer.ts"
 
 // =============================================================================
 // setTimeout

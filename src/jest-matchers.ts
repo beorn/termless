@@ -15,7 +15,7 @@
  *   expect(term).toHaveCursorAt(5, 10)
  */
 
-import type { CursorStyle, RGB, TerminalMode, UnderlineStyle } from "./types.ts"
+import type { CursorStyle, RGB, TerminalMode, UnderlineStyle } from "./terminal/types.ts"
 import {
   assertRegionView,
   assertCellView,
@@ -61,10 +61,7 @@ function toMatcherResult(result: AssertionResult) {
  * the surface is `CrossRendererOptions` (minus `cols`/`rows` — the matcher
  * fills those from the terminal) plus the matcher-only `dimensionTolerance`.
  */
-export type ToMatchAcrossRenderersOptions = Omit<
-  import("./cross-renderer.ts").CrossRendererOptions,
-  "cols" | "rows"
-> & {
+export type ToMatchAcrossRenderersOptions = Omit<import("./compare.ts").CrossRendererOptions, "cols" | "rows"> & {
   /** Max canvas-vs-svg dimension drift before the matcher fails. Default 0.10. */
   dimensionTolerance?: number
 }
@@ -242,8 +239,8 @@ export const termlessMatchers = {
     options: ToMatchAcrossRenderersOptions = {},
   ): Promise<{ pass: boolean; message: () => string }> {
     assertTerminalReadable(received, "toMatchAcrossRenderers")
-    const { captureCrossRenderer } = await import("./cross-renderer.ts")
-    const term = received as import("./types.ts").Terminal
+    const { captureCrossRenderer } = await import("./compare.ts")
+    const term = received as import("./terminal/types.ts").Terminal
     const result = await captureCrossRenderer(term, {
       ...options,
       cols: term.cols,

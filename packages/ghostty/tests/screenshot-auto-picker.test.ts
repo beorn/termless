@@ -15,8 +15,8 @@
  */
 
 import { describe, test, expect, beforeAll } from "vitest"
-import { createTerminal } from "../../../src/terminal.ts"
-import { dHash, hashDistance } from "../../../src/cross-renderer.ts"
+import { createTerminal } from "../../../src/terminal/terminal.ts"
+import { dHash, hashDistance } from "../../../src/compare.ts"
 import { createXtermBackend } from "../../xtermjs/src/index.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import type { Ghostty } from "ghostty-web"

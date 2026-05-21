@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { snapshotVisualState } from "../src/recording.ts"
+import { snapshotVisualState } from "../src/recording/visual-snapshot.ts"
 import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable } from "../src/index.ts"
 
 // =============================================================================

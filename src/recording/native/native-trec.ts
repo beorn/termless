@@ -40,8 +40,8 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
-import type { TraceFrame } from "./frame-trace.ts"
-import { traceToRecording } from "./frame-trace-recording.ts"
+import type { TraceFrame } from "../frame-trace.ts"
+import { traceToRecording } from "../frame-trace-recording.ts"
 import {
   type Command,
   type IoEvent,
@@ -49,7 +49,7 @@ import {
   type RendererFingerprint,
   createRecording,
   micros,
-} from "./recording-model.ts"
+} from "../recording.ts"
 import { buildZip, parseZip, type ZipEntry } from "./zip-archive.ts"
 
 /** The `.trec` format version written into every `manifest.json`. */

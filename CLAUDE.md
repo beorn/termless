@@ -78,7 +78,7 @@ The dHash regression tolerance is platform-aware via `TERMLESS_CI_PLATFORM` (set
 
 ## Backend Registry
 
-`backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/backends.ts` provides:
+`backends.json` pins backend versions (like Playwright's `browsers.json`). The registry in `src/backend/backends.ts` provides:
 
 - `backend("ghostty")` — async resolution (handles WASM/native init)
 - `backends()` — list all backend names

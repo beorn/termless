@@ -6,8 +6,14 @@ import { describe, expect, test } from "vitest"
 import { mkdtempSync, rmSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { readRecording, writeRecording, packRecording, unpackRecording, isTrecPath } from "../src/native-trec.ts"
-import { createRecording, micros, secondsToMicros } from "../src/recording-model.ts"
+import {
+  readRecording,
+  writeRecording,
+  packRecording,
+  unpackRecording,
+  isTrecPath,
+} from "../src/recording/native/native-trec.ts"
+import { createRecording, micros, secondsToMicros } from "../src/recording/recording.ts"
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), "trec-test-"))

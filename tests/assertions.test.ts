@@ -15,7 +15,7 @@ import type {
   RegionView,
   Cell,
   UnderlineStyle,
-} from "../src/types.ts"
+} from "../src/terminal/types.ts"
 import {
   assertContainsText,
   assertHasText,

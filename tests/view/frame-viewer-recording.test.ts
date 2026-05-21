@@ -16,7 +16,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { writeViewerFromRecording } from "../../src/view/viewer.ts"
 import { recordingToPngFrames, recordingToAnimationFrames } from "../../src/view/from-recording.ts"
-import { type Frame, type Recording, createRecording, micros } from "../../src/recording-model.ts"
+import { type Frame, type Recording, createRecording, micros } from "../../src/recording/recording.ts"
 
 let dir: string
 

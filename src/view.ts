@@ -21,11 +21,11 @@
  */
 
 import { writeFileSync } from "node:fs"
-import type { Recording } from "./recording-model.ts"
+import type { Recording } from "./recording/recording.ts"
 import { writeViewer, writeViewerFromRecording, type WriteViewerResult } from "./view/viewer.ts"
 import { renderAnimation, type AnimationFormat } from "./view/animation.ts"
 import { recordingToAnimationFrames, type FromRecordingOptions } from "./view/from-recording.ts"
-import type { Frame as ModelFrame } from "./recording-model.ts"
+import type { Frame as ModelFrame } from "./recording/recording.ts"
 
 /** The presentation mode of the `view` verb. */
 export type ViewMode = "scrub" | "animate"

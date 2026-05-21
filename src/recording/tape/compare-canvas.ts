@@ -30,10 +30,10 @@
  */
 
 import type { TapeFile } from "./parser.ts"
-import type { Cell, CursorState, Terminal, TerminalBackend, TerminalReadable } from "../types.ts"
+import type { Cell, CursorState, Terminal, TerminalBackend, TerminalReadable } from "../../terminal/types.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
-import { pngDimensions } from "../cross-renderer.ts"
+import { pngDimensions } from "../../compare.ts"
 import { encodePng, decodePngRgba, type RgbaImage } from "./png-codec.ts"
 
 // =============================================================================

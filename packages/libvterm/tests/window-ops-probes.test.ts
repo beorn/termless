@@ -15,7 +15,7 @@
 import { describe, test, expect } from "vitest"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import type { TerminalBackend } from "../../../src/types.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
 const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/

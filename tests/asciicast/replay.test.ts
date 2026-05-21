@@ -6,9 +6,9 @@
  */
 
 import { describe, test, expect, vi } from "vitest"
-import { parseAsciicast, replayAsciicast } from "../../src/asciicast/reader.ts"
-import { createTerminal } from "../../src/terminal.ts"
-import type { AsciicastRecording } from "../../src/asciicast/types.ts"
+import { parseAsciicast, replayAsciicast } from "../../src/recording/asciicast/reader.ts"
+import { createTerminal } from "../../src/terminal/terminal.ts"
+import type { AsciicastRecording } from "../../src/recording/asciicast/types.ts"
 
 // Use vterm backend — pure TypeScript, full feature coverage, no native deps
 import { createVtermBackend } from "../../packages/vterm/src/backend.ts"

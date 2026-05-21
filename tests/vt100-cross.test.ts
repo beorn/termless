@@ -10,7 +10,7 @@
  */
 import { describe, test, expect, afterEach } from "vitest"
 import { createVt100Backend } from "../packages/vt100/src/backend.ts"
-import type { TerminalBackend, Cell } from "../src/types.ts"
+import type { TerminalBackend, Cell } from "../src/terminal/types.ts"
 
 // ── Native module availability check ──────────────────────────────
 

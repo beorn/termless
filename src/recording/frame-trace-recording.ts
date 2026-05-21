@@ -30,9 +30,9 @@ import {
   type RendererFingerprint,
   createRecording,
   micros,
-} from "./recording-model.ts"
+} from "./recording.ts"
 import type { TraceFrame } from "./frame-trace.ts"
-import type { ScreenshotOptions } from "./types.ts"
+import type { ScreenshotOptions } from "../terminal/types.ts"
 
 /** Canvas options the frame tracer was created with — the fingerprint source. */
 export type TraceCanvasOptions = Pick<ScreenshotOptions, "cols" | "rows" | "fontSize" | "fontPath" | "theme" | "dpr">

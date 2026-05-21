@@ -16,11 +16,11 @@ import {
   isReady,
   getInstalledVersion,
   createTerminalByName,
-} from "../src/backends.ts"
-import { createTerminal } from "../src/terminal.ts"
+} from "../src/backend/backends.ts"
+import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createVt100Backend } from "../packages/vt100/src/backend.ts"
-import type { TerminalBackend } from "../src/types.ts"
+import type { TerminalBackend } from "../src/terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Manifest tests

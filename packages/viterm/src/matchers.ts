@@ -28,7 +28,7 @@ import type {
   UnderlineStyle,
   SvgScreenshotOptions,
   SvgTheme,
-} from "../../../src/types.ts"
+} from "../../../src/terminal/types.ts"
 import { screenshotSvg } from "../../../src/render/svg.ts"
 import {
   assertRegionView,

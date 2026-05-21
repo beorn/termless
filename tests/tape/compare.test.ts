@@ -7,10 +7,10 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseTape } from "../../src/tape/parser.ts"
-import { compareTape } from "../../src/tape/compare.ts"
+import { parseTape } from "../../src/recording/tape/parser.ts"
+import { compareTape } from "../../src/recording/tape/compare.ts"
 import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
-import type { TerminalBackend } from "../../src/types.ts"
+import type { TerminalBackend } from "../../src/terminal/types.ts"
 import * as UPNG from "upng-js"
 
 // =============================================================================

@@ -27,7 +27,7 @@ import { renderAnsiPng, renderTerminalPng } from "../src/render.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import { createTerminal, createFrameTracer } from "../../../src/index.ts"
 import type { Ghostty } from "ghostty-web"
-import type { TerminalBackend } from "../../../src/types.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 const FONTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "assets", "fonts")
 

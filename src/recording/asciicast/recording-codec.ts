@@ -20,7 +20,7 @@
  * needs markers should read them from {@link parseAsciicast} directly.
  */
 
-import { type Recording, type IoEvent, createRecording, micros, secondsToMicros } from "../recording-model.ts"
+import { type Recording, type IoEvent, createRecording, micros, secondsToMicros } from "../recording.ts"
 import { parseAsciicast } from "./reader.ts"
 import type { AsciicastHeader, AsciicastRecording } from "./types.ts"
 

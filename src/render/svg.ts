@@ -8,7 +8,15 @@
  * (macOS traffic light dots), margin, and margin fill color.
  */
 
-import type { TerminalReadable, SvgScreenshotOptions, SvgTheme, Cell, RGB, CursorState, WindowBar } from "../types.ts"
+import type {
+  TerminalReadable,
+  SvgScreenshotOptions,
+  SvgTheme,
+  Cell,
+  RGB,
+  CursorState,
+  WindowBar,
+} from "../terminal/types.ts"
 
 // ── Defaults ──
 

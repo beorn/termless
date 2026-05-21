@@ -6,8 +6,8 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { createAsciicastWriter } from "../../src/asciicast/writer.ts"
-import { parseAsciicast } from "../../src/asciicast/reader.ts"
+import { createAsciicastWriter } from "../../src/recording/asciicast/writer.ts"
+import { parseAsciicast } from "../../src/recording/asciicast/reader.ts"
 
 // =============================================================================
 // createAsciicastWriter

@@ -73,7 +73,7 @@ program
   .command("themes")
   .description("List available color themes for recordings")
   .action(async () => {
-    const { listThemes, listAliases, resolveTheme } = await import("../../../src/tape/themes.ts")
+    const { listThemes, listAliases, resolveTheme } = await import("../../../src/recording/tape/themes.ts")
     const themes = listThemes()
     const aliases = listAliases()
 

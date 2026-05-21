@@ -22,16 +22,11 @@
  * single monotonic clock. Never a float. asciicast's float-second timestamps
  * are normalized to integer µs on import (see {@link secondsToMicros}).
  *
- * Phase 1 of the Recording-domain unification (see the design doc §3, §6).
- * This is the **substrate phase**: the new model is defined here *alongside*
- * the legacy `recording.ts` / tape / asciicast artifacts. Nothing old is
- * deleted or changed; no consumer is migrated. Phases 2–6 do the migration.
- *
- * TEMPORARY MODULE NAME — Phase 6 reorg moves this to `recording/recording.ts`
- * and resolves the `Recording` name collision with the legacy
- * `src/recording.ts` export (which still owns the public `Recording` symbol
- * for now). Until then this type lives here under its own module so both can
- * coexist. Do not migrate consumers onto this type before Phase 2.
+ * This is `recording/recording.ts` — THE canonical captured-session model.
+ * The legacy fragmented artifacts (the old `recording.ts`, `asciicast/convert`)
+ * were purged in Phase 6A; this `Recording` type owns the concept. The format
+ * codecs live alongside it: `asciicast/recording-codec.ts` (the `.cast` codec),
+ * `tape/compile.ts` (the `.tape` compiler), `native/native-trec.ts` (`.trec`).
  */
 
 // =============================================================================

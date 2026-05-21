@@ -10,8 +10,8 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { createRecording, trackAuthority, micros, secondsToMicros, millisToMicros } from "../src/recording-model.ts"
-import type { Command, Frame, IoEvent, Recording, RendererFingerprint } from "../src/recording-model.ts"
+import { createRecording, trackAuthority, micros, secondsToMicros, millisToMicros } from "../src/recording/recording.ts"
+import type { Command, Frame, IoEvent, Recording, RendererFingerprint } from "../src/recording/recording.ts"
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

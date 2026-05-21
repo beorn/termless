@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { overlayKeystroke } from "../../src/tape/overlay.ts"
+import { overlayKeystroke } from "../../src/recording/tape/overlay.ts"
 
 // =============================================================================
 // Helpers

@@ -6,8 +6,8 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseTape } from "../../src/tape/parser.ts"
-import { executeTape } from "../../src/tape/executor.ts"
+import { parseTape } from "../../src/recording/tape/parser.ts"
+import { executeTape } from "../../src/recording/tape/executor.ts"
 import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
 
 // =============================================================================

@@ -11,7 +11,7 @@
 
 import { describe, test, expect, beforeEach, afterEach } from "vitest"
 import { createWeztermBackend, loadWeztermNative } from "../src/backend.ts"
-import type { TerminalBackend } from "../../../src/types.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 const encoder = new TextEncoder()
 const encode = (s: string) => encoder.encode(s)

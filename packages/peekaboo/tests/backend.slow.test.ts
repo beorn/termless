@@ -7,7 +7,7 @@
 
 import { describe, it, expect, afterEach } from "vitest"
 import { createPeekabooBackend } from "../src/backend.ts"
-import type { PtyHandle } from "../../../src/pty.ts"
+import type { PtyHandle } from "../../../src/terminal/pty.ts"
 
 describe("peekaboo backend", () => {
   let pty: PtyHandle | null = null

@@ -121,7 +121,7 @@ export async function createGifFromPngs(
   const decode =
     options?.decodePng ??
     (await (async () => {
-      const { decodePngRgba } = await import("../tape/png-codec.ts")
+      const { decodePngRgba } = await import("../recording/tape/png-codec.ts")
       return decodePngRgba
     })())
 

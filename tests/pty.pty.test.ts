@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { createTerminal } from "../src/terminal.ts"
+import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import "../packages/viterm/src/matchers.ts"
 

@@ -13,9 +13,9 @@
 import { describe, test, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { parseTape } from "../../src/tape/parser.ts"
-import { compareCanvas } from "../../src/tape/compare-canvas.ts"
-import { decodePngRgba } from "../../src/tape/png-codec.ts"
+import { parseTape } from "../../src/recording/tape/parser.ts"
+import { compareCanvas } from "../../src/recording/tape/compare-canvas.ts"
+import { decodePngRgba } from "../../src/recording/tape/png-codec.ts"
 import { createGhosttyBackend, initGhostty } from "../../packages/ghostty/src/index.ts"
 import { createXtermBackend } from "../../packages/xtermjs/src/index.ts"
 

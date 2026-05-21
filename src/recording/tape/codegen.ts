@@ -24,7 +24,7 @@
  * round-trip.
  */
 
-import type { Command, Recording } from "../recording-model.ts"
+import type { Command, Recording } from "../recording.ts"
 
 /** Options for {@link generateTape}. */
 export interface GenerateTapeOptions {

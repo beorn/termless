@@ -15,8 +15,8 @@ import { dirname, join } from "node:path"
 import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
-import type { TerminalBackend, TerminalOptions, Terminal } from "./types.ts"
-import { createTerminal } from "./terminal.ts"
+import type { TerminalBackend, TerminalOptions, Terminal } from "../terminal/types.ts"
+import { createTerminal } from "../terminal/terminal.ts"
 
 // ═══════════════════════════════════════════════════════
 // Manifest
@@ -50,7 +50,9 @@ export interface Manifest {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const MANIFEST_PATH = join(__dirname, "..", "backends.json")
+// `backends.json` lives at the package root; this file is `src/backend/`.
+const PACKAGE_ROOT = join(__dirname, "..", "..")
+const MANIFEST_PATH = join(PACKAGE_ROOT, "backends.json")
 
 let _manifest: Manifest | null = null
 
@@ -122,7 +124,7 @@ function runBuildScript(pkgDir: string): void {
   try {
     execSync(`bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
   } catch {
-    const flakeDir = join(__dirname, "..")
+    const flakeDir = PACKAGE_ROOT
     if (existsSync(join(flakeDir, "flake.nix"))) {
       execSync(`nix develop ${flakeDir} --command bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
     } else {

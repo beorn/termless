@@ -10,7 +10,7 @@
  * the built-in fallback themes.
  */
 
-import type { SvgTheme } from "../types.ts"
+import type { SvgTheme } from "../../terminal/types.ts"
 
 // =============================================================================
 // Built-in fallback themes (used when @silvery/theme is not installed)

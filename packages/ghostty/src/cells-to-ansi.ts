@@ -13,7 +13,7 @@
  * scroll history, or original SGR sequencing — just the final visible grid.
  */
 
-import type { Cell, CursorState, RGB, TerminalReadable } from "../../../src/types.ts"
+import type { Cell, CursorState, RGB, TerminalReadable } from "../../../src/terminal/types.ts"
 
 function rgbToSgr(role: "fg" | "bg", color: RGB): string {
   const code = role === "fg" ? 38 : 48

@@ -25,9 +25,9 @@
 
 import type { TapeFile, TapeCommand } from "./parser.ts"
 import { parseDuration } from "./parser.ts"
-import type { Terminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../types.ts"
-import { createTerminal } from "../terminal.ts"
-import { screenshotPng } from "../render/png.ts"
+import type { Terminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../../terminal/types.ts"
+import { createTerminal } from "../../terminal/terminal.ts"
+import { screenshotPng } from "../../render/png.ts"
 import { createFrameTracer } from "../frame-trace.ts"
 import type { FrameTracer, FrameTraceSummary } from "../frame-trace.ts"
 import { resolveTheme } from "./themes.ts"
@@ -149,7 +149,7 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
   let backendInstance: TerminalBackend
   const backendOpt = options?.backend ?? "vterm"
   if (typeof backendOpt === "string") {
-    const { backend } = await import("../backends.ts")
+    const { backend } = await import("../../backend/backends.ts")
     backendInstance = await backend(backendOpt)
   } else {
     backendInstance = backendOpt
@@ -313,7 +313,7 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
           terminal.press(keyName)
         } else {
           // In headless mode, feed the key's ANSI encoding directly
-          const { keyToAnsi, parseKey } = await import("../key-mapping.ts")
+          const { keyToAnsi, parseKey } = await import("../../terminal/key-mapping.ts")
           const ansi = keyToAnsi(parseKey(keyName))
           terminal.feed(ansi)
         }
@@ -327,7 +327,7 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
       if (terminal.alive) {
         terminal.press(keyStr)
       } else {
-        const { keyToAnsi, parseKey } = await import("../key-mapping.ts")
+        const { keyToAnsi, parseKey } = await import("../../terminal/key-mapping.ts")
         terminal.feed(keyToAnsi(parseKey(keyStr)))
       }
       break
@@ -338,7 +338,7 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
       if (terminal.alive) {
         terminal.press(keyStr)
       } else {
-        const { keyToAnsi, parseKey } = await import("../key-mapping.ts")
+        const { keyToAnsi, parseKey } = await import("../../terminal/key-mapping.ts")
         terminal.feed(keyToAnsi(parseKey(keyStr)))
       }
       break

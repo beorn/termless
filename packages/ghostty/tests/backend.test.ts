@@ -7,7 +7,7 @@
 import { describe, test, expect, beforeAll, afterEach } from "vitest"
 import { Ghostty } from "ghostty-web"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
-import type { TerminalBackend } from "../../../src/types.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 let ghostty: Ghostty
 

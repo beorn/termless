@@ -6,8 +6,8 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { diffBuffers } from "../src/diff.ts"
-import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable } from "../src/types.ts"
+import { diffBuffers } from "../src/terminal/diff.ts"
+import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable } from "../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Terminal Factory

@@ -15,7 +15,7 @@ import type {
   TerminalMode,
   RGB,
   UnderlineStyle,
-} from "../../../src/types.ts"
+} from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Terminal (same as matchers test)

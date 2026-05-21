@@ -26,7 +26,7 @@
  *   GUI access + spawns a real window.
  */
 
-import type { Terminal, SvgScreenshotOptions } from "./types.ts"
+import type { Terminal, SvgScreenshotOptions } from "./terminal/types.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
 
 export interface CrossRendererOptions {

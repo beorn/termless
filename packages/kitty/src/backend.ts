@@ -28,8 +28,8 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
-} from "../../../src/types.ts"
-import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
+} from "../../../src/terminal/types.ts"
+import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { execFileSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { dirname } from "node:path"

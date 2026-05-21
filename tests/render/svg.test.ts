@@ -8,7 +8,7 @@ import type {
   TerminalMode,
   ScrollbackState,
   UnderlineStyle,
-} from "../../src/types.ts"
+} from "../../src/terminal/types.ts"
 
 // ── Helpers ──
 

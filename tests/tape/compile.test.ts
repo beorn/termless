@@ -8,9 +8,9 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseTape } from "../../src/tape/parser.ts"
-import { compileTape, compileTapeSource } from "../../src/tape/compile.ts"
-import { generateTape } from "../../src/tape/codegen.ts"
+import { parseTape } from "../../src/recording/tape/parser.ts"
+import { compileTape, compileTapeSource } from "../../src/recording/tape/compile.ts"
+import { generateTape } from "../../src/recording/tape/codegen.ts"
 
 const SAMPLE = `
 # a sample tape

@@ -37,7 +37,7 @@ import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas"
-import type { TerminalReadable } from "../../../src/types.ts"
+import type { TerminalReadable } from "../../../src/terminal/types.ts"
 import { cellsToAnsi } from "./cells-to-ansi.ts"
 
 // ── Types ──

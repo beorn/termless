@@ -6,9 +6,9 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseKey, keyToAnsi } from "../src/key-mapping.ts"
-import { encodeKeyToAnsi } from "../src/key-encoding.ts"
-import { createTerminal } from "../src/terminal.ts"
+import { parseKey, keyToAnsi } from "../src/terminal/key-mapping.ts"
+import { encodeKeyToAnsi } from "../src/terminal/key-encoding.ts"
+import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import type {
   Cell,
@@ -20,7 +20,7 @@ import type {
   TerminalMode,
   TerminalOptions,
   RGB,
-} from "../src/types.ts"
+} from "../src/terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Mock Backend

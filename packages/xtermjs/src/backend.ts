@@ -29,8 +29,8 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
-} from "../../../src/types.ts"
-import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
+} from "../../../src/terminal/types.ts"
+import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
 // ═══════════════════════════════════════════════════════
 // ANSI 256-color palette

@@ -21,7 +21,7 @@
  * canvas/DOM target plugs in here without the three domain objects moving.
  */
 
-import type { TerminalReadable } from "../types.ts"
+import type { TerminalReadable } from "../terminal/types.ts"
 
 export { screenshotSvg, rgbToHex, rgbToString } from "./svg.ts"
 export { screenshotPng } from "./png.ts"

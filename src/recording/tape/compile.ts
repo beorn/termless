@@ -35,15 +35,8 @@
  * `Set Width`/`Set Height` also seed the recording's initial `cols`/`rows`.
  */
 
-import { createTerminal } from "../terminal.ts"
-import {
-  type Command,
-  type Micros,
-  type Recording,
-  createRecording,
-  micros,
-  millisToMicros,
-} from "../recording-model.ts"
+import { createTerminal } from "../../terminal/terminal.ts"
+import { type Command, type Micros, type Recording, createRecording, micros, millisToMicros } from "../recording.ts"
 import { type TapeCommand, type TapeFile, parseTape } from "./parser.ts"
 
 // =============================================================================

@@ -15,8 +15,8 @@ import type {
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-} from "../../../src/types.ts"
-import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
+} from "../../../src/terminal/types.ts"
+import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
 // ═══════════════════════════════════════════════════════
 // Backend factory

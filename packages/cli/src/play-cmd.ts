@@ -19,16 +19,16 @@ import type { Command } from "@silvery/commander"
 const parseNum = (v: string) => parseInt(v, 10)
 import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { parseTape } from "../../../src/tape/parser.ts"
-import { executeTape } from "../../../src/tape/executor.ts"
-import { compareTape, type CompareMode } from "../../../src/tape/compare.ts"
-import { compareCanvas } from "../../../src/tape/compare-canvas.ts"
-import { isReady as isBackendReadyForCanvas } from "../../../src/backends.ts"
-import { overlayKeystroke } from "../../../src/tape/overlay.ts"
-import { resolveTheme } from "../../../src/tape/themes.ts"
-import { backends as listBackends, isReady as isBackendReady } from "../../../src/backends.ts"
+import { parseTape } from "../../../src/recording/tape/parser.ts"
+import { executeTape } from "../../../src/recording/tape/executor.ts"
+import { compareTape, type CompareMode } from "../../../src/recording/tape/compare.ts"
+import { compareCanvas } from "../../../src/recording/tape/compare-canvas.ts"
+import { isReady as isBackendReadyForCanvas } from "../../../src/backend/backends.ts"
+import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
+import { resolveTheme } from "../../../src/recording/tape/themes.ts"
+import { backends as listBackends, isReady as isBackendReady } from "../../../src/backend/backends.ts"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
-import type { SvgScreenshotOptions, WindowBar } from "../../../src/types.ts"
+import type { SvgScreenshotOptions, WindowBar } from "../../../src/terminal/types.ts"
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -208,9 +208,9 @@ async function playCast(
     framerate?: number
   },
 ): Promise<void> {
-  const { parseAsciicast, replayAsciicast } = await import("../../../src/asciicast/reader.ts")
-  const { createTerminal } = await import("../../../src/terminal.ts")
-  const { backend } = await import("../../../src/backends.ts")
+  const { parseAsciicast, replayAsciicast } = await import("../../../src/recording/asciicast/reader.ts")
+  const { createTerminal } = await import("../../../src/terminal/terminal.ts")
+  const { backend } = await import("../../../src/backend/backends.ts")
 
   const recording = parseAsciicast(source)
   const cols = opts.cols || recording.header.width
@@ -436,8 +436,8 @@ async function playAction(
 
   // If tape has a Shell setting, spawn a real PTY and type into it
   if (shell) {
-    const { createTerminal } = await import("../../../src/terminal.ts")
-    const { backend } = await import("../../../src/backends.ts")
+    const { createTerminal } = await import("../../../src/terminal/terminal.ts")
+    const { backend } = await import("../../../src/backend/backends.ts")
     const cols = opts.cols || Number(tape.settings.Width) || 80
     const rows = opts.rows || Number(tape.settings.Height) || 24
 
@@ -494,7 +494,7 @@ async function playAction(
     }
 
     /** Format a tape command as a human-readable keystroke label. */
-    const commandToKeystroke = (cmd: import("../../../src/tape/parser.ts").TapeCommand): string => {
+    const commandToKeystroke = (cmd: import("../../../src/recording/tape/parser.ts").TapeCommand): string => {
       switch (cmd.type) {
         case "type": {
           const display = cmd.text.length > 20 ? `Type: ...${cmd.text.slice(-17)}` : `Type: ${cmd.text}`

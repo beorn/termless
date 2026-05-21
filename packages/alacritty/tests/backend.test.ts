@@ -9,7 +9,7 @@
  */
 import { describe, test, expect, afterEach } from "vitest"
 import { createAlacrittyBackend, loadAlacrittyNative } from "../src/backend.ts"
-import type { TerminalBackend } from "../../../src/types.ts"
+import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 // Skip all tests if native module is not available
 let nativeAvailable = false

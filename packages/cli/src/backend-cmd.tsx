@@ -31,7 +31,7 @@ import {
   getInstalledVersion,
   detectPackageManager,
   buildBackend,
-} from "../../../src/backends.ts"
+} from "../../../src/backend/backends.ts"
 import { printComponent } from "./render.tsx"
 import { Header, StatusLine, Summary, BackendsTable, type BackendRow } from "./ui.tsx"
 

@@ -37,9 +37,9 @@ import type {
   EmulatorWarning,
   WarningExtension,
   ScreenshotOptions,
-} from "../../../src/types.ts"
-import { pushWarning } from "../../../src/warnings.ts"
-import { encodeKeyToAnsi } from "../../../src/key-encoding.ts"
+} from "../../../src/terminal/types.ts"
+import { pushWarning } from "../../../src/terminal/warnings.ts"
+import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { renderTerminalPng } from "./render.ts"
 import type { RenderOptions } from "./render.ts"
 

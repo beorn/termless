@@ -5,8 +5,8 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseTape, parseDuration } from "../../src/tape/parser.ts"
-import type { TapeCommand } from "../../src/tape/parser.ts"
+import { parseTape, parseDuration } from "../../src/recording/tape/parser.ts"
+import type { TapeCommand } from "../../src/recording/tape/parser.ts"
 
 // =============================================================================
 // Duration parsing

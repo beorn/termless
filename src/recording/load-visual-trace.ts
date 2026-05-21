@@ -30,8 +30,8 @@
 
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { readRecording } from "./native-trec.ts"
-import type { Recording } from "./recording-model.ts"
+import { readRecording } from "./native/native-trec.ts"
+import type { Recording } from "./recording.ts"
 
 /** Options for {@link loadVisualTrace}. */
 export interface LoadVisualTraceOptions {

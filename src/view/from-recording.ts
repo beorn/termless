@@ -19,7 +19,7 @@
 
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import type { Frame as ModelFrame, Recording } from "../recording-model.ts"
+import type { Frame as ModelFrame, Recording } from "../recording/recording.ts"
 import type { AnimationFrame } from "./animation-types.ts"
 import type { PngFrame } from "./gif.ts"
 
