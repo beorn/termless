@@ -451,4 +451,72 @@ describe("screenshotSvg", () => {
     // Content: 20 + bar: 30 = 50
     expect(svg).toContain(`height="50"`)
   })
+
+  // ── Windows-style title bar ──
+
+  test("windowBar windows renders min/max/close glyphs, no traffic-light dots", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "windows" })
+    // Close glyph drawn in the Windows-red accent.
+    expect(svg).toContain("#e81123")
+    // A hollow square (maximize) and lines (minimize / close X).
+    expect(svg).toContain("<rect")
+    expect(svg).toContain("<line")
+    // No macOS traffic-light circles.
+    expect(svg).not.toContain("#ff5f57")
+    expect(svg).not.toContain("#28c840")
+  })
+
+  test("windowTitle renders title text in the bar", () => {
+    const term = createMockReadable(["Hi"])
+    const macos = screenshotSvg(term, { windowBar: "colorful", windowTitle: "bun km view" })
+    expect(macos).toContain("bun km view")
+    expect(macos).toContain("<text")
+    const win = screenshotSvg(term, { windowBar: "windows", windowTitle: "demo.sh" })
+    expect(win).toContain("demo.sh")
+  })
+
+  test("windowTitle is XML-escaped", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "colorful", windowTitle: "a & b <c>" })
+    expect(svg).toContain("a &amp; b &lt;c&gt;")
+  })
+
+  // ── Drop shadow ──
+
+  test("shadow emits a feDropShadow filter and applies it", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { shadow: 14, margin: 24 })
+    expect(svg).toContain('<filter id="window-shadow"')
+    expect(svg).toContain("feDropShadow")
+    expect(svg).toContain('filter="url(#window-shadow)"')
+  })
+
+  test("shadow=0 produces no filter", () => {
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "colorful" })
+    expect(svg).not.toContain("feDropShadow")
+  })
+
+  // ── Theme-aware bar color ──
+
+  test("bar color derives from the terminal background", () => {
+    const term = createMockReadable(["Hi"])
+    const dark = screenshotSvg(term, {
+      windowBar: "colorful",
+      theme: { background: "#101010" },
+    })
+    const light = screenshotSvg(term, {
+      windowBar: "colorful",
+      theme: { background: "#f0f0f0" },
+    })
+    // Different backgrounds → different derived bar colors. The bar rect is
+    // the first `rx`/`ry` rect emitted inside the window-bar group.
+    const barRe = /<rect width="[\d.]+" height="[\d.]+" rx="[\d.]+" ry="[\d.]+" fill="(#[0-9a-f]{6})"/
+    const darkBar = barRe.exec(dark)
+    const lightBar = barRe.exec(light)
+    expect(darkBar?.[1]).toBeDefined()
+    expect(lightBar?.[1]).toBeDefined()
+    expect(darkBar?.[1]).not.toBe(lightBar?.[1])
+  })
 })
