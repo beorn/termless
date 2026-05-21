@@ -129,16 +129,22 @@ describe("createFrameTracer", () => {
         rows: 2,
         onAfterWrite: (data) => hook?.(data),
       })
-      const tracer = createFrameTracer(term, { dir: dir3, debounceMs: 2, maxFrames: 2, renderFn: stubRender })
+      const maxFrames = 2
+      const tracer = createFrameTracer(term, { dir: dir3, debounceMs: 2, maxFrames, renderFn: stubRender })
       hook = tracer.onWrite
 
+      // Deterministic sync after each feed (mirrors 4fbd986 Windows CI race fix).
+      // Once the cap saturates, framesSinceSeq plateaus at maxFrames — bail out
+      // of the per-feed wait at that point so the loop doesn't time out on
+      // captures the tracer is intentionally rejecting.
       for (let i = 0; i < 5; i++) {
         term.feed(`${i}`)
-        await new Promise((r) => setTimeout(r, 8))
+        const target = Math.min(i + 1, maxFrames)
+        await waitForFrames(tracer, target)
       }
 
       const summary = await tracer.stop()
-      expect(summary.count).toBeLessThanOrEqual(2)
+      expect(summary.count).toBeLessThanOrEqual(maxFrames)
       expect(summary.truncated).toBe(true)
     } finally {
       rmSync(dir3, { recursive: true, force: true })
