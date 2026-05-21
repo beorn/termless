@@ -62,8 +62,6 @@
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.6.0",
         "commander": "^13.0.0",
-        "react": "^19.0.0",
-        "silvery": "^0.4.2",
         "zod": "^3.24.0",
       },
       "peerDependencies": {
@@ -1440,8 +1438,6 @@
     "@rolldown/binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
 
     "@termless/cli/@termless/core": ["@termless/monorepo@root:", {}],
-
-    "@termless/swash-render/@termless/core": ["@termless/monorepo@root:", {}],
 
     "@termless/xtermjs/@termless/core": ["@termless/monorepo@root:", {}],
 
