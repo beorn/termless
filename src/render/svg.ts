@@ -590,10 +590,13 @@ function renderWindowBar(
     parts.push(`<circle cx="${dotStartX + 40}" cy="${dotY}" r="${dotRadius}" fill="#28c840"/>`)
   }
 
-  // macOS title — centered.
+  // macOS title — flush-left to the right of the traffic-light dots,
+  // matching the live recording overlay's bold-flush-left layout.
+  // Dots sit at x=20, 40, 60 (radius 6) → rightmost edge ≈ 66; pad to 80.
   if (title) {
+    const titleStartX = dotStartX + 40 + dotRadius + 14 // 80
     parts.push(
-      `<text x="${barWidth / 2}" y="${dotY}" font-size="13" font-family="'Helvetica Neue', Arial, sans-serif" fill="${titleColor}" text-anchor="middle" dominant-baseline="central">${escapeXml(title)}</text>`,
+      `<text x="${titleStartX}" y="${dotY}" font-size="13" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="bold" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
     )
   }
 

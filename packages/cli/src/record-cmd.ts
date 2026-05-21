@@ -180,6 +180,19 @@ function detectTerminalFont(): string | undefined {
   return undefined
 }
 
+/**
+ * Compose a CSS font-family chain that starts with the user's detected
+ * terminal font and falls back to termless's bundled families. The
+ * rasterizer only has the bundled families registered, so without these
+ * fallbacks, Nerd Font + symbol + emoji glyphs render as tofu when the
+ * primary face is anything other than a bundled one.
+ *
+ * Exported for tests.
+ */
+export function composeFontFamily(primary: string): string {
+  return `'${primary}', 'TermlessMono', 'TermlessSymbols', 'TermlessNerd', 'TermlessEmoji', 'Menlo', 'Monaco', monospace`
+}
+
 // =============================================================================
 // Key-to-tape mapping
 // =============================================================================
@@ -363,9 +376,16 @@ async function interactiveRecord(
   // output (each frame carries it). `--title` defaults to the recorded command.
   const chromeStyle: ChromeStyle = opts.chrome ?? "none"
   const chrome = chromeStyle === "none" ? {} : chromeOptions(chromeStyle, opts.title ?? cmdLabel)
+  // When the host terminal's font is detected (e.g. `FiraMono Nerd Font Mono`
+  // from `~/.config/ghostty/config`), keep it at the head of the family chain
+  // but append termless's bundled-font fallbacks. The rasterizer (resvg /
+  // @napi-rs/canvas) only has the bundled families registered — a bare
+  // `'FiraMono Nerd Font Mono', monospace` chain skips straight to system
+  // `monospace`, which has no Nerd Font glyphs, so private-use codepoints
+  // (folder, file, hamburger, …) render as tofu in the captured GIF/PNG.
   const svgOpts: SvgScreenshotOptions | undefined =
     termFont || chromeStyle !== "none"
-      ? { ...(termFont ? { fontFamily: `'${termFont}', monospace` } : {}), ...chrome }
+      ? { ...(termFont ? { fontFamily: composeFontFamily(termFont) } : {}), ...chrome }
       : undefined
 
   // No pre-recording gate, no banner. The live overlay's status line above

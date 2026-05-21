@@ -42,7 +42,7 @@ async function loadGifenc() {
  */
 export async function createGif(
   frames: AnimationFrame[],
-  options?: AnimationOptions & { scale?: number; renderer?: RendererKind },
+  options?: AnimationOptions & { scale?: number; renderer?: RendererKind; forceSvg?: boolean },
 ): Promise<Uint8Array> {
   if (frames.length === 0) {
     throw new Error("createGif requires at least one frame")
@@ -56,14 +56,24 @@ export async function createGif(
   const defaultDuration = options?.defaultDuration ?? 100
   const loop = options?.loop ?? 0
   const scale = options?.scale ?? 2
+  // When chrome (window bar / border / shadow) is baked into the frame SVGs,
+  // the cell-native path can't reproduce it — chrome lives in SVG space, not
+  // the cell grid. Detect chrome in the first frame's SVG and force the SVG
+  // round-trip for every frame; callers can also opt in explicitly via
+  // `forceSvg: true`. Without this, `--chrome macos|windows` produces a GIF
+  // that drops the entire window frame.
+  const firstSvg = frames[0]?.svg ?? ""
+  const svgHasChrome = /windowBar|windowTitle|<rect[^>]*rx="\d+"/.test(firstSvg)
+  const forceSvg = options?.forceSvg === true || svgHasChrome
 
   const gif = GIFEncoder()
 
   // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
   // the SVG round-trip when the frame carries a snapshot — that is what makes
-  // color emoji and exact glyph coverage survive into the GIF.
+  // color emoji and exact glyph coverage survive into the GIF. Skipped when
+  // the frame includes chrome (no equivalent in the cell grid).
   const rasterize = (frame: AnimationFrame) =>
-    frame.snapshot && rasterizer.rasterizeCells
+    !forceSvg && frame.snapshot && rasterizer.rasterizeCells
       ? rasterizer.rasterizeCells(frame.snapshot, scale)
       : rasterizer.rasterize(frame.svg, scale)
 
