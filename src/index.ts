@@ -42,7 +42,7 @@ export type { Renderer, VectorRenderer, RasterRenderer } from "./render/index.ts
 export { cellsToAnsi } from "@termless/ghostty"
 export type { CanvasTheme } from "@termless/ghostty"
 export { createFrameTracer } from "./frame-trace.ts"
-export type { Frame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from "./frame-trace.ts"
+export type { TraceFrame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from "./frame-trace.ts"
 // Recording-domain adapter (Phase 2): frame-trace → Recording frames projection.
 export { traceToRecording, fingerprintFromCanvas } from "./frame-trace-recording.ts"
 export type { TraceToRecordingInput, TraceCanvasOptions } from "./frame-trace-recording.ts"
@@ -86,9 +86,22 @@ export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"
 export { diffBuffers } from "./diff.ts"
 export type { CellDiff, CellSummary, DiffResult } from "./diff.ts"
 
-// Recording and replay
-export { startRecording, replayRecording, snapshotVisualState } from "./recording.ts"
-export type { RecordedEvent, Recording, RecordingHandle } from "./recording.ts"
+// The unified captured-session model — the canonical Recording type.
+export { createRecording, trackAuthority, micros, secondsToMicros, millisToMicros } from "./recording-model.ts"
+export type {
+  Recording,
+  Command,
+  IoEvent,
+  IoDirection,
+  Frame,
+  Micros,
+  RendererFingerprint,
+  RecordingProvenance,
+  TrackAuthority,
+  CreateRecordingInput,
+} from "./recording-model.ts"
+// Visual-state snapshotting — buffer change detection for the `record` verb.
+export { snapshotVisualState } from "./recording.ts"
 
 // Mock timer for animation testing
 export { createMockTimer } from "./timer.ts"
@@ -114,7 +127,7 @@ export type { BackendEntry, Manifest, ResolveOptions } from "./backends.ts"
 export { parseTape, parseDuration } from "./tape/parser.ts"
 export type { TapeCommand, TapeFile } from "./tape/parser.ts"
 export { executeTape } from "./tape/executor.ts"
-export type { TapeExecutorOptions, TapeFrame, TapeResult } from "./tape/executor.ts"
+export type { TapeExecutorOptions, ScreenshotCapture, TapeResult } from "./tape/executor.ts"
 export { compareTape } from "./tape/compare.ts"
 export type { CompareMode, CompareOptions, CompareResult, BackendScreenshot, BackendSpec } from "./tape/compare.ts"
 export { compareCanvas, composeSideBySide, composeDiff } from "./tape/compare-canvas.ts"
@@ -151,10 +164,8 @@ export type { FromRecordingOptions } from "./view/from-recording.ts"
 // Asciicast v2 format
 export { parseAsciicast, replayAsciicast } from "./asciicast/reader.ts"
 export type { ReplayOptions } from "./asciicast/reader.ts"
-export { toAsciicast, createAsciicastWriter } from "./asciicast/writer.ts"
-export type { ToAsciicastOptions, AsciicastWriter } from "./asciicast/writer.ts"
-export { recordingToAsciicast, asciicastToRecording } from "./asciicast/convert.ts"
-export type { ConvertOptions } from "./asciicast/convert.ts"
+export { createAsciicastWriter } from "./asciicast/writer.ts"
+export type { AsciicastWriter } from "./asciicast/writer.ts"
 // Recording-domain adapter (Phase 2): .cast ⇄ Recording symmetric codec.
 export { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "./asciicast/recording-codec.ts"
 export type { EncodeAsciicastOptions } from "./asciicast/recording-codec.ts"

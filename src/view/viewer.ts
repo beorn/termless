@@ -20,7 +20,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { Frame } from "../frame-trace.ts"
+import type { TraceFrame } from "../frame-trace.ts"
 import type { Frame as ModelFrame, Recording } from "../recording-model.ts"
 
 export interface WriteViewerResult {
@@ -35,14 +35,14 @@ export interface WriteViewerResult {
 }
 
 /** Parse a frame-trace `index.jsonl`, tolerating a truncated final line. */
-function parseIndex(indexPath: string): Frame[] {
+function parseIndex(indexPath: string): TraceFrame[] {
   const raw = readFileSync(indexPath, "utf-8")
-  const frames: Frame[] = []
+  const frames: TraceFrame[] = []
   for (const line of raw.split("\n")) {
     const trimmed = line.trim()
     if (trimmed === "") continue
     try {
-      frames.push(JSON.parse(trimmed) as Frame)
+      frames.push(JSON.parse(trimmed) as TraceFrame)
     } catch {
       // Truncated/partial final line from a crashed session — stop here.
       break
@@ -84,7 +84,7 @@ export function writeViewer(dir: string): WriteViewerResult {
 
 /**
  * Project a unified-model {@link ModelFrame} onto the viewer's on-disk-shaped
- * wire {@link Frame}. The browser-side viewer JS reads the frozen on-disk
+ * wire {@link TraceFrame}. The browser-side viewer JS reads the frozen on-disk
  * field names (`ts`, `duplicate_of`, `ansi_input_preview`, …); this is the
  * one-way bridge from the {@link Recording} model into that wire shape.
  *
@@ -92,7 +92,7 @@ export function writeViewer(dir: string): WriteViewerResult {
  * `ts` field is treated as a relative ms position when no wall clock exists,
  * so a model frame's `at` is converted µs → ms.
  */
-function modelFrameToViewerFrame(frame: ModelFrame, prevAtMicros: number): Frame {
+function modelFrameToViewerFrame(frame: ModelFrame, prevAtMicros: number): TraceFrame {
   const tsMs = Math.round(frame.at / 1000)
   return {
     seq: frame.seq,
@@ -130,7 +130,7 @@ export function writeViewerFromRecording(recording: Recording, dir: string): Wri
   if (modelFrames === undefined || modelFrames.length === 0) {
     throw new Error("writeViewerFromRecording: recording has no frames projection")
   }
-  const frames: Frame[] = []
+  const frames: TraceFrame[] = []
   let prevAt = 0
   for (const mf of modelFrames) {
     frames.push(modelFrameToViewerFrame(mf, prevAt))
@@ -144,7 +144,7 @@ export function writeViewerFromRecording(recording: Recording, dir: string): Wri
  * template, write `viewer.html`. Used by both `writeViewer` (on-disk source)
  * and `writeViewerFromRecording` (in-memory `Recording` source).
  */
-function emitViewer(frames: Frame[], dir: string): WriteViewerResult {
+function emitViewer(frames: TraceFrame[], dir: string): WriteViewerResult {
   // Inline every referenced PNG as a data URI. Frames may share a PNG name
   // (they don't here — dedupe points dups at duplicate_of), and duplicate
   // frames have png:null; we resolve those through duplicate_of at view time.

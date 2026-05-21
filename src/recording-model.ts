@@ -183,8 +183,8 @@ export interface IoEvent {
  * stays *in* the Recording rather than being computed on demand.
  *
  * Each frame carries a {@link RendererFingerprint} + a `contentHash` so it can
- * be revalidated and regenerated. The unified shape later phases converge
- * `TapeFrame` and the legacy `Frame` onto.
+ * be revalidated and regenerated. This is the unified, canonical frame shape;
+ * the on-disk frame-trace index row (`TraceFrame`) is a serialization detail.
  */
 export interface Frame {
   /** 1-based sequence number within the projection. */

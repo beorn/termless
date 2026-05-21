@@ -1,43 +1,12 @@
 /**
- * asciicast v2 writer.
+ * asciicast v2 streaming writer.
  *
- * Converts termless recordings to asciicast v2 format and provides
- * a streaming writer for building asciicast files incrementally.
+ * Builds an asciicast v2 file incrementally from timestamped events. To
+ * serialize a captured {@link Recording} to `.cast`, use `encodeAsciicast`
+ * from `asciicast/recording-codec.ts` — the symmetric `.cast` codec.
  */
 
-import type { Recording } from "../recording.ts"
-import type { AsciicastHeader, AsciicastRecording } from "./types.ts"
-
-/** Options for converting a termless recording to asciicast. */
-export interface ToAsciicastOptions {
-  title?: string
-}
-
-/**
- * Convert a termless Recording to an asciicast v2 string (JSON-lines).
- *
- * Maps termless "output"/"input" event types to asciicast "o"/"i" types,
- * and converts timestamps from milliseconds to seconds.
- */
-export function toAsciicast(recording: Recording, options?: ToAsciicastOptions): string {
-  const header: AsciicastHeader = {
-    version: 2,
-    width: recording.cols,
-    height: recording.rows,
-    duration: recording.duration / 1000,
-  }
-  if (options?.title) header.title = options.title
-
-  const lines: string[] = [JSON.stringify(header)]
-
-  for (const event of recording.events) {
-    const time = event.timestamp / 1000
-    const type = event.type === "output" ? "o" : "i"
-    lines.push(JSON.stringify([time, type, event.data]))
-  }
-
-  return lines.join("\n") + "\n"
-}
+import type { AsciicastHeader } from "./types.ts"
 
 /** Handle for streaming asciicast writes. */
 export interface AsciicastWriter {

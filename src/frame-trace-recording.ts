@@ -31,7 +31,7 @@ import {
   createRecording,
   micros,
 } from "./recording-model.ts"
-import type { Frame as TraceFrame } from "./frame-trace.ts"
+import type { TraceFrame } from "./frame-trace.ts"
 import type { ScreenshotOptions } from "./types.ts"
 
 /** Canvas options the frame tracer was created with — the fingerprint source. */

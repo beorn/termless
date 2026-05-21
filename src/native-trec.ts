@@ -40,7 +40,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
-import type { Frame as TraceFrame } from "./frame-trace.ts"
+import type { TraceFrame } from "./frame-trace.ts"
 import { traceToRecording } from "./frame-trace-recording.ts"
 import {
   type Command,

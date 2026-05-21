@@ -15,7 +15,7 @@
  *
  * Output layout:
  *   /tmp/trace-1/
- *     index.jsonl    — append-only, one Frame per line; tolerant to truncation
+ *     index.jsonl    — append-only, one TraceFrame per line; tolerant to truncation
  *     00001.png      — unique frames only; duplicates point to original via duplicate_of
  *     00002.png
  *     ...
@@ -56,7 +56,7 @@ export interface FrameTraceOptions {
    * Path to a render-event sidecar JSONL written by silvery's render-trace
    * (`SILVERY_TRACE_FRAMES` — Phase 4 of the Visual Eyes epic). When set,
    * each captured frame is annotated with the silvery render event whose
-   * timestamp is the closest match (the `silvery` field on `Frame`).
+   * timestamp is the closest match (the `silvery` field on `TraceFrame`).
    *
    * Default: `<dir>/render-events.jsonl` — the path silvery writes to when
    * `SILVERY_TRACE_FRAMES` points at this same trace directory. Pass an
@@ -88,7 +88,7 @@ export interface SilveryRenderEvent {
   fiberHash: string
 }
 
-export interface Frame {
+export interface TraceFrame {
   seq: number
   ts: number
   iso: string
@@ -133,9 +133,9 @@ export interface FrameTracer {
   /** Hook to register with Terminal's `onAfterWrite`. */
   readonly onWrite: (data: Uint8Array) => void
   /** All frames recorded so far. */
-  framesSinceSeq(seq: number): Frame[]
+  framesSinceSeq(seq: number): TraceFrame[]
   /** Frames recorded at or after `ts` (ms epoch). */
-  framesSinceTime(ts: number): Frame[]
+  framesSinceTime(ts: number): TraceFrame[]
   /** Flush pending debounced frame, close index file, return summary. */
   stop(): Promise<FrameTraceSummary>
   /**
@@ -377,7 +377,7 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     options.silveryEventsFile === null ? null : (options.silveryEventsFile ?? join(dir, "render-events.jsonl"))
   const silveryJoin = silveryEventsFile ? createSilveryEventJoin(silveryEventsFile) : null
 
-  const frames: Frame[] = []
+  const frames: TraceFrame[] = []
   const hashToSeq = new Map<string, number>()
   let pendingTimer: ReturnType<typeof setTimeout> | null = null
   let bytesSinceLast = 0
@@ -432,7 +432,7 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
       renderMs = +(performance.now() - renderStart).toFixed(2)
     }
     const durSincePrev = lastTs == null ? 0 : ts - lastTs
-    const frame: Frame = {
+    const frame: TraceFrame = {
       seq,
       ts,
       iso: new Date(ts).toISOString(),

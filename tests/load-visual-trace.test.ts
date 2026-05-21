@@ -20,7 +20,7 @@ import { createTerminal } from "../src/terminal.ts"
 import { createFrameTracer } from "../src/frame-trace.ts"
 import { loadVisualTrace } from "../src/load-visual-trace.ts"
 import { writeVisualTrace } from "../src/write-visual-trace.ts"
-import type { Frame } from "../src/frame-trace.ts"
+import type { TraceFrame } from "../src/frame-trace.ts"
 import type { Terminal } from "../src/types.ts"
 import { createVt100Backend } from "../packages/vt100/src/index.ts"
 
@@ -91,7 +91,7 @@ describe("loadVisualTrace", () => {
     expect(recording.frames).toBeDefined()
     expect(recording.frames!.length).toBeGreaterThan(0)
 
-    // The frames projection carries the on-disk Frame fields, re-shaped.
+    // The frames projection carries the on-disk TraceFrame fields, re-shaped.
     const first = recording.frames![0]!
     expect(first.seq).toBe(1)
     expect(first.at).toBe(0) // first frame rebased to t=0
@@ -140,12 +140,12 @@ describe("writeVisualTrace", () => {
     await recordTraceDir(srcDir)
     const srcRecording = loadVisualTrace(srcDir, { backend: "vt100" })
 
-    // Re-derive the on-disk Frame[] (writeVisualTrace works on the tracer's
-    // Frame shape) by re-reading index.jsonl.
+    // Re-derive the on-disk TraceFrame[] (writeVisualTrace works on the tracer's
+    // TraceFrame shape) by re-reading index.jsonl.
     const srcFrames = readFileSync(join(srcDir, "index.jsonl"), "utf-8")
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as Frame)
+      .map((l) => JSON.parse(l) as TraceFrame)
 
     const destDir = join(root, "trace-rt-dest")
     writeVisualTrace(destDir, srcFrames, { pngSourceDir: srcDir })
@@ -162,7 +162,7 @@ describe("writeVisualTrace", () => {
     const srcFrames = readFileSync(join(srcDir, "index.jsonl"), "utf-8")
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as Frame)
+      .map((l) => JSON.parse(l) as TraceFrame)
 
     const destDir = join(root, "trace-bytes-dest")
     writeVisualTrace(destDir, srcFrames, { pngSourceDir: srcDir })
@@ -186,7 +186,7 @@ describe("writeVisualTrace", () => {
     const srcFrames = readFileSync(join(srcDir, "index.jsonl"), "utf-8")
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as Frame)
+      .map((l) => JSON.parse(l) as TraceFrame)
 
     const destDir = mkdtempSync(join(tmpdir(), "trace-wipe-dest-"))
     writeFileSync(join(destDir, "stale.txt"), "should be removed")

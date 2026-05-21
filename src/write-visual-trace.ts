@@ -12,7 +12,7 @@
  * `createFrameTracer` produces:
  *
  *   trace-dir/
- *     index.jsonl    — one {@link Frame} per line, in `seq` order
+ *     index.jsonl    — one {@link TraceFrame} per line, in `seq` order
  *     00001.png      — unique frames only; duplicates point back via duplicate_of
  *     ...
  *
@@ -21,16 +21,16 @@
  * the destination directory is wiped, the `index.jsonl` is written whole, and
  * every unique frame's PNG is copied from a source directory.
  *
- * Operating on the tracer's `Frame` shape (not the in-memory `Recording`) is
+ * Operating on the tracer's `TraceFrame` shape (not the in-memory `Recording`) is
  * deliberate: a golden trace must round-trip byte-identically through
- * `writeVisualTrace` → `loadVisualTrace`, and the `Frame` shape carries fields
+ * `writeVisualTrace` → `loadVisualTrace`, and the `TraceFrame` shape carries fields
  * (`render_ms`, `duration_since_prev_ms`, `iso`) the `Recording` projection
- * drops. Writing from `Frame[]` keeps the on-disk bytes lossless.
+ * drops. Writing from `TraceFrame[]` keeps the on-disk bytes lossless.
  */
 
 import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { Frame } from "./frame-trace.ts"
+import type { TraceFrame } from "./frame-trace.ts"
 
 /** Options for {@link writeVisualTrace}. */
 export interface WriteVisualTraceOptions {
@@ -61,7 +61,7 @@ export interface WriteVisualTraceOptions {
  *   tracer's `framesSinceSeq(0)`).
  * @param options See {@link WriteVisualTraceOptions}.
  */
-export function writeVisualTrace(dir: string, frames: Frame[], options: WriteVisualTraceOptions = {}): void {
+export function writeVisualTrace(dir: string, frames: TraceFrame[], options: WriteVisualTraceOptions = {}): void {
   if (existsSync(dir)) {
     rmSync(dir, { recursive: true, force: true })
   }

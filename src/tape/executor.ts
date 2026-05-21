@@ -50,7 +50,7 @@ export interface TapeExecutorOptions {
   /** Theme name for screenshots (overrides `Set Theme` in tape). */
   theme?: string
   /** Called after each visual change when recording is not hidden. */
-  onFrame?: (frame: TapeFrame) => void
+  onFrame?: (frame: ScreenshotCapture) => void
   /** Called when a Screenshot command is executed. */
   onScreenshot?: (png: Uint8Array, path?: string) => void
   /** Called after each command is executed, with the command and terminal. */
@@ -63,7 +63,7 @@ export interface TapeExecutorOptions {
   framesDir?: string
 }
 
-export interface TapeFrame {
+export interface ScreenshotCapture {
   /** Milliseconds since execution start. */
   timestamp: number
   /** PNG screenshot data. */
@@ -74,7 +74,7 @@ export interface TapeResult {
   /** Total execution time in milliseconds. */
   duration: number
   /** Collected frames (when onFrame is provided and not hidden). */
-  frames: TapeFrame[]
+  frames: ScreenshotCapture[]
   /** Number of screenshots taken. */
   screenshotCount: number
   /** The terminal instance (still open for inspection). */
@@ -136,7 +136,7 @@ function mapKeyName(vhsKey: string): string {
  */
 export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions): Promise<TapeResult> {
   const startTime = Date.now()
-  const frames: TapeFrame[] = []
+  const frames: ScreenshotCapture[] = []
   let screenshotCount = 0
   let hidden = false
 
@@ -253,9 +253,9 @@ interface ExecuteContext {
   svgOptions: SvgScreenshotOptions
   hidden: boolean
   startTime: number
-  frames: TapeFrame[]
+  frames: ScreenshotCapture[]
   playbackSpeed: number
-  onFrame?: (frame: TapeFrame) => void
+  onFrame?: (frame: ScreenshotCapture) => void
   onScreenshot?: (png: Uint8Array, path?: string) => void
   onScreenshotCount: () => void
   onHide: () => void
@@ -354,7 +354,7 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
       ctx.onScreenshot?.(png, cmd.path)
 
       if (!ctx.hidden) {
-        const frame: TapeFrame = {
+        const frame: ScreenshotCapture = {
           timestamp: Date.now() - ctx.startTime,
           png,
         }

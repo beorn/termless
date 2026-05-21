@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createTerminal } from "../src/terminal.ts"
 import { createFrameTracer } from "../src/frame-trace.ts"
-import type { Frame, SilveryRenderEvent } from "../src/frame-trace.ts"
+import type { TraceFrame, SilveryRenderEvent } from "../src/frame-trace.ts"
 import type { Terminal } from "../src/types.ts"
 
 // Use the vt100 backend — pure-TS, no native deps, fast for tests.
@@ -184,7 +184,7 @@ describe("createFrameTracer", () => {
       term.feed("hi")
       await new Promise((r) => setTimeout(r, 30))
 
-      const frames = tracer.framesSinceSeq(0) as Frame[]
+      const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
       // Frame ts > both events → joins the latest preceding event (evB).
       const joined = frames[0]!.silvery as SilveryRenderEvent
@@ -226,7 +226,7 @@ describe("createFrameTracer", () => {
       term.feed("x")
       await new Promise((r) => setTimeout(r, 30))
 
-      const frames = tracer.framesSinceSeq(0) as Frame[]
+      const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
       expect(frames[0]!.silvery).toBeUndefined()
 
@@ -268,7 +268,7 @@ describe("createFrameTracer", () => {
       term.feed("z")
       await new Promise((r) => setTimeout(r, 30))
 
-      const frames = tracer.framesSinceSeq(0) as Frame[]
+      const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
       expect(frames[0]!.silvery).toBeUndefined()
 
@@ -314,7 +314,7 @@ describe("createFrameTracer", () => {
       term.feed("q")
       await new Promise((r) => setTimeout(r, 30))
 
-      const frames = tracer.framesSinceSeq(0) as Frame[]
+      const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
       // Only the one valid event survives parsing and gets joined.
       const joined = frames[0]!.silvery as SilveryRenderEvent

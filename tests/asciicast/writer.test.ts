@@ -1,132 +1,13 @@
 /**
- * Tests for asciicast v2 writer.
+ * Tests for the asciicast v2 streaming writer.
  *
- * Verifies recording-to-asciicast conversion, JSON-lines format,
- * timestamp conversion, control character escaping, and round-trip.
+ * Verifies JSON-lines format, auto-timestamping, close semantics, and that
+ * the output round-trips through `parseAsciicast`.
  */
 
 import { describe, test, expect } from "vitest"
-import { toAsciicast, createAsciicastWriter } from "../../src/asciicast/writer.ts"
+import { createAsciicastWriter } from "../../src/asciicast/writer.ts"
 import { parseAsciicast } from "../../src/asciicast/reader.ts"
-import type { Recording } from "../../src/recording.ts"
-
-// =============================================================================
-// toAsciicast
-// =============================================================================
-
-describe("toAsciicast", () => {
-  test("converts a termless recording to asciicast v2 format", () => {
-    const recording: Recording = {
-      version: 1,
-      cols: 80,
-      rows: 24,
-      duration: 2000,
-      events: [
-        { timestamp: 0, type: "output", data: "$ " },
-        { timestamp: 500, type: "input", data: "ls\n" },
-        { timestamp: 1000, type: "output", data: "file1  file2\r\n" },
-      ],
-    }
-
-    const result = toAsciicast(recording)
-    const lines = result.trim().split("\n")
-
-    expect(lines).toHaveLength(4) // header + 3 events
-
-    // Header
-    const header = JSON.parse(lines[0]!) as Record<string, unknown>
-    expect(header.version).toBe(2)
-    expect(header.width).toBe(80)
-    expect(header.height).toBe(24)
-    expect(header.duration).toBe(2)
-
-    // Events — timestamps in seconds
-    expect(JSON.parse(lines[1]!)).toEqual([0, "o", "$ "])
-    expect(JSON.parse(lines[2]!)).toEqual([0.5, "i", "ls\n"])
-    expect(JSON.parse(lines[3]!)).toEqual([1, "o", "file1  file2\r\n"])
-  })
-
-  test("includes title when provided", () => {
-    const recording: Recording = {
-      version: 1,
-      cols: 80,
-      rows: 24,
-      duration: 0,
-      events: [],
-    }
-
-    const result = toAsciicast(recording, { title: "My Session" })
-    const header = JSON.parse(result.trim().split("\n")[0]!) as Record<string, unknown>
-    expect(header.title).toBe("My Session")
-  })
-
-  test("output is valid JSON-lines", () => {
-    const recording: Recording = {
-      version: 1,
-      cols: 120,
-      rows: 40,
-      duration: 1500,
-      events: [
-        { timestamp: 0, type: "output", data: "hello" },
-        { timestamp: 750, type: "output", data: "world" },
-        { timestamp: 1500, type: "output", data: "!" },
-      ],
-    }
-
-    const result = toAsciicast(recording)
-    const lines = result.trim().split("\n")
-
-    // Every line should be valid JSON
-    for (const line of lines) {
-      expect(() => JSON.parse(line)).not.toThrow()
-    }
-  })
-
-  test("properly escapes control characters in data", () => {
-    const recording: Recording = {
-      version: 1,
-      cols: 80,
-      rows: 24,
-      duration: 100,
-      events: [{ timestamp: 0, type: "output", data: "\x1b[31mred\x1b[0m\t\nnewline" }],
-    }
-
-    const result = toAsciicast(recording)
-    const lines = result.trim().split("\n")
-    const event = JSON.parse(lines[1]!) as [number, string, string]
-
-    // JSON.parse should restore the original control characters
-    expect(event[2]).toBe("\x1b[31mred\x1b[0m\t\nnewline")
-  })
-
-  test("round-trip: write → parse → compare", () => {
-    const recording: Recording = {
-      version: 1,
-      cols: 80,
-      rows: 24,
-      duration: 2000,
-      events: [
-        { timestamp: 0, type: "output", data: "$ " },
-        { timestamp: 200, type: "input", data: "echo hello\n" },
-        { timestamp: 500, type: "output", data: "hello\r\n$ " },
-        { timestamp: 1000, type: "output", data: "\x1b[31mred\x1b[0m" },
-      ],
-    }
-
-    const asciicastStr = toAsciicast(recording, { title: "test" })
-    const parsed = parseAsciicast(asciicastStr)
-
-    expect(parsed.header.version).toBe(2)
-    expect(parsed.header.width).toBe(80)
-    expect(parsed.header.height).toBe(24)
-    expect(parsed.header.title).toBe("test")
-    expect(parsed.events).toHaveLength(4)
-    expect(parsed.events[0]!.data).toBe("$ ")
-    expect(parsed.events[1]!.data).toBe("echo hello\n")
-    expect(parsed.events[2]!.data).toBe("hello\r\n$ ")
-    expect(parsed.events[3]!.data).toBe("\x1b[31mred\x1b[0m")
-  })
-})
 
 // =============================================================================
 // createAsciicastWriter
