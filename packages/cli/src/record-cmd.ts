@@ -343,6 +343,7 @@ async function interactiveRecord(
     renderer?: string
     chrome?: ChromeStyle
     title?: string
+    liveChrome?: ChromeStyle
   },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
@@ -350,6 +351,7 @@ async function interactiveRecord(
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
   const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "browser" | "auto" | undefined) ?? "auto"
+  const liveChrome: ChromeStyle = opts.liveChrome ?? "macos"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
@@ -403,6 +405,18 @@ async function interactiveRecord(
   const b = await backend("ghostty")
   const headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
 
+  // Live overlay — render the headless terminal's grid via Silvery, centered
+  // in the host terminal with a chrome frame. `--live-chrome none` falls back
+  // to today's raw-stdout-pipe behavior (no overlay).
+  let liveView: import("./rec-live-view.tsx").RecLiveViewHandle | null = null
+  if (liveChrome !== "none") {
+    const { runRecLiveView } = await import("./rec-live-view.tsx")
+    liveView = await runRecLiveView(headlessTerminal, {
+      chromeStyle: liveChrome,
+      title: cmdLabel,
+    })
+  }
+
   const animationFrames: import("../../../src/view/animation-types.ts").AnimationFrame[] = []
   let frameTimer: ReturnType<typeof setInterval> | null = null
   let lastFrameText = ""
@@ -424,10 +438,17 @@ async function interactiveRecord(
       const text = ptyDecoder.decode(data, { stream: true })
       // Record output event for asciicast
       outputEvents.push({ time: Date.now() - startTime, data: text })
-      // Forward to real terminal (raw bytes - no decode round-trip)
-      process.stdout.write(data)
       // Feed into headless terminal for image capture
       headlessTerminal.feed(text)
+      // Live preview routing: when the chrome overlay is mounted, render the
+      // headless grid through Silvery instead of piping raw bytes to the host
+      // terminal. `--live-chrome none` keeps the historical raw-stdout-pipe
+      // behavior — byte-identical to pre-change.
+      if (liveView) {
+        liveView.rerender()
+      } else {
+        process.stdout.write(data)
+      }
     },
   })
 
@@ -580,6 +601,13 @@ async function interactiveRecord(
     }
     process.stdin.pause()
     restoreTitle()
+    if (liveView) {
+      try {
+        liveView.unmount()
+      } catch {
+        // Best-effort unmount — host terminal restore still proceeds.
+      }
+    }
     headlessTerminal.close()
   }
 }
@@ -666,6 +694,7 @@ async function recordAction(
     cwd?: string
     chrome?: string
     title?: string
+    liveChrome?: string
   },
 ): Promise<void> {
   // Validate --chrome up front so a typo fails fast with the valid set.
@@ -674,7 +703,13 @@ async function recordAction(
     process.exitCode = 1
     return
   }
+  if (opts.liveChrome != null && !isChromeStyle(opts.liveChrome)) {
+    console.error(`Error: unknown --live-chrome "${opts.liveChrome}". Valid: ${CHROME_STYLES.join(", ")}.`)
+    process.exitCode = 1
+    return
+  }
   const chromeStyle: ChromeStyle = (opts.chrome as ChromeStyle | undefined) ?? "none"
+  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? "macos"
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -782,6 +817,7 @@ async function recordAction(
     renderer: opts.renderer,
     chrome: chromeStyle,
     title: opts.title,
+    liveChrome: liveChromeStyle,
   })
 }
 
@@ -819,6 +855,12 @@ export function registerRecordCommand(program: Command): void {
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
     .option("--chrome <style>", `Window chrome on rendered output: ${CHROME_STYLES.join(", ")} (default: none)`, "none")
+    .option(
+      "--live-chrome <style>",
+      `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")} (default: macos). ` +
+        `\`none\` falls back to flush-top-left raw stdout — the pre-chrome behavior.`,
+      "macos",
+    )
     .option("--title <text>", "Title text in the window chrome bar (default: the recorded command)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")
     .option("--terminal <name>", "Compat terminal app: ghostty, kitty, iterm, terminal (with --compat)")

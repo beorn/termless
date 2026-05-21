@@ -35,7 +35,7 @@ Alias: `termless rec`.
 
 ### One output flag — `-o`
 
-`record` has exactly one output flag. The *shape* of each `-o` value picks the
+`record` has exactly one output flag. The _shape_ of each `-o` value picks the
 mode — there is no separate format flag and no separate screenshot flag:
 
 ```bash
@@ -70,6 +70,32 @@ $ termless record
 
 `record -- <cmd>` with an explicit command shows no gate — recording starts
 immediately and the command's own exit ends it.
+
+### Live chrome
+
+While the recording runs, the captured grid is shown on your host terminal
+**centered inside a chrome frame** — title bar, border, traffic-light dots —
+so it's obvious where the recorded screen ends and your host terminal begins.
+Because the live view renders the headless terminal's cell grid (not raw
+bytes), TUI programs that use absolute cursor positioning (`vim`, `htop`,
+anything emitting `\x1b[H`) stay inside the frame.
+
+`--live-chrome` picks the style — same vocabulary as `--chrome`:
+
+```bash
+$ termless record -- bun km view ~/Vault                # default: macos chrome
+$ termless record --live-chrome windows -- bun km view ~/Vault
+$ termless record --live-chrome none -- bun km view ~/Vault   # raw stdout pipe
+```
+
+`--live-chrome none` falls back to the pre-chrome behavior — the recorded
+bytes pipe straight to the host terminal at the top-left, with no frame.
+Useful in narrow hosts, in pipes-to-file, and when the host terminal doesn't
+render border glyphs well.
+
+The live frame is **preview only** — the recording artifact (`.rec` / `.gif`
+/ `.png` / `.svg`) is byte-identical regardless of `--live-chrome`. The
+output's window chrome is controlled by `--chrome`.
 
 ### The renderer
 
@@ -140,20 +166,21 @@ $ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
 
 ### Record options
 
-| Option                   | Description                                                  | Default     |
-| ------------------------ | ------------------------------------------------------------ | ----------- |
-| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif` |
-| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                | `auto`      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                         | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                                    | vterm       |
-| `--cols <n>`             | Terminal columns                                             | `80`        |
-| `--rows <n>`             | Terminal rows                                                | `30`        |
-| `--timeout <ms>`         | Wait timeout in ms                                           | `5000`      |
-| `--keys <keys>`          | Comma-separated key names to press, then capture a still     | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys                           | `content`   |
-| `--text`                 | Print terminal text to stdout                                | off         |
-| `--compat`               | Compat capture in a real desktop terminal app                | off         |
-| `--terminal <name>`      | Compat terminal app (with `--compat`)                        | auto-detect |
+| Option                   | Description                                                                         | Default     |
+| ------------------------ | ----------------------------------------------------------------------------------- | ----------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`   |
+| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                                       | `auto`      |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --          |
+| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
+| `--cols <n>`             | Terminal columns                                                                    | `80`        |
+| `--rows <n>`             | Terminal rows                                                                       | `30`        |
+| `--timeout <ms>`         | Wait timeout in ms                                                                  | `5000`      |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
+| `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
+| `--text`                 | Print terminal text to stdout                                                       | off         |
+| `--compat`               | Compat capture in a real desktop terminal app                                       | off         |
+| `--terminal <name>`      | Compat terminal app (with `--compat`)                                               | auto-detect |
+| `--live-chrome <style>`  | Live preview chrome: `macos`, `windows`, or `none`                                  | `macos`     |
 
 `record`'s defaults yield a README-droppable artifact: backend `ghostty`,
 `80×30`, ~12 fps, and a ~300-frame cap.
@@ -232,25 +259,25 @@ $ termless compare demo.tape -b vterm,ghostty --compare diff -o diff.svg
 
 ### Comparison modes
 
-| Mode           | Description                                                          |
-| -------------- | -------------------------------------------------------------------- |
-| `separate`     | Individual screenshots per backend                                   |
-| `side-by-side` | Two backends side by side in one image                               |
-| `grid`         | All backends in a grid layout                                        |
-| `diff`         | Screenshots plus pixel-diff overlays against the first backend       |
+| Mode           | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `separate`     | Individual screenshots per backend                             |
+| `side-by-side` | Two backends side by side in one image                         |
+| `grid`         | All backends in a grid layout                                  |
+| `diff`         | Screenshots plus pixel-diff overlays against the first backend |
 
 ## Output Formats
 
 Recordings render to multiple output formats — no Chromium, no ffmpeg:
 
-| Format       | Extension | Type           | Dependencies           |
-| ------------ | --------- | -------------- | ---------------------- |
-| PNG          | `.png`    | Single frame   | `@resvg/resvg-js`      |
-| SVG          | `.svg`    | Single frame   | None (built-in)        |
-| Animated SVG | `.svg`    | Multi-frame    | None (CSS keyframes)   |
-| GIF          | `.gif`    | Multi-frame    | `gifenc` (pure JS)     |
-| APNG         | `.apng`   | Multi-frame    | `upng-js` (pure JS)    |
-| Web player   | browser   | Interactive    | `@termless/web-player` |
+| Format       | Extension | Type         | Dependencies           |
+| ------------ | --------- | ------------ | ---------------------- |
+| PNG          | `.png`    | Single frame | `@resvg/resvg-js`      |
+| SVG          | `.svg`    | Single frame | None (built-in)        |
+| Animated SVG | `.svg`    | Multi-frame  | None (CSS keyframes)   |
+| GIF          | `.gif`    | Multi-frame  | `gifenc` (pure JS)     |
+| APNG         | `.apng`   | Multi-frame  | `upng-js` (pure JS)    |
+| Web player   | browser   | Interactive  | `@termless/web-player` |
 
 The three on-disk recording **formats** — `.tape`, `.cast`, `.rec` — are
 documented under [Recording Formats](../reference/formats/).
