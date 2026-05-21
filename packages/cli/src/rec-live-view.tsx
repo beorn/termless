@@ -21,8 +21,9 @@
 
 import React, { useEffect, useState } from "react"
 import { Box, Text, render } from "silvery"
-import type { Terminal, Cell } from "../../../src/terminal/types.ts"
+import type { Terminal } from "../../../src/terminal/types.ts"
 import type { ChromeStyle } from "../../../src/render/chrome.ts"
+import { chromePresentation, rowToString } from "./rec-live-view-helpers.ts"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
@@ -45,47 +46,6 @@ export interface RecorderLiveProps {
   chromeStyle?: ChromeStyle
   /** Title text in the chrome bar. Default `""`. */
   title?: string
-}
-
-/** Border + chrome accent for a {@link ChromeStyle}. */
-interface ChromePresentation {
-  /** Silvery `borderStyle` value, or `null` to omit the border. */
-  borderStyle: "round" | "single" | "double" | null
-  /** Show the title-bar row above the grid? */
-  showTitleBar: boolean
-  /** Show the macOS-style traffic-light dots in the title bar? */
-  showDots: boolean
-}
-
-function chromePresentation(style: ChromeStyle): ChromePresentation {
-  switch (style) {
-    case "macos":
-      return { borderStyle: "round", showTitleBar: true, showDots: true }
-    case "windows":
-      return { borderStyle: "single", showTitleBar: true, showDots: false }
-    case "none":
-    default:
-      return { borderStyle: null, showTitleBar: false, showDots: false }
-  }
-}
-
-/**
- * Render a row of {@link Cell}s as a single string. Wide-cell continuation
- * cells are skipped — the preceding wide cell already contributed its glyph.
- * Falls back to a single space for empty cells.
- */
-function rowToString(row: readonly Cell[], cols: number): string {
-  let out = ""
-  for (let c = 0; c < cols; c++) {
-    const cell = row[c]
-    if (!cell) {
-      out += " "
-      continue
-    }
-    if (cell.continuation) continue
-    out += cell.char || " "
-  }
-  return out
 }
 
 /**
