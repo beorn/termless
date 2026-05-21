@@ -37,35 +37,55 @@ yarn add @termless/cli
 Or run directly:
 
 ```bash
-$ bunx termless record -o demo.tape ls -la
+$ bunx termless record -o demo.gif -- bun km view ~/Vault
 ```
 
 ## `termless record` {#record}
 
-Capture a terminal session into a [Recording](../concepts/recording) — as a
-`.tape` file, a screenshot, or animated output. Alias: `termless rec`.
+Capture a terminal session into a [Recording](../concepts/recording) and write
+it to one or more output files. Alias: `termless rec`.
+
+`record` has exactly **one output flag — `-o`**. The *shape* of each `-o`
+value picks the mode; there is no separate format flag and no separate
+screenshot flag.
+
+| Invocation                                | Output                                                       |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| `termless record -- <cmd>` (no `-o`)      | `out.gif` — a single file in the cwd                         |
+| `termless record -o demos/ -- <cmd>`      | `demos/` folder — `out.rec` · `out.gif` · `out.cast` · `out.tape` |
+| `termless record -o a.gif -o b.cast`      | exactly `a.gif` + `b.cast` (`-o` is repeatable)              |
+| `termless record -o shot.png -- <cmd>`    | a single still PNG                                           |
+| `termless record` (no command)            | shows a help gate, then records a live `$SHELL` on Enter     |
+
+The `-o` extension picks the format; the format decides whether a renderer
+is involved:
+
+| Extension       | Format                | Renderer                              |
+| --------------- | --------------------- | ------------------------------------- |
+| `.gif` `.apng`  | raster animation      | the renderer — `auto` (canvas → resvg) |
+| `.png`          | raster still          | the renderer — `auto` (canvas → resvg) |
+| `.svg`          | vector still/animation | none (vector)                         |
+| `.html`         | scrubbable browser viewer | none server-side                  |
+| `.rec` `.tape` `.cast` | recording data | none                                  |
 
 ```bash
-# Interactive recording — exit the command to stop
-$ termless record -o demo.tape ls -la
+# Bare record — shows a help gate, then records a live $SHELL on Enter
+$ termless record
 
-# Scripted recording with inline tape commands
-$ termless rec -t 'Type "hello"\nEnter\nScreenshot' bash
+# Record a command — no -o → out.gif in the cwd
+$ termless record -- bun km view ~/Vault
 
-# Record + render an animated GIF
-$ termless record -o demo.gif my-app
+# Folder bundle — a trailing slash writes out.{rec,gif,cast,tape}
+$ termless record -o demos/ -- bun km view ~/Vault
 
-# Record to .cast format
-$ termless record -o demo.cast my-app
+# Named files — -o is repeatable; the extension picks the format
+$ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
 
-# Capture every render frame into a .trec
-$ termless record --frames -o trace.trec my-app
+# A single still PNG
+$ termless record -o shot.png -- bun km view ~/Vault
 
-# Multiple outputs in one pass
-$ termless record -o demo.tape -o demo.gif my-app
-
-# Capture mode: run command, press keys, take screenshot
-$ termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
+# Force the resvg renderer (the common case never touches --renderer)
+$ termless record --renderer resvg -o demo.gif -- bun km view ~/Vault
 
 # Compat capture: record in a real desktop terminal app (macOS)
 $ termless record --compat -o c.png -- bun km view ~/Vault
@@ -73,22 +93,26 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 
 ### Options
 
-| Option                   | Description                                                       | Default     |
-| ------------------------ | ----------------------------------------------------------------- | ----------- |
-| `-o, --output <path...>` | Output file(s), format detected from extension                    | stdout      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                              | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                                         | vterm       |
-| `--frames`               | Capture every render frame into the recording's frames projection | off         |
-| `--cols <n>`             | Terminal columns                                                  | `80`        |
-| `--rows <n>`             | Terminal rows                                                     | `24`        |
-| `--timeout <ms>`         | Wait timeout in ms                                                | `5000`      |
-| `--keys <keys>`          | Comma-separated key names to press                                | --          |
-| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)                         | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys                                | `content`   |
-| `--text`                 | Print terminal text to stdout                                     | off         |
-| `--compat`               | Compat capture — record in a real desktop terminal app            | off         |
-| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`      | auto-detect |
-| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)      | --          |
+| Option                   | Description                                                   | Default     |
+| ------------------------ | ------------------------------------------------------------- | ----------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif` |
+| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                 | `auto`      |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                          | --          |
+| `-b, --backend <name>`   | Backend for scripted mode                                     | vterm       |
+| `--cols <n>`             | Terminal columns                                              | `80`        |
+| `--rows <n>`             | Terminal rows                                                 | `30`        |
+| `--timeout <ms>`         | Wait timeout in ms                                            | `5000`      |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still      | --          |
+| `--wait-for <text>`      | Wait for text before pressing keys                            | `content`   |
+| `--text`                 | Print terminal text to stdout                                 | off         |
+| `--compat`               | Compat capture — record in a real desktop terminal app        | off         |
+| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`  | auto-detect |
+| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)  | --          |
+
+`record`'s defaults are tuned for a README-droppable artifact: the `ghostty`
+backend (truecolor + real glyph shaping), `80×30` (GitHub renders README
+images at ~880px content width), ~12 fps, and a ~300-frame cap so a long
+session never produces a 50 MB GIF. Power users override every default.
 
 ### Compat capture (macOS) {#compat}
 
@@ -110,13 +134,13 @@ See [Recording Sessions](../guide/recording-sessions) for detailed usage.
 
 ## `termless view` {#view}
 
-Present a recording — a `.trec` directory or a bare frame-trace directory. By
+Present a recording — a single `.rec` file or a bare frame-trace directory. By
 default `view` writes a self-contained, scrubbable `viewer.html` alongside the
 recording; with `--format gif` it animates the recording's frames into a GIF.
 
 ```bash
 # Scrub a recording in the browser (writes viewer.html next to it)
-$ termless view ./mysession.trec
+$ termless view ./mysession.rec
 
 # Animate a recording to a GIF
 $ termless view ./trace --format gif -o demo.gif

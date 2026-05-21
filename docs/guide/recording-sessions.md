@@ -15,10 +15,13 @@ For the underlying mental model — the three tracks, the formats — see the
 ## Quick Start
 
 ```bash
-# Record a command to a .tape file
-$ termless record -o demo.tape ls -la
+# Record a command — no -o → out.gif in the cwd
+$ termless record -- bun km view ~/Vault
 
-# Play it back and render a GIF
+# A folder bundle — out.{rec,gif,cast,tape}
+$ termless record -o demos/ -- bun km view ~/Vault
+
+# Play a recording back and render a GIF
 $ termless play -o demo.gif demo.tape
 
 # Compare across backends — same recording, two emulators
@@ -30,24 +33,58 @@ $ termless compare demo.tape -b vterm,ghostty --compare side-by-side
 `termless record` captures a [Terminal](../concepts/terminal) into a Recording.
 Alias: `termless rec`.
 
-### Interactive recording
+### One output flag — `-o`
 
-Run a command (or your shell) and capture every keystroke into the commands
-track:
+`record` has exactly one output flag. The *shape* of each `-o` value picks the
+mode — there is no separate format flag and no separate screenshot flag:
 
 ```bash
-# Record a command — exit the command to stop
-$ termless record -o demo.tape ls -la
+# No -o → a single out.gif in the cwd
+$ termless record -- bun km view ~/Vault
 
-# Record a shell session — exit the shell to stop
-$ termless record -o demo.tape
+# A trailing slash → a folder bundle: out.rec, out.gif, out.cast, out.tape
+$ termless record -o demos/ -- bun km view ~/Vault
 
-# Record a specific command
-$ termless record -o demo.tape vim file.txt
+# An extension → that single file. -o is repeatable.
+$ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
+
+# A single still PNG
+$ termless record -o shot.png -- bun km view ~/Vault
 ```
 
-Arrow keys, Ctrl sequences, and timing gaps are all captured. When the command
-exits, the recording is saved.
+The extension picks the format: `.gif` / `.apng` / `.png` are raster (they
+consult the renderer — see below), `.svg` is vector, `.html` is a scrubbable
+browser viewer, and `.rec` / `.tape` / `.cast` are recording data.
+
+### Bare `record` — the help gate
+
+Run `termless record` with **no command** and it shows a short help panel —
+what is about to be recorded, that it spawns a live `$SHELL`, how to stop it
+(`exit` or Ctrl+D) — and waits for **Enter**. Only on Enter does the recording
+start and the shell spawn. The help is never part of the recording.
+
+```bash
+# Shows the help gate, then records $SHELL on Enter
+$ termless record
+```
+
+`record -- <cmd>` with an explicit command shows no gate — recording starts
+immediately and the command's own exit ends it.
+
+### The renderer
+
+Raster output (`.png` / `.gif` / `.apng`) is rasterized by a **renderer**:
+
+- **`canvas`** — `@napi-rs/canvas` (Skia). High fidelity. Needs the native binding.
+- **`resvg`** — `@resvg/resvg-js`. Cross-platform, no native binding, lower fidelity.
+
+`--renderer` selects it; the default `auto` uses `canvas` when its binding
+loads and falls back to `resvg`. The common case never touches `--renderer`.
+
+```bash
+# Force the resvg renderer
+$ termless record --renderer resvg -o demo.gif -- bun km view ~/Vault
+```
 
 ### Scripted recording
 
@@ -61,20 +98,20 @@ $ termless rec -t 'Type "hello world"\nEnter\nSleep 1s\nScreenshot' bash
 $ termless rec -t 'Type "ls -la"\nEnter\nScreenshot' -o listing.png bash
 ```
 
-### Capture mode
+### Key-press stills
 
-For quick one-shot captures — send keys, take a screenshot — use `--keys` and
-`--screenshot`:
+For a quick one-shot capture — send keys, then capture a still — use `--keys`
+with an image `-o`:
 
 ```bash
-# Run a TUI, navigate, capture
-$ termless record --keys j,j,Enter --screenshot /tmp/app.svg bun km view /path
+# Run a TUI, navigate, capture a still
+$ termless record --keys j,j,Enter -o /tmp/app.svg -- bun km view /path
 
 # Wait for specific text before pressing keys
-$ termless record --wait-for "ready>" --keys Enter --screenshot /tmp/out.png my-app
+$ termless record --wait-for "ready>" --keys Enter -o /tmp/out.png -- my-app
 
 # Just capture text output
-$ termless record --text ls -la
+$ termless record --text -- ls -la
 ```
 
 ### Compat capture (macOS)
@@ -95,28 +132,31 @@ faster and pops no window.
 
 ### Multiple outputs
 
-Record once, write several formats:
+`-o` is repeatable — record once, write several files:
 
 ```bash
-$ termless record -o demo.tape -o demo.gif my-app
+$ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
 ```
 
 ### Record options
 
-| Option                   | Description                                    | Default     |
-| ------------------------ | ---------------------------------------------- | ----------- |
-| `-o, --output <path...>` | Output file(s), format detected from extension | stdout      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)           | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                      | vterm       |
-| `--cols <n>`             | Terminal columns                               | `80`        |
-| `--rows <n>`             | Terminal rows                                  | `24`        |
-| `--timeout <ms>`         | Wait timeout in ms                             | `5000`      |
-| `--keys <keys>`          | Comma-separated key names to press             | --          |
-| `--screenshot <path>`    | Save screenshot (SVG or PNG by extension)      | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys             | `content`   |
-| `--text`                 | Print terminal text to stdout                  | off         |
-| `--compat`               | Compat capture in a real desktop terminal app  | off         |
-| `--terminal <name>`      | Compat terminal app (with `--compat`)          | auto-detect |
+| Option                   | Description                                                  | Default     |
+| ------------------------ | ------------------------------------------------------------ | ----------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif` |
+| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                | `auto`      |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                         | --          |
+| `-b, --backend <name>`   | Backend for scripted mode                                    | vterm       |
+| `--cols <n>`             | Terminal columns                                             | `80`        |
+| `--rows <n>`             | Terminal rows                                                | `30`        |
+| `--timeout <ms>`         | Wait timeout in ms                                           | `5000`      |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still     | --          |
+| `--wait-for <text>`      | Wait for text before pressing keys                           | `content`   |
+| `--text`                 | Print terminal text to stdout                                | off         |
+| `--compat`               | Compat capture in a real desktop terminal app                | off         |
+| `--terminal <name>`      | Compat terminal app (with `--compat`)                        | auto-detect |
+
+`record`'s defaults yield a README-droppable artifact: backend `ghostty`,
+`80×30`, ~12 fps, and a ~300-frame cap.
 
 ## Play
 

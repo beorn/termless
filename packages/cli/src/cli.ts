@@ -8,8 +8,8 @@
  *
  * @example
  * ```bash
- * # Record a terminal session (scripted)
- * termless record -t 'Type "hello"\nEnter\nScreenshot' bash
+ * # Record a terminal session — no -o → out.gif in the cwd
+ * termless record -- bun km view ~/Vault
  *
  * # Play back a recording
  * termless play demo.tape
@@ -43,7 +43,8 @@ const program = new Command()
   .version("0.3.1")
 
 program.addHelpSection("Recording verbs:", [
-  ["$ termless record -o demo.tape km view", "record — capture a session to a recording"],
+  ["$ termless record -- bun km view ~/V", "record — capture a session (no -o → out.gif)"],
+  ["$ termless record -o demos/ -- bun km", "record — folder bundle: out.{rec,gif,cast,tape}"],
   ["$ termless record --compat -- bun km view ~/V", "record — compat capture in a real terminal (macOS)"],
   ["$ termless view ./mysession.rec", "view — scrub a recording in the browser"],
   ["$ termless view ./trace --format gif -o demo.gif", "view — animate a recording to a GIF"],
