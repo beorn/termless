@@ -39,8 +39,8 @@ export interface CapturedSession {
   outputEvents: Array<{ time: number; data: string }>
   /** Captured SVG frames with per-frame display durations. */
   frames: AnimationFrame[]
-  /** The renderer for raster output (`canvas` / `resvg` / `swash` / `auto`). */
-  renderer: "canvas" | "resvg" | "swash" | "auto"
+  /** The renderer for raster output (`canvas` / `resvg` / `swash` / `browser` / `auto`). */
+  renderer: "canvas" | "resvg" | "swash" | "browser" | "auto"
 }
 
 // =============================================================================
@@ -116,6 +116,8 @@ async function writeRec(path: string, session: CapturedSession): Promise<void> {
       })
       at += frame.duration
     }
+    // Release the headless-Chromium instance the `browser` renderer holds.
+    await rasterizer?.dispose?.()
 
     const io = session.outputEvents.map((e) => ({
       at: micros(e.time * 1000),
@@ -165,7 +167,11 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
     const { selectRasterizer } = await import("../../../src/view/rasterizer.ts")
     const rasterizer = await selectRasterizer(session.renderer)
     const last = session.frames[session.frames.length - 1]!
-    writeFileSync(path, await rasterizer.toPng(last.svg, 2))
+    try {
+      writeFileSync(path, await rasterizer.toPng(last.svg, 2))
+    } finally {
+      await rasterizer.dispose?.()
+    }
     return
   }
   if (format === "html") {

@@ -113,6 +113,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "ghostty-web": "^0.4.0",
     "gifenc": "^1.0.3",
+    "playwright": "^1.59.0",
     "upng-js": "^2.1.0"
   },
   "overrides": {

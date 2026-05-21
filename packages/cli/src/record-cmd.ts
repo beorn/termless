@@ -338,7 +338,7 @@ async function interactiveRecord(
   const cmd = command ?? [shell]
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
-  const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "auto" | undefined) ?? "auto"
+  const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "browser" | "auto" | undefined) ?? "auto"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
@@ -765,7 +765,12 @@ export function registerRecordCommand(program: Command): void {
     )
     .option("-t, --tape <commands>", "Inline tape commands (scripted mode)")
     .option("-b, --backend <name>", "Backend name for scripted mode (default: vterm)")
-    .option("--renderer <kind>", "Raster renderer: canvas, resvg, swash, or auto (default: auto)", "auto")
+    .option(
+      "--renderer <kind>",
+      "Raster renderer: canvas, resvg, swash, browser, or auto (default: auto). " +
+        "browser is opt-in premium (headless Chromium — needs playwright installed).",
+      "auto",
+    )
     .option("--cols <n>", "Terminal columns", parseNum, DEFAULT_COLS)
     .option("--rows <n>", "Terminal rows", parseNum, DEFAULT_ROWS)
     .option("--timeout <ms>", "Wait timeout in ms", parseNum, 5000)
