@@ -203,15 +203,39 @@ function toSwashCell(cell: Cell): SwashCell {
   }
 }
 
+// Cell-metric defaults. swash rasterizes one glyph at a time and has no
+// notion of a terminal's cell box, so this binding supplies the fixed-pitch
+// grid metrics. The font-size / cell-height ratio is tuned so a row of text
+// fills its cell like a real terminal — JetBrains Mono's full ink extent
+// (accented caps through deep descenders, e.g. `Àgjpqy`) measures ~19.0 px at
+// `fontSize 17`, which sits centred in a 20 px cell with ~0.5 px clearance
+// top and bottom and no glyph clipped at the cell boundary. The earlier
+// `fontSize 16` left the glyph ~2 px short of the cell (visibly small, with
+// rows reading as over-leaded) *and* clipped accented caps against the cell
+// top. Baseline `cellHeight * 0.835` places the larger glyph's ascent inside
+// the cell. See `@km/termless/swash-glyph-polish`.
+/** Default cell box height in px (the monospace line height). */
+const DEFAULT_CELL_HEIGHT = 20
+/** Default cell advance width in px (the monospace pitch). */
+const DEFAULT_CELL_WIDTH = 9.6
+/**
+ * Default glyph render size as a fraction of the cell height. `17/20` fills
+ * the cell ~95% with no boundary clipping (see the comment block above) and
+ * scales with `cellHeight`, so a 2× `record` GIF stays in proportion.
+ */
+const DEFAULT_FONT_SIZE_RATIO = 17 / 20
+/** Default baseline as a fraction of the cell height. */
+const DEFAULT_BASELINE_RATIO = 0.835
+
 /** Options for {@link renderCells}. */
 export interface RenderCellsOptions {
   /** Cell advance width in px (monospace pitch). Default 9.6. */
   cellWidth?: number
   /** Cell box height in px (line height). Default 20. */
   cellHeight?: number
-  /** Glyph render size in px. Default 16. */
+  /** Glyph render size in px. Default `cellHeight * 0.85` — fills the cell ~95%. */
   fontSize?: number
-  /** Baseline offset from the cell-box top in px. Default `cellHeight * 0.78`. */
+  /** Baseline offset from the cell-box top in px. Default `cellHeight * 0.835`. */
   baseline?: number
   /** Padding on every side in px. Default 0. */
   padding?: number
@@ -234,7 +258,7 @@ export function renderCells(terminal: TerminalReadable, opts: RenderCellsOptions
   const lines = terminal.getLines()
   const rows = lines.length
   const cols = lines.reduce((m, line) => Math.max(m, line.length), 0)
-  const cellHeight = opts.cellHeight ?? 20
+  const cellHeight = opts.cellHeight ?? DEFAULT_CELL_HEIGHT
   const blank: SwashCell = { text: "", fg: -1, bg: -1, bold: false, wide: false, continuation: false }
   const cells: SwashCell[] = []
   for (let row = 0; row < rows; row++) {
@@ -248,10 +272,10 @@ export function renderCells(terminal: TerminalReadable, opts: RenderCellsOptions
     cells,
     cols,
     rows,
-    cellWidth: opts.cellWidth ?? 9.6,
+    cellWidth: opts.cellWidth ?? DEFAULT_CELL_WIDTH,
     cellHeight,
-    fontSize: opts.fontSize ?? 16,
-    baseline: opts.baseline ?? cellHeight * 0.78,
+    fontSize: opts.fontSize ?? cellHeight * DEFAULT_FONT_SIZE_RATIO,
+    baseline: opts.baseline ?? cellHeight * DEFAULT_BASELINE_RATIO,
     fonts: opts.fonts ?? swashFontChain(),
     defaultFg: opts.defaultFg ?? DEFAULT_FG,
     defaultBg: opts.defaultBg ?? DEFAULT_BG,

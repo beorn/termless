@@ -195,16 +195,35 @@ async function loadSwash(): Promise<SwashModule> {
  * SVG, so the SVG-input methods delegate to `resvg` as a faithful fallback
  * for the SVG-based gif / apng pipelines.
  */
+/**
+ * Edge padding (px, unscaled) the swash cells path adds around the grid.
+ *
+ * swash blits each glyph at `pen_x + placement.left`; a glyph whose
+ * `placement.left` is negative — common for Nerd Font icons, which overhang
+ * left of the pen origin — has its leftmost columns at `px < 0` at column 0,
+ * which the blit loop drops (the icon is clipped against the bitmap edge).
+ * A few px of padding on every side absorbs that overhang (and the symmetric
+ * right / top / bottom cases) so edge glyphs render whole. Scaled with the
+ * renderer's `scale` so the inset is constant in cell-fractions.
+ */
+const SWASH_EDGE_PADDING = 4
+
 async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
   // resvg is the SVG-input fallback — swash only consumes the cell grid.
   const svgFallback = createResvgRasterizer(await loadResvg())
   const toBitmap = (terminal: CellGridSource, scale: number): RasterBitmap => {
     const s = Math.max(1, scale)
+    // Cell metrics scale uniformly with `s`. `cellWidth` / `cellHeight` are the
+    // monospace grid pitch; `fontSize` / `baseline` are deliberately left to
+    // `renderCells`'s tuned defaults, fed the scaled `cellHeight` so the
+    // glyph-fill ratio (~95% of the cell) and centred baseline hold at any
+    // scale. The old explicit `fontSize: 16` rendered the glyph undersized.
     const bmp = mod.renderCells(terminal, {
       cellWidth: 9.6 * s,
       cellHeight: 20 * s,
-      fontSize: 16 * s,
-      baseline: 20 * 0.78 * s,
+      // Absorb left/right/top/bottom glyph overhang so edge glyphs (notably a
+      // col-0 Nerd Font icon) are not clipped against the bitmap border.
+      padding: Math.round(SWASH_EDGE_PADDING * s),
     })
     return { pixels: new Uint8Array(bmp.pixels), width: bmp.width, height: bmp.height }
   }

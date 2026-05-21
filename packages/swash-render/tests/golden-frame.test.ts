@@ -84,6 +84,67 @@ describe.skipIf(!NATIVE)("swash renderer — golden frame", () => {
     }
   })
 
+  it("a col-0 left-overhanging glyph is not clipped against the bitmap edge", () => {
+    // U+E0B0 — a powerline arrowhead whose outline overhangs left of the pen
+    // origin (`placement.left` negative). At column 0 with `padding: 0` its
+    // leftmost columns land at `px < 0` and the blit loop drops them — the
+    // arrow point is sheared off. A few px of padding absorbs the overhang.
+    const inkAtLeftEdge = (padding: number): number => {
+      const term = createTerminal({ backend: createVt100Backend(), cols: 4, rows: 1 })
+      try {
+        term.feed("\u{E0B0}")
+        const bmp = renderCells(term, { padding })
+        const px = new Uint8Array(bmp.pixels)
+        let edge = 0
+        for (let y = 0; y < bmp.height; y++) {
+          const i = (y * bmp.width + 0) * 4
+          if (px[i]! + px[i + 1]! + px[i + 2]! > 0x1e * 3 + 30) edge++
+        }
+        return edge
+      } finally {
+        term.close()
+      }
+    }
+    // padding 0 → glyph ink reaches the bitmap's x=0 column (clipped).
+    expect(inkAtLeftEdge(0)).toBeGreaterThan(0)
+    // padding ≥ a few px → no ink at the absolute edge (glyph rendered whole).
+    expect(inkAtLeftEdge(4)).toBe(0)
+  })
+
+  it("glyph ink fills the cell — tuned font-size metrics, not undersized", () => {
+    // The default font-size / baseline ratios are tuned so JetBrains Mono's
+    // full ink extent (accented caps through deep descenders) fills the cell
+    // ~95%. The earlier `fontSize 16` left the glyph ~2px short of the 20px
+    // cell — rows read as over-leaded and the text looked small and thin.
+    const inkBandFill = (opts?: { fontSize?: number; baseline?: number }): number => {
+      const term = createTerminal({ backend: createVt100Backend(), cols: 12, rows: 1 })
+      try {
+        term.feed("\u{C0}\u{C9}Mgjpqy{}")
+        const bmp = renderCells(term, opts)
+        const px = new Uint8Array(bmp.pixels)
+        let minY = bmp.height
+        let maxY = 0
+        for (let y = 0; y < bmp.height; y++) {
+          for (let x = 0; x < bmp.width; x++) {
+            const i = (y * bmp.width + x) * 4
+            if (px[i]! + px[i + 1]! + px[i + 2]! > 0x1e * 3 + 30) {
+              if (y < minY) minY = y
+              if (y > maxY) maxY = y
+            }
+          }
+        }
+        return (maxY - minY + 1) / bmp.height
+      } finally {
+        term.close()
+      }
+    }
+    // The new tuned default fills the cell well above the old fontSize-16 metrics.
+    const tuned = inkBandFill()
+    const old = inkBandFill({ fontSize: 16, baseline: 20 * 0.78 })
+    expect(tuned).toBeGreaterThan(0.92)
+    expect(tuned).toBeGreaterThan(old)
+  })
+
   // The spike's headline finding: swash renders color emoji in color.
   it.skipIf(!HAS_COLOR_EMOJI)("renders a color emoji with chromatic ink", () => {
     // The xterm backend tracks wide emoji as one cell; the pure-TS vt100
