@@ -193,6 +193,8 @@ export async function executeTape(tape: TapeFile, options?: TapeExecutorOptions)
   if (tape.settings.BorderRadius) svgOptions.borderRadius = Number.parseInt(tape.settings.BorderRadius, 10)
   if (tape.settings.WindowBar) svgOptions.windowBar = tape.settings.WindowBar.toLowerCase() as WindowBar
   if (tape.settings.WindowBarSize) svgOptions.windowBarSize = Number.parseInt(tape.settings.WindowBarSize, 10)
+  if (tape.settings.WindowTitle) svgOptions.windowTitle = tape.settings.WindowTitle
+  if (tape.settings.Shadow) svgOptions.shadow = Number.parseInt(tape.settings.Shadow, 10)
   if (tape.settings.Margin) svgOptions.margin = Number.parseInt(tape.settings.Margin, 10)
   if (tape.settings.MarginFill) svgOptions.marginFill = tape.settings.MarginFill
 
@@ -286,6 +288,8 @@ async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: Execute
       if (cmd.key === "BorderRadius") ctx.svgOptions.borderRadius = Number.parseInt(cmd.value, 10)
       if (cmd.key === "WindowBar") ctx.svgOptions.windowBar = cmd.value.toLowerCase() as WindowBar
       if (cmd.key === "WindowBarSize") ctx.svgOptions.windowBarSize = Number.parseInt(cmd.value, 10)
+      if (cmd.key === "WindowTitle") ctx.svgOptions.windowTitle = cmd.value
+      if (cmd.key === "Shadow") ctx.svgOptions.shadow = Number.parseInt(cmd.value, 10)
       if (cmd.key === "Margin") ctx.svgOptions.margin = Number.parseInt(cmd.value, 10)
       if (cmd.key === "MarginFill") ctx.svgOptions.marginFill = cmd.value
       if (cmd.key === "PlaybackSpeed") ctx.playbackSpeed = Number.parseFloat(cmd.value)
