@@ -53,6 +53,20 @@ export { loadVisualTrace } from "./load-visual-trace.ts"
 export type { LoadVisualTraceOptions } from "./load-visual-trace.ts"
 export { writeVisualTrace } from "./write-visual-trace.ts"
 export type { WriteVisualTraceOptions } from "./write-visual-trace.ts"
+// Native `.trec` recording format (Phase 5): the canonical full-fidelity
+// on-disk form — a directory bundle, superset of the frame-trace layout.
+export {
+  readRecording,
+  writeRecording,
+  packRecording,
+  unpackRecording,
+  isTrecPath,
+  TREC_FORMAT_VERSION,
+} from "./native-trec.ts"
+export type { TrecManifest, ReadRecordingOptions, WriteRecordingOptions } from "./native-trec.ts"
+// ZIP container helper backing `.trec` pack / unpack.
+export { buildZip, parseZip } from "./zip-archive.ts"
+export type { ZipEntry } from "./zip-archive.ts"
 // view verb + view/ module (Phase 3): one verb, one viewer, all presentation.
 export { view } from "./view.ts"
 export type { ViewMode, ViewOptions, ScrubViewOptions, AnimateViewOptions } from "./view.ts"

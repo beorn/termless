@@ -28,10 +28,9 @@
  * that needs the bytes resolves them against the trace directory itself.
  */
 
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { traceToRecording } from "./frame-trace-recording.ts"
-import type { Frame } from "./frame-trace.ts"
+import { readRecording } from "./native-trec.ts"
 import type { Recording } from "./recording-model.ts"
 
 /** Options for {@link loadVisualTrace}. */
@@ -45,58 +44,34 @@ export interface LoadVisualTraceOptions {
 }
 
 /**
- * Parse a frame-trace `index.jsonl` into `Frame[]`.
- *
- * One JSON object per line. Tolerant: blank lines and malformed lines (e.g. a
- * truncated final line from an interrupted trace) are skipped — matching the
- * append-only, truncation-tolerant design of `frame-trace.ts`.
- */
-function parseIndexJsonl(text: string): Frame[] {
-  const frames: Frame[] = []
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim()
-    if (trimmed.length === 0) continue
-    try {
-      frames.push(JSON.parse(trimmed) as Frame)
-    } catch {
-      // Tolerant: skip malformed line (matches frame-trace.ts's design).
-    }
-  }
-  return frames
-}
-
-/**
  * Load an on-disk frame-trace directory into an in-memory {@link Recording}.
  *
- * Reads `<path>/index.jsonl`, parses it into the tracer's `Frame[]`, and
- * projects them into a `Recording` whose `frames` projection is populated —
- * the same shape Phase 2's {@link traceToRecording} produces.
+ * Phase 5 update: `loadVisualTrace` now **delegates to {@link readRecording}**,
+ * the native `.trec` reader. `readRecording` accepts both a full `.trec`
+ * directory and a bare legacy frame-trace directory (`index.jsonl` +
+ * `NNNNN.png`, no `manifest.json`) — so `loadVisualTrace` keeps its exact
+ * contract (a frame-trace directory in, a `Recording` out) while the native
+ * `.trec` format owns the read path. km's `toMatchVisualTrace` calling
+ * `loadVisualTrace` transparently gains `.trec` support.
  *
  * Terminal geometry (`cols`/`rows`) is taken from the first frame's buffer.
  * `provenance.reproducible` is `false`: a bare frame trace records no `io`
  * track, so the visual state is the sole record.
  *
- * @param path Path to the frame-trace directory (the one holding
- *   `index.jsonl` + `NNNNN.png`).
+ * @param path Path to a frame-trace directory (`index.jsonl` + `NNNNN.png`),
+ *   or a full `.trec` directory.
  * @param options See {@link LoadVisualTraceOptions}.
  * @returns A {@link Recording} with a populated `frames` projection.
- * @throws {Error} when `<path>/index.jsonl` does not exist, or when it
- *   contains no parseable frames (a Recording must carry a non-empty track).
+ * @throws {Error} when `<path>` is neither a frame-trace directory nor a
+ *   `.trec` directory, or when it contains no parseable frames.
  */
 export function loadVisualTrace(path: string, options: LoadVisualTraceOptions = {}): Recording {
+  // Preserve the historical error message for a missing frame-trace index so
+  // existing callers/tests that match on it keep passing.
   const indexFile = join(path, "index.jsonl")
-  if (!existsSync(indexFile)) {
+  const manifestFile = join(path, "manifest.json")
+  if (!existsSync(indexFile) && !existsSync(manifestFile)) {
     throw new Error(`loadVisualTrace: no index.jsonl found at ${indexFile}`)
   }
-  const frames = parseIndexJsonl(readFileSync(indexFile, "utf-8"))
-  if (frames.length === 0) {
-    throw new Error(`loadVisualTrace: ${indexFile} contains no parseable frames`)
-  }
-  const first = frames[0]!
-  return traceToRecording({
-    frames,
-    cols: first.buffer.cols,
-    rows: first.buffer.rows,
-    backend: options.backend ?? "unknown",
-  })
+  return readRecording(path, { backend: options.backend ?? "unknown" })
 }

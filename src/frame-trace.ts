@@ -31,6 +31,7 @@ import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { writeViewer } from "./view/viewer.ts"
 import { traceToRecording } from "./frame-trace-recording.ts"
+import { writeRecording } from "./native-trec.ts"
 import type { Recording } from "./recording-model.ts"
 import type { ScreenshotOptions, Terminal } from "./types.ts"
 
@@ -149,6 +150,24 @@ export interface FrameTracer {
    * @throws {Error} when no frames have been captured.
    */
   toRecording(): Recording
+  /**
+   * Write the captured trace to a native `.trec` directory bundle at `trecDir`
+   * (Phase 5 of the Recording-domain unification).
+   *
+   * `.trec` is the canonical full-fidelity on-disk recording format — a
+   * directory whose `frames/` sub-tree is byte-compatible with the frame-trace
+   * layout this tracer writes, wrapped with a `manifest.json`. The frame
+   * tracer's own `index.jsonl` + `NNNNN.png` output (at the `dir` it was
+   * created with) is left **untouched** — `writeTrec` is an additive native-
+   * format export, not a replacement for the live trace directory.
+   *
+   * Call after `stop()`. The unique-frame PNGs are copied from the tracer's
+   * live trace `dir` into the `.trec` `frames/` sub-tree.
+   *
+   * @param trecDir Destination `.trec` directory.
+   * @throws {Error} when no frames have been captured.
+   */
+  writeTrec(trecDir: string): void
   /** Was the trace truncated by maxFrames cap. */
   readonly truncated: boolean
   /** Total frames recorded (unique + duplicate). */
@@ -513,6 +532,21 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
         backend: terminal.backend.name,
         ...(options.canvas !== undefined ? { canvas: options.canvas } : {}),
       })
+    },
+    writeTrec(trecDir: string): void {
+      // Project the captured trace into a Recording, then serialize it to a
+      // `.trec` directory. The unique-frame PNGs are copied from the tracer's
+      // live trace `dir` (where `captureFrame` wrote them).
+      const cols = frames[0]?.buffer.cols ?? options.canvas?.cols ?? terminal.cols
+      const rows = frames[0]?.buffer.rows ?? options.canvas?.rows ?? terminal.rows
+      const recording = traceToRecording({
+        frames,
+        cols,
+        rows,
+        backend: terminal.backend.name,
+        ...(options.canvas !== undefined ? { canvas: options.canvas } : {}),
+      })
+      writeRecording(trecDir, recording, { pngSourceDir: dir })
     },
     get truncated() {
       return truncated
