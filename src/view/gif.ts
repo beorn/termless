@@ -9,6 +9,7 @@
 
 // Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
+import { bundledFontFiles } from "../render/fonts.ts"
 
 // Lazy-cached imports
 let gifencModule: typeof import("gifenc") | null = null
@@ -60,13 +61,21 @@ export async function createGif(
 
   const gif = GIFEncoder()
 
+  // Bundled emoji + symbol fallback faces. resvg-js with only
+  // `loadSystemFonts` + `defaultFontFamily` does not resolve a face with
+  // coverage for emoji / rarer symbol code points — those render as `.notdef`
+  // tofu. Passing the bundled font files through `font.fontFiles` registers
+  // JetBrains Mono + Noto Sans Symbols 2 + Noto Emoji so per-glyph fallback
+  // covers the title-bar / footer glyphs (📋 📄 counters, status markers).
+  const fontFiles = bundledFontFiles()
+
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i]!
     const duration = frame.duration || defaultDuration
 
     const resvg = new Resvg(frame.svg, {
       fitTo: { mode: "zoom" as const, value: scale },
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles },
     })
     const rendered = resvg.render()
     const rgba = new Uint8Array(rendered.pixels)

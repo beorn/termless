@@ -20,16 +20,17 @@
 import { describe, test, expect, beforeAll } from "vitest"
 import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 import { createCanvas, loadImage, type ImageData } from "@napi-rs/canvas"
 import { renderAnsiPng, renderTerminalPng } from "../src/render.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import { createTerminal, createFrameTracer } from "../../../src/index.ts"
+import { bundledFontsDir } from "../../../src/render/fonts.ts"
 import type { Ghostty } from "ghostty-web"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
-const FONTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "assets", "fonts")
+// Canonical bundled fonts now live in @termless/core (src/render/fonts.ts).
+const FONTS_DIR = bundledFontsDir()
 
 let ghostty: Ghostty
 beforeAll(async () => {

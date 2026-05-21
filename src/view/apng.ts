@@ -9,6 +9,7 @@
 
 // Module declarations live in ./upng.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
+import { bundledFontFiles } from "../render/fonts.ts"
 
 // Lazy-cached imports
 let upngModule: typeof import("upng-js") | null = null
@@ -62,12 +63,17 @@ export async function createApng(
   let width = 0
   let height = 0
 
+  // Bundled emoji + symbol fallback faces — see gif.ts for the rationale.
+  // Without `font.fontFiles`, resvg-js renders emoji / rarer symbol code
+  // points as `.notdef` tofu.
+  const fontFiles = bundledFontFiles()
+
   for (const frame of frames) {
     const duration = frame.duration || defaultDuration
 
     const resvg = new Resvg(frame.svg, {
       fitTo: { mode: "zoom" as const, value: scale },
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles },
     })
     const rendered = resvg.render()
 

@@ -1,10 +1,20 @@
 # Bundled fonts
 
-`@termless/ghostty`'s canvas renderer registers these fonts process-wide so
-cell geometry is deterministic across platforms and emoji/symbol glyphs never
-render as tofu. The renderer does NOT use the platform `monospace` alias —
-that alias has unstable, platform-dependent metrics (Skia picks a different
-face per OS, sometimes proportional).
+The canonical termless font assets, owned by `@termless/core` and consumed by
+two render paths:
+
+- **`@termless/ghostty`'s canvas renderer** registers them process-wide via
+  `GlobalFonts.registerFromPath` so cell geometry is deterministic across
+  platforms and emoji/symbol glyphs never render as tofu. The renderer does
+  NOT use the platform `monospace` alias — that alias has unstable,
+  platform-dependent metrics (Skia picks a different face per OS).
+- **`@termless/core`'s `@resvg/resvg-js` SVG→raster path** (`gif.ts`,
+  `apng.ts`, `png.ts`, `record --screenshot *.png`) passes them to resvg's
+  `font.fontFiles` so emoji/symbol code points resolve instead of `.notdef`
+  tofu.
+
+The directory is resolved through `src/render/fonts.ts`; there is one bundled
+copy, not one per package.
 
 | File                           | Font                    | License | Source                                     |
 | ------------------------------ | ----------------------- | ------- | ------------------------------------------ |

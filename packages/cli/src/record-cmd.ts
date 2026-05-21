@@ -558,9 +558,11 @@ async function writeImageOutput(
   } else if (path.endsWith(".png")) {
     // Single frame PNG — rasterize the SVG
     const resvg = await import("@resvg/resvg-js")
+    const { bundledFontFiles } = await import("../../../src/render/fonts.ts")
     const renderer = new resvg.Resvg(frames[frames.length - 1]!.svg, {
       fitTo: { mode: "zoom" as const, value: 2 },
-      font: { loadSystemFonts: true, defaultFontFamily: "Menlo" },
+      // Bundled emoji + symbol fallback faces — see src/render/fonts.ts.
+      font: { loadSystemFonts: true, defaultFontFamily: "Menlo", fontFiles: bundledFontFiles() },
     })
     const rendered = renderer.render()
     writeFileSync(resolve(path), rendered.asPng())

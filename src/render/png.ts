@@ -8,6 +8,7 @@
 
 import type { TerminalReadable, SvgScreenshotOptions } from "../terminal/types.ts"
 import { screenshotSvg } from "./svg.ts"
+import { bundledFontFiles } from "./fonts.ts"
 
 export interface PngScreenshotOptions extends SvgScreenshotOptions {
   /** Render scale factor (default: 2 for retina-quality output). */
@@ -44,6 +45,9 @@ export async function screenshotPng(terminal: TerminalReadable, options?: PngScr
     font: {
       loadSystemFonts: true,
       defaultFontFamily: "Menlo",
+      // Bundled emoji + symbol fallback faces — without these, resvg-js
+      // renders emoji / rarer symbol code points as `.notdef` tofu.
+      fontFiles: bundledFontFiles(),
     },
   })
   return resvg.render().asPng()

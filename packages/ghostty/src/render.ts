@@ -34,10 +34,16 @@
 import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas"
 import type { TerminalReadable } from "../../../src/terminal/types.ts"
+import {
+  BUNDLED_FONTS,
+  bundledFontsDir,
+  BUNDLED_PRIMARY_FAMILY,
+  BUNDLED_SYMBOL_FAMILY,
+  BUNDLED_EMOJI_FAMILY,
+} from "../../../src/render/fonts.ts"
 import { cellsToAnsi } from "./cells-to-ansi.ts"
 
 // ── Types ──
@@ -384,38 +390,16 @@ function registerFontIfNeeded(fontPath: string): void {
 // All three are appended to *every* render's `fontFamily` chain so per-glyph
 // fallback Just Works regardless of what primary face the caller requested.
 
-/** Family names the bundled fonts are registered under (CSS `font-family`). */
-const BUNDLED_PRIMARY_FAMILY = "TermlessMono"
-const BUNDLED_SYMBOL_FAMILY = "TermlessSymbols"
-const BUNDLED_EMOJI_FAMILY = "TermlessEmoji"
+// The bundled font assets, family names, and directory resolver are owned by
+// `@termless/core` (`src/render/fonts.ts`) — the foundational package. Both
+// the canvas renderer here and core's `@resvg/resvg-js` SVG→raster path
+// (gif.ts / apng.ts / png.ts) consume the same single bundled copy.
 
 /**
  * The fallback chain appended to every render. Order matters: symbols then
  * emoji, both after whatever the caller's primary face is.
  */
 const BUNDLED_FALLBACK_CHAIN = `${BUNDLED_SYMBOL_FAMILY}, ${BUNDLED_EMOJI_FAMILY}`
-
-interface BundledFont {
-  file: string
-  family: string
-}
-
-const BUNDLED_FONTS: readonly BundledFont[] = [
-  { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY },
-  { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY },
-  { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY },
-]
-
-/**
- * Resolve the bundled `assets/fonts` directory in both layouts:
- *   - dev:       `<pkg>/src/render.ts`        → `<pkg>/assets/fonts`
- *   - published: `<pkg>/dist/index.mjs`       → `<pkg>/assets/fonts`
- * In both, the fonts dir is one level up from the file's directory + `assets`.
- */
-function bundledFontsDir(): string {
-  const here = dirname(fileURLToPath(import.meta.url))
-  return join(here, "..", "assets", "fonts")
-}
 
 let bundledFontsRegistered = false
 

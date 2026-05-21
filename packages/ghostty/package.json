@@ -24,8 +24,7 @@
     "directory": "packages/ghostty"
   },
   "files": [
-    "dist",
-    "assets"
+    "dist"
   ],
   "type": "module",
   "module": "./src/index.ts",

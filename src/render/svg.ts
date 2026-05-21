@@ -44,6 +44,17 @@ export function rgbToString(color: RGB | null, fallback: string): string {
   return color ? rgbToHex(color) : fallback
 }
 
+// ── Coordinate formatting ──
+
+/**
+ * Format a coordinate for SVG output: drop floating-point noise so cell
+ * positions like `28.799999999999997` emit as `28.8`. Trailing zeros are
+ * trimmed so integer coordinates stay integers.
+ */
+function coord(value: number): string {
+  return String(Math.round(value * 1000) / 1000)
+}
+
 // ── XML escaping ──
 
 function escapeXml(text: string): string {
@@ -69,16 +80,15 @@ interface TextSpan {
   /**
    * Visual cell width this span occupies. NOT text.length — wide chars
    * (emoji, CJK) count 2 cells per char; narrow chars count 1. Used to
-   * emit textLength on the tspan so the browser distributes glyphs across
-   * exactly cellCount × cellWidth pixels, instead of letting font kerning
-   * drift the right edge of the span away from cell boundaries.
+   * keep adjacent spans aligned on the cell grid and to advance startCol
+   * for following spans.
    */
   cellCount: number
   /**
    * True if this span contains a single wide character (emoji / CJK).
-   * Wide-char spans are NEVER merged with adjacent narrow-char spans —
-   * textLength + spacingAndGlyphs on a mixed tspan squishes the emoji
-   * into a narrow slot or stretches surrounding letters off-grid.
+   * Wide-char spans are NEVER merged with adjacent narrow-char spans, so
+   * a multi-char span is always all-narrow — which lets spanToTspan emit
+   * a clean per-character `x` list (one cellWidth step per glyph).
    */
   isWide: boolean
 }
@@ -283,20 +293,33 @@ function resolveOptions(options?: SvgScreenshotOptions): ResolvedOptions {
 // ── Span → tspan conversion ──
 
 function spanToTspan(span: TextSpan, cellWidth: number, themeFg: string): string {
-  const attrs: string[] = [`x="${span.startCol * cellWidth}"`]
-  // textLength + lengthAdjust forces the browser to stretch/shrink glyph
-  // spacing so the rendered span occupies EXACTLY cellCount × cellWidth
-  // pixels. Without this, font kerning drifts the right edge of each span
-  // away from cell boundaries — narrow chars consume fewer pixels than
-  // cellWidth, producing visible gaps; wide chars consume more, producing
-  // visible overlap into the next column (the original #55 collision).
-  // We only emit it when cellCount > 0 (always true for non-empty spans)
-  // and skip for single-character spans where the savings are tiny and
-  // some font hinting paths render slightly better with default spacing.
-  if (span.cellCount > 1) {
-    attrs.push(`textLength="${span.cellCount * cellWidth}"`)
-    attrs.push(`lengthAdjust="spacingAndGlyphs"`)
+  // Per-character cell-grid positioning. SVG `<tspan>` accepts `x` as a
+  // *list* of coordinates — one per character — pinning each glyph to an
+  // exact cell origin. This is renderer-agnostic: librsvg, @resvg/resvg-js,
+  // and browsers all honour the per-glyph `x` list identically.
+  //
+  // The earlier approach used `textLength` + `lengthAdjust="spacingAndGlyphs"`
+  // to stretch a whole span to `cellCount × cellWidth`. librsvg/browsers
+  // render that cleanly, but @resvg/resvg-js distributes glyphs differently
+  // — heavy, uneven letter-spacing, worst on bold faces (it picks a bold
+  // face with different metrics, then spreads it). Since the GIF/PNG path
+  // rasterizes via @resvg/resvg-js, that produced visibly broken output.
+  // An explicit `x` list sidesteps stretch entirely: the renderer just
+  // places each glyph at its cell origin and draws it at natural advance.
+  //
+  // Wide chars (emoji/CJK) are always isolated in their own single-char
+  // span (see buildTextSpans), so a multi-char span is always all-narrow:
+  // char `i` sits at `(startCol + i) × cellWidth`.
+  const charCount = [...span.text].length
+  let xValue: string
+  if (charCount > 1) {
+    const xs: string[] = []
+    for (let i = 0; i < charCount; i++) xs.push(coord((span.startCol + i) * cellWidth))
+    xValue = xs.join(" ")
+  } else {
+    xValue = coord(span.startCol * cellWidth)
   }
+  const attrs: string[] = [`x="${xValue}"`]
   if (span.fill !== themeFg) attrs.push(`fill="${span.fill}"`)
   if (span.bold) attrs.push(`font-weight="bold"`)
   if (span.italic) attrs.push(`font-style="italic"`)
