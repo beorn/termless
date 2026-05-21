@@ -44,6 +44,9 @@ export function chromeOptions(style: ChromeStyle, title?: string): SvgScreenshot
         windowBar: "colorful",
         windowBarSize: 38,
         borderRadius: 10,
+        // Inner padding keeps the first content row off the window bar and
+        // away from the rounded side edges.
+        padding: 12,
         // The margin gives the drop shadow room to render without clipping.
         margin: 24,
         shadow: 14,
@@ -53,6 +56,8 @@ export function chromeOptions(style: ChromeStyle, title?: string): SvgScreenshot
       return {
         windowBar: "windows",
         windowBarSize: 34,
+        // Inner padding keeps the first content row off the title bar.
+        padding: 10,
         // Square corners + no shadow — the Windows desktop convention.
         borderRadius: 0,
         margin: 0,
