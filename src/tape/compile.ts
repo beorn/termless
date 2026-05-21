@@ -85,14 +85,7 @@ const DEFAULT_TYPING_SPEED_MS = 50
 const INTER_PRESS_DELAY_MS = 50
 
 /** Tape command `type` values that have no `commands`-track representation. */
-const DROPPED_KINDS = new Set<TapeCommand["type"]>([
-  "output",
-  "hide",
-  "show",
-  "source",
-  "require",
-  "expect",
-])
+const DROPPED_KINDS = new Set<TapeCommand["type"]>(["output", "hide", "show", "source", "require", "expect"])
 
 /**
  * Compile a parsed `.tape` into a {@link Recording} carrying a `commands`
@@ -151,7 +144,9 @@ export function compileTape(tape: TapeFile, options?: CompileTapeOptions): Compi
       }
       case "key": {
         const count = cmd.count ?? 1
-        commands.push(count > 1 ? { kind: "key", at: at(), key: cmd.key, count } : { kind: "key", at: at(), key: cmd.key })
+        commands.push(
+          count > 1 ? { kind: "key", at: at(), key: cmd.key, count } : { kind: "key", at: at(), key: cmd.key },
+        )
         if (count > 1) clockMicros += INTER_PRESS_DELAY_MS * (count - 1) * 1000
         break
       }
@@ -168,7 +163,9 @@ export function compileTape(tape: TapeFile, options?: CompileTapeOptions): Compi
         break
       }
       case "screenshot":
-        commands.push(cmd.path !== undefined ? { kind: "screenshot", at: at(), path: cmd.path } : { kind: "screenshot", at: at() })
+        commands.push(
+          cmd.path !== undefined ? { kind: "screenshot", at: at(), path: cmd.path } : { kind: "screenshot", at: at() },
+        )
         break
     }
   }

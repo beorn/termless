@@ -35,10 +35,7 @@ import type { Frame as TraceFrame } from "./frame-trace.ts"
 import type { ScreenshotOptions } from "./types.ts"
 
 /** Canvas options the frame tracer was created with — the fingerprint source. */
-export type TraceCanvasOptions = Pick<
-  ScreenshotOptions,
-  "cols" | "rows" | "fontSize" | "fontPath" | "theme" | "dpr"
->
+export type TraceCanvasOptions = Pick<ScreenshotOptions, "cols" | "rows" | "fontSize" | "fontPath" | "theme" | "dpr">
 
 /** Input for {@link traceToRecording}. */
 export interface TraceToRecordingInput {

@@ -9,21 +9,18 @@
 
 import { describe, test, expect } from "vitest"
 import { parseAsciicast } from "../../src/asciicast/reader.ts"
-import {
-  decodeAsciicast,
-  decodeAsciicastSource,
-  encodeAsciicast,
-} from "../../src/asciicast/recording-codec.ts"
+import { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "../../src/asciicast/recording-codec.ts"
 import { createRecording, micros, secondsToMicros } from "../../src/recording-model.ts"
 
-const CAST = [
-  JSON.stringify({ version: 2, width: 100, height: 30, duration: 2.5, title: "demo" }),
-  JSON.stringify([0.0, "o", "$ "]),
-  JSON.stringify([0.5, "i", "ls\r"]),
-  JSON.stringify([0.512, "o", "ls\r\n"]),
-  JSON.stringify([1.0, "o", "file1  file2\r\n$ "]),
-  JSON.stringify([1.2, "m", "a marker"]),
-].join("\n") + "\n"
+const CAST =
+  [
+    JSON.stringify({ version: 2, width: 100, height: 30, duration: 2.5, title: "demo" }),
+    JSON.stringify([0.0, "o", "$ "]),
+    JSON.stringify([0.5, "i", "ls\r"]),
+    JSON.stringify([0.512, "o", "ls\r\n"]),
+    JSON.stringify([1.0, "o", "file1  file2\r\n$ "]),
+    JSON.stringify([1.2, "m", "a marker"]),
+  ].join("\n") + "\n"
 
 describe("decodeAsciicast — .cast → Recording (io track)", () => {
   test("decodes events into a direction-tagged io track", () => {

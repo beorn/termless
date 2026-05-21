@@ -52,8 +52,7 @@ export function decodeAsciicast(cast: AsciicastRecording): Recording {
   }
   // Header `duration` (float seconds) is authoritative when present; else use
   // the last event's timestamp.
-  const durationMicros =
-    cast.header.duration !== undefined ? secondsToMicros(cast.header.duration) : micros(maxAt)
+  const durationMicros = cast.header.duration !== undefined ? secondsToMicros(cast.header.duration) : micros(maxAt)
   return createRecording({
     cols: cast.header.width,
     rows: cast.header.height,
