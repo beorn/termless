@@ -20,7 +20,7 @@
  *    clock.
  *
  * Use it for *human-readable export* of an authored recording, never as a
- * lossless serialization. The native `.trec` format (Phase 5) is the lossless
+ * lossless serialization. The native `.rec` format (Phase 5) is the lossless
  * round-trip.
  */
 

@@ -1,6 +1,6 @@
 ---
 title: Recording Formats
-description: The three on-disk formats a Recording serializes to — .tape, .cast, and .trec.
+description: The three on-disk formats a Recording serializes to — .tape, .cast, and .rec.
 ---
 
 # Recording Formats
@@ -13,8 +13,8 @@ domain object.
 | --------------------- | --------------------------------------------- | -------------------------- |
 | [`.tape`](./tape)     | charm/VHS interop — a *compiler* input        | commands                   |
 | [`.cast`](./asciicast) | asciinema interop — a symmetric *codec*       | io                         |
-| [`.trec`](./trec)     | termless native — a directory bundle          | commands + io + frames     |
+| [`.rec`](./rec)     | termless native — a single-file container          | commands + io + frames     |
 
 Use `.tape` to author a session by hand or interop with VHS. Use `.cast` to
-interop with the asciinema ecosystem. Use `.trec` for termless's own lossless,
+interop with the asciinema ecosystem. Use `.rec` for termless's own lossless,
 all-tracks form.

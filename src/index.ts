@@ -53,18 +53,19 @@ export { loadVisualTrace } from "./recording/load-visual-trace.ts"
 export type { LoadVisualTraceOptions } from "./recording/load-visual-trace.ts"
 export { writeVisualTrace } from "./recording/write-visual-trace.ts"
 export type { WriteVisualTraceOptions } from "./recording/write-visual-trace.ts"
-// Native `.trec` recording format (Phase 5): the canonical full-fidelity
-// on-disk form — a directory bundle, superset of the frame-trace layout.
+// Native `.rec` recording format (Phase 5): the canonical full-fidelity
+// on-disk form — a single-file ZIP container, superset of the frame-trace
+// layout.
 export {
   readRecording,
   writeRecording,
   packRecording,
   unpackRecording,
-  isTrecPath,
-  TREC_FORMAT_VERSION,
-} from "./recording/native/native-trec.ts"
-export type { TrecManifest, ReadRecordingOptions, WriteRecordingOptions } from "./recording/native/native-trec.ts"
-// ZIP container helper backing `.trec` pack / unpack.
+  isRecPath,
+  REC_FORMAT_VERSION,
+} from "./recording/native/native-rec.ts"
+export type { RecManifest, ReadRecordingOptions, WriteRecordingOptions } from "./recording/native/native-rec.ts"
+// ZIP container helper backing the `.rec` format.
 export { buildZip, parseZip } from "./recording/native/zip-archive.ts"
 export type { ZipEntry } from "./recording/native/zip-archive.ts"
 // view verb + view/ module (Phase 3): one verb, one viewer, all presentation.

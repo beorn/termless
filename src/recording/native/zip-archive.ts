@@ -1,8 +1,8 @@
 /**
- * Minimal, dependency-free ZIP container — `pack` / `unpack` for the `.trec`
- * native recording format (see {@link "./native-trec.ts"}).
+ * Minimal, dependency-free ZIP container — `pack` / `unpack` for the `.rec`
+ * native recording format (see {@link "./native-rec.ts"}).
  *
- * A `.trec` recording is a **directory bundle** by default. `pack` zips that
+ * A `.rec` recording is a **single-file container** by default. `pack` zips that
  * directory into a single-file portable archive (like `.docx` / `.epub`);
  * `unpack` expands it back. The archive is a standard ZIP — readable by any
  * ZIP tool — but termless writes and reads it itself so the native format has
@@ -20,7 +20,7 @@
  *    keeps it fast and dependency-free.
  *
  * This is intentionally a *codec*, not a general archiver: it round-trips a
- * `name → bytes` map, which is exactly what the `.trec` directory is.
+ * `name → bytes` map, which is exactly what the `.rec` directory is.
  */
 
 import { deflateRawSync, inflateRawSync } from "node:zlib"

@@ -30,7 +30,7 @@
 
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { readRecording } from "./native/native-trec.ts"
+import { readRecording } from "./native/native-rec.ts"
 import type { Recording } from "./recording.ts"
 
 /** Options for {@link loadVisualTrace}. */
@@ -47,23 +47,23 @@ export interface LoadVisualTraceOptions {
  * Load an on-disk frame-trace directory into an in-memory {@link Recording}.
  *
  * Phase 5 update: `loadVisualTrace` now **delegates to {@link readRecording}**,
- * the native `.trec` reader. `readRecording` accepts both a full `.trec`
+ * the native `.rec` reader. `readRecording` accepts both a full `.rec`
  * directory and a bare legacy frame-trace directory (`index.jsonl` +
  * `NNNNN.png`, no `manifest.json`) — so `loadVisualTrace` keeps its exact
  * contract (a frame-trace directory in, a `Recording` out) while the native
- * `.trec` format owns the read path. km's `toMatchVisualTrace` calling
- * `loadVisualTrace` transparently gains `.trec` support.
+ * `.rec` format owns the read path. km's `toMatchVisualTrace` calling
+ * `loadVisualTrace` transparently gains `.rec` support.
  *
  * Terminal geometry (`cols`/`rows`) is taken from the first frame's buffer.
  * `provenance.reproducible` is `false`: a bare frame trace records no `io`
  * track, so the visual state is the sole record.
  *
  * @param path Path to a frame-trace directory (`index.jsonl` + `NNNNN.png`),
- *   or a full `.trec` directory.
+ *   or a full `.rec` directory.
  * @param options See {@link LoadVisualTraceOptions}.
  * @returns A {@link Recording} with a populated `frames` projection.
  * @throws {Error} when `<path>` is neither a frame-trace directory nor a
- *   `.trec` directory, or when it contains no parseable frames.
+ *   `.rec` directory, or when it contains no parseable frames.
  */
 export function loadVisualTrace(path: string, options: LoadVisualTraceOptions = {}): Recording {
   // Preserve the historical error message for a missing frame-trace index so

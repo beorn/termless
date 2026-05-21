@@ -208,7 +208,7 @@ export default defineConfig({
           { text: "Overview", link: "/reference/formats/" },
           { text: ".tape", link: "/reference/formats/tape" },
           { text: ".cast", link: "/reference/formats/asciicast" },
-          { text: ".trec", link: "/reference/formats/trec" },
+          { text: ".rec", link: "/reference/formats/rec" },
         ],
       },
       {

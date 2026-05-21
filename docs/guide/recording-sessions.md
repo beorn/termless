@@ -160,7 +160,7 @@ the recording's frames into a GIF. See
 
 ```bash
 # Scrub a recording in the browser
-$ termless view ./mysession.trec
+$ termless view ./mysession.rec
 
 # Animate a recording to a GIF
 $ termless view ./trace --format gif -o demo.gif
@@ -212,7 +212,7 @@ Recordings render to multiple output formats — no Chromium, no ffmpeg:
 | APNG         | `.apng`   | Multi-frame    | `upng-js` (pure JS)    |
 | Web player   | browser   | Interactive    | `@termless/web-player` |
 
-The three on-disk recording **formats** — `.tape`, `.cast`, `.trec` — are
+The three on-disk recording **formats** — `.tape`, `.cast`, `.rec` — are
 documented under [Recording Formats](../reference/formats/).
 
 ## Programmatic API
@@ -241,7 +241,7 @@ await replayRecording(term2, recording, { realtime: true }) // original timing
 
 - [Recording](../concepts/recording) -- the concept and its three tracks.
 - [Tracing Visual Bugs](./tracing-visual-bugs) -- the frames projection + scrubbable viewer.
-- [Recording Formats](../reference/formats/) -- the `.tape`, `.cast`, and `.trec` specs.
+- [Recording Formats](../reference/formats/) -- the `.tape`, `.cast`, and `.rec` specs.
 - [Web Player](./web-player) -- embed a recording in browser docs.
 - [Screenshots](./screenshots) -- single-frame SVG and PNG capture.
 - [Multi-Backend Testing](./multi-backend) -- backend comparison in Vitest.

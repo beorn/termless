@@ -1,22 +1,22 @@
 ---
-title: .trec Format Reference
-description: The native termless recording format — a directory bundle carrying the commands, io, and frames tracks losslessly.
+title: .rec Format Reference
+description: The native termless recording format — a single-file container carrying the commands, io, and frames tracks losslessly.
 ---
 
-# `.trec` Format Reference
+# `.rec` Format Reference
 
-`.trec` is termless's **native** recording format — the canonical, full-fidelity
+`.rec` is termless's **native** recording format — the canonical, full-fidelity
 on-disk form of a [Recording](../../concepts/recording). Unlike [`.tape`](./tape)
-(a lossy compiler input) and [`.cast`](./asciicast) (an io-only codec), `.trec`
+(a lossy compiler input) and [`.cast`](./asciicast) (an io-only codec), `.rec`
 carries **all three tracks** — commands, io, and frames — losslessly.
 
-## Shape — a directory bundle
+## Shape — a single-file container
 
-A `.trec` is a **directory**, not a single file. (A long trace base64'd into one
-JSON would be a hundred-megabyte file that breaks `git diff` and risks OOM.)
+A `.rec` is a **single file**: a standard ZIP container (like `.docx` or
+`.epub`) holding the whole Recording as archive entries.
 
 ```
-mysession.trec/
+mysession.rec                    ← one file, a ZIP container holding:
   manifest.json                  — metadata, Renderer fingerprint, track index
   commands.jsonl                 — the commands source track   (omitted if absent)
   io.jsonl                       — the io source track         (omitted if absent)
@@ -26,11 +26,16 @@ mysession.trec/
 A Recording is valid with any non-empty subset of tracks, so each track file is
 written only when that track is present. `manifest.json` indexes which ones are.
 
+The unpacked layout — a directory with the same entries — is an internal
+working form. `packRecording` / `unpackRecording` convert between the file and
+the directory; `writeRecording` / `readRecording` are the user-facing
+single-file API.
+
 ## `manifest.json`
 
 | Field              | Type                  | Meaning                                                     |
 | ------------------ | --------------------- | ----------------------------------------------------------- |
-| `trecVersion`      | `number`              | The `.trec` format version.                                 |
+| `recVersion`       | `number`              | The `.rec` format version.                                  |
 | `recordingVersion` | `1`                   | The Recording-model version.                                |
 | `cols` / `rows`    | `number`              | Terminal size at recording start.                           |
 | `durationMicros`   | `number`              | Total duration, integer microseconds.                       |
@@ -38,14 +43,14 @@ written only when that track is present. `manifest.json` indexes which ones are.
 | `tracks`           | `{commands,io,frames}` | Which track files are present.                              |
 | `fingerprint`      | `RendererFingerprint` | The Renderer fingerprint the frames were rendered against.  |
 
-The presence of `manifest.json` is what distinguishes a full `.trec` directory
+The presence of `manifest.json` is what distinguishes a full `.rec` container
 from a bare legacy frame-trace directory.
 
 ## Superset of the frame-trace layout
 
 The `frames/` subtree is **byte-identical** to a bare frame-trace directory —
 `index.jsonl` plus `NNNNN.png` files. An existing frame-trace directory *is* a
-valid `.trec` `frames/` subtree: `readRecording` loads a bare frame-trace
+valid `.rec` `frames/` subtree: `readRecording` loads a bare frame-trace
 directory (no `manifest.json`) as a frames-only Recording. That superset
 relationship keeps existing visual-regression goldens valid.
 
@@ -80,25 +85,26 @@ import {
   readRecording,
   packRecording,
   unpackRecording,
-  isTrecPath,
+  isRecPath,
 } from "@termless/core"
 
-// Write a Recording to a .trec directory
-writeRecording("mysession.trec", recording, { pngSourceDir: "/tmp/my-trace" })
+// Write a Recording to a single .rec file
+writeRecording("mysession.rec", recording, { pngSourceDir: "/tmp/my-trace" })
 
-// Read a .trec directory (or a bare legacy frame-trace directory) back
-const rec = readRecording("mysession.trec")
+// Read a .rec file (or a bare legacy frame-trace directory) back
+const rec = readRecording("mysession.rec")
 ```
 
-### Portable single-file archive
+### Directory working form
 
-`packRecording` zips a `.trec` directory into a portable single-file `.trec`
-archive (like `.docx` or `.epub`); `unpackRecording` expands it back. The
-archive is optional — the directory is the default form.
+`unpackRecording` expands a `.rec` file into a directory bundle — the internal
+working form — and `packRecording` zips a directory back into a single `.rec`
+file. The single file is the canonical format; the directory is a convenience
+for inspecting or editing the contents.
 
 ```typescript
-packRecording("mysession.trec", "mysession.trec.zip")
-unpackRecording("mysession.trec.zip", "restored.trec")
+unpackRecording("mysession.rec", "mysession-dir/")
+packRecording("mysession-dir/", "mysession.rec")
 ```
 
 ## See Also

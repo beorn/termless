@@ -15,7 +15,7 @@
  * termless play demo.tape
  *
  * # View a recording — scrub it in the browser
- * termless view ./mysession.trec
+ * termless view ./mysession.rec
  *
  * # Manage backends
  * termless backends list
@@ -45,7 +45,7 @@ const program = new Command()
 program.addHelpSection("Recording verbs:", [
   ["$ termless record -o demo.tape km view", "record — capture a session to a recording"],
   ["$ termless record --compat -- bun km view ~/V", "record — compat capture in a real terminal (macOS)"],
-  ["$ termless view ./mysession.trec", "view — scrub a recording in the browser"],
+  ["$ termless view ./mysession.rec", "view — scrub a recording in the browser"],
   ["$ termless view ./trace --format gif -o demo.gif", "view — animate a recording to a GIF"],
   ["$ termless play demo.tape", "play — re-execute a recording"],
   ["$ termless compare demo.tape -b vterm,ghostty", "compare — diff a recording across backends"],

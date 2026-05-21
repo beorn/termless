@@ -13,7 +13,7 @@ headless execution and multi-backend playback.
 `.tape` is a **compiler input**, not a symmetric codec: a `.tape` file *compiles*
 into a Recording's **commands** track (`Type "hi"` expands into key events with
 timing; `Sleep` is a player directive). Going the other way — Recording → `.tape` —
-is best-effort. For lossless storage of all tracks, use [`.trec`](./trec).
+is best-effort. For lossless storage of all tracks, use [`.rec`](./rec).
 
 ## Overview
 
@@ -316,4 +316,4 @@ The termless `.tape` compiler accepts VHS `.tape` files. The main differences:
 
 - [Recording Sessions](../../guide/recording-sessions) -- recording and playback how-to.
 - [.cast format](./asciicast) -- the asciinema codec.
-- [.trec format](./trec) -- termless's native, all-tracks format.
+- [.rec format](./rec) -- termless's native, all-tracks format.

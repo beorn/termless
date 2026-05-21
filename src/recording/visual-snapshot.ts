@@ -7,7 +7,7 @@
  *
  * The captured-session model itself lives in `recording.ts` (the unified
  * `Recording` type) and its format codecs (`asciicast/recording-codec.ts`,
- * `tape/compile.ts`, `native/native-trec.ts`). This module is only the
+ * `tape/compile.ts`, `native/native-rec.ts`). This module is only the
  * buffer-snapshot helper used by the `record` verb's change-detection loop.
  */
 

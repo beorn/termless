@@ -1,41 +1,41 @@
 /**
- * The native `.trec` recording format — termless's canonical full-fidelity
+ * The native `.rec` recording format — termless's canonical full-fidelity
  * on-disk form for a {@link Recording}.
  *
- * Phase 5 of the Recording-domain unification (design doc §4, §6). `.trec`
+ * Phase 5 of the Recording-domain unification (design doc §4, §6). `.rec`
  * supersedes the ad-hoc `recording.ts` JSON and the bare frame-trace directory
  * with **one canonical format** that carries all three Recording members
  * losslessly.
  *
- * ## Shape — a directory bundle
+ * ## Shape — a single-file container
  *
- * `.trec` is a **directory**, never a base64-in-JSON single file (a long trace
- * base64'd into one JSON is a 100 MB OOM / `git diff`-breaking monster):
+ * A `.rec` is a **single file**: a standard ZIP container (like `.docx` /
+ * `.epub`) that holds the whole Recording — manifest, source tracks, and the
+ * frames projection — as archive entries:
  *
  * ```
- * mysession.trec/
- *   manifest.json                 — metadata, Renderer fingerprint, track index,
- *                                   format version
- *   commands.jsonl                — the commands source track  (omitted if absent)
- *   io.jsonl                      — the io source track        (omitted if absent)
- *   frames/index.jsonl + NNNNN.png — the frames projection      (omitted if absent)
+ * mysession.rec                    ← one file, a ZIP container holding:
+ *   manifest.json                  — metadata, Renderer fingerprint, track
+ *                                    index, format version
+ *   commands.jsonl                 — the commands source track  (omitted if absent)
+ *   io.jsonl                       — the io source track        (omitted if absent)
+ *   frames/index.jsonl + NNNNN.png — the frames projection       (omitted if absent)
  * ```
+ *
+ * The unpacked layout (a directory with the same entries) is an internal
+ * working form — {@link packRecording} / {@link unpackRecording} convert
+ * between the file and the directory; {@link writeRecording} /
+ * {@link readRecording} are the user-facing single-file API.
  *
  * ## Superset of the frame-trace layout
  *
  * The `frames/` subtree is **byte-identical to the frame-trace directory
- * layout** ({@link "./frame-trace.ts"}'s `index.jsonl` + `NNNNN.png`). An
- * existing km golden trace directory IS a valid `.trec` `frames/` subtree —
+ * layout** ({@link "../frame-trace.ts"}'s `index.jsonl` + `NNNNN.png`). An
+ * existing km golden trace directory IS a valid `.rec` `frames/` subtree —
  * {@link readRecording} loads a bare legacy frame-trace directory (no
  * `manifest.json`, just `index.jsonl` + PNGs) as a frames-only Recording.
  * That superset relationship is what keeps every km golden valid across the
- * Phase 5 format change.
- *
- * ## Portable single-file archive
- *
- * {@link packRecording} zips a `.trec` directory into a portable single-file
- * `.trec` archive (like `.docx` / `.epub`); {@link unpackRecording} expands it
- * back. The archive path is optional — the directory is the default.
+ * format change.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
@@ -52,16 +52,16 @@ import {
 } from "../recording.ts"
 import { buildZip, parseZip, type ZipEntry } from "./zip-archive.ts"
 
-/** The `.trec` format version written into every `manifest.json`. */
-export const TREC_FORMAT_VERSION = 1
+/** The `.rec` format version written into every `manifest.json`. */
+export const REC_FORMAT_VERSION = 1
 
-/** File name of the manifest within a `.trec` directory. */
+/** File name of the manifest within a `.rec` container. */
 const MANIFEST_FILE = "manifest.json"
-/** File name of the commands track within a `.trec` directory. */
+/** File name of the commands track within a `.rec` container. */
 const COMMANDS_FILE = "commands.jsonl"
-/** File name of the io track within a `.trec` directory. */
+/** File name of the io track within a `.rec` container. */
 const IO_FILE = "io.jsonl"
-/** Sub-directory holding the frames projection within a `.trec` directory. */
+/** Sub-directory holding the frames projection within a `.rec` container. */
 const FRAMES_DIR = "frames"
 /** Index file within the `frames/` sub-directory. */
 const FRAMES_INDEX = "index.jsonl"
@@ -71,16 +71,16 @@ const FRAMES_INDEX = "index.jsonl"
 // =============================================================================
 
 /**
- * The `manifest.json` of a `.trec` directory — metadata about the recording
+ * The `manifest.json` of a `.rec` container — metadata about the recording
  * plus an index of which track files are present.
  *
- * The manifest is the marker that distinguishes a full `.trec` directory from
- * a bare legacy frame-trace directory: when it is absent, {@link readRecording}
+ * The manifest is the marker that distinguishes a full `.rec` from a bare
+ * legacy frame-trace directory: when it is absent, {@link readRecording}
  * falls back to the frames-only legacy path.
  */
-export interface TrecManifest {
-  /** The `.trec` format version — {@link TREC_FORMAT_VERSION}. */
-  trecVersion: number
+export interface RecManifest {
+  /** The `.rec` format version — {@link REC_FORMAT_VERSION}. */
+  recVersion: number
   /** Recording-model version (currently always `1`). */
   recordingVersion: 1
   /** Terminal columns at recording start. */
@@ -92,8 +92,8 @@ export interface TrecManifest {
   /** Whether the frames projection is regenerable from the io track. */
   reproducible: boolean
   /**
-   * Which track files are present in the directory. A reader uses this index
-   * to know what to load without probing the filesystem for every track.
+   * Which track files are present in the container. A reader uses this index
+   * to know what to load without probing for every track.
    */
   tracks: {
     /** `true` when `commands.jsonl` is present. */
@@ -121,9 +121,9 @@ export interface WriteRecordingOptions {
   /**
    * Directory the frames projection's PNGs are copied *from*. Each frame's
    * `png` field is a relative filename resolved against this directory; the
-   * resolved PNG is copied into the `.trec` `frames/` sub-directory under the
-   * same name. Omit when the recording carries no PNGs (every frame's `png` is
-   * `null`) or when the PNGs are not available on disk.
+   * resolved PNG is packed into the `.rec` container's `frames/` sub-tree
+   * under the same name. Omit when the recording carries no PNGs (every
+   * frame's `png` is `null`) or when the PNGs are not available on disk.
    */
   pngSourceDir?: string
 }
@@ -133,7 +133,7 @@ export interface ReadRecordingOptions {
   /**
    * Backend id stamped onto the synthesized renderer fingerprint when reading
    * a *bare legacy frame-trace directory* (one with no `manifest.json`). The
-   * legacy layout records no backend. Ignored for a full `.trec` directory,
+   * legacy layout records no backend. Ignored for a full `.rec` container,
    * which carries the fingerprint in its manifest. Default: `"unknown"`.
    */
   backend?: string
@@ -172,7 +172,7 @@ function parseJsonl<T>(text: string): T[] {
 // Frames projection ⇄ frame-trace `index.jsonl`
 // =============================================================================
 //
-// The `.trec` `frames/` sub-tree is byte-compatible with the frame-trace
+// The `.rec` `frames/` sub-tree is byte-compatible with the frame-trace
 // directory layout: `index.jsonl` rows are the on-disk `TraceFrame` shape, not
 // the in-memory model `Frame` shape. Writing converts model frames to
 // `TraceFrame` rows; reading projects `TraceFrame` rows back via the shared
@@ -221,13 +221,13 @@ function recordingFramesToTraceFrames(recording: Recording): TraceFrame[] {
 }
 
 // =============================================================================
-// In-memory bundle — the `name → bytes` map a `.trec` directory holds
+// In-memory bundle — the `name → bytes` map a `.rec` container holds
 // =============================================================================
 
 /**
- * Serialize a {@link Recording} into the set of files a `.trec` directory
+ * Serialize a {@link Recording} into the set of files a `.rec` container
  * holds: a `name → bytes` map. This is the shared core of {@link writeRecording}
- * (writes the map to a directory) and {@link packRecording} (zips the map).
+ * (zips the map into one file) and {@link packRecording} (zips a directory).
  *
  * `pngSourceDir` resolves each frame's `png` filename to bytes; a missing PNG
  * is skipped (the index still records the frame) — mirroring the frame
@@ -240,8 +240,8 @@ function serializeRecording(recording: Recording, pngSourceDir?: string): Map<st
   const traceFrames = recording.frames !== undefined ? recordingFramesToTraceFrames(recording) : []
   const fingerprint = recording.frames?.[0]?.fingerprint
 
-  const manifest: TrecManifest = {
-    trecVersion: TREC_FORMAT_VERSION,
+  const manifest: RecManifest = {
+    recVersion: REC_FORMAT_VERSION,
     recordingVersion: recording.version,
     cols: recording.cols,
     rows: recording.rows,
@@ -278,12 +278,12 @@ function serializeRecording(recording: Recording, pngSourceDir?: string): Map<st
 }
 
 /**
- * Reconstruct a {@link Recording} from a `.trec` `name → bytes` file map.
+ * Reconstruct a {@link Recording} from a `.rec` `name → bytes` file map.
  *
  * The manifest is authoritative for `cols` / `rows` / `durationMicros` /
  * `provenance`. The frames projection is rebuilt by projecting the
  * `frames/index.jsonl` `TraceFrame` rows through {@link traceToRecording} — the
- * shared adapter — so a `.trec` and a bare frame-trace directory take the same
+ * shared adapter — so a `.rec` and a bare frame-trace directory take the same
  * projection path. PNG bytes are NOT loaded into the Recording; each frame's
  * `png` field stays a relative filename.
  */
@@ -291,9 +291,9 @@ function deserializeRecording(files: Map<string, Uint8Array>, backend: string): 
   const decoder = new TextDecoder()
   const manifestRaw = files.get(MANIFEST_FILE)
   if (manifestRaw === undefined) {
-    throw new Error("readRecording: .trec directory has no manifest.json")
+    throw new Error("readRecording: .rec container has no manifest.json")
   }
-  const manifest = JSON.parse(decoder.decode(manifestRaw)) as TrecManifest
+  const manifest = JSON.parse(decoder.decode(manifestRaw)) as RecManifest
 
   const commandsRaw = files.get(COMMANDS_FILE)
   const ioRaw = files.get(IO_FILE)
@@ -331,157 +331,8 @@ function deserializeRecording(files: Map<string, Uint8Array>, backend: string): 
 }
 
 // =============================================================================
-// Directory I/O — writeRecording / readRecording
+// Directory helpers — collect / write a `.rec` directory working form
 // =============================================================================
-
-/**
- * Write a {@link Recording} to a `.trec` directory at `dir`.
- *
- * The destination directory is **wiped and recreated** — `writeRecording`
- * produces a clean bundle, never merges into an existing one. It writes
- * `manifest.json`, the present source tracks (`commands.jsonl` / `io.jsonl`),
- * and the frames projection (`frames/index.jsonl` + the unique-frame PNGs
- * copied from {@link WriteRecordingOptions.pngSourceDir}).
- *
- * The `frames/` sub-tree is byte-compatible with the legacy frame-trace
- * directory layout.
- *
- * @param dir Destination `.trec` directory. Created if missing; prior contents
- *   are removed.
- * @param recording The recording to serialize.
- * @param options See {@link WriteRecordingOptions}.
- */
-export function writeRecording(dir: string, recording: Recording, options: WriteRecordingOptions = {}): void {
-  const files = serializeRecording(recording, options.pngSourceDir)
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true })
-  }
-  mkdirSync(dir, { recursive: true })
-  for (const [name, bytes] of files) {
-    const dest = join(dir, name)
-    mkdirSync(join(dest, ".."), { recursive: true })
-    writeFileSync(dest, bytes)
-  }
-}
-
-/**
- * Read a `.trec` directory at `dir` into a {@link Recording}.
- *
- * Accepts **both** forms:
- *
- *  - A full `.trec` directory — has a `manifest.json`; all present tracks are
- *    loaded.
- *  - A **bare legacy frame-trace directory** — no `manifest.json`, just
- *    `index.jsonl` + `NNNNN.png` (the layout km goldens use). It is loaded as
- *    a frames-only Recording. This is the superset-compatibility guarantee:
- *    every existing km golden trace loads through `readRecording` unchanged.
- *
- * PNG bytes are NOT loaded into the Recording; each frame's `png` field stays a
- * relative filename, resolved by a consumer against the directory.
- *
- * @param dir Path to a `.trec` directory, or a bare frame-trace directory.
- * @param options See {@link ReadRecordingOptions}.
- * @returns The reconstructed {@link Recording}.
- * @throws {Error} when `dir` is neither a `.trec` directory nor a frame-trace
- *   directory (no `manifest.json` and no `index.jsonl`).
- */
-export function readRecording(dir: string, options: ReadRecordingOptions = {}): Recording {
-  const backend = options.backend ?? "unknown"
-  const manifestPath = join(dir, MANIFEST_FILE)
-
-  // Bare legacy frame-trace directory — no manifest, frames-only.
-  if (!existsSync(manifestPath)) {
-    const legacyIndex = join(dir, FRAMES_INDEX)
-    if (!existsSync(legacyIndex)) {
-      throw new Error(
-        `readRecording: ${dir} is not a .trec directory (no manifest.json) ` +
-          `and not a frame-trace directory (no index.jsonl)`,
-      )
-    }
-    const traceFrames = parseJsonl<TraceFrame>(readFileSync(legacyIndex, "utf-8"))
-    if (traceFrames.length === 0) {
-      throw new Error(`readRecording: ${legacyIndex} contains no parseable frames`)
-    }
-    const first = traceFrames[0]!
-    return traceToRecording({
-      frames: traceFrames,
-      cols: first.buffer.cols,
-      rows: first.buffer.rows,
-      backend,
-    })
-  }
-
-  // Full .trec directory — collect the known files into a bundle map.
-  const files = new Map<string, Uint8Array>()
-  files.set(MANIFEST_FILE, new Uint8Array(readFileSync(manifestPath)))
-  for (const name of [COMMANDS_FILE, IO_FILE]) {
-    const path = join(dir, name)
-    if (existsSync(path)) files.set(name, new Uint8Array(readFileSync(path)))
-  }
-  const framesDir = join(dir, FRAMES_DIR)
-  if (existsSync(framesDir) && statSync(framesDir).isDirectory()) {
-    for (const name of readdirSync(framesDir)) {
-      files.set(`${FRAMES_DIR}/${name}`, new Uint8Array(readFileSync(join(framesDir, name))))
-    }
-  }
-  return deserializeRecording(files, backend)
-}
-
-// =============================================================================
-// Archive I/O — packRecording / unpackRecording
-// =============================================================================
-
-/**
- * Pack a `.trec` directory into a portable single-file `.trec` archive.
- *
- * The archive is a standard ZIP (like `.docx` / `.epub`) — every file in the
- * `.trec` directory becomes an archive entry, paths relative to the directory
- * root. The archive path is **optional**: the directory bundle is the default
- * working form; `pack` produces the convenient single-file form for transport.
- *
- * @param dir Source `.trec` directory.
- * @param archivePath Destination archive file (conventionally ending `.trec`).
- * @throws {Error} when `dir` does not exist.
- */
-export function packRecording(dir: string, archivePath: string): void {
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    throw new Error(`packRecording: ${dir} is not a directory`)
-  }
-  const entries: ZipEntry[] = []
-  for (const path of walk(dir)) {
-    entries.push({ path: relativeSlash(dir, path), bytes: new Uint8Array(readFileSync(path)) })
-  }
-  // Stable order — sorted paths produce a reproducible archive.
-  entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
-  writeFileSync(archivePath, buildZip(entries))
-}
-
-/**
- * Unpack a single-file `.trec` archive back into a `.trec` directory.
- *
- * The inverse of {@link packRecording}. The destination directory is wiped and
- * recreated, then every archive entry is written to its path within it.
- *
- * @param archivePath Source `.trec` archive file.
- * @param dir Destination `.trec` directory. Created if missing; prior contents
- *   are removed.
- * @throws {Error} when `archivePath` does not exist.
- */
-export function unpackRecording(archivePath: string, dir: string): void {
-  if (!existsSync(archivePath)) {
-    throw new Error(`unpackRecording: ${archivePath} does not exist`)
-  }
-  const entries = parseZip(new Uint8Array(readFileSync(archivePath)))
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true })
-  }
-  mkdirSync(dir, { recursive: true })
-  for (const entry of entries) {
-    const dest = join(dir, entry.path)
-    mkdirSync(join(dest, ".."), { recursive: true })
-    writeFileSync(dest, entry.bytes)
-  }
-}
 
 /** Recursively list every file path under `root` (directories excluded). */
 function walk(root: string): string[] {
@@ -504,9 +355,193 @@ function relativeSlash(root: string, file: string): string {
 }
 
 /**
- * Probe whether a path uses the `.trec` extension — the conventional name for
- * both a `.trec` directory bundle and a packed `.trec` archive file.
+ * Collect a `.rec` *directory* bundle (manifest + tracks + frames) into a
+ * `name → bytes` map — the inverse of writing the map to a directory.
  */
-export function isTrecPath(path: string): boolean {
-  return basename(path).endsWith(".trec")
+function collectBundleDir(dir: string): Map<string, Uint8Array> {
+  const files = new Map<string, Uint8Array>()
+  files.set(MANIFEST_FILE, new Uint8Array(readFileSync(join(dir, MANIFEST_FILE))))
+  for (const name of [COMMANDS_FILE, IO_FILE]) {
+    const path = join(dir, name)
+    if (existsSync(path)) files.set(name, new Uint8Array(readFileSync(path)))
+  }
+  const framesDir = join(dir, FRAMES_DIR)
+  if (existsSync(framesDir) && statSync(framesDir).isDirectory()) {
+    for (const name of readdirSync(framesDir)) {
+      files.set(`${FRAMES_DIR}/${name}`, new Uint8Array(readFileSync(join(framesDir, name))))
+    }
+  }
+  return files
+}
+
+/** Write a `name → bytes` bundle map out as a directory tree at `dir`. */
+function writeBundleDir(dir: string, files: Map<string, Uint8Array>): void {
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true })
+  }
+  mkdirSync(dir, { recursive: true })
+  for (const [name, bytes] of files) {
+    const dest = join(dir, name)
+    mkdirSync(join(dest, ".."), { recursive: true })
+    writeFileSync(dest, bytes)
+  }
+}
+
+/** Zip a `name → bytes` bundle map into ZIP-container bytes (stable order). */
+function bundleToZip(files: Map<string, Uint8Array>): Uint8Array {
+  const entries: ZipEntry[] = [...files.entries()].map(([path, bytes]) => ({ path, bytes }))
+  entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+  return buildZip(entries)
+}
+
+// =============================================================================
+// File I/O — writeRecording / readRecording (the `.rec` single-file API)
+// =============================================================================
+
+/**
+ * Write a {@link Recording} to a single `.rec` file at `path`.
+ *
+ * The `.rec` is a ZIP container holding `manifest.json`, the present source
+ * tracks (`commands.jsonl` / `io.jsonl`), and the frames projection
+ * (`frames/index.jsonl` + the unique-frame PNGs copied from
+ * {@link WriteRecordingOptions.pngSourceDir}). The container's internal
+ * `frames/` sub-tree is byte-compatible with the legacy frame-trace layout.
+ *
+ * @param path Destination `.rec` file. Created or overwritten. Parent
+ *   directories are created if missing.
+ * @param recording The recording to serialize.
+ * @param options See {@link WriteRecordingOptions}.
+ */
+export function writeRecording(path: string, recording: Recording, options: WriteRecordingOptions = {}): void {
+  const files = serializeRecording(recording, options.pngSourceDir)
+  mkdirSync(join(path, ".."), { recursive: true })
+  writeFileSync(path, bundleToZip(files))
+}
+
+/**
+ * Read a `.rec` recording into a {@link Recording}.
+ *
+ * Accepts **three** forms:
+ *
+ *  - A single `.rec` **file** — the canonical container; the ZIP is parsed and
+ *    every track loaded.
+ *  - A `.rec` **directory** bundle — the internal unpacked working form (has a
+ *    `manifest.json`); all present tracks are loaded.
+ *  - A **bare legacy frame-trace directory** — no `manifest.json`, just
+ *    `index.jsonl` + `NNNNN.png` (the layout km goldens use). Loaded as a
+ *    frames-only Recording. This is the superset-compatibility guarantee:
+ *    every existing km golden trace loads through `readRecording` unchanged.
+ *
+ * PNG bytes are NOT loaded into the Recording; each frame's `png` field stays a
+ * relative filename, resolved by a consumer.
+ *
+ * @param path Path to a `.rec` file, a `.rec` directory, or a frame-trace
+ *   directory.
+ * @param options See {@link ReadRecordingOptions}.
+ * @returns The reconstructed {@link Recording}.
+ * @throws {Error} when `path` is none of the accepted forms.
+ */
+export function readRecording(path: string, options: ReadRecordingOptions = {}): Recording {
+  const backend = options.backend ?? "unknown"
+
+  if (!existsSync(path)) {
+    throw new Error(`readRecording: ${path} does not exist`)
+  }
+
+  // ── Single-file `.rec` container ──
+  if (statSync(path).isFile()) {
+    const entries = parseZip(new Uint8Array(readFileSync(path)))
+    const files = new Map<string, Uint8Array>()
+    for (const entry of entries) files.set(entry.path, entry.bytes)
+    return deserializeRecording(files, backend)
+  }
+
+  // ── Directory form: `.rec` bundle, or a bare legacy frame-trace directory ──
+  const dir = path
+  const manifestPath = join(dir, MANIFEST_FILE)
+
+  // Bare legacy frame-trace directory — no manifest, frames-only.
+  if (!existsSync(manifestPath)) {
+    const legacyIndex = join(dir, FRAMES_INDEX)
+    if (!existsSync(legacyIndex)) {
+      throw new Error(
+        `readRecording: ${dir} is not a .rec container (no manifest.json) ` +
+          `and not a frame-trace directory (no index.jsonl)`,
+      )
+    }
+    const traceFrames = parseJsonl<TraceFrame>(readFileSync(legacyIndex, "utf-8"))
+    if (traceFrames.length === 0) {
+      throw new Error(`readRecording: ${legacyIndex} contains no parseable frames`)
+    }
+    const first = traceFrames[0]!
+    return traceToRecording({
+      frames: traceFrames,
+      cols: first.buffer.cols,
+      rows: first.buffer.rows,
+      backend,
+    })
+  }
+
+  // Full `.rec` directory bundle.
+  return deserializeRecording(collectBundleDir(dir), backend)
+}
+
+// =============================================================================
+// Archive ⇄ directory — packRecording / unpackRecording (internal working form)
+// =============================================================================
+
+/**
+ * Pack a `.rec` *directory* bundle into a single `.rec` file.
+ *
+ * The `.rec` file is a standard ZIP (like `.docx` / `.epub`) — every file in
+ * the directory becomes an archive entry, paths relative to the directory
+ * root. The directory bundle is the internal unpacked working form;
+ * {@link writeRecording} is the usual way to produce a `.rec` directly from a
+ * {@link Recording}.
+ *
+ * @param dir Source `.rec` directory bundle.
+ * @param archivePath Destination `.rec` file.
+ * @throws {Error} when `dir` does not exist.
+ */
+export function packRecording(dir: string, archivePath: string): void {
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+    throw new Error(`packRecording: ${dir} is not a directory`)
+  }
+  const entries: ZipEntry[] = []
+  for (const path of walk(dir)) {
+    entries.push({ path: relativeSlash(dir, path), bytes: new Uint8Array(readFileSync(path)) })
+  }
+  // Stable order — sorted paths produce a reproducible archive.
+  entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+  writeFileSync(archivePath, buildZip(entries))
+}
+
+/**
+ * Unpack a single `.rec` file back into a `.rec` directory bundle — the
+ * internal unpacked working form.
+ *
+ * The inverse of {@link packRecording}. The destination directory is wiped and
+ * recreated, then every archive entry is written to its path within it.
+ *
+ * @param archivePath Source `.rec` file.
+ * @param dir Destination `.rec` directory. Created if missing; prior contents
+ *   are removed.
+ * @throws {Error} when `archivePath` does not exist.
+ */
+export function unpackRecording(archivePath: string, dir: string): void {
+  if (!existsSync(archivePath)) {
+    throw new Error(`unpackRecording: ${archivePath} does not exist`)
+  }
+  const entries = parseZip(new Uint8Array(readFileSync(archivePath)))
+  const files = new Map<string, Uint8Array>()
+  for (const entry of entries) files.set(entry.path, entry.bytes)
+  writeBundleDir(dir, files)
+}
+
+/**
+ * Probe whether a path uses the `.rec` extension — the conventional name for
+ * the single-file `.rec` container.
+ */
+export function isRecPath(path: string): boolean {
+  return basename(path).endsWith(".rec")
 }

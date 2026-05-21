@@ -1,9 +1,9 @@
 /**
- * `.trec` native format — round-trip, legacy-superset, and pack/unpack tests.
+ * `.rec` native format — round-trip, legacy-superset, and pack/unpack tests.
  * Phase 5 of the recording-domain refactor.
  */
 import { describe, expect, test } from "vitest"
-import { mkdtempSync, rmSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, existsSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -11,16 +11,16 @@ import {
   writeRecording,
   packRecording,
   unpackRecording,
-  isTrecPath,
-} from "../src/recording/native/native-trec.ts"
+  isRecPath,
+} from "../src/recording/native/native-rec.ts"
 import { createRecording, micros, secondsToMicros } from "../src/recording/recording.ts"
 
 function tmp(): string {
-  return mkdtempSync(join(tmpdir(), "trec-test-"))
+  return mkdtempSync(join(tmpdir(), "rec-test-"))
 }
 
-describe("native .trec format", () => {
-  test("Recording → writeRecording → readRecording round-trips (commands + io)", () => {
+describe("native .rec format", () => {
+  test("Recording → writeRecording → readRecording round-trips a single .rec file (commands + io)", () => {
     const dir = tmp()
     try {
       const rec = createRecording({
@@ -36,9 +36,11 @@ describe("native .trec format", () => {
           { at: micros(10_000), direction: "out", data: "hello\r\n" },
         ],
       })
-      const trec = join(dir, "session.trec")
-      writeRecording(trec, rec)
-      const back = readRecording(trec)
+      const recPath = join(dir, "session.rec")
+      writeRecording(recPath, rec)
+      // `.rec` is a single FILE, not a directory.
+      expect(statSync(recPath).isFile()).toBe(true)
+      const back = readRecording(recPath)
       expect(back.cols).toBe(80)
       expect(back.rows).toBe(24)
       expect(back.commands).toHaveLength(2)
@@ -52,7 +54,7 @@ describe("native .trec format", () => {
 
   test("a bare legacy frame-trace directory loads as a frames-only Recording", () => {
     // tests/fixtures/legacy-frame-trace/ holds an index.jsonl + 00001.png with
-    // no manifest.json — the pre-.trec layout. readRecording must accept it.
+    // no manifest.json — the pre-.rec layout. readRecording must accept it.
     const legacy = join(import.meta.dirname, "fixtures", "legacy-frame-trace")
     expect(existsSync(join(legacy, "index.jsonl"))).toBe(true)
     expect(existsSync(join(legacy, "manifest.json"))).toBe(false)
@@ -66,7 +68,7 @@ describe("native .trec format", () => {
     expect(rec.provenance.reproducible).toBe(false)
   })
 
-  test("pack → unpack round-trips a .trec directory", () => {
+  test("pack → unpack round-trips a .rec file via the directory working form", () => {
     const dir = tmp()
     try {
       const rec = createRecording({
@@ -75,16 +77,22 @@ describe("native .trec format", () => {
         durationMicros: secondsToMicros(2),
         io: [{ at: micros(0), direction: "out", data: "x" }],
       })
-      const src = join(dir, "a.trec")
-      writeRecording(src, rec)
+      const recPath = join(dir, "a.rec")
+      writeRecording(recPath, rec)
 
-      const archive = join(dir, "a.trec.zip")
-      packRecording(src, archive)
-      expect(existsSync(archive)).toBe(true)
+      // Unpack the single-file `.rec` to the directory working form.
+      const unpacked = join(dir, "a-dir")
+      unpackRecording(recPath, unpacked)
+      expect(statSync(unpacked).isDirectory()).toBe(true)
+      expect(existsSync(join(unpacked, "manifest.json"))).toBe(true)
+      // The directory working form loads too.
+      expect(readRecording(unpacked).cols).toBe(80)
 
-      const restored = join(dir, "restored.trec")
-      unpackRecording(archive, restored)
-      const back = readRecording(restored)
+      // Pack the directory back into a single `.rec` file.
+      const repacked = join(dir, "b.rec")
+      packRecording(unpacked, repacked)
+      expect(statSync(repacked).isFile()).toBe(true)
+      const back = readRecording(repacked)
       expect(back.cols).toBe(80)
       expect(back.io).toHaveLength(1)
       expect(back.io?.[0]?.data).toBe("x")
@@ -93,10 +101,10 @@ describe("native .trec format", () => {
     }
   })
 
-  test("isTrecPath recognises the .trec extension", () => {
-    expect(isTrecPath("foo.trec")).toBe(true)
-    expect(isTrecPath("/a/b/session.trec")).toBe(true)
-    expect(isTrecPath("foo.tape")).toBe(false)
-    expect(isTrecPath("foo")).toBe(false)
+  test("isRecPath recognises the .rec extension", () => {
+    expect(isRecPath("foo.rec")).toBe(true)
+    expect(isRecPath("/a/b/session.rec")).toBe(true)
+    expect(isRecPath("foo.tape")).toBe(false)
+    expect(isRecPath("foo")).toBe(false)
   })
 })
