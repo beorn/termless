@@ -603,6 +603,99 @@ function renderWindowBar(
   return parts
 }
 
+// ── Chrome-only renderer (no cell content) ──
+
+/**
+ * Render JUST the chrome layer at `cols × rows` dimensions — no cell content,
+ * transparent cell area. Used by the GIF compositor: rasterized once per
+ * recording and blended over each frame's cell-native (swash) raster so the
+ * chrome travels with the GIF while cells keep their cell-native fidelity
+ * (color emoji, exact glyph coverage).
+ *
+ * The geometry mirrors `screenshotSvg`'s chrome path exactly; tests pin both
+ * to the same `chromeBounds()` math (`vendor/termless/src/render/chrome.ts`).
+ */
+export function chromeOnlySvg(cols: number, rows: number, options?: SvgScreenshotOptions): string {
+  const opts = resolveOptions(options)
+  const { cellWidth, cellHeight, themeBg, padding, borderRadius, windowBar, windowBarSize, windowTitle, shadow, margin, marginFill } = opts
+
+  // No chrome → nothing to render; return an empty transparent SVG sized to
+  // the cell area, so the caller can blit cells over it as a no-op.
+  const hasChrome = padding > 0 || borderRadius > 0 || windowBar !== "none" || margin > 0 || shadow > 0
+  const contentWidth = cols * cellWidth
+  const contentHeight = rows * cellHeight
+  if (!hasChrome) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${contentWidth}" height="${contentHeight}" viewBox="0 0 ${contentWidth} ${contentHeight}"/>`
+  }
+
+  const barHeight = windowBar !== "none" ? windowBarSize : 0
+  const innerWidth = contentWidth + padding * 2
+  const innerHeight = contentHeight + padding * 2 + barHeight
+  const totalWidth = innerWidth + margin * 2
+  const totalHeight = innerHeight + margin * 2
+
+  const parts: string[] = []
+  parts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
+  )
+
+  const hasDefs = shadow > 0 || borderRadius > 0
+  if (hasDefs) parts.push(`<defs>`)
+  if (shadow > 0) {
+    parts.push(
+      `<filter id="window-shadow" x="-50%" y="-50%" width="200%" height="200%">` +
+        `<feDropShadow dx="0" dy="${coord(shadow * 0.35)}" stdDeviation="${coord(shadow)}" flood-color="#000000" flood-opacity="0.45"/>` +
+        `</filter>`,
+    )
+  }
+  if (borderRadius > 0) {
+    parts.push(
+      `<clipPath id="terminal-clip">` +
+        `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"/>` +
+        `</clipPath>`,
+    )
+  }
+  if (hasDefs) parts.push(`</defs>`)
+
+  if (margin > 0 && marginFill) {
+    parts.push(`<rect width="100%" height="100%" fill="${marginFill}"/>`)
+  }
+
+  if (shadow > 0) {
+    const shAttrs =
+      borderRadius > 0
+        ? `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"`
+        : `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}"`
+    parts.push(`<rect ${shAttrs} fill="${themeBg}" filter="url(#window-shadow)"/>`)
+  }
+
+  if (borderRadius > 0) {
+    parts.push(`<g clip-path="url(#terminal-clip)">`)
+  }
+
+  // Window background — drawn so the bar sits on the right color, but the
+  // cell area itself stays the same theme bg (callers blit cells on top, so
+  // it doesn't matter visually — only color emoji's anti-alias edges benefit).
+  const bgAttrs =
+    borderRadius > 0
+      ? `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" rx="${borderRadius}" ry="${borderRadius}"`
+      : `x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}"`
+  parts.push(`<rect ${bgAttrs} fill="${themeBg}"/>`)
+
+  if (windowBar !== "none") {
+    parts.push(`<g transform="translate(${margin}, ${margin})">`)
+    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius, themeBg, windowTitle))
+    parts.push(`</g>`)
+  }
+
+  if (borderRadius > 0) {
+    parts.push(`</g>`)
+  }
+
+  parts.push(`</svg>`)
+  return parts.join("\n")
+}
+
 // ── Main renderer ──
 
 export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreenshotOptions): string {

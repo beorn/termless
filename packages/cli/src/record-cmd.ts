@@ -657,6 +657,7 @@ async function interactiveRecord(
       outputEvents,
       frames: animationFrames,
       renderer,
+      ...(chromeStyle !== "none" ? { chrome: chromeStyle, chromeTitle: opts.title ?? cmdLabel } : {}),
     }
 
     const { runRecordSummary } = await import("./rec-summary.tsx")

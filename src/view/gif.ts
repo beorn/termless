@@ -14,7 +14,9 @@
 
 // Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
-import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
+import { selectRasterizer, type RendererKind, type RasterBitmap } from "./rasterizer.ts"
+import { chromeBounds, chromeOptions, isChromeStyle, type ChromeStyle } from "../render/chrome.ts"
+import { chromeOnlySvg } from "../render/svg.ts"
 
 // Lazy-cached imports
 let gifencModule: typeof import("gifenc") | null = null
@@ -42,7 +44,22 @@ async function loadGifenc() {
  */
 export async function createGif(
   frames: AnimationFrame[],
-  options?: AnimationOptions & { scale?: number; renderer?: RendererKind; forceSvg?: boolean },
+  options?: AnimationOptions & {
+    scale?: number
+    renderer?: RendererKind
+    /** Force the SVG round-trip for every frame (default: auto-detect chrome). */
+    forceSvg?: boolean
+    /** Chrome style baked into the frames. When set + the rasterizer exposes
+     *  `rasterizeCells`, the encoder composites chrome over cell-native cell
+     *  rasters — chrome travels with the GIF and color-emoji fidelity survives. */
+    chrome?: ChromeStyle
+    /** Window title for the chrome bar (composite path). */
+    chromeTitle?: string
+    /** Cell-grid dimensions used for the composite path. Defaults to the
+     *  renderer's standard 9.6 × 16 (DEFAULT_CELL_*) — keep in sync. */
+    cellWidth?: number
+    cellHeight?: number
+  },
 ): Promise<Uint8Array> {
   if (frames.length === 0) {
     throw new Error("createGif requires at least one frame")
@@ -66,16 +83,86 @@ export async function createGif(
   const svgHasChrome = /windowBar|windowTitle|<rect[^>]*rx="\d+"/.test(firstSvg)
   const forceSvg = options?.forceSvg === true || svgHasChrome
 
+  // Composite path: when chrome is known + the rasterizer exposes
+  // `rasterizeCells`, rasterize chrome ONCE per recording and blit each
+  // frame's cell-native raster underneath. Recovers color-emoji fidelity that
+  // the pure-SVG fallback gives up. Falls through to the SVG path if any
+  // ingredient (snapshot, chrome style, cell-native rasterizer) is missing.
+  const chromeStyle = options?.chrome
+  const useComposite =
+    forceSvg &&
+    !!rasterizer.rasterizeCells &&
+    chromeStyle !== undefined &&
+    chromeStyle !== "none" &&
+    isChromeStyle(chromeStyle) &&
+    !!frames[0]?.snapshot
+  const cellWidth = options?.cellWidth ?? 9.6
+  const cellHeight = options?.cellHeight ?? 16
+
   const gif = GIFEncoder()
+
+  // Composite chrome over a cell-native frame raster. Returns a fresh RGBA
+  // bitmap at chrome dimensions × `scale`, with chrome painted on top of the
+  // cells (per-pixel alpha-over so the bar / shadow / rounded corners are
+  // visible and the cells fill the inner area at full swash fidelity).
+  let chromeLayerCache: RasterBitmap | null = null
+  const compositeFrame = async (frame: AnimationFrame): Promise<RasterBitmap> => {
+    if (!frame.snapshot || !rasterizer.rasterizeCells || chromeStyle === undefined || chromeStyle === "none") {
+      throw new Error("compositeFrame: missing ingredients (snapshot / rasterizeCells / chromeStyle)")
+    }
+    const snap = frame.snapshot
+    const cellGrid = snap.getLines()
+    const rows = cellGrid.length
+    const cols = rows > 0 ? Math.max(...cellGrid.map((l) => l.length)) : 0
+    const bounds = chromeBounds(chromeStyle, cols, rows, cellWidth, cellHeight)
+    if (chromeLayerCache === null) {
+      // Look up the chrome SVG opts (windowBar, padding, margin, shadow, …)
+      // and merge in the optional title. Same options screenshotSvg used to
+      // bake chrome into the per-frame SVG, minus the cell content.
+      const chromeOpts = {
+        ...chromeOptions(chromeStyle, options?.chromeTitle),
+        cellWidth,
+        cellHeight,
+      }
+      const chromeSvg = chromeOnlySvg(cols, rows, chromeOpts)
+      chromeLayerCache = await rasterizer.rasterize(chromeSvg, scale)
+    }
+    const chromeLayer = chromeLayerCache
+    const cellLayer = await rasterizer.rasterizeCells(snap, scale)
+
+    // Output canvas = chrome dimensions × scale. Start from chrome, then blit
+    // the cell-native pixels into the (cellOffsetX, cellOffsetY) sub-rect.
+    const outWidth = chromeLayer.width
+    const outHeight = chromeLayer.height
+    const out = new Uint8Array(outWidth * outHeight * 4)
+    out.set(chromeLayer.pixels)
+    const dx = Math.round(bounds.cellOffsetX * scale)
+    const dy = Math.round(bounds.cellOffsetY * scale)
+    const cellW = Math.min(cellLayer.width, outWidth - dx)
+    const cellH = Math.min(cellLayer.height, outHeight - dy)
+    for (let y = 0; y < cellH; y++) {
+      const srcRow = y * cellLayer.width * 4
+      const dstRow = ((dy + y) * outWidth + dx) * 4
+      // Copy cells *under* chrome where chrome is transparent, and *over*
+      // chrome where cells are opaque. Chrome-only SVG paints the bar +
+      // border (opaque) and leaves the cell area transparent / themeBg —
+      // straight overwrite of the rect works: cell pixels replace whatever
+      // chrome had in that sub-rect (which is just the themeBg fill).
+      out.set(cellLayer.pixels.subarray(srcRow, srcRow + cellW * 4), dstRow)
+    }
+    return { pixels: out, width: outWidth, height: outHeight }
+  }
 
   // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
   // the SVG round-trip when the frame carries a snapshot — that is what makes
   // color emoji and exact glyph coverage survive into the GIF. Skipped when
   // the frame includes chrome (no equivalent in the cell grid).
   const rasterize = (frame: AnimationFrame) =>
-    !forceSvg && frame.snapshot && rasterizer.rasterizeCells
-      ? rasterizer.rasterizeCells(frame.snapshot, scale)
-      : rasterizer.rasterize(frame.svg, scale)
+    useComposite
+      ? compositeFrame(frame)
+      : !forceSvg && frame.snapshot && rasterizer.rasterizeCells
+        ? rasterizer.rasterizeCells(frame.snapshot, scale)
+        : rasterizer.rasterize(frame.svg, scale)
 
   // Shared global palette. A terminal recording's colour set barely changes
   // frame to frame (theme + ANSI + anti-alias blends), so quantizing a fresh

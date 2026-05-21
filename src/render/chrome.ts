@@ -18,6 +18,59 @@
 
 import type { SvgScreenshotOptions } from "../terminal/types.ts"
 
+/**
+ * Geometry of a chrome'd terminal screenshot in CSS pixels — where the cell
+ * grid sits inside the framed window. Consumers that need to composite a
+ * cell-native rasterization (swash) under chrome layer call this to learn
+ * (a) the chrome layer's full dimensions and (b) the (x,y) offset at which to
+ * blit the cell-grid bitmap.
+ */
+export interface ChromeBounds {
+  /** Total chrome'd SVG width in CSS px (innerWidth + margin*2). */
+  totalWidth: number
+  /** Total chrome'd SVG height in CSS px (innerHeight + margin*2). */
+  totalHeight: number
+  /** Cell-grid origin X in CSS px (margin + padding). */
+  cellOffsetX: number
+  /** Cell-grid origin Y in CSS px (margin + padding + windowBarSize). */
+  cellOffsetY: number
+  /** Cell-grid width in CSS px (cols * cellWidth). */
+  cellAreaWidth: number
+  /** Cell-grid height in CSS px (rows * cellHeight). */
+  cellAreaHeight: number
+}
+
+/**
+ * Compute the chrome layout geometry for `style` at a `cols × rows` cell grid.
+ * Mirrors the math in `screenshotSvg`'s chrome path — kept here so consumers
+ * (e.g. the GIF compositor) can size and offset their cell-native rasters
+ * without parsing the rendered SVG.
+ */
+export function chromeBounds(
+  style: ChromeStyle,
+  cols: number,
+  rows: number,
+  cellWidth: number,
+  cellHeight: number,
+): ChromeBounds {
+  const opts = chromeOptions(style)
+  const padding = opts.padding ?? 0
+  const margin = opts.margin ?? 0
+  const barHeight = opts.windowBar && opts.windowBar !== "none" ? (opts.windowBarSize ?? 0) : 0
+  const cellAreaWidth = cols * cellWidth
+  const cellAreaHeight = rows * cellHeight
+  const innerWidth = cellAreaWidth + padding * 2
+  const innerHeight = cellAreaHeight + padding * 2 + barHeight
+  return {
+    totalWidth: innerWidth + margin * 2,
+    totalHeight: innerHeight + margin * 2,
+    cellOffsetX: margin + padding,
+    cellOffsetY: margin + padding + barHeight,
+    cellAreaWidth,
+    cellAreaHeight,
+  }
+}
+
 /** The window-chrome styles `--chrome` accepts. */
 export const CHROME_STYLES = ["none", "macos", "windows"] as const
 

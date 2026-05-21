@@ -21,6 +21,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
+import type { ChromeStyle } from "../../../src/render/chrome.ts"
 import type { OutputFormat, OutputTarget } from "./output-targets.ts"
 
 /** One captured `record` session — the single source every output projects from. */
@@ -41,6 +42,10 @@ export interface CapturedSession {
   frames: AnimationFrame[]
   /** The renderer for raster output (`canvas` / `resvg` / `swash` / `browser` / `auto`). */
   renderer: "canvas" | "resvg" | "swash" | "browser" | "auto"
+  /** Chrome style baked into the frames (for the GIF composite path). */
+  chrome?: ChromeStyle
+  /** Window title baked into the chrome bar. */
+  chromeTitle?: string
 }
 
 // =============================================================================
@@ -149,7 +154,14 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
   }
   if (format === "gif") {
     const { createGif } = await import("../../../src/view/gif.ts")
-    writeFileSync(path, await createGif(session.frames, { renderer: session.renderer }))
+    writeFileSync(
+      path,
+      await createGif(session.frames, {
+        renderer: session.renderer,
+        ...(session.chrome ? { chrome: session.chrome } : {}),
+        ...(session.chromeTitle ? { chromeTitle: session.chromeTitle } : {}),
+      }),
+    )
     return
   }
   if (format === "apng") {
