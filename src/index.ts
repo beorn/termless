@@ -45,7 +45,7 @@ export type { Frame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from ".
 // Recording-domain adapter (Phase 2): frame-trace → Recording frames projection.
 export { traceToRecording, fingerprintFromCanvas } from "./frame-trace-recording.ts"
 export type { TraceToRecordingInput, TraceCanvasOptions } from "./frame-trace-recording.ts"
-export { writeViewer } from "./frame-viewer.ts"
+export { writeViewer, writeViewerFromRecording } from "./frame-viewer.ts"
 export type { WriteViewerResult } from "./frame-viewer.ts"
 export { captureCrossRenderer, pngDimensions } from "./cross-renderer.ts"
 export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } from "./cross-renderer.ts"
@@ -117,6 +117,9 @@ export type { PngFrame } from "./animation/gif.ts"
 export { createApng } from "./animation/apng.ts"
 export { renderAnimation, detectFormat } from "./animation/index.ts"
 export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation/types.ts"
+// Recording-domain bridge (Phase 2): derive animation frames from a Recording.
+export { recordingToPngFrames, recordingToAnimationFrames } from "./animation/from-recording.ts"
+export type { FromRecordingOptions } from "./animation/from-recording.ts"
 
 // Asciicast v2 format
 export { parseAsciicast, replayAsciicast } from "./asciicast/reader.ts"

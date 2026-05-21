@@ -21,6 +21,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import type { Frame } from "./frame-trace.ts"
+import type { Frame as ModelFrame, Recording } from "./recording-model.ts"
 
 export interface WriteViewerResult {
   /** Absolute path to the generated viewer.html. */
@@ -78,12 +79,77 @@ export function writeViewer(dir: string): WriteViewerResult {
     throw new Error(`writeViewer: no index.jsonl in ${dir}`)
   }
   const frames = parseIndex(indexPath)
+  return emitViewer(frames, dir)
+}
 
+/**
+ * Project a unified-model {@link ModelFrame} onto the viewer's on-disk-shaped
+ * wire {@link Frame}. The browser-side viewer JS reads the frozen on-disk
+ * field names (`ts`, `duplicate_of`, `ansi_input_preview`, …); this is the
+ * one-way bridge from the {@link Recording} model into that wire shape.
+ *
+ * Timebase — the model carries `at` (integer µs from start). The viewer's
+ * `ts` field is treated as a relative ms position when no wall clock exists,
+ * so a model frame's `at` is converted µs → ms.
+ */
+function modelFrameToViewerFrame(frame: ModelFrame, prevAtMicros: number): Frame {
+  const tsMs = Math.round(frame.at / 1000)
+  return {
+    seq: frame.seq,
+    ts: tsMs,
+    iso: "",
+    hash: frame.contentHash,
+    duplicate_of: frame.duplicateOf,
+    bytes_in_since_last: frame.bytesInSinceLast,
+    ansi_input_preview: frame.ansiPreview,
+    buffer: {
+      cols: frame.buffer.cols,
+      rows: frame.buffer.rows,
+      cursor: { row: frame.buffer.cursor.row, col: frame.buffer.cursor.col },
+    },
+    duration_since_prev_ms: Math.round((frame.at - prevAtMicros) / 1000),
+    render_ms: 0,
+    png: frame.png,
+    ...(frame.signal !== undefined ? { silvery: frame.signal } : {}),
+  }
+}
+
+/**
+ * Generate `viewer.html` from a unified {@link Recording}'s `frames`
+ * projection (Phase 2 of the Recording-domain unification).
+ *
+ * This is the {@link Recording}-consuming entry point — `writeViewer` parses
+ * the on-disk `index.jsonl`; this consumes the in-memory model directly. PNGs
+ * are still inlined from `dir` (the projection's `png` field is a path
+ * relative to the recording bundle).
+ *
+ * @throws {Error} when the recording has no `frames` projection.
+ */
+export function writeViewerFromRecording(recording: Recording, dir: string): WriteViewerResult {
+  const modelFrames = recording.frames
+  if (modelFrames === undefined || modelFrames.length === 0) {
+    throw new Error("writeViewerFromRecording: recording has no frames projection")
+  }
+  const frames: Frame[] = []
+  let prevAt = 0
+  for (const mf of modelFrames) {
+    frames.push(modelFrameToViewerFrame(mf, prevAt))
+    prevAt = mf.at
+  }
+  return emitViewer(frames, dir)
+}
+
+/**
+ * Shared viewer-emission core: inline referenced PNGs, render the HTML
+ * template, write `viewer.html`. Used by both `writeViewer` (on-disk source)
+ * and `writeViewerFromRecording` (in-memory `Recording` source).
+ */
+function emitViewer(frames: Frame[], dir: string): WriteViewerResult {
   // Inline every referenced PNG as a data URI. Frames may share a PNG name
   // (they don't here — dedupe points dups at duplicate_of), and duplicate
   // frames have png:null; we resolve those through duplicate_of at view time.
   const images: Record<string, string> = {}
-  const pngOnDisk = new Set(readdirSync(dir).filter((f) => /\.png$/i.test(f)))
+  const pngOnDisk = existsSync(dir) ? new Set(readdirSync(dir).filter((f) => /\.png$/i.test(f))) : new Set<string>()
   for (const frame of frames) {
     if (frame.png && pngOnDisk.has(frame.png) && !(frame.png in images)) {
       images[frame.png] = fileToDataUri(join(dir, frame.png))

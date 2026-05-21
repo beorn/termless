@@ -9,6 +9,9 @@ export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./types.
 export { createAnimatedSvg } from "./animated-svg.ts"
 export { createGif } from "./gif.ts"
 export { createApng } from "./apng.ts"
+// Recording-domain bridge (Phase 2): derive animation frames from a Recording.
+export { recordingToPngFrames, recordingToAnimationFrames } from "./from-recording.ts"
+export type { FromRecordingOptions } from "./from-recording.ts"
 
 import type { AnimationFrame, AnimationFormat, AnimationOptions } from "./types.ts"
 import { createAnimatedSvg } from "./animated-svg.ts"
