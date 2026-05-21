@@ -18,7 +18,9 @@
  * server-side, so neither involves a renderer.
  */
 
-import { bundledFontFiles } from "../render/fonts.ts"
+import { bundledFontFiles, bundledFontsDir, BUNDLED_FONTS } from "../render/fonts.ts"
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 
 /** How a raster frame is rasterized from SVG. */
 export type RendererKind = "canvas" | "resvg" | "auto"
@@ -84,7 +86,22 @@ let canvasModule: { createCanvas: any; Image: any } | null = null
 
 async function loadCanvas(): Promise<{ createCanvas: any; Image: any }> {
   if (canvasModule) return canvasModule
-  canvasModule = (await import("@napi-rs/canvas")) as { createCanvas: any; Image: any }
+  const mod = (await import("@napi-rs/canvas")) as {
+    createCanvas: any
+    Image: any
+    GlobalFonts: { registerFromPath(path: string, family: string): void }
+  }
+  // Register the bundled fallback faces process-wide BEFORE any SVG with text
+  // is rasterized — without these, `@napi-rs/canvas` falls back to system
+  // fonts and every symbol / emoji / box-drawing glyph renders as tofu. The
+  // `resvg` rasterizer wires the same faces via `font.fontFiles`; this is the
+  // canvas-side equivalent. Idempotent (registerFromPath is keyed by family).
+  const dir = bundledFontsDir()
+  for (const { file, family } of BUNDLED_FONTS) {
+    const path = join(dir, file)
+    if (existsSync(path)) mod.GlobalFonts.registerFromPath(path, family)
+  }
+  canvasModule = mod
   return canvasModule
 }
 
