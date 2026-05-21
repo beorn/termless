@@ -73,17 +73,39 @@ is involved:
 A **renderer** rasterizes captured frames into pixels. `--renderer` picks one;
 the default is `auto`.
 
-| Renderer | How it works | Use it for |
-| -------- | ------------ | ---------- |
-| `swash`  | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. Bundled font chain: JetBrains Mono + Noto Sans Symbols 2 + Symbols Nerd Font + Noto Emoji. | The default — highest fidelity. |
-| `resvg`  | Renders each frame's SVG via `@resvg/resvg-js`, handed the same bundled fonts. Clean glyph coverage; no native build. | Cross-platform fallback. |
-| `canvas` | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu. | Niche; prefer `resvg`. |
-| `auto`   | Resolves to `swash`, falling back to `resvg` then `canvas`. | The default. |
+| Renderer  | How it works | Use it for |
+| --------- | ------------ | ---------- |
+| `swash`   | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. Bundled font chain: JetBrains Mono + Noto Sans Symbols 2 + Symbols Nerd Font + Noto Emoji. | The default — highest fidelity. |
+| `resvg`   | Renders each frame's SVG via `@resvg/resvg-js`, handed the same bundled fonts. Clean glyph coverage; no native build. | Cross-platform fallback. |
+| `canvas`  | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu. | Niche; prefer `resvg`. |
+| `browser` | Rasterizes each frame's SVG in **headless Chromium** (Playwright) — a real browser text engine for Chrome-identical shaping, font fallback, ligatures, and colour emoji. **Absolute-max fidelity.** | Premium opt-in: marketing assets + a fidelity oracle against `swash`/`canvas`. |
+| `auto`    | Resolves to `swash`, falling back to `resvg` then `canvas`. Never `browser`. | The default. |
 
 `auto` prefers `swash` — it consumes the cell grid directly, so colour emoji,
 Nerd Font icons and box-drawing all render faithfully. Where the swash native
 binding is unavailable it falls back to `resvg`, which renders the SVG path
 with the same bundled fonts.
+
+### `browser` — the premium opt-in tier
+
+`browser` is the **highest-fidelity** renderer: it hosts each frame's SVG in a
+headless-Chromium page and screenshots it, so output matches Chrome exactly
+(shaping, fallback, ligatures, colour emoji). It is **opt-in only** and never
+chosen by `auto` — Chromium is a hundreds-of-MB dependency, too heavy for a
+default or CI. Reach for it for one-off README/blog assets, or as a correctness
+**oracle** (render the same frame via `browser` and `swash`, diff them).
+
+Playwright is an **optional** dependency — a default `bun install` omits it and
+`swash`/`resvg`/`canvas` are unaffected. Install it before using `--renderer
+browser`:
+
+```bash
+bun add -d playwright
+npx playwright install chromium
+```
+
+Without playwright, `--renderer browser` fails fast with that exact install
+hint.
 
 ```bash
 # Bare record — shows a help gate, then records a live $SHELL on Enter
@@ -113,7 +135,7 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 | Option                   | Description                                                                         | Default     |
 | ------------------------ | ----------------------------------------------------------------------------------- | ----------- |
 | `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`   |
-| `--renderer <kind>`      | Raster renderer: `resvg`, `swash`, `canvas`, or `auto`                              | `auto`      |
+| `--renderer <kind>`      | Raster renderer: `resvg`, `swash`, `canvas`, `browser`, or `auto`                   | `auto`      |
 | `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --          |
 | `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
 | `--cols <n>`             | Terminal columns                                                                    | `80`        |
