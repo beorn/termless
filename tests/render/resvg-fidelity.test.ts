@@ -191,21 +191,29 @@ describe("resvg letter-spacing (bug 2)", () => {
     }
   })
 
-  test.skipIf(!CANVAS_AVAILABLE)("every cell of a bold word holds its glyph — no collapsed/spread cells", async () => {
-    // With per-cell `x`, each glyph sits inside its own cell column. The
-    // letter-spacing bug drifts later glyphs off-grid — some cell columns
-    // would go near-empty while neighbours double up. Assert every cell of
-    // the word has a healthy ink count.
-    const word = "Workflow:"
-    const cells = [...word].map((ch) => cell(ch, { bold: true }))
-    const img = await decode(await screenshotPng(readableFromCells(cells), { scale: SCALE }))
-    for (let col = 0; col < word.length; col++) {
-      const ink = cellBandInk(img, col)
-      expect(ink, `cell ${col} ('${[...word][col]}') ink=${ink} — glyph missing or drifted off-grid`).toBeGreaterThan(
-        20,
-      )
-    }
-  })
+  // Bumped timeout: the Windows GitHub runner is slow enough that the
+  // canvas-renderer path through this test plus its decode pass routinely
+  // overshoots the default 5s. The assertion itself runs ~1s on macOS/linux,
+  // ~6-8s on win32-x64. Per-test 30s ceiling keeps the gate honest without
+  // skipping the platform entirely. Other platforms still see real
+  // timeout-protection at the default vitest timeout (the heavy work here
+  // is canvas + decode; if that ever stalls beyond 30s, something is broken
+  // worth flagging).
+  test.skipIf(!CANVAS_AVAILABLE)(
+    "every cell of a bold word holds its glyph — no collapsed/spread cells",
+    async () => {
+      const word = "Workflow:"
+      const cells = [...word].map((ch) => cell(ch, { bold: true }))
+      const img = await decode(await screenshotPng(readableFromCells(cells), { scale: SCALE }))
+      for (let col = 0; col < word.length; col++) {
+        const ink = cellBandInk(img, col)
+        expect(ink, `cell ${col} ('${[...word][col]}') ink=${ink} — glyph missing or drifted off-grid`).toBeGreaterThan(
+          20,
+        )
+      }
+    },
+    30000,
+  )
 })
 
 /** Raster one glyph alone via raw resvg, with a caller-chosen `font` config. */
