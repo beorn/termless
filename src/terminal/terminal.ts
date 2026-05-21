@@ -376,6 +376,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     if (opts?.renderer === "canvas") return screenshotAsCanvasPng(opts)
     if (opts?.renderer === "resvg") return screenshotPng(terminal, opts as PngScreenshotOptions)
     if (opts?.renderer === "swash") return screenshotAsSwashPng(opts)
+    if (opts?.renderer === "browser") return screenshotAsBrowserPng(opts)
 
     // 1. Backend's own renderer.
     if (backend.screenshot) {
@@ -420,6 +421,34 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     }
     const scale = (opts as { scale?: number } | undefined)?.scale ?? 2
     return rasterizer.cellsToPng(terminal, scale)
+  }
+
+  /**
+   * Explicit browser path — rasterizes the SVG via headless Chromium
+   * (Playwright). The absolute-max-fidelity renderer: a real browser text
+   * engine gives Chrome-identical shaping, font fallback, ligatures, and
+   * color emoji. Opt-in only — Playwright is an optional dependency, and
+   * `selectRasterizer("browser")` throws a clear install hint if absent.
+   */
+  async function screenshotAsBrowserPng(opts?: ScreenshotOptions): Promise<Uint8Array> {
+    const { selectRasterizer } = await import("../view/rasterizer.ts")
+    const rasterizer = await selectRasterizer("browser")
+    const scale = (opts as { scale?: number } | undefined)?.scale ?? 2
+    // The browser renderer needs a self-contained SVG — embed the bundled
+    // fonts so Chromium renders deterministically, not from host fonts.
+    const svgOpts: SvgScreenshotOptions = {
+      embedFonts: true,
+      ...(opts?.fontFamily ? { fontFamily: opts.fontFamily } : {}),
+      ...(opts?.fontSize ? { fontSize: opts.fontSize } : {}),
+      ...(opts?.cellWidth ? { cellWidth: opts.cellWidth } : {}),
+      ...(opts?.cellHeight ? { cellHeight: opts.cellHeight } : {}),
+    }
+    const svg = screenshot(svgOpts)
+    try {
+      return await rasterizer.toPng(svg, scale)
+    } finally {
+      await rasterizer.dispose?.()
+    }
   }
 
   /**

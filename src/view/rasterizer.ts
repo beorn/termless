@@ -14,10 +14,17 @@
  *   its `Rasterizer` exposes {@link Rasterizer.rasterizeCells}; the SVG-input
  *   methods delegate to `resvg` (swash does not parse SVG). The cells path is
  *   the fidelity win — `Terminal.screenshot({ renderer: "swash" })` uses it.
+ * - **`browser`** — headless Chromium via Playwright. The **highest-fidelity**
+ *   path: a real browser text engine gives Chrome-identical shaping, font
+ *   fallback, ligatures, and color emoji with zero per-glyph work. Playwright
+ *   is an **optional** dependency — `browser` throws a clear install hint when
+ *   it is absent, and is **never** the `auto` default (Chromium is a heavy,
+ *   hundreds-of-MB dependency). Opt-in only, for marketing assets and as a
+ *   fidelity oracle against `canvas`.
  *
  * `auto` (the default) uses `canvas` when its native binding loads, and falls
  * back to `resvg` otherwise. `--renderer` is a *force* override — the common
- * case never touches it.
+ * case never touches it. `browser` is opt-in only and never reached by `auto`.
  *
  * Raster outputs (`.png` / `.gif` / `.apng`) consult the renderer. `.svg` is
  * vector and `.html` defers to the browser canvas — neither rasterizes
@@ -29,7 +36,7 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 
 /** How a raster frame is rasterized from SVG. */
-export type RendererKind = "canvas" | "resvg" | "swash" | "auto"
+export type RendererKind = "canvas" | "resvg" | "swash" | "browser" | "auto"
 
 /** A terminal whose cell grid a {@link Rasterizer} can read directly. */
 export type CellGridSource = import("../terminal/types.ts").TerminalReadable
@@ -47,7 +54,7 @@ export interface RasterBitmap {
 /** A renderer: rasterizes one SVG frame into an RGBA bitmap. */
 export interface Rasterizer {
   /** The concrete renderer this resolved to (`auto` collapses to one of these). */
-  readonly kind: "canvas" | "resvg" | "swash"
+  readonly kind: "canvas" | "resvg" | "swash" | "browser"
   /** Rasterize `svg` at `scale`× into an RGBA bitmap. */
   rasterize(svg: string, scale: number): Promise<RasterBitmap>
   /** Rasterize `svg` at `scale`× directly into PNG bytes. */
@@ -60,6 +67,14 @@ export interface Rasterizer {
   rasterizeCells?(terminal: CellGridSource, scale: number): Promise<RasterBitmap>
   /** Rasterize a terminal's cell grid directly into PNG bytes. */
   cellsToPng?(terminal: CellGridSource, scale: number): Promise<Uint8Array>
+  /**
+   * Release any long-lived resources the renderer holds. Present only on the
+   * `browser` renderer, which keeps a headless-Chromium instance alive across
+   * frames — callers that finish a batch (`createGif`, `createApng`) should
+   * `await rasterizer.dispose?.()` so Chromium is closed. The pure-native
+   * renderers hold nothing and omit it.
+   */
+  dispose?(): Promise<void>
 }
 
 // =============================================================================
@@ -210,6 +225,159 @@ async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
 }
 
 // =============================================================================
+// browser renderer (headless Chromium via Playwright)
+// =============================================================================
+
+/**
+ * The shape of the `playwright` module's `chromium` namespace we depend on —
+ * a structural subset, so the import does not require Playwright's types to
+ * be installed (Playwright is an optional dependency).
+ */
+interface PlaywrightChromium {
+  launch(opts?: { headless?: boolean; args?: string[] }): Promise<PlaywrightBrowser>
+}
+interface PlaywrightBrowser {
+  newPage(opts?: { viewport?: { width: number; height: number }; deviceScaleFactor?: number }): Promise<PlaywrightPage>
+  close(): Promise<void>
+}
+interface PlaywrightPage {
+  setContent(html: string, opts?: { waitUntil?: string }): Promise<void>
+  evaluate(fn: () => unknown): Promise<unknown>
+  screenshot(opts?: { type?: "png"; omitBackground?: boolean }): Promise<Buffer>
+  close(): Promise<void>
+}
+
+let playwrightModule: { chromium: PlaywrightChromium } | null = null
+
+/**
+ * Lazily import `playwright`. Playwright is an **optional** dependency — a
+ * default `bun install` omits it. Throws a clear, actionable error if absent,
+ * naming both the package install and the browser-download step.
+ */
+async function loadPlaywright(): Promise<{ chromium: PlaywrightChromium }> {
+  if (playwrightModule) return playwrightModule
+  // Indirect specifier so bundlers / static analysers do not treat `playwright`
+  // as a hard dependency to resolve at build time.
+  const specifier = "playwright"
+  playwrightModule = (await import(specifier)) as { chromium: PlaywrightChromium }
+  return playwrightModule
+}
+
+/** Read intrinsic width/height from an SVG root — reused for the viewport. */
+function browserSvgSize(svg: string): { width: number; height: number } {
+  const { width, height } = svgIntrinsicSize(svg)
+  return { width: Math.max(1, width), height: Math.max(1, height) }
+}
+
+/**
+ * Inline the bundled `@font-face` faces into an SVG if it does not already
+ * carry them. The `record` GIF/APNG pipeline produces frame SVGs without
+ * `embedFonts`, so Chromium would otherwise fall back to host fonts (or tofu
+ * for symbol / emoji code points). Embedding makes the page deterministic.
+ */
+async function ensureEmbeddedFonts(svg: string): Promise<string> {
+  if (svg.includes("@font-face")) return svg
+  const { embeddedFontFaceDefs } = await import("../render/svg.ts")
+  const defs = embeddedFontFaceDefs()
+  if (!defs) return svg
+  // Insert the <defs> block immediately after the opening <svg ...> tag.
+  return svg.replace(/(<svg[^>]*>)/, `$1${defs}`)
+}
+
+/** Wrap an SVG in a minimal full-bleed HTML document for Chromium. */
+function browserHtml(svg: string, width: number, height: number): string {
+  return (
+    `<!doctype html><html><head><meta charset="utf-8"><style>` +
+    `html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}` +
+    `svg{display:block}` +
+    `</style></head><body>${svg}</body></html>`
+  )
+}
+
+/**
+ * The `browser` rasterizer — rasterizes SVG frames via headless Chromium.
+ *
+ * The browser instance is launched once and reused across every `rasterize` /
+ * `toPng` call; `dispose()` closes it. This is the absolute-max-fidelity path
+ * (Chrome-grade shaping, fallback, ligatures, color emoji) — opt-in only.
+ */
+function createBrowserRasterizer(playwright: { chromium: PlaywrightChromium }): Rasterizer {
+  let browserPromise: Promise<PlaywrightBrowser> | null = null
+
+  const getBrowser = (): Promise<PlaywrightBrowser> => {
+    if (!browserPromise) {
+      browserPromise = playwright.chromium
+        .launch({ headless: true, args: ["--force-color-profile=srgb"] })
+        .catch((cause: unknown) => {
+          browserPromise = null
+          throw new Error(
+            "--renderer browser could not launch Chromium. Install the browser binary:\n" +
+              "  npx playwright install chromium",
+            { cause },
+          )
+        })
+    }
+    return browserPromise
+  }
+
+  const shot = async (svg: string, scale: number): Promise<{ png: Uint8Array; width: number; height: number }> => {
+    const { width, height } = browserSvgSize(svg)
+    const embedded = await ensureEmbeddedFonts(svg)
+    const browser = await getBrowser()
+    const page = await browser.newPage({
+      viewport: { width, height },
+      deviceScaleFactor: Math.max(1, scale),
+    })
+    try {
+      await page.setContent(browserHtml(embedded, width, height), { waitUntil: "load" })
+      // Block until embedded @font-face faces have finished loading — without
+      // this, the first frames screenshot mid-font-swap (FOUT) and glyphs
+      // render in a fallback face.
+      await page.evaluate(() => (document as { fonts: { ready: Promise<unknown> } }).fonts.ready)
+      const buf = await page.screenshot({ type: "png", omitBackground: false })
+      return {
+        png: new Uint8Array(buf),
+        width: Math.round(width * Math.max(1, scale)),
+        height: Math.round(height * Math.max(1, scale)),
+      }
+    } finally {
+      await page.close()
+    }
+  }
+
+  return {
+    kind: "browser",
+    async rasterize(svg, scale) {
+      // Decode the PNG back to RGBA via upng — the GIF/APNG encoders consume
+      // raw pixels, not PNG bytes.
+      const { png, width, height } = await shot(svg, scale)
+      const UPNG = (await import("upng-js")) as typeof import("upng-js")
+      const ab = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer
+      const decoded = UPNG.decode(ab)
+      const rgbaFrames = UPNG.toRGBA8(decoded)
+      return {
+        pixels: new Uint8Array(rgbaFrames[0] ?? new ArrayBuffer(0)),
+        width: decoded.width,
+        height: decoded.height,
+      }
+    },
+    async toPng(svg, scale) {
+      return (await shot(svg, scale)).png
+    },
+    async dispose() {
+      if (!browserPromise) return
+      const pending = browserPromise
+      browserPromise = null
+      try {
+        await (await pending).close()
+      } catch {
+        // Browser may have already exited — nothing to release.
+      }
+    },
+  }
+}
+
+// =============================================================================
 // Selection
 // =============================================================================
 
@@ -218,6 +386,8 @@ async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
  *
  * - `canvas` — `@napi-rs/canvas`; throws a clear error if the binding is absent.
  * - `resvg` — `@resvg/resvg-js`; throws a clear error if it is absent.
+ * - `browser` — headless Chromium via the optional `playwright` package;
+ *   throws a clear install hint if absent. Never reached from `auto`.
  * - `auto` — `canvas` when its binding loads, else `resvg`.
  */
 export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Rasterizer> {
@@ -246,7 +416,20 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
       )
     }
   }
+  if (kind === "browser") {
+    try {
+      return createBrowserRasterizer(await loadPlaywright())
+    } catch (e) {
+      throw new Error(
+        "--renderer browser requires the optional playwright package. Install it:\n" +
+          "  bun add -d playwright\n" +
+          "  npx playwright install chromium\n" +
+          `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
+      )
+    }
+  }
   // auto — prefer swash, fall back to resvg, then canvas.
+  // `browser` is opt-in only: never reached from `auto` (Chromium is heavy).
   //
   // swash is the highest-fidelity renderer: it consumes the cell grid
   // directly (no SVG round-trip) and composites full-colour emoji from their

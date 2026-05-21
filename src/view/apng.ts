@@ -55,23 +55,28 @@ export async function createApng(
   let width = 0
   let height = 0
 
-  for (const frame of frames) {
-    const duration = frame.duration || defaultDuration
+  try {
+    for (const frame of frames) {
+      const duration = frame.duration || defaultDuration
 
-    // Cell-native path (swash): skip the SVG round-trip when a snapshot exists.
-    const rendered =
-      frame.snapshot && rasterizer.rasterizeCells
-        ? await rasterizer.rasterizeCells(frame.snapshot, scale)
-        : await rasterizer.rasterize(frame.svg, scale)
+      // Cell-native path (swash): skip the SVG round-trip when a snapshot exists.
+      const rendered =
+        frame.snapshot && rasterizer.rasterizeCells
+          ? await rasterizer.rasterizeCells(frame.snapshot, scale)
+          : await rasterizer.rasterize(frame.svg, scale)
 
-    // Use first frame's dimensions as the canvas size
-    if (width === 0) {
-      width = rendered.width
-      height = rendered.height
+      // Use first frame's dimensions as the canvas size
+      if (width === 0) {
+        width = rendered.width
+        height = rendered.height
+      }
+
+      rgbaBuffers.push(rendered.pixels.buffer as ArrayBuffer)
+      delays.push(duration)
     }
-
-    rgbaBuffers.push(rendered.pixels.buffer as ArrayBuffer)
-    delays.push(duration)
+  } finally {
+    // Release the headless-Chromium instance the `browser` renderer holds.
+    await rasterizer.dispose?.()
   }
 
   // upng-js encode: cnum=0 means lossless (full RGBA, no quantization)

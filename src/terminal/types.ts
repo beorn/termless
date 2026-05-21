@@ -228,11 +228,13 @@ export interface ScreenshotOptions {
   /**
    * Which renderer rasterizes the screenshot — `canvas` (`@napi-rs/canvas`,
    * high fidelity), `resvg` (`@resvg/resvg-js`, cross-platform), `swash`
-   * (`@termless/swash-render`, pure-Rust, browser-grade color emoji), or
-   * `auto` (canvas when its native binding loads, else resvg). Default
-   * `auto`. A *force* override consulted by {@link Terminal.screenshot}.
+   * (`@termless/swash-render`, pure-Rust, browser-grade color emoji),
+   * `browser` (headless Chromium via the optional `playwright` package —
+   * absolute-max fidelity, opt-in only), or `auto` (canvas when its native
+   * binding loads, else resvg). Default `auto`. A *force* override consulted
+   * by {@link Terminal.screenshot}. `browser` is never reached from `auto`.
    */
-  renderer?: "canvas" | "resvg" | "swash" | "auto"
+  renderer?: "canvas" | "resvg" | "swash" | "browser" | "auto"
 }
 
 export interface TerminalBackend extends TerminalReadable {
