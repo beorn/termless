@@ -45,28 +45,43 @@ $ bunx termless record -o demo.gif -- bun km view ~/Vault
 Capture a terminal session into a [Recording](../concepts/recording) and write
 it to one or more output files. Alias: `termless rec`.
 
-`record` has exactly **one output flag — `-o`**. The *shape* of each `-o`
+`record` has exactly **one output flag — `-o`**. The _shape_ of each `-o`
 value picks the mode; there is no separate format flag and no separate
 screenshot flag.
 
-| Invocation                                | Output                                                       |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| `termless record -- <cmd>` (no `-o`)      | `out.gif` — a single file in the cwd                         |
-| `termless record -o demos/ -- <cmd>`      | `demos/` folder — `out.rec` · `out.gif` · `out.cast` · `out.tape` |
-| `termless record -o a.gif -o b.cast`      | exactly `a.gif` + `b.cast` (`-o` is repeatable)              |
-| `termless record -o shot.png -- <cmd>`    | a single still PNG                                           |
-| `termless record` (no command)            | shows a help gate, then records a live `$SHELL` on Enter     |
+| Invocation                             | Output                                                            |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| `termless record -- <cmd>` (no `-o`)   | `out.gif` — a single file in the cwd                              |
+| `termless record -o demos/ -- <cmd>`   | `demos/` folder — `out.rec` · `out.gif` · `out.cast` · `out.tape` |
+| `termless record -o a.gif -o b.cast`   | exactly `a.gif` + `b.cast` (`-o` is repeatable)                   |
+| `termless record -o shot.png -- <cmd>` | a single still PNG                                                |
+| `termless record` (no command)         | shows a help gate, then records a live `$SHELL` on Enter          |
 
 The `-o` extension picks the format; the format decides whether a renderer
 is involved:
 
-| Extension       | Format                | Renderer                              |
-| --------------- | --------------------- | ------------------------------------- |
-| `.gif` `.apng`  | raster animation      | the renderer — `auto` (canvas → resvg) |
-| `.png`          | raster still          | the renderer — `auto` (canvas → resvg) |
-| `.svg`          | vector still/animation | none (vector)                         |
-| `.html`         | scrubbable browser viewer | none server-side                  |
-| `.rec` `.tape` `.cast` | recording data | none                                  |
+| Extension              | Format                    | Renderer                          |
+| ---------------------- | ------------------------- | --------------------------------- |
+| `.gif` `.apng`         | raster animation          | the renderer — `auto` (see below) |
+| `.png`                 | raster still              | the renderer — `auto` (see below) |
+| `.svg`                 | vector still/animation    | none (vector)                     |
+| `.html`                | scrubbable browser viewer | none server-side                  |
+| `.rec` `.tape` `.cast` | recording data            | none                              |
+
+### Renderers
+
+A **renderer** rasterizes captured frames into pixels. `--renderer` picks one;
+the default is `auto`.
+
+| Renderer | How it works | Use it for |
+| -------- | ------------ | ---------- |
+| `resvg`  | Renders each frame's SVG via `@resvg/resvg-js`, handed the bundled fonts. Clean glyph coverage (rounded box corners, sigils, monochrome emoji). | The default — cross-platform, no native build. |
+| `swash`  | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. | `--renderer swash` when you want colour emoji. |
+| `canvas` | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu. | Niche; prefer `resvg`. |
+| `auto`   | Resolves to `resvg`, falling back to `canvas`. | The default. |
+
+`swash` is not yet the `auto` default — its font chain still misses some
+marker glyphs. Pass `--renderer swash` explicitly to use it.
 
 ```bash
 # Bare record — shows a help gate, then records a live $SHELL on Enter
@@ -93,21 +108,21 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 
 ### Options
 
-| Option                   | Description                                                   | Default     |
-| ------------------------ | ------------------------------------------------------------- | ----------- |
-| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif` |
-| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                 | `auto`      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                          | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                                     | vterm       |
-| `--cols <n>`             | Terminal columns                                              | `80`        |
-| `--rows <n>`             | Terminal rows                                                 | `30`        |
-| `--timeout <ms>`         | Wait timeout in ms                                            | `5000`      |
-| `--keys <keys>`          | Comma-separated key names to press, then capture a still      | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys                            | `content`   |
-| `--text`                 | Print terminal text to stdout                                 | off         |
-| `--compat`               | Compat capture — record in a real desktop terminal app        | off         |
-| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`  | auto-detect |
-| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)  | --          |
+| Option                   | Description                                                                         | Default     |
+| ------------------------ | ----------------------------------------------------------------------------------- | ----------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`   |
+| `--renderer <kind>`      | Raster renderer: `resvg`, `swash`, `canvas`, or `auto`                              | `auto`      |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --          |
+| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
+| `--cols <n>`             | Terminal columns                                                                    | `80`        |
+| `--rows <n>`             | Terminal rows                                                                       | `30`        |
+| `--timeout <ms>`         | Wait timeout in ms                                                                  | `5000`      |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
+| `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
+| `--text`                 | Print terminal text to stdout                                                       | off         |
+| `--compat`               | Compat capture — record in a real desktop terminal app                              | off         |
+| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`                        | auto-detect |
+| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)                        | --          |
 
 `record`'s defaults are tuned for a README-droppable artifact: the `ghostty`
 backend (truecolor + real glyph shaping), `80×30` (GitHub renders README
@@ -127,7 +142,7 @@ $ termless record --compat --terminal ghostty --cols 140 --rows 40 -o c.png -- b
 ```
 
 Compat capture is macOS-only and needs a GUI session plus Screen Recording
-permission. For routine visual iteration use plain `record` (the canvas
+permission. For routine visual iteration use plain `record` (the resvg
 renderer) — the compat path is slow and pops a real window.
 
 See [Recording Sessions](../guide/recording-sessions) for detailed usage.
