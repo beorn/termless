@@ -16,18 +16,43 @@
 
 import { describe, test, expect, vi, afterEach } from "vitest"
 import { createRequire } from "node:module"
+import { existsSync } from "node:fs"
 import type { RendererKind } from "../../src/view/rasterizer.ts"
+
+const require_ = createRequire(import.meta.url)
 
 /** Whether the optional `playwright` package resolves in this worktree. */
 function playwrightInstalled(): boolean {
   try {
-    createRequire(import.meta.url).resolve("playwright")
+    require_.resolve("playwright")
     return true
   } catch {
     return false
   }
 }
 const PLAYWRIGHT_INSTALLED = playwrightInstalled()
+
+/**
+ * Whether a launchable Chromium binary is actually present. The `playwright`
+ * package can be installed without the browser binaries — `playwright install
+ * chromium` is a separate step. CI installs the package but not the binary, so
+ * the smoke test (which launches a real browser) must gate on the binary, not
+ * just the package. `chromium.executablePath()` is synchronous and points at
+ * the resolved binary path; the binary may or may not exist on disk.
+ */
+function chromiumBinaryAvailable(): boolean {
+  if (!PLAYWRIGHT_INSTALLED) return false
+  try {
+    const { chromium } = require_("playwright") as {
+      chromium: { executablePath(): string }
+    }
+    const path = chromium.executablePath()
+    return !!path && existsSync(path)
+  } catch {
+    return false
+  }
+}
+const CHROMIUM_AVAILABLE = chromiumBinaryAvailable()
 
 /** A small km-ish SVG terminal frame — embedded fonts, a board-like card. */
 const KM_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120" preserveAspectRatio="xMidYMid meet">
@@ -79,8 +104,8 @@ describe("browser renderer — playwright absent", () => {
   })
 })
 
-describe("browser renderer — smoke (playwright installed)", () => {
-  test.skipIf(!PLAYWRIGHT_INSTALLED)(
+describe("browser renderer — smoke (playwright + Chromium binary installed)", () => {
+  test.skipIf(!CHROMIUM_AVAILABLE)(
     "rasterizes a km-ish SVG frame to a non-empty PNG",
     async () => {
       const { selectRasterizer } = await import("../../src/view/rasterizer.ts")

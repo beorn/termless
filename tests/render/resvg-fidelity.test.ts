@@ -31,7 +31,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { createCanvas, loadImage } from "@napi-rs/canvas"
+import { createRequire } from "node:module"
 import { existsSync } from "node:fs"
 import { Resvg } from "@resvg/resvg-js"
 import { screenshotPng } from "../../src/render/png.ts"
@@ -44,6 +44,46 @@ const SCALE = 2
 const CELL_W = 9.6
 const CELL_H = 20
 const BG = { r: 0x1e, g: 0x1e, b: 0x1e } // DEFAULT_THEME.background
+
+/**
+ * `@napi-rs/canvas` is an optional, native-binding-backed dep used only by the
+ * pixel-comparison helpers below. It is a devDep of `packages/ghostty`, not a
+ * hard root dependency — a default CI runner / lean checkout may not have it.
+ * The SVG-string assertions don't need it; the canvas-decode tests skip when
+ * it is absent rather than crashing the whole file at import time.
+ */
+const CANVAS_AVAILABLE = (() => {
+  try {
+    createRequire(import.meta.url).resolve("@napi-rs/canvas")
+    return true
+  } catch {
+    return false
+  }
+})()
+
+let canvasModule: typeof import("@napi-rs/canvas") | null = null
+async function loadCanvas(): Promise<typeof import("@napi-rs/canvas")> {
+  if (!canvasModule) canvasModule = await import("@napi-rs/canvas")
+  return canvasModule
+}
+
+/**
+ * `@twemoji/svg` is an optional peer dep (~17 MB of color emoji SVGs). When it
+ * is absent, `src/render/emoji.ts` correctly soft-falls-back to font rendering
+ * — `loadTwemojiSvg` returns null and the renderer emits a `<tspan>` instead of
+ * an injected `<image>`. The bug-4 image-injection assertions only hold when
+ * the asset pack IS installed, so they gate on this. (The "renders as a real
+ * glyph" coverage test above still passes via the bundled monochrome NotoEmoji
+ * font path, so emoji rendering itself stays covered without the pack.)
+ */
+const TWEMOJI_AVAILABLE = (() => {
+  try {
+    createRequire(import.meta.url).resolve("@twemoji/svg")
+    return true
+  } catch {
+    return false
+  }
+})()
 
 function cell(char: string, overrides: Partial<Cell> = {}): Cell {
   return {
@@ -77,6 +117,7 @@ function readableFromCells(cells: Cell[]): TerminalReadable {
 
 /** Decode PNG bytes into a flat RGBA pixel view via @napi-rs/canvas. */
 async function decode(bytes: Uint8Array): Promise<{ w: number; h: number; data: Uint8ClampedArray }> {
+  const { createCanvas, loadImage } = await loadCanvas()
   const img = await loadImage(Buffer.from(bytes))
   const canvas = createCanvas(img.width, img.height)
   const ctx = canvas.getContext("2d")
@@ -150,7 +191,7 @@ describe("resvg letter-spacing (bug 2)", () => {
     }
   })
 
-  test("every cell of a bold word holds its glyph — no collapsed/spread cells", async () => {
+  test.skipIf(!CANVAS_AVAILABLE)("every cell of a bold word holds its glyph — no collapsed/spread cells", async () => {
     // With per-cell `x`, each glyph sits inside its own cell column. The
     // letter-spacing bug drifts later glyphs off-grid — some cell columns
     // would go near-empty while neighbours double up. Assert every cell of
@@ -189,7 +230,7 @@ describe("resvg emoji / symbol coverage (bug 3)", () => {
     for (const f of files) expect(existsSync(f), `bundled font missing: ${f}`).toBe(true)
   })
 
-  test.each([
+  test.skipIf(!CANVAS_AVAILABLE).each([
     ["📋", "clipboard emoji U+1F4CB"],
     ["📄", "page emoji U+1F4C4"],
     ["⧗", "hourglass symbol U+29D7"],
@@ -209,7 +250,7 @@ describe("resvg emoji / symbol coverage (bug 3)", () => {
     expect(ratio, `glyph ${glyph} interior ink ratio ${ratio.toFixed(3)} — renders as tofu`).toBeGreaterThan(0.04)
   })
 
-  test.each([["⧗", "hourglass symbol U+29D7"]])(
+  test.skipIf(!CANVAS_AVAILABLE).each([["⧗", "hourglass symbol U+29D7"]])(
     "the bundled fontFiles improve glyph coverage for %s (%s)",
     async (glyph, _label) => {
       // Control: the resvg `font` config the encoders used BEFORE this fix —
@@ -238,7 +279,7 @@ describe("resvg emoji / symbol coverage (bug 3)", () => {
     },
   )
 
-  test.each([
+  test.skipIf(!TWEMOJI_AVAILABLE).each([
     ["📋", "clipboard emoji U+1F4CB", "1f4cb"],
     ["📄", "page emoji U+1F4C4", "1f4c4"],
     ["📁", "folder emoji U+1F4C1", "1f4c1"],

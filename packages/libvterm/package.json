@@ -47,6 +47,11 @@
   },
   "tsdown": {
     "clean": true,
+    "deps": {
+      "neverBundle": [
+        "../wasm/libvterm.js"
+      ]
+    },
     "dts": true,
     "entry": "src/index.ts",
     "format": "esm"
