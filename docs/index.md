@@ -20,8 +20,8 @@ features:
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
   - title: Cross-Terminal Conformance
     details: "Run the same tests against 10 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
-  - title: Recording & Playback
-    details: "Record terminal sessions as .tape files. Play back as GIF, animated SVG, APNG, or asciicast. Cross-terminal comparison in one command. Like VHS, but headless and multi-backend."
+  - title: Record, View, Play, Compare
+    details: "Capture a terminal session as a Recording. Play it back, animate it as GIF / SVG / APNG, scrub it frame-by-frame, or compare it across backends — one command each, headless and multi-backend."
   - title: Composable Selectors
     details: "screen, scrollback, buffer, viewport, row, cell, range. Separate WHERE to look from WHAT to assert. 21+ matchers for text, style, cursor, modes."
   - title: SVG & PNG Screenshots
@@ -98,22 +98,22 @@ test("inspect what string matching can't see", () => {
 })
 ```
 
-## Recording & Playback
+## Recording Sessions
 
-Record terminal sessions and play them back as animated output -- no ffmpeg, no Chromium, no external tools:
+Capture a terminal session as a Recording, then play it back as animated output -- no ffmpeg, no Chromium, no external tools:
 
 ```bash
-# Record a command to a tape file
+# Record a command to a recording
 $ termless record -o demo.tape ls -la
 
-# Play back as an animated GIF
+# Play it back as an animated GIF
 $ termless play -o demo.gif demo.tape
 
-# Cross-terminal comparison — same tape, different backends
-$ termless play -b vterm,ghostty --compare side-by-side demo.tape
+# Compare across backends — same recording, different emulators
+$ termless compare demo.tape -b vterm,ghostty --compare side-by-side
 ```
 
-Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all rendered with pure JS encoders. See [Recording & Playback](/guide/recording) for full details.
+Output formats: GIF, animated SVG, APNG, PNG -- all rendered with pure JS encoders. See [Recording Sessions](/guide/recording-sessions) for full details.
 
 ## Why Not Just Assert on Strings?
 

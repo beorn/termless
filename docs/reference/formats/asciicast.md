@@ -1,15 +1,23 @@
 ---
-title: Asciicast v2 Format
+title: .cast Format Reference
 description: Read, write, and convert asciicast v2 recordings for asciinema compatibility.
 ---
 
-# Asciicast v2
+# `.cast` Format Reference
 
-Termless can read and write [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/) files (`.cast`) for compatibility with the asciinema ecosystem.
+`.cast` is one of the three on-disk [formats](./) a [Recording](../../concepts/recording)
+serializes to. It is the [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/)
+format from the [asciinema](https://asciinema.org) project, used for interop with
+the asciinema ecosystem.
 
-## What is Asciicast?
+Unlike [`.tape`](./tape) (a compiler input), `.cast` is a **symmetric codec**: it
+decodes losslessly into a Recording's **io** track, and encodes the io track back
+out without loss.
 
-Asciicast v2 is a JSON-lines format for recording terminal sessions, created by the [asciinema](https://asciinema.org) project. Each `.cast` file has a header line (JSON object) followed by event lines (JSON arrays):
+## What is asciicast?
+
+asciicast v2 is a JSON-lines format. Each `.cast` file has a header line (a JSON
+object) followed by event lines (JSON arrays):
 
 ```
 {"version": 2, "width": 80, "height": 24, "duration": 5.2}
@@ -18,38 +26,33 @@ Asciicast v2 is a JSON-lines format for recording terminal sessions, created by 
 [3.0, "o", "$ "]
 ```
 
-The format is widely supported by tools like [asciinema-player](https://github.com/asciinema/asciinema-player) for interactive web playback.
+It is widely supported — for example by
+[asciinema-player](https://github.com/asciinema/asciinema-player) for interactive
+web playback.
 
 ## CLI Usage
 
-### Recording as Asciicast
-
 ```bash
-# Record directly to asciicast format
+# Record directly to .cast
 $ termless record -o demo.cast my-app
-```
 
-### Playing Asciicast Files
-
-```bash
-# Play back an asciicast recording
+# Play back a .cast recording
 $ termless play demo.cast
 
-# Convert asciicast to GIF
+# Convert .cast to a GIF
 $ termless play -o demo.gif demo.cast
 
-# Convert asciicast to animated SVG
+# Convert .cast to an animated SVG
 $ termless play -o demo.svg demo.cast
 ```
 
-## Reading Asciicast Files
+## Reading `.cast` Files
 
-Parse `.cast` files into structured recordings:
+Parse `.cast` files into a structured Recording:
 
 ```typescript
 import { parseAsciicast, replayAsciicast } from "@termless/core"
 
-// Parse a .cast file
 const content = await Bun.file("demo.cast").text()
 const recording = parseAsciicast(content)
 
@@ -60,11 +63,10 @@ console.log(recording.events.length) // number of events
 
 ### Replay Through a Terminal
 
-Feed an asciicast recording through any termless terminal backend:
+Feed a `.cast` recording through any backend:
 
 ```typescript
-import { parseAsciicast, replayAsciicast } from "@termless/core"
-import { createTerminal } from "@termless/core"
+import { parseAsciicast, replayAsciicast, createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const recording = parseAsciicast(content)
@@ -74,21 +76,14 @@ const term = createTerminal({
   rows: recording.header.height,
 })
 
-// Instant replay (no delays)
-await replayAsciicast(recording, term, { speed: Infinity })
-
-// Real-time replay
-await replayAsciicast(recording, term)
-
-// 2x speed
-await replayAsciicast(recording, term, { speed: 2 })
+await replayAsciicast(recording, term, { speed: Infinity }) // instant
+await replayAsciicast(recording, term) // real-time
+await replayAsciicast(recording, term, { speed: 2 }) // 2x
 ```
 
-## Writing Asciicast Files
+## Writing `.cast` Files
 
-### From a Termless Recording
-
-Convert a termless `Recording` to asciicast format:
+Convert a Recording to `.cast`:
 
 ```typescript
 import { toAsciicast } from "@termless/core"
@@ -97,37 +92,29 @@ const cast = toAsciicast(recording, { title: "My Demo" })
 await Bun.write("demo.cast", cast)
 ```
 
-### Structured Conversion
+### Codec Conversion
 
-Convert between the two recording formats:
+`.cast` decodes to the io track and encodes back from it:
 
 ```typescript
 import { recordingToAsciicast, asciicastToRecording } from "@termless/core"
 
-// termless → asciicast
-const asciicast = recordingToAsciicast(recording)
-
-// asciicast → termless
-const termlessRec = asciicastToRecording(asciicast)
+const asciicast = recordingToAsciicast(recording) // Recording → .cast
+const rec = asciicastToRecording(asciicast) // .cast → Recording
 ```
 
 ### Streaming Writer
 
-Build asciicast files incrementally with the streaming writer:
+Build `.cast` files incrementally:
 
 ```typescript
 import { createAsciicastWriter } from "@termless/core"
 
-const writer = createAsciicastWriter({
-  version: 2,
-  width: 80,
-  height: 24,
-})
+const writer = createAsciicastWriter({ version: 2, width: 80, height: 24 })
 
 writer.writeOutput("$ ")
 writer.writeInput("ls\n")
 writer.writeOutput("file1  file2\n")
-writer.writeOutput("$ ")
 writer.writeMarker("end of demo")
 
 const cast = writer.close() // JSON-lines string
@@ -136,15 +123,17 @@ await Bun.write("demo.cast", cast)
 
 ## Event Types
 
-Asciicast v2 supports three event types:
+asciicast v2 supports three event types. These map directly to the io track's
+direction tags:
 
 | Type  | Meaning                               | Example                   |
 | ----- | ------------------------------------- | ------------------------- |
 | `"o"` | Output (terminal data sent to screen) | `[1.5, "o", "hello\r\n"]` |
 | `"i"` | Input (user keystrokes)               | `[2.0, "i", "ls\n"]`      |
-| `"m"` | Marker (named position in recording)  | `[3.0, "m", "step-2"]`    |
+| `"m"` | Marker (named position)               | `[3.0, "m", "step-2"]`    |
 
-During replay, only `"o"` events are fed to the terminal. Input events are recorded for reference but not replayed. Marker events are reported via the `onEvent` callback.
+During replay, only `"o"` events are fed to the terminal. Input events are
+recorded for reference; markers are reported via the `onEvent` callback.
 
 ## Header Fields
 
@@ -161,6 +150,7 @@ During replay, only `"o"` events are fed to the terminal. Input events are recor
 
 ## See Also
 
-- [Recording & Playback](/guide/recording) -- CLI usage and recording modes
-- [Tape Format Reference](/guide/tape-format) -- the `.tape` file format
-- [asciinema documentation](https://docs.asciinema.org/manual/asciicast/v2/) -- upstream format specification
+- [Recording Sessions](../../guide/recording-sessions) -- recording and playback how-to.
+- [.tape format](./tape) -- the VHS-compatible compiler format.
+- [.trec format](./trec) -- termless's native, all-tracks format.
+- [asciinema documentation](https://docs.asciinema.org/manual/asciicast/v2/) -- upstream spec.

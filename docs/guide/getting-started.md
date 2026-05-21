@@ -185,8 +185,10 @@ test("with explicit cleanup", async () => {
 
 ## Next Steps
 
+- [Concepts Overview](/concepts/overview) -- the three objects and four verbs
 - [Writing Tests](/guide/writing-tests) -- all matchers and assertion patterns
 - [Screenshots](/guide/screenshots) -- SVG & PNG screenshot capture
+- [Recording Sessions](/guide/recording-sessions) -- record, play, view, and compare
 - [Best Practices](/guide/best-practices) -- avoiding flaky tests, PTY timing, selector tips
 - [Multi-Backend Testing](/guide/multi-backend) -- test against multiple backends
 - [Backend Capabilities](/guide/backends) -- which backends support which features

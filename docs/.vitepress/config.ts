@@ -102,6 +102,15 @@ export default defineConfig({
 
     nav: [
       {
+        text: "Concepts",
+        items: [
+          { text: "Overview", link: "/concepts/overview" },
+          { text: "Backend", link: "/concepts/backend" },
+          { text: "Terminal", link: "/concepts/terminal" },
+          { text: "Recording", link: "/concepts/recording" },
+        ],
+      },
+      {
         text: "Guide",
         items: [
           { text: "Getting Started", link: "/guide/getting-started" },
@@ -109,17 +118,20 @@ export default defineConfig({
           { text: "Writing Tests", link: "/guide/writing-tests" },
           { text: "Screenshots", link: "/guide/screenshots" },
           { text: "Best Practices", link: "/guide/best-practices" },
-          { text: "Recording & Playback", link: "/guide/recording" },
+          { text: "Recording Sessions", link: "/guide/recording-sessions" },
+          { text: "Tracing Visual Bugs", link: "/guide/tracing-visual-bugs" },
           { text: "Web Player", link: "/guide/web-player" },
           { text: "Backends", link: "/guide/backends" },
-          { text: "CLI & MCP Server", link: "/guide/cli" },
         ],
       },
       {
-        text: "API",
+        text: "Reference",
         items: [
-          { text: "Terminal", link: "/api/terminal" },
-          { text: "Backend", link: "/api/backend" },
+          { text: "CLI", link: "/reference/cli" },
+          { text: "MCP Server", link: "/reference/mcp" },
+          { text: "Recording Formats", link: "/reference/formats/" },
+          { text: "Terminal API", link: "/api/terminal" },
+          { text: "Backend API", link: "/api/backend" },
           { text: "Cell & Types", link: "/api/cell" },
           { text: "Matchers", link: "/api/matchers" },
         ],
@@ -142,6 +154,15 @@ export default defineConfig({
     ],
 
     sidebar: [
+      {
+        text: "Concepts",
+        items: [
+          { text: "Overview", link: "/concepts/overview" },
+          { text: "Backend", link: "/concepts/backend" },
+          { text: "Terminal", link: "/concepts/terminal" },
+          { text: "Recording", link: "/concepts/recording" },
+        ],
+      },
       {
         text: "Guide",
         items: [
@@ -169,16 +190,26 @@ export default defineConfig({
       {
         text: "Recording",
         items: [
-          { text: "Recording & Playback", link: "/guide/recording" },
-          { text: "Tape Format Reference", link: "/guide/tape-format" },
-          { text: "Frame-Trace Mode", link: "/guide/frame-trace" },
-          { text: "Asciicast v2", link: "/guide/asciicast" },
+          { text: "Recording Sessions", link: "/guide/recording-sessions" },
+          { text: "Tracing Visual Bugs", link: "/guide/tracing-visual-bugs" },
           { text: "Web Player", link: "/guide/web-player" },
         ],
       },
       {
-        text: "Tools",
-        items: [{ text: "CLI & MCP Server", link: "/guide/cli" }],
+        text: "Reference",
+        items: [
+          { text: "CLI", link: "/reference/cli" },
+          { text: "MCP Server", link: "/reference/mcp" },
+        ],
+      },
+      {
+        text: "Recording Formats",
+        items: [
+          { text: "Overview", link: "/reference/formats/" },
+          { text: ".tape", link: "/reference/formats/tape" },
+          { text: ".cast", link: "/reference/formats/asciicast" },
+          { text: ".trec", link: "/reference/formats/trec" },
+        ],
       },
       {
         text: "API Reference",

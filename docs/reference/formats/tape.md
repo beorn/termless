@@ -1,15 +1,24 @@
 ---
-title: Tape Format Reference
-description: Complete reference for the .tape file format -- commands, settings, duration syntax, and examples.
+title: .tape Format Reference
+description: Complete reference for the .tape recording format -- commands, settings, duration syntax, and examples.
 ---
 
-# Tape Format Reference
+# `.tape` Format Reference
 
-The `.tape` format is a line-based DSL for scripting terminal sessions. It is compatible with [VHS](https://github.com/charmbracelet/vhs) by Charmbracelet, but termless adds headless execution and multi-backend playback.
+`.tape` is one of the three on-disk [formats](./) a [Recording](../../concepts/recording)
+serializes to. It is a line-based DSL for *scripting* a terminal session, compatible
+with [VHS](https://github.com/charmbracelet/vhs) by Charmbracelet — termless adds
+headless execution and multi-backend playback.
+
+`.tape` is a **compiler input**, not a symmetric codec: a `.tape` file *compiles*
+into a Recording's **commands** track (`Type "hi"` expands into key events with
+timing; `Sleep` is a player directive). Going the other way — Recording → `.tape` —
+is best-effort. For lossless storage of all tracks, use [`.trec`](./trec).
 
 ## Overview
 
-A `.tape` file is a sequence of commands, one per line. Blank lines and comments (lines starting with `#`) are ignored.
+A `.tape` file is a sequence of commands, one per line. Blank lines and comments
+(lines starting with `#`) are ignored.
 
 ```tape
 # This is a comment
@@ -108,7 +117,8 @@ Sleep 0.5s
 
 ### Screenshot
 
-Capture a screenshot of the current terminal state:
+Capture a screenshot of the current terminal state. `Screenshot` is a *render
+directive* — it tells the player to rasterize the current buffer:
 
 ```tape
 # Screenshot with auto-generated path
@@ -120,7 +130,8 @@ Screenshot /tmp/demo.png
 
 ### Hide / Show
 
-Control whether terminal output is visible during playback. Useful for skipping setup steps in animations:
+Control whether terminal output is visible during playback. Useful for skipping
+setup steps in animations:
 
 ```tape
 Hide
@@ -157,7 +168,8 @@ Enter
 
 ### Output
 
-Declare output file paths (VHS compatibility). In termless, prefer the `-o` CLI flag instead:
+Declare output file paths (VHS compatibility). In termless, prefer the `-o` CLI
+flag instead:
 
 ```tape
 Output demo.gif
@@ -233,11 +245,15 @@ Set PlaybackSpeed 2
 Set Framerate 30
 ```
 
-`PlaybackSpeed` changes how `Sleep` durations are interpreted during render. `Framerate` caps generated animation output.
+`PlaybackSpeed` changes how `Sleep` durations are interpreted during render.
+`Framerate` caps generated animation output.
 
-### Frame-Trace (every-render-frame capture)
+### Frames projection capture
 
-Capture every render-relevant buffer change with timestamp + content-hash dedupe to a sibling directory. Useful for frame-by-frame debugging of TUI rendering.
+These settings populate the Recording's **frames** projection while the tape
+runs — every render-relevant buffer change is captured with a timestamp and a
+content hash. See [Tracing Visual Bugs](../../guide/tracing-visual-bugs) for the
+workflow.
 
 ```tape
 Set Frames "/tmp/my-trace/"
@@ -248,10 +264,6 @@ Set FrameDebounceMs 16
 | ----------------- | -------------------------------------------------------- |
 | `Frames`          | Directory to write `NNNNN.png` + `index.jsonl` into      |
 | `FrameDebounceMs` | Debounce interval in ms (default 16 = 60fps render-pass) |
-
-The `index.jsonl` is append-only and streaming-readable — partial traces from a crashed session remain parseable up to the last fully-flushed line. Identical buffer states (by xxHash64) are recorded with `duplicate_of` but skip the PNG to save disk.
-
-See [Frame-Trace Mode](frame-trace.md) for the full guide.
 
 ## Duration Format
 
@@ -291,35 +303,17 @@ Sleep 500ms
 Screenshot build-done.png
 ```
 
-## Running Tape Files
-
-```bash
-# Play a tape and see the output
-$ termless play demo.tape
-
-# Play and generate a GIF
-$ termless play -o demo.gif demo.tape
-
-# Play against a specific backend
-$ termless play -b ghostty demo.tape
-
-# Play with cross-terminal comparison
-$ termless play -b vterm,ghostty --compare side-by-side demo.tape
-
-# Play against every installed, ready backend
-$ termless play -b all --compare grid -o all-backends.svg demo.tape
-```
-
 ## VHS Compatibility
 
-The termless tape parser is compatible with VHS `.tape` files. The main differences:
+The termless `.tape` compiler accepts VHS `.tape` files. The main differences:
 
-- **Execution is headless** -- no GUI window, no ffmpeg dependency
-- **Multi-backend** -- play against any of 10+ terminal emulators
-- **Output formats** -- GIF, animated SVG, APNG, PNG, asciicast (all pure JS, no ffmpeg)
-- **Cross-terminal comparison** -- side-by-side, grid, diff modes, including pixel-diff overlays
+- **Execution is headless** -- no GUI window, no ffmpeg dependency.
+- **Multi-backend** -- play against any of 10+ terminal emulators.
+- **Output formats** -- GIF, animated SVG, APNG, PNG, asciicast (all pure JS, no ffmpeg).
+- **Cross-terminal comparison** -- side-by-side, grid, diff modes, including pixel-diff overlays.
 
 ## See Also
 
-- [Recording & Playback](/guide/recording) -- CLI usage and recording modes
-- [Asciicast v2](/guide/asciicast) -- asciicast format for asciinema compatibility
+- [Recording Sessions](../../guide/recording-sessions) -- recording and playback how-to.
+- [.cast format](./asciicast) -- the asciinema codec.
+- [.trec format](./trec) -- termless's native, all-tracks format.
