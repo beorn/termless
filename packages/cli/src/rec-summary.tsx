@@ -39,7 +39,9 @@ export interface RecordSummaryProps {
 }
 
 function formatDuration(ms: number): string {
-  return `${(ms / 1000).toFixed(1)}s`
+  const sec = ms / 1000
+  if (sec >= 1) return `${Math.round(sec)}s`
+  return `${Math.round(ms)}ms`
 }
 
 function formatBytes(bytes: number): string {
@@ -92,13 +94,14 @@ export function RecordSummary({
     }
   }, [writeFiles, exit])
 
-  const stats = [`${cols}×${rows}`, plural(keystrokeCount, "keystroke"), plural(frameCount, "frame")]
-
   return (
     <Box flexDirection="column">
       <Text>
-        Recorded <Strong>{formatDuration(durationMs)}</Strong> for <Strong>{cmdLabel}</Strong>{" "}
-        <Muted>({stats.join(" · ")})</Muted>
+        Cmd <Strong>`{cmdLabel}`</Strong>
+      </Text>
+      <Text>
+        Rec <Strong>{formatDuration(durationMs)}</Strong> at {cols}x{rows}, {plural(keystrokeCount, "keystroke")},{" "}
+        {plural(frameCount, "frame")}
       </Text>
       {files.map((f, i) => (
         <Box key={i} flexDirection="row">
