@@ -1,8 +1,28 @@
 /**
- * termless MCP Server — terminal session management over MCP stdio.
+ * termless MCP Server — drive and observe terminal sessions over MCP stdio.
  *
- * Same 8 tools as the playwright-tty MCP server, but backed by termless
- * (xterm.js headless + Bun PTY). No Chromium dependency — screenshots are SVG or PNG.
+ * The tools map onto the recording-domain vocabulary (three objects —
+ * Backend, Terminal, Recording — and four verbs — record · view · play ·
+ * compare), so an agent reading the tool list sees the same verbs the
+ * `termless` CLI exposes, not a separate vocabulary:
+ *
+ * - `start` / `stop` / `list` / `press` / `type` / `text` / `wait` drive a
+ *   *live* Terminal object — open a session, send input, read state, close it.
+ *   These are Terminal operations, not recording verbs.
+ * - `screenshot` is a one-frame **view**: it renders the live Terminal's
+ *   current buffer to a PNG/SVG image.
+ * - `start({ trace: { dir } })` turns the session into a **record**: every
+ *   buffer mutation is captured as a frame. `trace` then **views** the
+ *   recorded frames; `stop` finalizes the recording.
+ * - `compat-screenshot` is a one-frame **view** captured against the
+ *   peekaboo backend — a real desktop terminal app instead of a headless one.
+ *
+ * Backed by termless (headless terminal backend + Bun PTY). No Chromium
+ * dependency — screenshots render via a native canvas / SVG pipeline.
+ *
+ * The `mcp__tty__*` tool names are a stable external contract (agents invoke
+ * them by name); they are not renamed to the verb words. Descriptions, not
+ * identifiers, carry the verb mapping.
  */
 
 import { readFile, writeFile } from "node:fs/promises"
@@ -55,13 +75,13 @@ export async function startMcpServer(): Promise<void> {
   const sessions = createSessionManager()
   const server = new McpServer({ name: "termless", version: "0.1.0" })
 
-  // start — Create terminal session (optionally with frame-trace recording)
+  // start — Open a live Terminal session (optionally recording its frames)
   register(
     server,
     "start",
     {
       description:
-        "Start a terminal session with a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to enable Visual Eyes Phase 2 frame-trace recording: every buffer mutation produces a debounced PNG + JSONL row capturing render-relevant state.",
+        "Open a live terminal session — a Terminal object backed by a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to also *record* the session: every buffer mutation is captured as a debounced PNG + JSONL frame. Read the recorded frames with the `trace` tool; finalize the recording with `stop`.",
       inputSchema: {
         command: z.array(z.string()).describe("Command to run (e.g. ['bun', 'km', 'view', '/path'])"),
         env: z.record(z.string(), z.string()).optional().describe("Environment variables"),
@@ -98,7 +118,7 @@ export async function startMcpServer(): Promise<void> {
           })
           .optional()
           .describe(
-            "Enable frame-trace recording for this session. When set, every buffer mutation is captured (debounced) and persisted as a PNG + index.jsonl row in `dir`. Read via the `trace` tool; finalize via `stop`.",
+            "Record this session. When set, every buffer mutation is captured (debounced) as a frame and persisted as a PNG + index.jsonl row in `dir`. View the recorded frames via the `trace` tool; finalize the recording via `stop`.",
           ),
       },
     },
@@ -146,13 +166,13 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // stop — Kill session (finalize attached FrameTracer if present)
+  // stop — Close the live Terminal session (finalize the recording if any)
   register(
     server,
     "stop",
     {
       description:
-        "Stop a terminal session and kill the process. If a FrameTracer was attached via `start({ trace: {...} })`, it is finalized first and its summary is returned in the `trace` field.",
+        "Close a terminal session and kill the process. If the session was recording (opened via `start({ trace: {...} })`), the recording is finalized first and its summary is returned in the `trace` field.",
       inputSchema: {
         sessionId: z.string().describe("Session ID to stop"),
       },
@@ -234,13 +254,13 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // screenshot — PNG (default, via Terminal.screenshot() auto-picker) or SVG
+  // screenshot — View the live Terminal as a one-frame image (PNG or SVG)
   register(
     server,
     "screenshot",
     {
       description:
-        "Capture a screenshot of the terminal. Defaults to high-fidelity PNG via the auto-picker (Terminal.screenshot — backend-native renderer → @termless/ghostty native canvas → resvg fallback). No Chromium / Playwright dependency. SVG output stays accessible via `.svg` extension on outputPath or `format: 'svg'`.",
+        "View the live terminal as a single-frame image. Renders the Terminal's current buffer to a high-fidelity PNG via the auto-picker (Terminal.screenshot — backend-native renderer → @termless/ghostty native canvas → resvg fallback). No Chromium / Playwright dependency. SVG output stays accessible via `.svg` extension on outputPath or `format: 'svg'`.",
       inputSchema: {
         sessionId: z.string().describe("Session ID"),
         outputPath: z
@@ -341,13 +361,13 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // trace — Return frames captured since a sequence number (Visual Eyes Phase 2)
+  // trace — View the frames recorded by a session (since a sequence number)
   register(
     server,
     "trace",
     {
       description:
-        "Return frames captured since `since` (sequence number). Returns Frame[] from the in-memory ring buffer of the FrameTracer attached at start. The cursor does NOT auto-advance — the caller passes the seq of the last frame seen. Requires `start({ trace: {...} })` to have been called for this session.",
+        "View the frames recorded for a session — returns Frame[] captured since `since` (sequence number) from the in-memory ring buffer. The cursor does NOT auto-advance — the caller passes the seq of the last frame seen. Requires the session to have been opened as a recording via `start({ trace: {...} })`.",
       inputSchema: {
         sessionId: z.string().describe("Session ID"),
         since: z
@@ -371,7 +391,7 @@ export async function startMcpServer(): Promise<void> {
       if (!tracer) {
         return textResult({
           error:
-            "No tracer attached to this session. Pass `trace: { dir }` to mcp__tty__start to enable frame-trace recording.",
+            "This session is not recording. Open it as a recording by passing `trace: { dir }` to mcp__tty__start.",
         })
       }
       const frames =
@@ -401,13 +421,13 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // compat-screenshot — capture a TUI in a real desktop terminal app (Visual Eyes Phase 8)
+  // compat-screenshot — View a TUI in a real desktop terminal app (compat backend)
   register(
     server,
     "compat-screenshot",
     {
       description:
-        "Capture a TUI command running in the user's ACTUAL desktop terminal app (Ghostty / kitty / iTerm / Terminal.app) via macOS screencapture. Pixel-perfect for that specific terminal + the user's real font/theme config — the COMPAT path. Use this ONLY for terminal-specific compat bugs ('does it look right in Ghostty 1.3 with my Tokyo Night theme?'). For routine visual iteration use the `screenshot` tool (canvas renderer — fast, no GUI, cross-platform). macOS-only; needs a GUI session + Screen Recording permission. Spawns and then closes a real window.",
+        "View a TUI as a one-frame image, captured against the peekaboo backend — the user's ACTUAL desktop terminal app (Ghostty / kitty / iTerm / Terminal.app) via macOS screencapture. Pixel-perfect for that specific terminal + the user's real font/theme config — the COMPAT path. Use this ONLY for terminal-specific compat bugs ('does it look right in Ghostty 1.3 with my Tokyo Night theme?'). For routine visual iteration use the `screenshot` tool (headless canvas renderer — fast, no GUI, cross-platform). macOS-only; needs a GUI session + Screen Recording permission. Spawns and then closes a real window.",
       inputSchema: {
         cmd: z.string().describe("TUI command to run as a shell string (e.g. 'bun km view ~/Vault')"),
         terminal: z
