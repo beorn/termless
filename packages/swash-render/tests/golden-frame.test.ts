@@ -64,9 +64,24 @@ describe.skipIf(!NATIVE)("swash renderer — golden frame", () => {
 
   it("font chain includes the bundled faces", () => {
     const chain = swashFontChain()
-    // JetBrains Mono + symbol + mono-emoji are always bundled; the color
-    // emoji face is appended only when the platform ships one.
-    expect(chain.length).toBeGreaterThanOrEqual(3)
+    // JetBrains Mono + Noto Symbols 2 + Symbols Nerd Font + mono-emoji are
+    // always bundled; the color emoji face is appended only when the platform
+    // ships one.
+    expect(chain.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it("renders a Nerd Font marker glyph as real ink, not .notdef tofu", () => {
+    // U+F0F6 — the Nerd Font private-use icon TUIs (km) use as a column
+    // marker. The bundled Symbols Nerd Font face must cover it; before it was
+    // bundled this rendered as a `.notdef` box.
+    const term = createTerminal({ backend: createVt100Backend(), cols: 4, rows: 1 })
+    try {
+      term.feed("\u{F0F6}")
+      const bmp = renderCells(term)
+      expect(inkPixels(new Uint8Array(bmp.pixels))).toBeGreaterThan(8)
+    } finally {
+      term.close()
+    }
   })
 
   // The spike's headline finding: swash renders color emoji in color.

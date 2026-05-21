@@ -246,32 +246,37 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
       )
     }
   }
-  // auto — prefer resvg, fall back to canvas.
+  // auto — prefer swash, fall back to resvg, then canvas.
   //
-  // resvg is the safe default: handed the bundled fonts via `font.fontFiles`,
-  // it resolves symbol / emoji / box-drawing glyphs with per-glyph fallback,
-  // and renders a km board cleanly (rounded corners, sigil icons — verified).
+  // swash is the highest-fidelity renderer: it consumes the cell grid
+  // directly (no SVG round-trip) and composites full-colour emoji from their
+  // native colour tables. Its bundled font chain — JetBrains Mono, Noto Sans
+  // Symbols 2, Symbols Nerd Font, Noto Emoji — covers box-drawing, sigil
+  // icons, Nerd Font glyphs and emoji, so a km board renders cleanly
+  // (verified). For SVG-only inputs swash's `rasterize` delegates to resvg,
+  // so `auto`→swash is never worse than resvg and strictly better whenever a
+  // frame carries a cell snapshot (the `record` GIF path).
   //
-  // swash is NOT in the `auto` chain yet — it is the cell-native,
-  // color-emoji renderer, but its font chain still lacks coverage for some
-  // marker glyphs (they render as `.notdef` tofu — see
-  // @km/termless/swash-font-coverage). Until that closes, swash is reachable
-  // only via an explicit `--renderer swash`; promoting it to the `auto`
-  // default would regress frames resvg already renders correctly.
-  //
+  // resvg is the cross-platform fallback (no native build): handed the same
+  // bundled fonts via `font.fontFiles`, it renders the SVG path correctly.
   // The `canvas` rasterizer is last — its `drawImage` SVG path ignores
   // registered fonts, so glyphs the system font lacks render as tofu.
   try {
-    return createResvgRasterizer(await loadResvg())
+    return await createSwashRasterizer(await loadSwash())
   } catch {
     try {
-      return createCanvasRasterizer(await loadCanvas())
+      return createResvgRasterizer(await loadResvg())
     } catch {
-      throw new Error(
-        "createGif/screenshot requires a renderer. Install one:\n" +
-          "  bun add @resvg/resvg-js  (resvg — cross-platform, default)\n" +
-          "  bun add @napi-rs/canvas  (canvas — fallback)",
-      )
+      try {
+        return createCanvasRasterizer(await loadCanvas())
+      } catch {
+        throw new Error(
+          "createGif/screenshot requires a renderer. Install one:\n" +
+            "  @termless/swash-render   (swash — cell-native, highest fidelity)\n" +
+            "  bun add @resvg/resvg-js  (resvg — cross-platform fallback)\n" +
+            "  bun add @napi-rs/canvas  (canvas — last-resort fallback)",
+        )
+      }
     }
   }
 }

@@ -173,8 +173,9 @@ async function rasterGlyph(
 describe("resvg emoji / symbol coverage (bug 3)", () => {
   test("bundled fallback font files exist and resolve", () => {
     const files = bundledFontFiles()
-    // The three OFL faces: JetBrains Mono + Noto Sans Symbols 2 + Noto Emoji.
-    expect(files.length).toBe(3)
+    // The four OFL faces: JetBrains Mono + Noto Sans Symbols 2 +
+    // Symbols Nerd Font + Noto Emoji.
+    expect(files.length).toBe(4)
     for (const f of files) expect(existsSync(f), `bundled font missing: ${f}`).toBe(true)
   })
 

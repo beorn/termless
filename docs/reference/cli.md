@@ -75,13 +75,15 @@ the default is `auto`.
 
 | Renderer | How it works | Use it for |
 | -------- | ------------ | ---------- |
-| `resvg`  | Renders each frame's SVG via `@resvg/resvg-js`, handed the bundled fonts. Clean glyph coverage (rounded box corners, sigils, monochrome emoji). | The default — cross-platform, no native build. |
-| `swash`  | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. | `--renderer swash` when you want colour emoji. |
+| `swash`  | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. Bundled font chain: JetBrains Mono + Noto Sans Symbols 2 + Symbols Nerd Font + Noto Emoji. | The default — highest fidelity. |
+| `resvg`  | Renders each frame's SVG via `@resvg/resvg-js`, handed the same bundled fonts. Clean glyph coverage; no native build. | Cross-platform fallback. |
 | `canvas` | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu. | Niche; prefer `resvg`. |
-| `auto`   | Resolves to `resvg`, falling back to `canvas`. | The default. |
+| `auto`   | Resolves to `swash`, falling back to `resvg` then `canvas`. | The default. |
 
-`swash` is not yet the `auto` default — its font chain still misses some
-marker glyphs. Pass `--renderer swash` explicitly to use it.
+`auto` prefers `swash` — it consumes the cell grid directly, so colour emoji,
+Nerd Font icons and box-drawing all render faithfully. Where the swash native
+binding is unavailable it falls back to `resvg`, which renders the SVG path
+with the same bundled fonts.
 
 ```bash
 # Bare record — shows a help gate, then records a live $SHELL on Enter

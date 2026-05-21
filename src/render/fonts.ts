@@ -1,10 +1,12 @@
 /**
  * Bundled fallback fonts — the canonical termless font assets.
  *
- * Three OFL-licensed faces ship inside `@termless/core` under `assets/fonts`:
+ * Four OFL-licensed faces ship inside `@termless/core` under `assets/fonts`:
  *
  *   - JetBrains Mono       — primary monospace face (broad Latin + box-drawing)
  *   - Noto Sans Symbols 2  — terminal symbol glyphs JetBrains Mono lacks
+ *   - Symbols Nerd Font    — Nerd Font private-use icons (powerline, devicons,
+ *                            the U+F0xx/U+E0xx glyphs TUIs like km use)
  *   - Noto Emoji (mono)    — emoji code points (📁 📋 📄, status emoji)
  *
  * Two render paths consume these:
@@ -26,6 +28,7 @@ import { existsSync } from "node:fs"
 /** Family names the bundled fonts are registered under (CSS `font-family`). */
 export const BUNDLED_PRIMARY_FAMILY = "TermlessMono"
 export const BUNDLED_SYMBOL_FAMILY = "TermlessSymbols"
+export const BUNDLED_NERD_FAMILY = "TermlessNerd"
 export const BUNDLED_EMOJI_FAMILY = "TermlessEmoji"
 
 /** One bundled font: a file name (relative to the fonts dir) + its family. */
@@ -41,6 +44,7 @@ export interface BundledFont {
 export const BUNDLED_FONTS: readonly BundledFont[] = [
   { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY },
   { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY },
+  { file: "SymbolsNerdFontMono-Regular.ttf", family: BUNDLED_NERD_FAMILY },
   { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY },
 ]
 
