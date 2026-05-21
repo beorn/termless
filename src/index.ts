@@ -122,6 +122,9 @@ export { toAsciicast, createAsciicastWriter } from "./asciicast/writer.ts"
 export type { ToAsciicastOptions, AsciicastWriter } from "./asciicast/writer.ts"
 export { recordingToAsciicast, asciicastToRecording } from "./asciicast/convert.ts"
 export type { ConvertOptions } from "./asciicast/convert.ts"
+// Recording-domain adapter (Phase 2): .cast ⇄ Recording symmetric codec.
+export { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "./asciicast/recording-codec.ts"
+export type { EncodeAsciicastOptions } from "./asciicast/recording-codec.ts"
 export type {
   AsciicastHeader,
   AsciicastTheme,
