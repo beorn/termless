@@ -60,8 +60,9 @@ describe("createFrameTracer", () => {
     onAfterWrite = tracer.onWrite
 
     term.feed("hello")
-    // wait past debounce
-    await new Promise((r) => setTimeout(r, 30))
+    // Wait deterministically for the debounced capture — a blind sleep races
+    // it under full-suite load.
+    await waitForFrames(tracer, 1)
 
     const frames = tracer.framesSinceSeq(0)
     expect(frames.length).toBeGreaterThanOrEqual(1)
@@ -95,10 +96,10 @@ describe("createFrameTracer", () => {
       hook = tracer.onWrite
 
       term.feed("abc")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 1)
       // Re-feed an ANSI no-op (cursor save+restore) — same final buffer state.
       term.feed("\x1b7\x1b8")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 2)
 
       const frames = tracer.framesSinceSeq(0)
       expect(frames.length).toBeGreaterThanOrEqual(2)
@@ -182,7 +183,7 @@ describe("createFrameTracer", () => {
       hook = tracer.onWrite
 
       term.feed("hi")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 1)
 
       const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
@@ -224,7 +225,7 @@ describe("createFrameTracer", () => {
       hook = tracer.onWrite
 
       term.feed("x")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 1)
 
       const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
@@ -266,7 +267,7 @@ describe("createFrameTracer", () => {
       hook = tracer.onWrite
 
       term.feed("z")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 1)
 
       const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)
@@ -312,7 +313,7 @@ describe("createFrameTracer", () => {
       hook = tracer.onWrite
 
       term.feed("q")
-      await new Promise((r) => setTimeout(r, 30))
+      await waitForFrames(tracer, 1)
 
       const frames = tracer.framesSinceSeq(0) as TraceFrame[]
       expect(frames.length).toBeGreaterThanOrEqual(1)

@@ -386,6 +386,12 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   let firstTs: number | null = null
   let truncated = false
   let stopped = false
+  // The in-flight `captureFrame()` promise, if a debounced capture has fired
+  // and is mid-flight (awaiting `renderFn` / writing to disk). `stop()` awaits
+  // this so a caller that does `await tracer.stop()` then `rmSync(dir)` is
+  // race-free by construction — no late `appendFileSync`/`writeFile` can hit
+  // an already-removed directory.
+  let inFlightCapture: Promise<void> | null = null
 
   function flushPending(): void {
     if (pendingTimer) {
@@ -412,6 +418,10 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
       // Unique frame — write the PNG.
       try {
         const png = await renderFn(terminal)
+        // `renderFn` is async — the tracer may have been stopped while it ran.
+        // Bail before any disk write so a late capture never touches a
+        // directory the caller has already removed.
+        if (stopped) return
         const fname = `${padSeq(seq)}.png`
         await writeFile(join(dir, fname), png)
         pngRelPath = fname
@@ -426,6 +436,7 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     } else if (!dedupe) {
       // Forced re-render even though hash matches.
       const png = await renderFn(terminal)
+      if (stopped) return
       const fname = `${padSeq(seq)}.png`
       await writeFile(join(dir, fname), png)
       pngRelPath = fname
@@ -454,6 +465,9 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     // undefined and the viewer omits the section.
     const silveryEvent = silveryJoin?.matchFor(ts)
     if (silveryEvent) frame.silvery = silveryEvent
+    // A `writeFile` await above may have let `stop()` run to completion; never
+    // append to an index file whose directory has since been removed.
+    if (stopped) return
     frames.push(frame)
     appendFileSync(indexFile, JSON.stringify(frame) + "\n")
     if (firstTs == null) firstTs = ts
@@ -467,7 +481,17 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     if (pendingTimer) clearTimeout(pendingTimer)
     pendingTimer = setTimeout(() => {
       pendingTimer = null
-      void captureFrame()
+      // Track the fired capture so `stop()` can await it. A capture is async
+      // (`renderFn` + disk writes); without this handle a `stop()` that races
+      // a just-fired debounce would return before the capture's late
+      // `writeFile`/`appendFileSync`, letting a caller's `rmSync(dir)` trip an
+      // ENOENT. `.catch` keeps the fire-and-forget tick rejection-free; errors
+      // inside `captureFrame` are already swallowed at their own call sites.
+      const capture = captureFrame().catch(() => {})
+      inFlightCapture = capture
+      void capture.then(() => {
+        if (inFlightCapture === capture) inFlightCapture = null
+      })
     }, debounceMs)
   }
 
@@ -478,13 +502,28 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   }
 
   async function stop(): Promise<FrameTraceSummary> {
+    // Drain a debounced capture that has fired and is mid-flight (awaiting
+    // `renderFn` / disk writes) before doing anything else. Capturing the
+    // handle and awaiting it here is what makes `await tracer.stop()` then
+    // `rmSync(dir)` race-free — no late write can outlive `stop()`.
+    if (inFlightCapture) {
+      await inFlightCapture
+    }
     if (pendingTimer) {
       clearTimeout(pendingTimer)
       pendingTimer = null
-      // Flush one final frame if writes were pending.
+      // Flush one final frame if writes were pending. Done before `stopped`
+      // is set so this capture is allowed to write its frame.
       await captureFrame()
     }
     stopped = true
+    // A capture could have fired between the `inFlightCapture` await above and
+    // here (a debounce timer landing during `await captureFrame()`). It will
+    // observe `stopped` and bail before any write, but await it so `stop()`'s
+    // returned promise still strictly outlives every capture tick.
+    if (inFlightCapture) {
+      await inFlightCapture
+    }
     const uniqueCount = hashToSeq.size
     const count = frames.length
     const totalBytes = frames.reduce((acc, f) => acc + f.bytes_in_since_last, 0)
