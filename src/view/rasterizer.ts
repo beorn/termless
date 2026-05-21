@@ -246,17 +246,26 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
       )
     }
   }
-  // auto — prefer canvas, fall back to resvg.
+  // auto — prefer resvg, fall back to canvas.
+  //
+  // resvg is the correct SVG rasterizer: it is handed the bundled fallback
+  // fonts via `font.fontFiles` and does per-glyph fallback, so symbol /
+  // emoji / box-drawing glyphs resolve. The `canvas` rasterizer rasterizes
+  // the SVG through `@napi-rs/canvas`'s `drawImage`, which does NOT consult
+  // registered fonts for SVG `<text>` — so glyphs the system font lacks
+  // (rounded box corners ╭╮╰╯, sigil icons) render as `.notdef` tofu.
+  // resvg is therefore the safe default; `canvas` stays available via an
+  // explicit `--renderer canvas` for callers who want it.
   try {
-    return createCanvasRasterizer(await loadCanvas())
+    return createResvgRasterizer(await loadResvg())
   } catch {
     try {
-      return createResvgRasterizer(await loadResvg())
+      return createCanvasRasterizer(await loadCanvas())
     } catch {
       throw new Error(
         "createGif/screenshot requires a renderer. Install one:\n" +
-          "  bun add @napi-rs/canvas   (canvas — high fidelity)\n" +
-          "  bun add @resvg/resvg-js   (resvg — cross-platform)",
+          "  bun add @resvg/resvg-js   (resvg — cross-platform, default)\n" +
+          "  bun add @napi-rs/canvas   (canvas — fallback)",
       )
     }
   }
