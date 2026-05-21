@@ -1,6 +1,6 @@
 /**
- * Regression tests for the `@resvg/resvg-js` SVG→raster path — pins the two
- * fidelity fixes from `record-gif-output-broken` (bugs 2 + 3):
+ * Regression tests for the `@resvg/resvg-js` SVG→raster path — pins three
+ * fidelity fixes:
  *
  *   Bug 2 — letter-spacing. The SVG used to stretch every multi-cell tspan
  *   with `textLength` + `lengthAdjust="spacingAndGlyphs"`. librsvg/browsers
@@ -9,15 +9,25 @@
  *   so a bold word occupies EXACTLY its cell columns — no spread past the
  *   last cell's right edge.
  *
- *   Bug 3 — emoji / symbol tofu. resvg-js with only `loadSystemFonts` +
- *   `defaultFontFamily` does not resolve a face covering emoji code points,
- *   rendering them as hollow `.notdef` boxes. The fix passes the bundled
- *   Noto Emoji / Noto Sans Symbols 2 faces through `font.fontFiles`, so an
- *   emoji cell gets real interior ink.
+ *   Bug 3 — symbol tofu. resvg-js with only `loadSystemFonts` +
+ *   `defaultFontFamily` does not resolve a face covering rarer symbol
+ *   codepoints (e.g. ⧗ U+29D7), rendering them as hollow `.notdef` boxes.
+ *   The fix passes the bundled Noto Sans Symbols 2 / Nerd Font faces through
+ *   `font.fontFiles`, so a symbol cell gets real interior ink.
  *
- * Both are exercised through `screenshotPng()` — the canonical resvg path,
- * the same SVG + font wiring `createGif` / `createApng` use — plus a smoke
- * check that `createGif` itself produces a non-empty GIF.
+ *   Bug 4 — color emoji rendered as monochrome outline. resvg-js cannot
+ *   render any color emoji font format (CBDT/sbix Apple Color Emoji, COLR/CPAL
+ *   Twemoji Mozilla, OT-SVG TwitterColorEmoji-SVGinOT). Bundling NotoEmoji
+ *   (monochrome) at least lets every emoji codepoint resolve, but the result
+ *   is a thin outlined glyph that drops user-visible color. The fix side-steps
+ *   fonts: for emoji codepoints, `src/render/svg.ts` emits a sibling `<image
+ *   href="data:image/svg+xml;base64,...">` referencing the Twemoji color SVG
+ *   from the optional `@twemoji/svg` peer dep. Resvg renders nested SVG via
+ *   `<image>` correctly even when it cannot render the same emoji from a font.
+ *
+ * All three are exercised through `screenshotPng()` — the canonical resvg
+ * path, the same SVG + font wiring `createGif` / `createApng` use — plus a
+ * smoke check that `createGif` itself produces a non-empty GIF.
  */
 
 import { describe, test, expect } from "vitest"
@@ -199,31 +209,60 @@ describe("resvg emoji / symbol coverage (bug 3)", () => {
     expect(ratio, `glyph ${glyph} interior ink ratio ${ratio.toFixed(3)} — renders as tofu`).toBeGreaterThan(0.04)
   })
 
+  test.each([["⧗", "hourglass symbol U+29D7"]])(
+    "the bundled fontFiles improve glyph coverage for %s (%s)",
+    async (glyph, _label) => {
+      // Control: the resvg `font` config the encoders used BEFORE this fix —
+      // `loadSystemFonts` + `defaultFontFamily` only. With nothing in fontFiles,
+      // resvg-js cannot deterministically resolve a face covering these code
+      // points (worst case: hollow `.notdef` tofu).
+      const before = interiorInkRatio(
+        await rasterGlyph(glyph, { loadSystemFonts: false, defaultFontFamily: "Menlo" }),
+        0,
+      )
+      // The fix: the bundled Noto faces passed through `font.fontFiles`.
+      const after = interiorInkRatio(
+        await rasterGlyph(glyph, {
+          loadSystemFonts: false,
+          defaultFontFamily: "Menlo",
+          fontFiles: bundledFontFiles(),
+        }),
+        0,
+      )
+      expect(
+        after,
+        `bundled fontFiles must add glyph ink for ${glyph} — before ${before.toFixed(3)}, after ${after.toFixed(3)}`,
+      ).toBeGreaterThan(before)
+      // And the resolved glyph must be a real, well-inked glyph (not tofu).
+      expect(after, `glyph ${glyph} still under-inked with fontFiles`).toBeGreaterThan(0.04)
+    },
+  )
+
   test.each([
-    ["📋", "clipboard emoji U+1F4CB"],
-    ["📄", "page emoji U+1F4C4"],
-    ["⧗", "hourglass symbol U+29D7"],
-  ])("the bundled fontFiles improve glyph coverage for %s (%s)", async (glyph, _label) => {
-    // Control: the resvg `font` config the encoders used BEFORE this fix —
-    // `loadSystemFonts` + `defaultFontFamily` only. With nothing in fontFiles,
-    // resvg-js cannot deterministically resolve a face covering these code
-    // points (worst case: hollow `.notdef` tofu).
-    const before = interiorInkRatio(await rasterGlyph(glyph, { loadSystemFonts: false, defaultFontFamily: "Menlo" }), 0)
-    // The fix: the bundled Noto faces passed through `font.fontFiles`.
-    const after = interiorInkRatio(
-      await rasterGlyph(glyph, {
-        loadSystemFonts: false,
-        defaultFontFamily: "Menlo",
-        fontFiles: bundledFontFiles(),
-      }),
-      0,
-    )
-    expect(
-      after,
-      `bundled fontFiles must add glyph ink for ${glyph} — before ${before.toFixed(3)}, after ${after.toFixed(3)}`,
-    ).toBeGreaterThan(before)
-    // And the resolved glyph must be a real, well-inked glyph (not tofu).
-    expect(after, `glyph ${glyph} still under-inked with fontFiles`).toBeGreaterThan(0.04)
+    ["📋", "clipboard emoji U+1F4CB", "1f4cb"],
+    ["📄", "page emoji U+1F4C4", "1f4c4"],
+    ["📁", "folder emoji U+1F4C1", "1f4c1"],
+  ])("color emoji %s (%s) is image-injected, not font-rendered", async (glyph, _label, key) => {
+    // For emoji codepoints, the SVG renderer side-steps the font path entirely
+    // and embeds a Twemoji color SVG via `<image href="data:image/svg+xml;base64">`
+    // — see src/render/emoji.ts. resvg-js cannot render any color emoji font
+    // format (CBDT, COLR, OT-SVG), so font-only rendering produces the bundled
+    // monochrome Noto Emoji outline. Image injection delivers the colorful
+    // emoji users see in their real terminal.
+    const wide = [...glyph][0]!.codePointAt(0)! >= 0x1f000
+    const cells = [cell(glyph, { wide })]
+    if (wide) cells.push(cell("", { continuation: true }))
+    const svg = screenshotSvg(readableFromCells(cells))
+    // Asserts the renderer chose the image path for this codepoint.
+    expect(svg).toContain(`<image `)
+    expect(svg).toContain(`data:image/svg+xml;base64,`)
+    // And the embedded asset is the right Twemoji file (the base64 begins with
+    // the Twemoji SVG's opening "<svg ").
+    expect(svg).toMatch(new RegExp(`data:image/svg\\+xml;base64,[A-Za-z0-9+/=]+`))
+    // The rasterized output still has plenty of interior ink (it's a colored
+    // emoji glyph, not tofu) — pinned by the existing "renders as a real glyph"
+    // test above. This test pins the renderer-side architecture: image, not font.
+    void key
   })
 
   test("a bold + emoji frame round-trips through createGif", async () => {

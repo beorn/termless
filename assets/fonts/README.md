@@ -24,8 +24,8 @@ copy, not one per package.
 
 All three are licensed under the SIL Open Font License 1.1 — redistributable,
 including bundled inside an npm package. Noto Emoji is the **monochrome**
-build (not the color COLR build): a terminal-faithful look that composes with
-the renderer's truecolor SGR foreground.
+build, kept as the last-resort fallback when `@twemoji/svg` is not installed
+or a codepoint is outside the Twemoji catalogue.
 
 Roles:
 
@@ -33,4 +33,9 @@ Roles:
   broad Latin + box-drawing + geometric-shape coverage.
 - **Noto Sans Symbols 2** — fallback for terminal symbol glyphs JetBrains Mono
   lacks (e.g. the hourglass U+29D7, rarer geometric shapes, arrows).
-- **Noto Emoji** — fallback for emoji code points (📁 📋 📄, status emoji).
+- **Noto Emoji** — last-resort monochrome fallback for emoji code points; in
+  the canvas path it's the only emoji face and renders cleanly. In the resvg
+  path, color emoji is delivered via `<image>` injection from `@twemoji/svg`
+  (see `src/render/emoji.ts`) because resvg-js does not support any color
+  font format (CBDT/sbix, COLR/CPAL, OT-SVG) — see the canonical commentary
+  in `src/render/emoji.ts` for the empirical rationale.

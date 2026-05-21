@@ -27,6 +27,7 @@ import {
   BUNDLED_NERD_FAMILY,
   BUNDLED_EMOJI_FAMILY,
 } from "./fonts.ts"
+import { isLikelyEmoji, loadTwemojiSvg, toTwemojiKey } from "./emoji.ts"
 
 // ── Defaults ──
 
@@ -375,6 +376,23 @@ function spanToTspan(span: TextSpan, cellWidth: number, themeFg: string): string
 
 // ── Text row rendering ──
 
+/**
+ * Resolve a wide-character span to a bundled Twemoji color SVG. Returns the
+ * data URI when the codepoint sequence has a Twemoji asset and the optional
+ * `@twemoji/svg` peer dependency is installed; null otherwise (in which case
+ * the span falls back to font rendering via {@link spanToTspan}, which still
+ * picks up the bundled monochrome Noto Emoji face).
+ *
+ * The text-span builder isolates every wide character in its own single-char
+ * span (see {@link buildTextSpans}), so a multi-char emoji ZWJ sequence will
+ * still arrive here as one span — there is no per-glyph splitting needed.
+ */
+function resolveEmojiSpan(span: TextSpan): string | null {
+  if (!span.isWide) return null
+  if (!isLikelyEmoji(span.text)) return null
+  return loadTwemojiSvg(toTwemojiKey(span.text))
+}
+
 function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
   const parts: string[] = []
   const { cellHeight, cellWidth, fontSize, fontFamily, themeFg, themeBg } = opts
@@ -388,13 +406,40 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
 
     // Baseline: top of cell + font size (approximate ascent for monospace)
     const y = row * cellHeight + fontSize
-    parts.push(`<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`)
-
+    // Partition spans: emoji spans (with a resolved Twemoji asset) become
+    // sibling `<image>` elements; non-emoji spans collect into one `<text>`
+    // per contiguous run with `<tspan>` children. A row may interleave
+    // `<text>` and `<image>` siblings — both are positioned absolutely so
+    // ordering matches the source row.
+    let textOpen = false
     for (const span of spans) {
+      const emojiUri = resolveEmojiSpan(span)
+      if (emojiUri !== null) {
+        if (textOpen) {
+          parts.push(`</text>`)
+          textOpen = false
+        }
+        // The emoji image spans 2 cells horizontally (wide char) and one
+        // cell vertically. The Twemoji SVG viewBox is 36×36 — resvg honours
+        // `<image>` width/height as the rendered box and scales the inner
+        // SVG to fit. Positioning at the cell-grid origin keeps the emoji
+        // aligned with surrounding monospace text.
+        const x = coord(span.startCol * cellWidth)
+        const yTop = coord(row * cellHeight)
+        const w = coord(span.cellCount * cellWidth)
+        const h = coord(cellHeight)
+        parts.push(`<image x="${x}" y="${yTop}" width="${w}" height="${h}" href="${emojiUri}"/>`)
+        continue
+      }
+      if (!textOpen) {
+        parts.push(
+          `<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
+        )
+        textOpen = true
+      }
       parts.push(spanToTspan(span, cellWidth, themeFg))
     }
-
-    parts.push(`</text>`)
+    if (textOpen) parts.push(`</text>`)
   }
 
   return parts
