@@ -370,7 +370,7 @@ async function interactiveRecord(
 
   // ── Bare `record` → pre-flight help gate, then record on Enter ──
   if (command === undefined) {
-    const { runHelpGate } = await import("./help-gate.tsx")
+    const { runHelpGate } = await import("./help-gate.ts")
     await runHelpGate({ shell, cols: opts.cols, rows: opts.rows, outputs: outputPaths })
   }
 
@@ -395,8 +395,20 @@ async function interactiveRecord(
   }
   const setTitle = (title: string) => process.stderr.write(setTitleSequence(title))
   setTitle(recordingTitle(cmdLabel))
+  // Per-second cadence: drive the overlay's elapsed clock + toggle the
+  // window-bar dot (●  vs   ) so the host title appears to blink alongside
+  // the on-screen ● REC indicator. The live overlay's own 30 fps paint
+  // timer takes care of the in-frame blink + clock refresh.
+  let titleTick = 0
   const titleTimer = setInterval(() => {
-    setTitle(recordingTitle(cmdLabel, Date.now() - startTime))
+    const elapsed = Date.now() - startTime
+    titleTick++
+    const blinkOn = titleTick % 2 === 0
+    const titleLabel = blinkOn
+      ? recordingTitle(cmdLabel, elapsed)
+      : recordingTitle(cmdLabel, elapsed).replace("● ", "  ")
+    setTitle(titleLabel)
+    if (liveView) liveView.setElapsedMs(elapsed)
   }, 1000)
 
   // Headless terminal that mirrors PTY output — the source for frame capture.
@@ -405,13 +417,15 @@ async function interactiveRecord(
   const b = await backend("ghostty")
   const headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
 
-  // Live overlay — render the headless terminal's grid via Silvery, centered
-  // in the host terminal with a chrome frame. `--live-chrome none` falls back
-  // to today's raw-stdout-pipe behavior (no overlay).
-  let liveView: import("./rec-live-view.tsx").RecLiveViewHandle | null = null
+  // Live overlay — direct-ANSI painter that mirrors the headless terminal's
+  // grid into a centred chrome window on the host. Does NOT touch stdin — the
+  // host's stdin → PTY pipe stays intact, so Ctrl-D / Ctrl-C / typing all
+  // reach the recorded child. `--live-chrome none` skips the overlay and
+  // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
+  let liveView: import("./rec-live-overlay.ts").RecLiveOverlayHandle | null = null
   if (liveChrome !== "none") {
-    const { runRecLiveView } = await import("./rec-live-view.tsx")
-    liveView = await runRecLiveView(headlessTerminal, {
+    const { startRecLiveOverlay } = await import("./rec-live-overlay.ts")
+    liveView = startRecLiveOverlay(headlessTerminal, {
       chromeStyle: liveChrome,
       title: cmdLabel,
     })
@@ -603,9 +617,9 @@ async function interactiveRecord(
     restoreTitle()
     if (liveView) {
       try {
-        liveView.unmount()
+        liveView.stop()
       } catch {
-        // Best-effort unmount — host terminal restore still proceeds.
+        // Best-effort restore — host terminal cleanup still proceeds.
       }
     }
     headlessTerminal.close()
