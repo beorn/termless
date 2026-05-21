@@ -69,13 +69,22 @@ export async function createGif(
 
   // Shared global palette. A terminal recording's colour set barely changes
   // frame to frame (theme + ANSI + anti-alias blends), so quantizing a fresh
-  // 256-colour palette per frame — and re-embedding it in every frame — is
-  // pure bloat. Quantize ONCE from a representative content-bearing frame and
-  // reuse it as the GIF's global colour table: every frame after the first
-  // omits its local table. Big size win, no visible quality loss for a TUI.
+  // palette per frame — and re-embedding it in every frame — is pure bloat.
+  // Quantize ONCE from a representative content-bearing frame and reuse it as
+  // the GIF's global colour table. 255 colours, not 256: index 255 is
+  // reserved as the inter-frame transparency marker (below).
   const sampleIdx = Math.floor(frames.length / 2)
   const sample = await rasterize(frames[sampleIdx]!)
-  const palette = quantize(sample.pixels, 256)
+  const palette = quantize(sample.pixels, 255)
+  const TRANSPARENT_IDX = 255
+
+  // Inter-frame diffing. Successive terminal frames differ in only a handful
+  // of cells, so after frame 0 each frame is written as a *delta*: pixels
+  // unchanged from the previous frame become the transparent index, and the
+  // frame is composited over its predecessor (`dispose: 1` — do not dispose).
+  // Long runs of the transparent index compress near-free under LZW — the
+  // dominant GIF-size win for a recording.
+  let prevIndexed: Uint8Array | null = null
 
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i]!
@@ -84,13 +93,33 @@ export async function createGif(
     const { pixels: rgba, width, height } = i === sampleIdx ? sample : await rasterize(frame)
     const indexed = applyPalette(rgba, palette)
 
-    gif.writeFrame(indexed, width, height, {
+    // Delta-encode against the previous frame when dimensions match.
+    const canDiff = prevIndexed !== null && prevIndexed.length === indexed.length
+    let frameData = indexed
+    if (canDiff) {
+      const delta = new Uint8Array(indexed.length)
+      for (let p = 0; p < indexed.length; p++) {
+        delta[p] = indexed[p] === prevIndexed![p] ? TRANSPARENT_IDX : indexed[p]!
+      }
+      frameData = delta
+    }
+
+    gif.writeFrame(frameData, width, height, {
       // Only the first frame carries the palette — it becomes the global
       // colour table; later frames reference it (no per-frame local table).
       palette: i === 0 ? palette : undefined,
       delay: duration,
       repeat: i === 0 ? (loop === 0 ? 0 : loop) : undefined,
+      // Frames after the first are deltas: transparent pixels show the
+      // composited prior frame through. `dispose: 1` keeps each frame in
+      // place so the next delta lands on top of it.
+      transparent: canDiff,
+      transparentIndex: TRANSPARENT_IDX,
+      dispose: 1,
     })
+
+    // Compare the NEXT frame against this frame's full (un-delta'd) content.
+    prevIndexed = indexed
   }
 
   gif.finish()
