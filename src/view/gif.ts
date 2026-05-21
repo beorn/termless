@@ -59,26 +59,35 @@ export async function createGif(
 
   const gif = GIFEncoder()
 
+  // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
+  // the SVG round-trip when the frame carries a snapshot — that is what makes
+  // color emoji and exact glyph coverage survive into the GIF.
+  const rasterize = (frame: AnimationFrame) =>
+    frame.snapshot && rasterizer.rasterizeCells
+      ? rasterizer.rasterizeCells(frame.snapshot, scale)
+      : rasterizer.rasterize(frame.svg, scale)
+
+  // Shared global palette. A terminal recording's colour set barely changes
+  // frame to frame (theme + ANSI + anti-alias blends), so quantizing a fresh
+  // 256-colour palette per frame — and re-embedding it in every frame — is
+  // pure bloat. Quantize ONCE from a representative content-bearing frame and
+  // reuse it as the GIF's global colour table: every frame after the first
+  // omits its local table. Big size win, no visible quality loss for a TUI.
+  const sampleIdx = Math.floor(frames.length / 2)
+  const sample = await rasterize(frames[sampleIdx]!)
+  const palette = quantize(sample.pixels, 256)
+
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i]!
     const duration = frame.duration || defaultDuration
 
-    // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
-    // the SVG round-trip when the frame carries a snapshot — that is what makes
-    // color emoji and exact glyph coverage survive into the GIF.
-    const {
-      pixels: rgba,
-      width,
-      height,
-    } = frame.snapshot && rasterizer.rasterizeCells
-      ? await rasterizer.rasterizeCells(frame.snapshot, scale)
-      : await rasterizer.rasterize(frame.svg, scale)
-
-    const palette = quantize(rgba, 256)
+    const { pixels: rgba, width, height } = i === sampleIdx ? sample : await rasterize(frame)
     const indexed = applyPalette(rgba, palette)
 
     gif.writeFrame(indexed, width, height, {
-      palette,
+      // Only the first frame carries the palette — it becomes the global
+      // colour table; later frames reference it (no per-frame local table).
+      palette: i === 0 ? palette : undefined,
       delay: duration,
       repeat: i === 0 ? (loop === 0 ? 0 : loop) : undefined,
     })
