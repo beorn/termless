@@ -16,3 +16,6 @@ packages/*/native/target/
 packages/*/native/Cargo.lock
 .termless-cache/
 sites/terminfo.dev/
+
+# Scratch recording artifacts — never commit (see @km/termless/record-gif-output-broken)
+/*.gif
