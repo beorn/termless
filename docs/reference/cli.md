@@ -73,13 +73,13 @@ is involved:
 A **renderer** rasterizes captured frames into pixels. `--renderer` picks one;
 the default is `auto`.
 
-| Renderer  | How it works | Use it for |
-| --------- | ------------ | ---------- |
-| `swash`   | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. Bundled font chain: JetBrains Mono + Noto Sans Symbols 2 + Symbols Nerd Font + Noto Emoji. | The default — highest fidelity. |
-| `resvg`   | Renders each frame's SVG via `@resvg/resvg-js`, handed the same bundled fonts. Clean glyph coverage; no native build. | Cross-platform fallback. |
-| `canvas`  | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu. | Niche; prefer `resvg`. |
-| `browser` | Rasterizes each frame's SVG in **headless Chromium** (Playwright) — a real browser text engine for Chrome-identical shaping, font fallback, ligatures, and colour emoji. **Absolute-max fidelity.** | Premium opt-in: marketing assets + a fidelity oracle against `swash`/`canvas`. |
-| `auto`    | Resolves to `swash`, falling back to `resvg` then `canvas`. Never `browser`. | The default. |
+| Renderer  | How it works                                                                                                                                                                                                                               | Use it for                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `swash`   | Renders the **cell grid directly** (no SVG) via the pure-Rust `swash` crate — composites **full-colour emoji** from their native colour tables. Bundled font chain: JetBrains Mono + Noto Sans Symbols 2 + Symbols Nerd Font + Noto Emoji. | The default — highest fidelity.                                                |
+| `resvg`   | Renders each frame's SVG via `@resvg/resvg-js`, handed the same bundled fonts. Clean glyph coverage; no native build.                                                                                                                      | Cross-platform fallback.                                                       |
+| `canvas`  | Rasterizes the SVG through `@napi-rs/canvas`. Its `drawImage` path ignores registered fonts, so some glyphs tofu.                                                                                                                          | Niche; prefer `resvg`.                                                         |
+| `browser` | Rasterizes each frame's SVG in **headless Chromium** (Playwright) — a real browser text engine for Chrome-identical shaping, font fallback, ligatures, and colour emoji. **Absolute-max fidelity.**                                        | Premium opt-in: marketing assets + a fidelity oracle against `swash`/`canvas`. |
+| `auto`    | Resolves to `swash`, falling back to `resvg` then `canvas`. Never `browser`.                                                                                                                                                               | The default.                                                                   |
 
 `auto` prefers `swash` — it consumes the cell grid directly, so colour emoji,
 Nerd Font icons and box-drawing all render faithfully. Where the swash native
@@ -140,6 +140,7 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 | `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
 | `--cols <n>`             | Terminal columns                                                                    | `80`        |
 | `--rows <n>`             | Terminal rows                                                                       | `30`        |
+| `--scale <n>`            | Raster resolution multiplier for `.gif`/`.apng`/`.png` — `1` native, `2` retina     | `2`         |
 | `--timeout <ms>`         | Wait timeout in ms                                                                  | `5000`      |
 | `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
 | `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
@@ -152,6 +153,12 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 backend (truecolor + real glyph shaping), `80×30` (GitHub renders README
 images at ~880px content width), ~12 fps, and a ~300-frame cap so a long
 session never produces a 50 MB GIF. Power users override every default.
+
+`--scale` controls the raster resolution of `.gif` / `.apng` / `.png` output.
+The default `2` doubles the renderer's native cell metrics — an `80×30` grid
+(768×600 native) becomes 1536×1200, which GitHub downscales to its ~880px
+content width as crisp 2× DPI. Use `--scale 1` for a smaller file at native
+size, or `--scale 3`+ for print-grade stills.
 
 ### Compat capture (macOS) {#compat}
 

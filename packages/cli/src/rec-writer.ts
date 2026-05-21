@@ -41,6 +41,8 @@ export interface CapturedSession {
   frames: AnimationFrame[]
   /** The renderer for raster output (`canvas` / `resvg` / `swash` / `browser` / `auto`). */
   renderer: "canvas" | "resvg" | "swash" | "browser" | "auto"
+  /** Raster output resolution multiplier — `1` = native cell metrics, `2` = retina. */
+  scale: number
 }
 
 // =============================================================================
@@ -101,7 +103,7 @@ async function writeRec(path: string, session: CapturedSession): Promise<void> {
     for (let i = 0; i < session.frames.length; i++) {
       const frame = session.frames[i]!
       const pngName = `${String(i + 1).padStart(5, "0")}.png`
-      const png = await rasterizer!.toPng(frame.svg, 2)
+      const png = await rasterizer!.toPng(frame.svg, session.scale)
       writeFileSync(join(pngDir, pngName), png)
       modelFrames.push({
         seq: i + 1,
@@ -149,12 +151,12 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
   }
   if (format === "gif") {
     const { createGif } = await import("../../../src/view/gif.ts")
-    writeFileSync(path, await createGif(session.frames, { renderer: session.renderer }))
+    writeFileSync(path, await createGif(session.frames, { renderer: session.renderer, scale: session.scale }))
     return
   }
   if (format === "apng") {
     const { createApng } = await import("../../../src/view/apng.ts")
-    writeFileSync(path, await createApng(session.frames, { renderer: session.renderer }))
+    writeFileSync(path, await createApng(session.frames, { renderer: session.renderer, scale: session.scale }))
     return
   }
   if (format === "svg") {
@@ -168,7 +170,7 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
     const rasterizer = await selectRasterizer(session.renderer)
     const last = session.frames[session.frames.length - 1]!
     try {
-      writeFileSync(path, await rasterizer.toPng(last.svg, 2))
+      writeFileSync(path, await rasterizer.toPng(last.svg, session.scale))
     } finally {
       await rasterizer.dispose?.()
     }

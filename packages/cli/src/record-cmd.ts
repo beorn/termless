@@ -61,6 +61,13 @@ export const DEFAULT_ROWS = 30
 export const DEFAULT_FPS = 12
 /** Hard cap on frames captured — a long session must not produce a 50 MB GIF. */
 export const FRAME_CAP = 300
+/**
+ * Default raster resolution multiplier. `2` doubles the swash cell metrics —
+ * an 80×30 grid (768×600 native) becomes 1536×1200, which GitHub downscales to
+ * its ~880px content width as crisp 2× DPI. `--scale 1` writes native size for
+ * a smaller file; `--scale 3`+ for print-grade stills.
+ */
+export const DEFAULT_SCALE = 2
 /** Frame-capture interval in ms, derived from {@link DEFAULT_FPS}. */
 const FRAME_INTERVAL_MS = Math.round(1000 / DEFAULT_FPS)
 
@@ -332,7 +339,15 @@ export function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>,
  */
 async function interactiveRecord(
   command: string[] | undefined,
-  opts: { output?: string[]; cols: number; rows: number; raw?: boolean; showKeys?: boolean; renderer?: string },
+  opts: {
+    output?: string[]
+    cols: number
+    rows: number
+    raw?: boolean
+    showKeys?: boolean
+    renderer?: string
+    scale: number
+  },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
   const cmd = command ?? [shell]
@@ -535,6 +550,7 @@ async function interactiveRecord(
       outputEvents,
       frames: animationFrames,
       renderer,
+      scale: opts.scale,
     }
     const savedOutputs = await writeOutputs(targets, session, (s) =>
       eventsToTape(s.inputEvents, s.command.join(" "), raw),
@@ -641,11 +657,18 @@ async function recordAction(
     showKeys?: boolean
     theme?: string
     renderer?: string
+    scale: number
     compat?: boolean
     terminal?: string
     cwd?: string
   },
 ): Promise<void> {
+  // Clamp --scale: a garbage value (NaN / 0 / negative) would produce a
+  // zero-area or inverted bitmap. Fall back to the README-fit default.
+  if (!Number.isFinite(opts.scale) || opts.scale < 1) {
+    opts.scale = DEFAULT_SCALE
+  }
+
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -714,7 +737,7 @@ async function recordAction(
         if (target.format === "png") {
           writeFileSync(
             resolve(target.path),
-            await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto" }),
+            await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto", dpr: opts.scale }),
           )
         } else if (target.format === "svg") {
           writeFileSync(resolve(target.path), terminal.screenshotSvg(), "utf-8")
@@ -744,6 +767,7 @@ async function recordAction(
     raw: opts.raw,
     showKeys: opts.showKeys,
     renderer: opts.renderer,
+    scale: opts.scale,
   })
 }
 
@@ -773,6 +797,12 @@ export function registerRecordCommand(program: Command): void {
     )
     .option("--cols <n>", "Terminal columns", parseNum, DEFAULT_COLS)
     .option("--rows <n>", "Terminal rows", parseNum, DEFAULT_ROWS)
+    .option(
+      "--scale <n>",
+      "Raster resolution multiplier for .gif/.apng/.png — 1 = native, 2 = retina",
+      parseNum,
+      DEFAULT_SCALE,
+    )
     .option("--timeout <ms>", "Wait timeout in ms", parseNum, 5000)
     .option("--text", "Print terminal text to stdout")
     .option("--keys <keys>", "Comma-separated key names to press, then capture a still")
@@ -789,6 +819,7 @@ export function registerRecordCommand(program: Command): void {
     ["$ termless record -o demos/ -- bun km view", "Trailing / → folder: out.{rec,gif,cast,tape}"],
     ["$ termless record -o a.gif -o a.cast -- km", "Repeatable, extensioned → exactly those files"],
     ["$ termless record -o shot.png -- bun km view", "An extension → that single file"],
+    ["$ termless record --scale 1 -o demo.gif -- km", "Native resolution (smaller file; default is 2×)"],
   ])
 
   cmd.addHelpSection("Compat capture (macOS, --compat):", [
