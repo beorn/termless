@@ -1,75 +1,133 @@
+/**
+ * rec-live-overlay — public API tests.
+ *
+ * The geometry-math primitives (`chromeMetrics`, `computeLayout`) from the
+ * previous direct-ANSI painter are gone — silvery owns layout now. These
+ * tests cover the public surface (`startRecLiveOverlay`, the
+ * `RecLiveOverlayHandle`) without trying to spin up a full silvery render
+ * pipeline in a non-TTY test environment. The component-level rendering
+ * is covered by `vendor/silvery/tests/features/terminal-component.test.tsx`.
+ */
+
 import { describe, it, expect } from "vitest"
-import { chromeMetrics, computeLayout } from "../src/rec-live-overlay.ts"
+import { startRecLiveOverlay } from "../src/rec-live-overlay.tsx"
+import type { Terminal } from "../../../src/terminal/types.ts"
 
-describe("chromeMetrics", () => {
-  it("macos: 2 top rows (title bar + edge) + 1 bottom + 1 side each", () => {
-    expect(chromeMetrics("macos")).toMatchObject({
-      topRows: 2,
-      bottomRows: 1,
-      leftCols: 1,
-      rightCols: 1,
-      showTitleBar: true,
-      showDots: true,
+// Minimal fake Terminal stub for the smoke test. The overlay's silvery
+// mount may fail in a non-TTY test environment (no real stdout), so the
+// tests only verify the handle surface — start/stop, idempotency, no
+// throws when called against the fake.
+function fakeTerm(): Terminal {
+  return {
+    cols: 5,
+    rows: 2,
+    getLines: () => [[], []],
+    getCursor: () => ({ x: 0, y: 0, visible: true, style: null }),
+    // The remaining TerminalReadable members aren't read by <Terminal>.
+    getText: () => "",
+    getTextRange: () => "",
+    getCell: () => ({}) as never,
+    getLine: () => [],
+    getMode: () => false,
+    getTitle: () => "",
+    getScrollback: () => ({ viewportOffset: 0, totalLines: 0, screenLines: 2 }),
+  } as unknown as Terminal
+}
+
+describe("startRecLiveOverlay — public handle", () => {
+  it("returns a handle with the documented shape", () => {
+    const out = makeMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
     })
+    expect(typeof handle.rerender).toBe("function")
+    expect(typeof handle.repaint).toBe("function")
+    expect(typeof handle.setElapsedMs).toBe("function")
+    expect(typeof handle.stop).toBe("function")
+    handle.stop()
   })
 
-  it("windows: same row/col counts as macos but no traffic-light dots", () => {
-    const m = chromeMetrics("windows")
-    expect(m.showDots).toBe(false)
-    expect(m.showTitleBar).toBe(true)
-    expect(m.border).not.toBeNull()
+  it("stop() is idempotent", () => {
+    const out = makeMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
+    })
+    handle.stop()
+    // Second call must not throw.
+    expect(() => handle.stop()).not.toThrow()
   })
 
-  it("none: zero chrome — no border, no title bar", () => {
-    expect(chromeMetrics("none")).toMatchObject({
-      topRows: 0,
-      bottomRows: 0,
-      showTitleBar: false,
-      border: null,
+  it("does NOT unconditionally enable host mouse mode (snoop-driven only)", () => {
+    // record-cmd.ts snoops PTY output and mirrors the recorded program's
+    // mouse-mode escapes to the host. The overlay must NOT add a blanket
+    // `\x1b[?1003h` at startup — that's the bug upstream `8d293a5` fixed.
+    const out = makeMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
     })
+    // No mouse-mode enable should be present.
+    expect(out.written.some((s) => /\x1b\[\?(?:1000|1002|1003|1006)h/.test(s))).toBe(false)
+    handle.stop()
+    // Nor a blanket disable on stop — record-cmd's snooper handles both.
+    // We still expect alt-screen exit + cursor-show as the safety net.
+    expect(out.written.some((s) => s.includes("\x1b[?1049l"))).toBe(true)
+    expect(out.written.some((s) => s.includes("\x1b[?25h"))).toBe(true)
+  })
+
+  it("rerender / setElapsedMs / repaint do not throw before silvery mounts", () => {
+    const out = makeMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
+    })
+    expect(() => {
+      handle.rerender()
+      handle.repaint()
+      handle.setElapsedMs(1500)
+    }).not.toThrow()
+    handle.stop()
   })
 })
 
-describe("computeLayout — centering", () => {
-  it("centers an 80×30 grid + macos chrome in a 100×50 host", () => {
-    const m = chromeMetrics("macos")
-    const layout = computeLayout(100, 50, 80, 30, m)
-    expect(layout.frameWidth).toBe(82) // 80 grid + 1 left + 1 right
-    expect(layout.frameHeight).toBe(33) // 30 grid + 2 top + 1 bottom
-    // Frame should be roughly centered: (100 - 82) / 2 = 9 → 1-based col = 10
-    expect(layout.frameLeft).toBe(10)
-    // Total stack = 33 + 2 (status reserve) = 35. (50-35)/2 = 7 → 1-based row = 8
-    expect(layout.statusRow).toBe(8)
-    expect(layout.frameTop).toBe(10) // 8 + 2 reserve
-    expect(layout.gridTop).toBe(12) // frameTop + 2 (top chrome rows)
-    expect(layout.gridLeft).toBe(11) // frameLeft + 1 (left chrome col)
-    expect(layout.visibleCols).toBe(80)
-    expect(layout.visibleRows).toBe(30)
-  })
-
-  it("clamps to (1,1) when host is smaller than the frame", () => {
-    const m = chromeMetrics("macos")
-    const layout = computeLayout(40, 20, 80, 30, m)
-    expect(layout.frameLeft).toBe(1)
-    expect(layout.statusRow).toBe(1)
-    // Visible region clips to whatever the host can show.
-    expect(layout.visibleCols).toBeLessThanOrEqual(40)
-    expect(layout.visibleRows).toBeLessThanOrEqual(20)
-  })
-
-  it("with --live-chrome none: grid is centered with no border padding", () => {
-    const m = chromeMetrics("none")
-    const layout = computeLayout(100, 50, 80, 30, m)
-    expect(layout.frameWidth).toBe(80)
-    expect(layout.frameHeight).toBe(30)
-    expect(layout.gridLeft).toBe(layout.frameLeft) // no left chrome col
-    expect(layout.gridTop).toBe(layout.frameTop)
-  })
-
-  it("visibleRows never goes negative", () => {
-    const m = chromeMetrics("macos")
-    const layout = computeLayout(80, 4, 80, 30, m)
-    expect(layout.visibleRows).toBeGreaterThanOrEqual(0)
-    expect(layout.visibleCols).toBeGreaterThanOrEqual(0)
-  })
-})
+// ────────────────────────────────────────────────────────────────────────────
+// Mock stream — captures writes so the tests can assert on host bytes
+// without actually emitting to a real stdout.
+// ────────────────────────────────────────────────────────────────────────────
+function makeMockStream(): NodeJS.WriteStream & { written: string[] } {
+  const written: string[] = []
+  const stream = {
+    written,
+    columns: 80,
+    rows: 24,
+    isTTY: false,
+    fd: 1,
+    write(data: string | Uint8Array): boolean {
+      written.push(typeof data === "string" ? data : Buffer.from(data).toString("utf8"))
+      return true
+    },
+    on(): typeof stream {
+      return stream
+    },
+    off(): typeof stream {
+      return stream
+    },
+    removeListener(): typeof stream {
+      return stream
+    },
+    removeAllListeners(): typeof stream {
+      return stream
+    },
+  }
+  return stream as unknown as NodeJS.WriteStream & { written: string[] }
+}

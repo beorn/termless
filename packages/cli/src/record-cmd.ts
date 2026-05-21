@@ -418,9 +418,9 @@ async function interactiveRecord(
   // host's stdin → PTY pipe stays intact, so Ctrl-D / Ctrl-C / typing all
   // reach the recorded child. `--live-chrome none` skips the overlay and
   // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
-  let liveView: import("./rec-live-overlay.ts").RecLiveOverlayHandle | null = null
+  let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
   if (liveChrome !== "none") {
-    const { startRecLiveOverlay } = await import("./rec-live-overlay.ts")
+    const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
     liveView = startRecLiveOverlay(headlessTerminal, {
       chromeStyle: liveChrome,
       title: cmdLabel,
