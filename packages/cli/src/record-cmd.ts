@@ -368,17 +368,12 @@ async function interactiveRecord(
       ? { ...(termFont ? { fontFamily: `'${termFont}', monospace` } : {}), ...chrome }
       : undefined
 
-  // No pre-recording gate. The live overlay's status line above the chrome
-  // (`● REC m:ss · Ctrl+D to stop`) is enough inline help; making the user
-  // hit Enter before a shell session is gratuitous friction. Bare `record`
-  // (no command) spawns $SHELL straight into the chrome.
-  //
-  // Styled separator + recording-start banner still goes to stderr — it
-  // won't appear in .tape stdout, and it carries the size + output paths
-  // for users running `record` from a shell script.
-  process.stderr.write(
-    formatRecordingStart({ cmdLabel, cols: opts.cols, rows: opts.rows, outputPaths, wantImages: true }),
-  )
+  // No pre-recording gate, no banner. The live overlay's status line above
+  // the chrome (`● REC m:ss · Ctrl+D to stop`) is the entire inline help;
+  // anything else printed before recording starts is noise the user has
+  // already scrolled past by the time the recording ends. The post-exit
+  // summary below is the one user-facing surface for cmd + duration +
+  // file sizes.
 
   const { spawnPty } = await import("../../../src/terminal/pty.ts")
 
@@ -614,7 +609,22 @@ async function interactiveRecord(
       process.stderr.write(faint(`  frame cap (${FRAME_CAP}) reached — recording truncated\n`))
     }
 
-    // Project the capture into every requested output, with per-file progress.
+    // ── One-line recording summary ─────────────────────────────────────────
+    //
+    // Shape: `Recorded 15.4s for \`/bin/zsh\` (80×30 · 36 keystrokes · 30 frames)`
+    // Then per-file `  ◌ out.gif Writing...` with an animated braille spinner
+    // that swaps to `  ✓ out.gif 188 KB` in place when the write completes.
+    const stats = [
+      `${opts.cols}×${opts.rows}`,
+      plural(inputEvents.length, "keystroke"),
+      plural(animationFrames.length, "frame"),
+    ]
+    process.stderr.write(
+      `\nRecorded ${formatDuration(durationMs)} for \x1b[1m${cmdLabel}\x1b[0m ` +
+        faint(`(${stats.join(" · ")})`) +
+        "\n",
+    )
+
     const session: CapturedSession = {
       cols: opts.cols,
       rows: opts.rows,
@@ -626,10 +636,12 @@ async function interactiveRecord(
       renderer,
     }
 
-    if (targets.length > 0) {
-      const plural = targets.length === 1 ? "" : "s"
-      process.stderr.write(faint(`\n  Writing ${targets.length} output file${plural}...\n`))
-    }
+    // Animated spinner for the in-flight file. Braille chars cycle smoothly
+    // at ~12 fps; each phase=done call clears the timer and prints the final
+    // `✓ path size` line in place.
+    const SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    let spinIdx = 0
+    let spinTimer: ReturnType<typeof setInterval> | null = null
 
     const savedOutputs = await writeOutputs(
       targets,
@@ -637,24 +649,30 @@ async function interactiveRecord(
       (s) => eventsToTape(s.inputEvents, s.command.join(" "), raw),
       (event) => {
         if (event.phase === "start") {
-          process.stderr.write(faint(`  \x1b[2K  ◌ ${event.target.path}...\r`))
+          const paint = (): void => {
+            const ch = SPINNER[spinIdx++ % SPINNER.length]
+            process.stderr.write(`\r\x1b[2K  \x1b[33m${ch}\x1b[0m ${event.target.path} ${faint("Writing...")}`)
+          }
+          paint()
+          spinTimer = setInterval(paint, 80)
         } else {
-          // Overwrite the "◌ writing..." line with the final "✓ name (size)".
-          const sizeStr = event.bytes != null ? ` ${formatBytes(event.bytes)}` : ""
-          process.stderr.write(`  \x1b[2K\x1b[32m✓\x1b[0m ${event.target.path}${faint(sizeStr)}\n`)
+          if (spinTimer) {
+            clearInterval(spinTimer)
+            spinTimer = null
+          }
+          const sizeStr = event.bytes != null ? formatBytes(event.bytes) : ""
+          process.stderr.write(`\r\x1b[2K  \x1b[32m✓\x1b[0m ${event.target.path} ${faint(sizeStr)}\n`)
         }
       },
     )
+    if (spinTimer) {
+      clearInterval(spinTimer)
+      spinTimer = null
+    }
 
-    process.stderr.write(
-      formatRecordingSummary({
-        durationMs,
-        inputEventCount: inputEvents.length,
-        outputEventCount: outputEvents.length,
-        frameCount: animationFrames.length,
-        savedOutputs,
-      }),
-    )
+    // No closing banner — the one-line header + per-file rows ARE the summary.
+    // Reference the unused `savedOutputs` to keep call-sites compile-clean.
+    void savedOutputs
   } finally {
     // Best-effort cleanup for the unhappy path (exception before teardown).
     clearInterval(titleTimer)
