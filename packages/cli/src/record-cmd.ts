@@ -437,12 +437,14 @@ async function interactiveRecord(
   // `@km/termless/15589`: a grid wider than `host − chrome` makes the chrome
   // box overflow the host → silvery centres it off-surface → margin cells
   // never get painted → host scrollback bleeds through, and the recorded
-  // app's rows wrap. `fitGridToHost` derives `host − chromeOverhead(style)`.
+  // app's rows wrap. `clampGridToHost` returns `min(DEFAULT_GRID, host − chromeOverhead(style))`
+  // (clamp-down only — never grows past the 80×30 default; letterboxed at wider hosts).
+  // Per 15614 (user-decided, supersedes the size-fit rule from the 2026-05-22 arch-decision doc).
   //
   // `--live-chrome none` (raw-stdout passthrough) and the artifact-only paths
   // keep the historical `--cols/--rows` sizing — there is no overlay viewport
   // to fit. See `.claude/arch-decisions/2026-05-22-termless-rec-viewport-fit.md`.
-  const { fitGridToHost, resolveLiveChrome } = await import("./rec-live-overlay.tsx")
+  const { clampGridToHost, resolveLiveChrome } = await import("./rec-live-overlay.tsx")
   const hostCols = () => process.stdout.columns ?? opts.cols
   const hostRows = () => process.stdout.rows ?? opts.rows
   // `--live-chrome none` means no overlay at all (raw-stdout passthrough).
@@ -452,7 +454,7 @@ async function interactiveRecord(
   const useOverlay = liveChrome !== "none"
   const effectiveChrome: ChromeStyle = useOverlay ? resolveLiveChrome(hostCols(), hostRows(), liveChrome) : "none"
   const fitted = useOverlay
-    ? fitGridToHost(hostCols(), hostRows(), effectiveChrome)
+    ? clampGridToHost(hostCols(), hostRows(), effectiveChrome)
     : { cols: opts.cols, rows: opts.rows }
   let gridCols = fitted.cols
   let gridRows = fitted.rows
@@ -545,7 +547,7 @@ async function interactiveRecord(
   let hostResizeHandler: (() => void) | null = null
   if (useOverlay) {
     hostResizeHandler = () => {
-      const next = fitGridToHost(hostCols(), hostRows(), effectiveChrome)
+      const next = clampGridToHost(hostCols(), hostRows(), effectiveChrome)
       if (next.cols === gridCols && next.rows === gridRows) return
       gridCols = next.cols
       gridRows = next.rows

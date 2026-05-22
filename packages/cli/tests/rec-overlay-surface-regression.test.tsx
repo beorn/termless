@@ -17,8 +17,9 @@
  * both symptoms are one root cause — the recorded grid size is decoupled
  * from the viewport that displays it. The fix is the viewport-fit contract:
  *
- * - `fitGridToHost` derives the grid as `host − chromeOverhead` → the chrome
- *   box is ≤ the host viewport BY CONSTRUCTION → no overflow, no wrap;
+ * - `clampGridToHost` returns `min(DEFAULT_GRID, host − chromeOverhead)` →
+ *   the chrome box is ≤ the host viewport BY CONSTRUCTION → no overflow, no
+ *   wrap; the grid never grows past the user-decided 80×30 default;
  * - the `Overlay` root `<Box>` has an explicit `backgroundColor` and is
  *   sized `width/height 100%` → it paints EVERY host cell on every frame →
  *   no unpainted margin → no host-bleed.
@@ -34,7 +35,7 @@ import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
 import type { TerminalReadable } from "silvery"
-import { Overlay, chromeTokens, createOverlayStore, fitGridToHost } from "../src/rec-live-overlay.tsx"
+import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
 // ────────────────────────────────────────────────────────────────────────────
 // A fake recorded terminal sized exactly to the viewport-fit derivation —
@@ -63,11 +64,11 @@ function fittedTerminal(cols: number, rows: number, fill = "X"): TerminalReadabl
 
 /**
  * Render the `Overlay` at a given host size with a recorded terminal sized
- * via `fitGridToHost` — i.e. the exact size contract `record-cmd.ts` now
- * enforces.
+ * via `clampGridToHost` — the 15614 size contract `record-cmd.ts` now
+ * enforces (fixed-default + letterbox + clamp-down).
  */
 function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
-  const grid = fitGridToHost(hostCols, hostRows, style)
+  const grid = clampGridToHost(hostCols, hostRows, style)
   const terminal = fittedTerminal(grid.cols, grid.rows)
   const store = createOverlayStore({ revision: 0, elapsedMs: 0, blinkTick: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
@@ -117,13 +118,16 @@ describe("rec live overlay — surface ownership (no host-scrollback bleed)", ()
 
 describe("rec live overlay — recorded grid fits its container (no line-wrap)", () => {
   test("the recorded-grid <Text> rows render at the fitted width, not 80", () => {
-    // Pre-fix: the recorded grid was a hardcoded 80 cols; in an 80-col host
-    // the 2-col border pushed the row content to wrap. Post-fix: the grid is
-    // `host − chrome`, so the bordered box is exactly the host width.
+    // Pre-15589: hardcoded 80 grid in 80-col host overflowed (chrome pushed
+    // it to 82 → wrap). Post-15589 (size-fit, now superseded): grid was
+    // `host − chrome` (= 78 here). Post-15614 (fixed-default + clamp-down):
+    // grid is `min(80, host − chrome)` = `min(80, 78)` = 78 at this narrow
+    // host — same numeric result, different rule. At a WIDER host (120+)
+    // the grid stays at 80 (letterboxed), which is the user-decided contract.
     const HOST_COLS = 80
     const HOST_ROWS = 30
     const { app, grid } = renderOverlay(HOST_COLS, HOST_ROWS, "macos")
-    // macos chrome: 2-col border → grid is 78 cols.
+    // Narrow host: clamp-down to host − chrome = 78×25.
     expect(grid.cols).toBe(78)
     // The recorded fill char appears on screen — the grid rendered.
     expect(app.text).toContain("X")
@@ -133,9 +137,13 @@ describe("rec live overlay — recorded grid fits its container (no line-wrap)",
     expect(grid.cols + 2).toBe(HOST_COLS)
   })
 
-  test("a wide host gives a correspondingly wide recorded grid", () => {
+  test("a wide host LETTERBOXES the recorded grid at 80×30 — does NOT grow with the host (15614)", () => {
+    // Pre-15614 contract (size-fit, REJECTED by the user): grid grew with
+    // host — 200×60 host yielded a 198×55 grid. Post-15614 (user-decided
+    // fixed-default + letterbox): the grid STAYS AT 80×30 regardless of
+    // host width. The chrome box is letterboxed inside the 200×60 host.
     const { grid } = renderOverlay(200, 60, "macos")
-    expect(grid.cols).toBe(198)
-    expect(grid.rows).toBe(55)
+    expect(grid.cols).toBe(80)
+    expect(grid.rows).toBe(30)
   })
 })

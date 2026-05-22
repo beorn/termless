@@ -86,6 +86,26 @@ export const MIN_GRID_COLS = 20
 export const MIN_GRID_ROWS = 6
 
 /**
+ * Recorded-grid default size — the user-decided fixed README-fit dimensions.
+ *
+ * The live overlay sizes the recorded child PTY at these defaults regardless
+ * of host width/height, then LETTERBOXES the chrome box inside the host
+ * viewport. The host owns the surface (paints every cell every frame via
+ * `Overlay` root with `backgroundColor=$bg` + `width/height 100%`), so the
+ * letterbox margin around the recorded box never bleeds host scrollback.
+ *
+ * When the host is narrower/shorter than `DEFAULT_GRID + chromeOverhead`,
+ * the grid clamps DOWN (never up — host width never grows the grid). This
+ * is the "clamp-down only" rule from `clampGridToHost` below.
+ *
+ * These values must stay aligned with the `--cols/--rows` flag defaults in
+ * `record-cmd.ts` (the artifact-capture size, which historically and now
+ * shares the same 80×30 README-fit default). Both should be 80×30.
+ */
+export const DEFAULT_GRID_COLS = 80
+export const DEFAULT_GRID_ROWS = 30
+
+/**
  * Chrome overhead — the cells the overlay's silvery component tree consumes
  * AROUND the recorded grid, per chrome style. This is the single source of
  * truth for the size contract: the recorded child PTY (and the headless
@@ -145,19 +165,38 @@ export function resolveLiveChrome(hostCols: number, hostRows: number, requested:
 /**
  * Derive the recorded-grid size from the host viewport and chrome style.
  *
- * The returned `cols × rows` is what the recorded child PTY, the headless
- * terminal, and the `<Terminal>` component must ALL use. Because it is
- * `host − chromeOverhead` (clamped to a usable floor), the chrome box is
- * always ≤ the host viewport — so the overlay tree tiles the full surface
- * (no host-scrollback bleed) and the grid never overflows its container
- * (no line-wrap). This is the viewport-fit size contract from
- * `.claude/arch-decisions/2026-05-22-termless-rec-viewport-fit.md`.
+ * **Clamp-down rule (15614, user-decided)**: the recorded grid is the
+ * `DEFAULT_GRID` default size (80×30) UNLESS the host viewport minus chrome
+ * cannot fit it — in which case the grid clamps DOWN to fit the host. The
+ * grid NEVER GROWS to fill a wider host. The chrome box is then LETTERBOXED
+ * inside the host viewport (centered by silvery's `<Box>` layout); the
+ * overlay root paints every host cell so the letterbox margin can never
+ * bleed host scrollback.
+ *
+ *   - host ≥ DEFAULT_GRID + chromeOverhead → grid = DEFAULT_GRID (letterbox)
+ *   - host < DEFAULT_GRID + chromeOverhead → grid = max(MIN_GRID, host - chromeOverhead)
+ *
+ * This supersedes the size-fit rule from `.claude/arch-decisions/
+ * 2026-05-22-termless-rec-viewport-fit.md` §1. The user explicitly rejected
+ * size-fit: "and now `km view` uses the entire width/height of the terminal
+ * by default (not the default 80×30)?" Per chief 2026-05-22 #undead reopen
+ * verdict, fixed-default + letterbox replaces size-fit. Bead:
+ * `@km/termless/15589-rec-compositing-bleed-wrap/15614-sizing-fixed-letterbox`.
  */
-export function fitGridToHost(hostCols: number, hostRows: number, style: ChromeStyle): { cols: number; rows: number } {
+export function clampGridToHost(
+  hostCols: number,
+  hostRows: number,
+  style: ChromeStyle,
+): { cols: number; rows: number } {
   const overhead = chromeOverhead(style)
+  // host − chrome is the largest the grid could ever be at this host size.
+  // The default cap (80×30) caps it FROM ABOVE; the min-grid floor caps it
+  // FROM BELOW. Result: grid ≤ DEFAULT and grid ≤ host − chrome.
+  const availableCols = hostCols - overhead.cols
+  const availableRows = hostRows - overhead.rows
   return {
-    cols: Math.max(MIN_GRID_COLS, hostCols - overhead.cols),
-    rows: Math.max(MIN_GRID_ROWS, hostRows - overhead.rows),
+    cols: Math.max(MIN_GRID_COLS, Math.min(DEFAULT_GRID_COLS, availableCols)),
+    rows: Math.max(MIN_GRID_ROWS, Math.min(DEFAULT_GRID_ROWS, availableRows)),
   }
 }
 
