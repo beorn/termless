@@ -176,8 +176,9 @@ describe("Sleep command", () => {
 
 // Screenshot rendering has a cold-start cost (canvas + font init on the first
 // screenshot of the process). On slow CI runners — Windows in particular — that
-// first render measured 5–15s, flaking against vitest's 5000ms default. Give the
-// screenshot tests generous headroom; it is cold-start latency, not a hang.
+// first render measured 5–15s steady-state and 30-50s when the cold-start lands
+// on this test first. Vitest's default 5000ms doesn't survive it. 60s ceiling
+// covers the worst observed Windows cold-start; it is latency, not a hang.
 describe("Screenshot command", () => {
   test("calls onScreenshot callback", async () => {
     const tape = parseTape('Type "test"\nScreenshot')
@@ -196,7 +197,7 @@ describe("Screenshot command", () => {
     expect(screenshots[0]!.png).toBeInstanceOf(Uint8Array)
     expect(screenshots[0]!.png.length).toBeGreaterThan(0)
     await result.terminal.close()
-  }, 30_000)
+  }, 60_000)
 
   test("passes screenshot path to callback", async () => {
     const tape = parseTape("Screenshot output/demo.png")

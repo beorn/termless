@@ -193,12 +193,12 @@ describe("resvg letter-spacing (bug 2)", () => {
 
   // Bumped timeout: the Windows GitHub runner is slow enough that the
   // canvas-renderer path through this test plus its decode pass routinely
-  // overshoots the default 5s. The assertion itself runs ~1s on macOS/linux,
-  // ~6-8s on win32-x64. Per-test 30s ceiling keeps the gate honest without
-  // skipping the platform entirely. Other platforms still see real
-  // timeout-protection at the default vitest timeout (the heavy work here
-  // is canvas + decode; if that ever stalls beyond 30s, something is broken
-  // worth flagging).
+  // overshoots vitest defaults. The assertion itself runs ~1s on macOS/linux,
+  // ~6-8s steady-state on win32-x64, and 30-50s cold-start when canvas/font
+  // init lands on this test first. Per-test 60s ceiling keeps the gate honest
+  // without skipping the platform; other platforms still see real timeout
+  // protection (if canvas + decode ever stalls beyond 60s, something is
+  // broken worth flagging).
   test.skipIf(!CANVAS_AVAILABLE)(
     "every cell of a bold word holds its glyph — no collapsed/spread cells",
     async () => {
@@ -212,7 +212,7 @@ describe("resvg letter-spacing (bug 2)", () => {
         )
       }
     },
-    30000,
+    60000,
   )
 })
 
