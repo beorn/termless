@@ -25,10 +25,7 @@ import { describe, expect, test } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
-const RECORD_CMD_SRC = readFileSync(
-  join(__dirname, "..", "src", "record-cmd.ts"),
-  "utf8",
-)
+const RECORD_CMD_SRC = readFileSync(join(__dirname, "..", "src", "record-cmd.ts"), "utf8")
 
 describe("rec --live-chrome default flipped to 'none' (interim 2026-05-22)", () => {
   test("runtime default in runRecord: liveChrome ?? 'none'", () => {
