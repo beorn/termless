@@ -438,10 +438,10 @@ async function interactiveRecord(
   // host's stdin → PTY pipe stays intact, so Ctrl-D / Ctrl-C / typing all
   // reach the recorded child. `--live-chrome none` skips the overlay and
   // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
-  let liveView: import("./rec-live-overlay.ts").RecLiveOverlayHandle | null = null
+  let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
   if (liveChrome !== "none") {
-    const { startRecLiveOverlay } = await import("./rec-live-overlay.ts")
-    liveView = startRecLiveOverlay(headlessTerminal, {
+    const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
+    liveView = await startRecLiveOverlay(headlessTerminal, {
       chromeStyle: liveChrome,
       title: cmdLabel,
     })
@@ -482,12 +482,14 @@ async function interactiveRecord(
         const mouseSeqs = text.match(/\x1b\[\?(?:1000|1002|1003|1005|1006|1015)[hl]/g)
         if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
       }
-      // Live preview routing: when the chrome overlay is mounted, render the
-      // headless grid through Silvery instead of piping raw bytes to the host
-      // terminal. `--live-chrome none` keeps the historical raw-stdout-pipe
-      // behavior — byte-identical to pre-change.
+      // Live preview routing: when the chrome overlay is mounted, feed the
+      // raw bytes into the embedded XtermAdapter — silvery's Viewport blits
+      // the resulting cell grid into the chrome window. `--live-chrome none`
+      // keeps the historical raw-stdout-pipe behavior (byte-identical to
+      // pre-change). The headless terminal's `feed()` call above stays the
+      // same: the GIF/PNG capture path reads from it independently.
       if (liveView) {
-        liveView.rerender()
+        liveView.feed(data)
       } else {
         process.stdout.write(data)
       }
@@ -630,7 +632,7 @@ async function interactiveRecord(
     restoreTitle()
     if (liveView) {
       try {
-        liveView.stop()
+        await liveView.stop()
       } catch {
         // Best-effort.
       }
@@ -688,7 +690,7 @@ async function interactiveRecord(
     restoreTitle()
     if (liveView) {
       try {
-        liveView.stop()
+        await liveView.stop()
       } catch {
         // Best-effort.
       }

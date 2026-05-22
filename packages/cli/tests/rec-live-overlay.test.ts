@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { chromeMetrics, computeLayout } from "../src/rec-live-overlay.ts"
+import { chromeMetrics, computeLayout } from "../src/rec-overlay-geometry.ts"
 
 describe("chromeMetrics", () => {
   it("macos: 2 top rows (title bar + edge) + 1 bottom + 1 side each", () => {
