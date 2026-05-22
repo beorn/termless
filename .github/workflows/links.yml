@@ -1,0 +1,33 @@
+name: links
+
+# Per-PR link checking via lychee. The cheapest fast-feedback layer for
+# broken links in repo docs; complements the cross-site /marketing
+# link-check (monthly cadence, catches bit-rot from external sites).
+#
+# Shared accept/exclude args keep per-PR and monthly checks aligned —
+# a link should not pass per-PR but fail monthly.
+#
+# Tracked at @km/infra/14942-lychee-action-rollout.
+
+on:
+  pull_request:
+    paths: ["**/*.md", "**/*.html", "docs/**"]
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  lychee:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: |
+            --max-concurrency 24
+            --no-progress
+            --accept '200..=204,206,301,302,303,307,308,403,429'
+            --exclude '^(mailto|tel|javascript):'
+            './**/*.md'
+            './**/*.html'
+          fail: true
