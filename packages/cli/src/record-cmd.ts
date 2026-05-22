@@ -56,6 +56,19 @@ export const RESTORE_TITLE_SEQUENCE = "\x1b[23;0t"
 // the page. ~12 fps reads smoothly and keeps file size down; the frame cap
 // stops a long session producing a 50 MB GIF.
 /** Default terminal columns — README content fits ~80. */
+/**
+ * Env vars merged into every spawned child under `termless rec`. The
+ * one entry — `TERMLESS_REC=1` — is the generic "you are running under
+ * termless recording" signal. Probe-driven TUIs should bail to a
+ * degrade-branch when this is set: the headless backend feeding the
+ * rec frame doesn't reply to probes, so unconsumed probe bytes leak
+ * into the cell grid; recordings need a deterministic host-agnostic
+ * look anyway. See `@km/termless/15589-rec-compositing-bleed-wrap/15621-rec-probe-ansi-leak`.
+ */
+export const REC_CHILD_ENV: Readonly<Record<string, string>> = Object.freeze({
+  TERMLESS_REC: "1",
+})
+
 export const DEFAULT_COLS = 80
 /** Default terminal rows — room for real apps without dominating the page. */
 export const DEFAULT_ROWS = 30
@@ -500,6 +513,9 @@ async function interactiveRecord(
     command: cmd,
     cols: gridCols,
     rows: gridRows,
+    // `REC_CHILD_ENV` — generic recording-mode env signal (see export
+    // above). Honoring CLIs bail probe-driven theme detection when set.
+    env: { ...REC_CHILD_ENV },
     onData: (data: Uint8Array) => {
       const text = ptyDecoder.decode(data, { stream: true })
       // Record output event for asciicast
