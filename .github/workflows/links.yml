@@ -23,11 +23,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lycheeverse/lychee-action@v2
         with:
+          # --root-dir resolves root-relative VitePress paths (/guide/…,
+          # /api/…) against ./docs — the VitePress site root. Without it
+          # lychee errors "Cannot convert path '/guide/foo' to a URI".
+          # --exclude swallows CHANGELOG placeholder version URLs that
+          # don't exist yet (compare/v0.0.1, releases/tag/v0.0.1).
           args: |
             --max-concurrency 24
             --no-progress
+            --root-dir '${{ github.workspace }}/docs'
             --accept '200..=204,206,301,302,303,307,308,403,429'
             --exclude '^(mailto|tel|javascript):'
+            --exclude 'github\.com/.*/(compare|releases/tag)/v0\.0\.1'
             './**/*.md'
             './**/*.html'
           fail: true
