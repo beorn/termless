@@ -94,6 +94,15 @@ function makeTtyMockStream(): NodeJS.WriteStream & { written: string[] } {
 /** CSI > <flags> u — the Kitty keyboard ENABLE (push) sequence. */
 const KITTY_ENABLE_RE = /\x1b\[>\d*u/
 
+/**
+ * Mouse-tracking ENABLE — any of the SGR / motion private modes
+ * (`CSI ?1000h` / `?1002h` / `?1003h` / `?1006h` / `?1016h`).
+ */
+const MOUSE_ENABLE_RE = /\x1b\[\?(?:1000|1002|1003|1006|1016)h/
+
+/** CSI ?1004h — focus-event reporting ENABLE. */
+const FOCUS_ENABLE_RE = /\x1b\[\?1004h/
+
 describe("rec overlay — Kitty keyboard protocol must stay off (input: false)", () => {
   it("never writes a Kitty-enable sequence to the host", async () => {
     const out = makeTtyMockStream()
@@ -135,5 +144,67 @@ describe("rec overlay — Kitty keyboard protocol must stay off (input: false)",
 
     const all = out.written.join("")
     expect(KITTY_ENABLE_RE.test(all)).toBe(false)
+  })
+})
+
+/**
+ * Regression — `termless rec` overlay must NOT enable mouse tracking or
+ * focus reporting on the host terminal.
+ *
+ * Bug `@km/termless/15586-rec-mouse-garble`: after the 15575 Kitty-keyboard
+ * fix the recording *still* garbled. Cause: mouse tracking and focus
+ * reporting are also host-input-protocol toggles — `CSI ?1000h`/`?1002h`/
+ * `?1003h`/`?1006h` makes the terminal emit mouse-report bytes on stdin,
+ * `CSI ?1004h` makes it emit focus-event bytes. The 15575 fix deliberately
+ * left both unchanged; that was the residual leak. With `input: false`
+ * silvery does not own stdin, so it must not enable them — host
+ * mouse/focus-report sequences the recorded child cannot parse leak to the
+ * screen as garbled text.
+ *
+ * The fix (silvery `create-app.tsx`): the mouse-tracking enable, the
+ * focus-reporting enable, and their teardown disables are all gated by
+ * `!inputDisabled`, the sibling gate to 15575's Kitty fix.
+ */
+describe("rec overlay — mouse/focus tracking must stay off (input: false)", () => {
+  it("never writes a mouse-enable sequence to the host", async () => {
+    const out = makeTtyMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
+    })
+
+    await new Promise((r) => setTimeout(r, 250))
+
+    const all = out.written.join("")
+    expect(
+      MOUSE_ENABLE_RE.test(all),
+      `host stdout must not contain a mouse-enable sequence ` +
+        `(CSI ?1000/1002/1003/1006h); got: ${JSON.stringify(all.slice(0, 200))}`,
+    ).toBe(false)
+
+    handle.stop()
+  })
+
+  it("never writes a focus-enable sequence to the host", async () => {
+    const out = makeTtyMockStream()
+    const handle = startRecLiveOverlay(fakeTerm(), {
+      out,
+      chromeStyle: "none",
+      hostCols: () => 80,
+      hostRows: () => 24,
+    })
+
+    await new Promise((r) => setTimeout(r, 250))
+
+    const all = out.written.join("")
+    expect(
+      FOCUS_ENABLE_RE.test(all),
+      `host stdout must not contain a focus-enable sequence (CSI ?1004h); ` +
+        `got: ${JSON.stringify(all.slice(0, 200))}`,
+    ).toBe(false)
+
+    handle.stop()
   })
 })
