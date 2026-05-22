@@ -10,7 +10,14 @@
  */
 
 import { describe, it, expect } from "vitest"
-import { startRecLiveOverlay } from "../src/rec-live-overlay.tsx"
+import {
+  startRecLiveOverlay,
+  chromeOverhead,
+  fitGridToHost,
+  resolveLiveChrome,
+  MIN_GRID_COLS,
+  MIN_GRID_ROWS,
+} from "../src/rec-live-overlay.tsx"
 import type { Terminal } from "../../../src/terminal/types.ts"
 
 // Minimal fake Terminal stub for the smoke test. The overlay's silvery
@@ -97,6 +104,85 @@ describe("startRecLiveOverlay — public handle", () => {
       handle.setElapsedMs(1500)
     }).not.toThrow()
     handle.stop()
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// Viewport-fit contract — `@km/termless/15589`. The recorded grid MUST be
+// `host − chromeOverhead`, so the chrome box is always ≤ the host viewport
+// (no host-scrollback bleed) and the grid never overflows (no line-wrap).
+// These are pure functions — no TTY, no silvery mount needed.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("chromeOverhead — the size-contract source of truth", () => {
+  it("macos/windows reserve a bordered box + title bar + status line", () => {
+    // 2 cols border; 1 status + 1 spacer + 2 border + 1 titlebar = 5 rows.
+    expect(chromeOverhead("macos")).toEqual({ cols: 2, rows: 5 })
+    expect(chromeOverhead("windows")).toEqual({ cols: 2, rows: 5 })
+  })
+
+  it("none reserves only the status bar + spacer (no border)", () => {
+    expect(chromeOverhead("none")).toEqual({ cols: 0, rows: 2 })
+  })
+})
+
+describe("fitGridToHost — recorded grid = host − chrome", () => {
+  it("derives the grid from host minus chrome overhead (macos)", () => {
+    // The km default terminal is 80×30 — the exact size that overflowed
+    // before the fix (80-col grid + 2-col border = 82 > 80-col host).
+    expect(fitGridToHost(80, 30, "macos")).toEqual({ cols: 78, rows: 25 })
+  })
+
+  it("a 120×40 host yields a comfortably large grid", () => {
+    expect(fitGridToHost(120, 40, "macos")).toEqual({ cols: 118, rows: 35 })
+  })
+
+  it("none chrome loses only the status bar + spacer rows", () => {
+    expect(fitGridToHost(80, 30, "none")).toEqual({ cols: 80, rows: 28 })
+  })
+
+  it("clamps to the usable floor when the host is tiny — never 0 or negative", () => {
+    // A 10×4 host minus chrome would be negative; the PTY must never be
+    // spawned at ≤ 0 cols/rows (ConPTY + many apps hard-crash).
+    const fitted = fitGridToHost(10, 4, "macos")
+    expect(fitted.cols).toBe(MIN_GRID_COLS)
+    expect(fitted.rows).toBe(MIN_GRID_ROWS)
+    expect(fitted.cols).toBeGreaterThan(0)
+    expect(fitted.rows).toBeGreaterThan(0)
+  })
+
+  it("the chrome box always fits the host viewport (no overflow, by construction)", () => {
+    // For any host ≥ the chrome+floor minimum, grid + chromeOverhead ≤ host.
+    for (const style of ["macos", "windows", "none"] as const) {
+      const oh = chromeOverhead(style)
+      for (const [h, v] of [
+        [80, 30],
+        [120, 40],
+        [100, 50],
+        [200, 60],
+      ]) {
+        const grid = fitGridToHost(h!, v!, style)
+        expect(grid.cols + oh.cols).toBeLessThanOrEqual(h!)
+        expect(grid.rows + oh.rows).toBeLessThanOrEqual(v!)
+      }
+    }
+  })
+})
+
+describe("resolveLiveChrome — auto-drop chrome when the host is too small", () => {
+  it("keeps the requested chrome when the host comfortably fits it", () => {
+    expect(resolveLiveChrome(120, 40, "macos")).toBe("macos")
+    expect(resolveLiveChrome(80, 30, "windows")).toBe("windows")
+  })
+
+  it("downgrades to none when the host can't fit a bordered box + min grid", () => {
+    // host − chromeOverhead("macos") would fall below the min grid floor.
+    expect(resolveLiveChrome(21, 30, "macos")).toBe("none")
+    expect(resolveLiveChrome(80, 8, "macos")).toBe("none")
+  })
+
+  it("none is already minimal — never downgrades further", () => {
+    expect(resolveLiveChrome(5, 3, "none")).toBe("none")
   })
 })
 

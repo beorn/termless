@@ -427,11 +427,41 @@ async function interactiveRecord(
     if (liveView) liveView.setElapsedMs(elapsed)
   }, 1000)
 
+  // ── Recorded-grid size — the viewport-fit contract ─────────────────────────
+  //
+  // When the live overlay is mounted, the recorded child PTY, the headless
+  // terminal mirroring it, and silvery's `<Terminal>` grid MUST all be the
+  // SAME size, and that size MUST fit inside the host viewport minus the
+  // overlay's chrome. Sizing the recorded child to a host-independent default
+  // (`--cols/--rows`, README-fit 80×30) is the root cause of
+  // `@km/termless/15589`: a grid wider than `host − chrome` makes the chrome
+  // box overflow the host → silvery centres it off-surface → margin cells
+  // never get painted → host scrollback bleeds through, and the recorded
+  // app's rows wrap. `fitGridToHost` derives `host − chromeOverhead(style)`.
+  //
+  // `--live-chrome none` (raw-stdout passthrough) and the artifact-only paths
+  // keep the historical `--cols/--rows` sizing — there is no overlay viewport
+  // to fit. See `.claude/arch-decisions/2026-05-22-termless-rec-viewport-fit.md`.
+  const { fitGridToHost, resolveLiveChrome } = await import("./rec-live-overlay.tsx")
+  const hostCols = () => process.stdout.columns ?? opts.cols
+  const hostRows = () => process.stdout.rows ?? opts.rows
+  // `--live-chrome none` means no overlay at all (raw-stdout passthrough).
+  // Otherwise the overlay mounts — but the chrome STYLE is auto-downgraded
+  // when the host is too small to fit a bordered box around the min grid,
+  // so a narrow terminal records borderless rather than crashing/bleeding.
+  const useOverlay = liveChrome !== "none"
+  const effectiveChrome: ChromeStyle = useOverlay ? resolveLiveChrome(hostCols(), hostRows(), liveChrome) : "none"
+  const fitted = useOverlay
+    ? fitGridToHost(hostCols(), hostRows(), effectiveChrome)
+    : { cols: opts.cols, rows: opts.rows }
+  let gridCols = fitted.cols
+  let gridRows = fitted.rows
+
   // Headless terminal that mirrors PTY output — the source for frame capture.
   const { createTerminal } = await import("../../../src/terminal/terminal.ts")
   const { backend } = await import("../../../src/backend/backends.ts")
   const b = await backend("ghostty")
-  const headlessTerminal = createTerminal({ backend: b, cols: opts.cols, rows: opts.rows })
+  const headlessTerminal = createTerminal({ backend: b, cols: gridCols, rows: gridRows })
 
   // Live overlay — direct-ANSI painter that mirrors the headless terminal's
   // grid into a centred chrome window on the host. Does NOT touch stdin — the
@@ -439,10 +469,14 @@ async function interactiveRecord(
   // reach the recorded child. `--live-chrome none` skips the overlay and
   // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
   let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
-  if (liveChrome !== "none") {
+  if (useOverlay) {
     const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
     liveView = startRecLiveOverlay(headlessTerminal, {
-      chromeStyle: liveChrome,
+      // `effectiveChrome`, not the raw `liveChrome` request — the overlay
+      // and the grid-size derivation must agree on the SAME chrome style,
+      // or the size contract breaks. `resolveLiveChrome` may have
+      // downgraded a `macos`/`windows` request to `none` for a small host.
+      chromeStyle: effectiveChrome,
       title: cmdLabel,
     })
   }
@@ -462,8 +496,8 @@ async function interactiveRecord(
   const ptyDecoder = new TextDecoder()
   const pty = spawnPty({
     command: cmd,
-    cols: opts.cols,
-    rows: opts.rows,
+    cols: gridCols,
+    rows: gridRows,
     onData: (data: Uint8Array) => {
       const text = ptyDecoder.decode(data, { stream: true })
       // Record output event for asciicast
@@ -497,6 +531,38 @@ async function interactiveRecord(
   // Track the latest keystroke label for overlay
   let currentKeystrokeLabel = ""
   let stdinHandler: ((chunk: Buffer) => void) | null = null
+
+  // ── Resize-on-host-resize — keep the viewport-fit contract holding ─────────
+  //
+  // The recorded grid was sized to `host − chrome` at spawn. When the user
+  // resizes the host terminal, that derivation must be re-run and propagated
+  // to all three surfaces (child PTY, headless terminal, silvery overlay) or
+  // the grid stops fitting and `@km/termless/15589` reappears. Silvery's own
+  // Size owner reflows the overlay tree on the same `resize` event; we drive
+  // the child PTY + headless terminal here. The chrome STYLE stays fixed at
+  // its mount-time `effectiveChrome` — re-resolving it would mean remounting
+  // the overlay mid-recording; only the grid size re-fits.
+  let hostResizeHandler: (() => void) | null = null
+  if (useOverlay) {
+    hostResizeHandler = () => {
+      const next = fitGridToHost(hostCols(), hostRows(), effectiveChrome)
+      if (next.cols === gridCols && next.rows === gridRows) return
+      gridCols = next.cols
+      gridRows = next.rows
+      try {
+        pty.resize(gridCols, gridRows)
+      } catch {
+        // PTY may have closed.
+      }
+      try {
+        headlessTerminal.resize(gridCols, gridRows)
+      } catch {
+        // Headless backend may not be resizable mid-stream — best-effort.
+      }
+      liveView?.repaint()
+    }
+    process.stdout.on("resize", hostResizeHandler)
+  }
 
   try {
     // Frame capture timer — ~12 fps, capped at FRAME_CAP frames. A first-paint
@@ -628,6 +694,10 @@ async function interactiveRecord(
       process.stdin.removeListener("data", stdinHandler)
       stdinHandler = null
     }
+    if (hostResizeHandler) {
+      process.stdout.removeListener("resize", hostResizeHandler)
+      hostResizeHandler = null
+    }
     if (process.stdin.isTTY) {
       try {
         process.stdin.setRawMode(false)
@@ -657,9 +727,12 @@ async function interactiveRecord(
     // Text + Spinner + theme tokens) inline at the cursor. The component
     // owns the per-file lifecycle: starts every row at `◌`, swaps to an
     // animated <Spinner> when phase=start, lands at `✓ size` on phase=done.
+    // The artifact metadata reports the ACTUAL recorded grid size — which,
+    // for the live-overlay path, is the host-fitted `gridCols × gridRows`,
+    // not the `--cols/--rows` request. `--live-chrome none` keeps `opts`.
     const session: CapturedSession = {
-      cols: opts.cols,
-      rows: opts.rows,
+      cols: gridCols,
+      rows: gridRows,
       durationMs,
       command: cmd,
       inputEvents,
@@ -672,8 +745,8 @@ async function interactiveRecord(
     await runRecordSummary({
       cmdLabel,
       durationMs,
-      cols: opts.cols,
-      rows: opts.rows,
+      cols: gridCols,
+      rows: gridRows,
       keystrokeCount: inputEvents.length,
       frameCount: animationFrames.length,
       targets,
@@ -685,6 +758,7 @@ async function interactiveRecord(
     clearInterval(titleTimer)
     if (frameTimer) clearInterval(frameTimer)
     if (stdinHandler) process.stdin.removeListener("data", stdinHandler)
+    if (hostResizeHandler) process.stdout.removeListener("resize", hostResizeHandler)
     if (process.stdin.isTTY) {
       try {
         process.stdin.setRawMode(false)

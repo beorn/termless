@@ -76,6 +76,91 @@ export interface RecLiveOverlayHandle {
 
 const DEFAULT_FPS = 30
 
+/**
+ * Minimum recorded-grid size. Below this the recorded app is unusable; if
+ * the host viewport can't fit even this plus chrome, the overlay clamps the
+ * grid to the floor and accepts that the grid is wider than the host (the
+ * recorded app then scrolls/clips rather than the host wrapping host text).
+ */
+export const MIN_GRID_COLS = 20
+export const MIN_GRID_ROWS = 6
+
+/**
+ * Chrome overhead — the cells the overlay's silvery component tree consumes
+ * AROUND the recorded grid, per chrome style. This is the single source of
+ * truth for the size contract: the recorded child PTY (and the headless
+ * terminal mirroring it) MUST be sized to `host − chromeOverhead` so the
+ * `<Terminal>` grid always fits the viewport that displays it. Sizing the
+ * recorded child independently of this is the root cause of
+ * `@km/termless/15589` (host-scrollback bleed + recorded-app line-wrap).
+ *
+ * Layout (see {@link Overlay}):
+ * - status bar:  1 row
+ * - spacer box:  1 row
+ * - bordered box: top+bottom border = 2 rows, left+right border = 2 cols
+ * - title bar (macos/windows only): 1 row
+ *
+ * `none` chrome draws no border and no title bar — only the status bar +
+ * spacer cost rows.
+ */
+export interface ChromeOverhead {
+  cols: number
+  rows: number
+}
+
+export function chromeOverhead(style: ChromeStyle): ChromeOverhead {
+  switch (style) {
+    case "macos":
+    case "windows":
+      // 2 cols border; 1 status + 1 spacer + 2 border + 1 titlebar rows.
+      return { cols: 2, rows: 5 }
+    case "none":
+    default:
+      // No border, no titlebar — just the status bar + spacer.
+      return { cols: 0, rows: 2 }
+  }
+}
+
+/**
+ * Resolve the EFFECTIVE chrome style for a given host viewport.
+ *
+ * When the host is too small to fit `MIN_GRID + chromeOverhead(style)`, the
+ * bordered chrome would force the grid below its usable floor (or, worse,
+ * overflow the host and reintroduce `@km/termless/15589`). In that case we
+ * downgrade to `none` chrome — it has the least overhead (no border, no
+ * title bar), so the recorded grid still fits. This is the
+ * "auto-drop chrome when too small" guardrail: the recording stays clean on
+ * a narrow terminal instead of crashing or bleeding.
+ *
+ * `none` is already minimal — it never downgrades further.
+ */
+export function resolveLiveChrome(hostCols: number, hostRows: number, requested: ChromeStyle): ChromeStyle {
+  if (requested === "none") return "none"
+  const overhead = chromeOverhead(requested)
+  const fitsWidth = hostCols - overhead.cols >= MIN_GRID_COLS
+  const fitsHeight = hostRows - overhead.rows >= MIN_GRID_ROWS
+  return fitsWidth && fitsHeight ? requested : "none"
+}
+
+/**
+ * Derive the recorded-grid size from the host viewport and chrome style.
+ *
+ * The returned `cols × rows` is what the recorded child PTY, the headless
+ * terminal, and the `<Terminal>` component must ALL use. Because it is
+ * `host − chromeOverhead` (clamped to a usable floor), the chrome box is
+ * always ≤ the host viewport — so the overlay tree tiles the full surface
+ * (no host-scrollback bleed) and the grid never overflows its container
+ * (no line-wrap). This is the viewport-fit size contract from
+ * `.claude/arch-decisions/2026-05-22-termless-rec-viewport-fit.md`.
+ */
+export function fitGridToHost(hostCols: number, hostRows: number, style: ChromeStyle): { cols: number; rows: number } {
+  const overhead = chromeOverhead(style)
+  return {
+    cols: Math.max(MIN_GRID_COLS, hostCols - overhead.cols),
+    rows: Math.max(MIN_GRID_ROWS, hostRows - overhead.rows),
+  }
+}
+
 function formatElapsed(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000))
   const m = Math.floor(seconds / 60)
@@ -88,7 +173,7 @@ function formatElapsed(ms: number): string {
 // drawing with declarative <Box borderStyle="round">.
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface ChromePresetTokens {
+export interface ChromePresetTokens {
   borderStyle: "round" | "single" | "none"
   showTitleBar: boolean
   /** macOS-style traffic-light dots at the left of the title bar. */
@@ -97,7 +182,7 @@ interface ChromePresetTokens {
   showControls: boolean
 }
 
-function chromeTokens(style: ChromeStyle): ChromePresetTokens {
+export function chromeTokens(style: ChromeStyle): ChromePresetTokens {
   switch (style) {
     case "macos":
       return { borderStyle: "round", showTitleBar: true, showDots: true, showControls: false }
@@ -114,13 +199,13 @@ function chromeTokens(style: ChromeStyle): ChromePresetTokens {
 // tree subscribes via useSyncExternalStore. One bump fans out to all reads.
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface OverlayState {
+export interface OverlayState {
   revision: number
   elapsedMs: number
   blinkTick: number
 }
 
-function createOverlayStore(initial: OverlayState): {
+export function createOverlayStore(initial: OverlayState): {
   getSnapshot(): OverlayState
   subscribe(listener: () => void): () => void
   set(updates: Partial<OverlayState>): void
@@ -142,14 +227,26 @@ function createOverlayStore(initial: OverlayState): {
 
 type OverlayStore = ReturnType<typeof createOverlayStore>
 
-interface OverlayProps {
+/**
+ * Props for {@link Overlay}. Exported alongside the component so the
+ * `@km/termless/15589` regression test can render it through
+ * `@silvery/test`'s `createRenderer` and assert the surface-ownership +
+ * no-overflow contract without spinning up a real PTY.
+ */
+export interface OverlayProps {
   terminal: Terminal
   title: string
   preset: ChromePresetTokens
   store: OverlayStore
 }
 
-function Overlay(props: OverlayProps): React.ReactElement {
+/**
+ * The live-overlay React tree — status bar + spacer + (optionally bordered)
+ * recorded grid, centred on a full-surface background that the overlay
+ * OWNS. Exported for the regression test; production code reaches it via
+ * {@link startRecLiveOverlay}.
+ */
+export function Overlay(props: OverlayProps): React.ReactElement {
   const { terminal, title, preset, store } = props
 
   // useSyncExternalStore — every store.set() bumps re-render through
@@ -172,9 +269,25 @@ function Overlay(props: OverlayProps): React.ReactElement {
 
   const grid = <SilveryTerminal terminal={terminal} revision={revision} cursor={true} />
 
+  // The root box MUST own the full host surface. `width="100%" height="100%"`
+  // sizes it to the silvery viewport (= host terminal); `backgroundColor`
+  // makes the overlay tree paint EVERY cell — including the margin around the
+  // centered chrome box — on every frame. Without this the incremental
+  // renderer leaves the margin cells untouched after the one-time alt-screen
+  // clear, and any pre-existing host-screen content shows through. This is
+  // the host-scrollback-bleed half of `@km/termless/15589`.
+  const rootProps = {
+    flexDirection: "column" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    width: "100%" as const,
+    height: "100%" as const,
+    backgroundColor: "$bg",
+  }
+
   if (preset.borderStyle === "none") {
     return (
-      <Box flexDirection="column" justifyContent="center" alignItems="center">
+      <Box {...rootProps}>
         {statusBar}
         <Box />
         {grid}
@@ -183,7 +296,7 @@ function Overlay(props: OverlayProps): React.ReactElement {
   }
 
   return (
-    <Box flexDirection="column" justifyContent="center" alignItems="center">
+    <Box {...rootProps}>
       {statusBar}
       <Box />
       <Box borderStyle={preset.borderStyle} flexDirection="column">
