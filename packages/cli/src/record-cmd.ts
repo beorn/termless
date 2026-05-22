@@ -377,7 +377,17 @@ async function interactiveRecord(
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
   const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "browser" | "auto" | undefined) ?? "auto"
-  const liveChrome: ChromeStyle = opts.liveChrome ?? "macos"
+  // Default `"none"` — raw-stdout passthrough. Pre-2026-05-22 the default was
+  // `"macos"` (silvery-mounted bordered chrome around the recorded grid), but
+  // 6 recurrences of compositing-leak bugs (15551/15575/15586/15589.A/B/C/D +
+  // the round-6 OSC-probe + keystroke-echo + Ctrl-D-dead defects) made the
+  // user-visible defaults garbled. The structural fix (silvery <Island>
+  // primitive — @km/silvery/15646-islands) is a quarter-investment epic;
+  // meanwhile the default flips to `"none"` so users see clean recordings
+  // today. Pass `--live-chrome macos` explicitly to opt into the legacy
+  // silvery overlay path. After islands ships, the overlay path returns
+  // by-construction-correct under a new default.
+  const liveChrome: ChromeStyle = opts.liveChrome ?? "none"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
@@ -894,7 +904,8 @@ async function recordAction(
     return
   }
   const chromeStyle: ChromeStyle = (opts.chrome as ChromeStyle | undefined) ?? "none"
-  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? "macos"
+  // Default `"none"` — see comment at the runtime default site above.
+  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? "none"
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -1042,9 +1053,11 @@ export function registerRecordCommand(program: Command): void {
     .option("--chrome <style>", `Window chrome on rendered output: ${CHROME_STYLES.join(", ")} (default: none)`, "none")
     .option(
       "--live-chrome <style>",
-      `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")} (default: macos). ` +
-        `\`none\` falls back to flush-top-left raw stdout — the pre-chrome behavior.`,
-      "macos",
+      `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")} (default: none — raw-stdout passthrough). ` +
+        `Pass \`macos\` or \`windows\` to opt into the silvery-mounted bordered chrome ` +
+        `(temporarily disabled by default 2026-05-22 due to compositing-leak bugs in the overlay path; ` +
+        `re-enabled by-construction-correct when the silvery <Island> primitive ships — see @km/silvery/15646-islands).`,
+      "none",
     )
     .option("--title <text>", "Title text in the window chrome bar (default: the recorded command)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")

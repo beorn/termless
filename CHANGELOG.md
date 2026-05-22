@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **`termless rec` default `--live-chrome` flipped from `macos` to `none` (raw-stdout passthrough)** — the silvery-mounted bordered-chrome overlay path had 6 rounds of compositing-leak bugs (host-scrollback bleed, CJK width drift, OSC palette-probe responses leaking as visible cells, keystroke echo into the recorded grid, Ctrl-D not reaching the stop handler). The structural fix is the silvery `<Island>` primitive ([`@km/silvery/15646-islands`](../../@km/silvery/15646-islands.md)) — a quarter-investment epic. Meanwhile, the default flips to `none`: the recorded program (km view, nvim, htop, any TUI) renders directly to the host terminal, which handles probes natively. The headless backend continues to capture for `.cast`/`.gif`/`.png` artifacts — recordings work exactly as before, just without the live silvery chrome wrapper. Opt back into the legacy overlay with `--live-chrome macos` (or `windows`); the path remains for users who explicitly want it and accept the bug class. The opt-in path will become by-construction-correct when the `<Island>` primitive ships.
+
 ### Added
 
 - **`compat-screenshot` — real desktop-terminal capture** — `termless compat-screenshot -- <cmd>` (CLI) and the `compat-screenshot` MCP tool spawn the user's actual macOS terminal app (Ghostty / kitty / iTerm / Terminal.app), run a TUI command, `screencapture` the window, and clean up. Pixel-perfect for that specific terminal + the user's real font/theme config — the **compat** path. macOS-only; auto-detects the terminal (ghostty > kitty > iterm > terminal) and returns terminal version/font/theme metadata. For routine visual iteration use the canvas renderer instead. New `@termless/peekaboo` exports: `compatScreenshot()`, `assertCompatCapable()`, `detectTerminal()`, `getTerminalAdapter()`. See [@termless/peekaboo README](packages/peekaboo/README.md).
