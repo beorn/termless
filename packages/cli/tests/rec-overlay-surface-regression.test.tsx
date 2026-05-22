@@ -34,12 +34,7 @@ import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
 import type { TerminalReadable } from "silvery"
-import {
-  Overlay,
-  chromeTokens,
-  createOverlayStore,
-  fitGridToHost,
-} from "../src/rec-live-overlay.tsx"
+import { Overlay, chromeTokens, createOverlayStore, fitGridToHost } from "../src/rec-live-overlay.tsx"
 
 // ────────────────────────────────────────────────────────────────────────────
 // A fake recorded terminal sized exactly to the viewport-fit derivation —
