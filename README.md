@@ -388,10 +388,10 @@ Termless is the **only** headless terminal testing library that supports multi-b
 - [Best Practices](https://termless.dev/guide/best-practices) -- avoiding flaky tests, PTY timing, selectors
 - [Multi-Backend Testing](https://termless.dev/guide/multi-backend) -- test against any backend
 - [Backend Capabilities](https://termless.dev/guide/backends) -- which backends support what
-- [Recording & Playback](https://termless.dev/guide/recording) -- record, play, GIF/SVG/APNG output
-- [Tape Format](https://termless.dev/guide/tape-format) -- `.tape` file reference
-- [Asciicast v2](https://termless.dev/guide/asciicast) -- asciinema compatibility
-- [CLI & MCP](https://termless.dev/guide/cli) -- CLI usage and MCP server
+- [Recording & Playback](https://termless.dev/guide/recording-sessions) -- record, play, GIF/SVG/APNG output
+- [Tape Format](https://termless.dev/reference/formats/tape) -- `.tape` file reference
+- [Asciicast v2](https://termless.dev/reference/formats/asciicast) -- asciinema compatibility
+- [CLI & MCP](https://termless.dev/reference/cli) -- CLI usage and MCP server
 - **API Reference**: [Terminal](https://termless.dev/api/terminal) | [Backend](https://termless.dev/api/backend) | [Cell & Types](https://termless.dev/api/cell) | [Matchers](https://termless.dev/api/matchers)
 
 ## Recording & Playback
@@ -415,7 +415,7 @@ termless rec -t 'Type "hello"\nEnter\nScreenshot' bash
 termless record -o demo.cast my-app
 ```
 
-Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all pure JS, no ffmpeg. See the [Recording & Playback docs](https://termless.dev/guide/recording) for full details.
+Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all pure JS, no ffmpeg. See the [Recording & Playback docs](https://termless.dev/guide/recording-sessions) for full details.
 
 ## CLI & MCP Server
 
@@ -433,7 +433,7 @@ termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
 termless mcp
 ```
 
-See the [CLI & MCP docs](https://termless.dev/guide/cli) for full options.
+See the [CLI & MCP docs](https://termless.dev/reference/cli) for full options.
 
 ## See Also
 

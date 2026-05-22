@@ -23,21 +23,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lycheeverse/lychee-action@v2
         with:
-          # --root-dir lets lychee parse VitePress root-relative paths
-          # (/guide/…, /api/…) without erroring "Cannot convert path to
-          # URI". --exclude '^file:' then skips the resulting file://
-          # checks — VitePress already validates internal links at build
-          # time; lychee's job here is external link rot. The CHANGELOG
-          # exclude swallows v0.0.1 placeholder GitHub URLs that don't
-          # exist yet (compare/v0.0.1, releases/tag/v0.0.1).
+          # Scoped glob: lint top-level + docs only — skips node_modules
+          # entirely (which the workspace pulls in via bun install on CI
+          # and pollutes the scan with thousands of npm-vendor README
+          # links). --root-dir lets lychee parse VitePress root-relative
+          # paths (/guide/…) without erroring; --exclude '^file:' then
+          # skips the resulting file:// checks since VitePress validates
+          # internal links at build time. Accept 401 for rate-limited
+          # endpoints. CHANGELOG v0.0.1 placeholder GitHub URLs excluded.
           args: |
             --max-concurrency 24
             --no-progress
             --root-dir '${{ github.workspace }}/docs'
-            --accept '200..=204,206,301,302,303,307,308,403,429'
+            --accept '200..=204,206,301,302,303,307,308,401,403,429'
             --exclude '^(mailto|tel|javascript):'
             --exclude '^file:'
             --exclude 'github\.com/.*/(compare|releases/tag)/v0\.0\.1'
-            './**/*.md'
-            './**/*.html'
+            README.md
+            CHANGELOG.md
+            CLAUDE.md
+            'docs/**/*.md'
+            'docs/**/*.html'
+            'packages/*/README.md'
           fail: true
