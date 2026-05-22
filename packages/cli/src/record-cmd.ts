@@ -528,8 +528,17 @@ async function interactiveRecord(
     }
     process.stdin.resume()
 
-    stdinHandler = (chunk: Buffer) => {
-      const bytes = new Uint8Array(chunk)
+    stdinHandler = (chunk: Buffer | string) => {
+      // Defensive: silvery (or any other transient stdin reader earlier in
+      // this process's lifetime) may have called `stdin.setEncoding("utf8")`,
+      // in which case Node delivers strings here instead of Buffers. We
+      // forward bytes verbatim to the recorded PTY, so re-encode strings to
+      // UTF-8 bytes before measuring length / writing. The host owns stdin
+      // for the lifetime of the recording (silvery is mounted with
+      // `input: false`), but the belt-and-suspenders matters: a silently
+      // empty-bytes path would silently drop every keystroke and Ctrl-C
+      // alike. See `@km/termless/15541-rec-recording-mode-ux`.
+      const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk)
       inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
 
       // Update keystroke label for overlay
