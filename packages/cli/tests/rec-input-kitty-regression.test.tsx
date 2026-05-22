@@ -57,9 +57,29 @@ function fakeTerm(): Terminal {
  * non-headless protocol-setup path (the path that would emit the Kitty
  * enable). Captures every write for assertion.
  */
+type MockTtyStream = {
+  written: string[]
+  columns: number
+  rows: number
+  isTTY: true
+  fd: number
+  write(data: string | Uint8Array): boolean
+  on(): MockTtyStream
+  off(): MockTtyStream
+  once(): MockTtyStream
+  removeListener(): MockTtyStream
+  removeAllListeners(): MockTtyStream
+  listenerCount(): number
+}
+
 function makeTtyMockStream(): NodeJS.WriteStream & { written: string[] } {
   const written: string[] = []
-  const stream = {
+  // Explicit `MockTtyStream` type breaks the TS7022 self-reference cycle —
+  // before the explicit type, `on(): typeof stream` referenced `stream` while
+  // it was still being initialized, making the return type `any`. The named
+  // alias gives `stream` a declared type up-front so the recursive references
+  // resolve cleanly.
+  const stream: MockTtyStream = {
     written,
     columns: 80,
     rows: 24,
@@ -69,19 +89,19 @@ function makeTtyMockStream(): NodeJS.WriteStream & { written: string[] } {
       written.push(typeof data === "string" ? data : Buffer.from(data).toString("utf8"))
       return true
     },
-    on(): typeof stream {
+    on(): MockTtyStream {
       return stream
     },
-    off(): typeof stream {
+    off(): MockTtyStream {
       return stream
     },
-    once(): typeof stream {
+    once(): MockTtyStream {
       return stream
     },
-    removeListener(): typeof stream {
+    removeListener(): MockTtyStream {
       return stream
     },
-    removeAllListeners(): typeof stream {
+    removeAllListeners(): MockTtyStream {
       return stream
     },
     listenerCount(): number {

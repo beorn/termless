@@ -229,9 +229,27 @@ describe("resolveLiveChrome — auto-drop chrome when the host is too small", ()
 // Mock stream — captures writes so the tests can assert on host bytes
 // without actually emitting to a real stdout.
 // ────────────────────────────────────────────────────────────────────────────
+type MockStream = {
+  written: string[]
+  columns: number
+  rows: number
+  isTTY: false
+  fd: number
+  write(data: string | Uint8Array): boolean
+  on(): MockStream
+  off(): MockStream
+  removeListener(): MockStream
+  removeAllListeners(): MockStream
+}
+
 function makeMockStream(): NodeJS.WriteStream & { written: string[] } {
   const written: string[] = []
-  const stream = {
+  // Explicit `MockStream` type breaks the TS7022 self-reference cycle —
+  // before the explicit type, `on(): typeof stream` referenced `stream`
+  // while it was still being initialized, making the inferred type
+  // collapse to `any`. The named alias gives `stream` a declared type
+  // up-front so the recursive returns resolve cleanly.
+  const stream: MockStream = {
     written,
     columns: 80,
     rows: 24,
@@ -241,16 +259,16 @@ function makeMockStream(): NodeJS.WriteStream & { written: string[] } {
       written.push(typeof data === "string" ? data : Buffer.from(data).toString("utf8"))
       return true
     },
-    on(): typeof stream {
+    on(): MockStream {
       return stream
     },
-    off(): typeof stream {
+    off(): MockStream {
       return stream
     },
-    removeListener(): typeof stream {
+    removeListener(): MockStream {
       return stream
     },
-    removeAllListeners(): typeof stream {
+    removeAllListeners(): MockStream {
       return stream
     },
   }

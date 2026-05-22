@@ -35,6 +35,7 @@ import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
 import type { TerminalReadable } from "silvery"
+import type { Terminal } from "../../../src/terminal/types.ts"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -72,7 +73,15 @@ function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "win
   const terminal = fittedTerminal(grid.cols, grid.rows)
   const store = createOverlayStore({ revision: 0, elapsedMs: 0, blinkTick: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
-  const app = render(<Overlay terminal={terminal} title="rec" preset={chromeTokens(style)} store={store} />)
+  // The mock satisfies the `TerminalReadable` read protocol the Overlay
+  // actually consumes at runtime (cols/rows/getLines/getCursor — what
+  // silvery's `<Terminal>` reads). The full `Terminal` interface is wider
+  // (PTY, mouse, screenshot, region selectors); none of those paths fire
+  // in this surface-ownership test, so the unknown-cast through Terminal
+  // is sound here.
+  const app = render(
+    <Overlay terminal={terminal as unknown as Terminal} title="rec" preset={chromeTokens(style)} store={store} />,
+  )
   return { app, grid }
 }
 
@@ -82,7 +91,7 @@ describe("rec live overlay — surface ownership (no host-scrollback bleed)", ()
       const HOST_COLS = 120
       const HOST_ROWS = 40
       const { app } = renderOverlay(HOST_COLS, HOST_ROWS, style)
-      const buffer = app.buffer
+      const buffer = app.lastBuffer()
       expect(buffer).not.toBeNull()
       if (!buffer) return
 
@@ -108,7 +117,7 @@ describe("rec live overlay — surface ownership (no host-scrollback bleed)", ()
     const HOST_COLS = 80
     const HOST_ROWS = 30
     const { app } = renderOverlay(HOST_COLS, HOST_ROWS, "macos")
-    const buffer = app.buffer
+    const buffer = app.lastBuffer()
     expect(buffer).not.toBeNull()
     if (!buffer) return
     expect(buffer.width).toBe(HOST_COLS)
