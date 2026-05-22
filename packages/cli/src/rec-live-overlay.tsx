@@ -183,7 +183,7 @@ function RecOverlay({ adapter, cols, rows, chromeStyle, title, elapsedMs, subscr
   return (
     <Box flexDirection="column" alignItems="center" justifyContent="center" flexGrow={1}>
       <Text>{statusText}</Text>
-      <Box flexDirection="column">
+      <Box borderStyle={borderStyle} flexDirection="column">
         {metrics.showTitleBar ? (
           <Box flexDirection="row">
             {metrics.showDots ? (
@@ -197,16 +197,14 @@ function RecOverlay({ adapter, cols, rows, chromeStyle, title, elapsedMs, subscr
             {metrics.showControls ? <Text>{`  ${controlsStr} `}</Text> : null}
           </Box>
         ) : null}
-        <Box borderStyle={borderStyle} flexDirection="column">
-          <Viewport
-            cols={cols}
-            rows={rows}
-            source={adapter}
-            focusable={false}
-            captureInput="none"
-            cursorVisible
-          />
-        </Box>
+        <Viewport
+          cols={cols}
+          rows={rows}
+          source={adapter}
+          focusable={false}
+          captureInput="none"
+          cursorVisible
+        />
       </Box>
     </Box>
   )
