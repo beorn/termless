@@ -34,7 +34,8 @@
 import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
-import type { ForeignSource, XtermAdapterHandle } from "@termless/xtermjs"
+import type { XtermAdapterHandle } from "@termless/xtermjs"
+import type { ForeignSource, ViewportContext } from "@silvery/ag/viewport-types"
 import { createCellBuffer } from "@silvery/ag/viewport-buffer"
 import type { Cell } from "@silvery/ag/types"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
@@ -56,7 +57,7 @@ import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../s
  */
 function mockAdapter(cols: number, rows: number, fill = "X"): XtermAdapterHandle {
   const source: ForeignSource = {
-    connect(ctx) {
+    connect(ctx: ViewportContext) {
       const buf = createCellBuffer(cols, rows)
       const cell: Cell = {
         char: fill,
