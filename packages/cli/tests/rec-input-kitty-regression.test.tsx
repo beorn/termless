@@ -126,11 +126,13 @@ const FOCUS_ENABLE_RE = /\x1b\[\?1004h/
 describe("rec overlay — Kitty keyboard protocol must stay off (input: false)", () => {
   it("never writes a Kitty-enable sequence to the host", async () => {
     const out = makeTtyMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
 
     // Give silvery's async mount a chance to run its protocol-setup path.
@@ -152,11 +154,13 @@ describe("rec overlay — Kitty keyboard protocol must stay off (input: false)",
     // it could only produce these by having flipped the host into Kitty
     // mode — which the enable-gate now prevents.)
     const out = makeTtyMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
     await new Promise((r) => setTimeout(r, 250))
     handle.stop()
@@ -188,11 +192,13 @@ describe("rec overlay — Kitty keyboard protocol must stay off (input: false)",
 describe("rec overlay — mouse/focus tracking must stay off (input: false)", () => {
   it("never writes a mouse-enable sequence to the host", async () => {
     const out = makeTtyMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
 
     await new Promise((r) => setTimeout(r, 250))
@@ -209,11 +215,13 @@ describe("rec overlay — mouse/focus tracking must stay off (input: false)", ()
 
   it("never writes a focus-enable sequence to the host", async () => {
     const out = makeTtyMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
 
     await new Promise((r) => setTimeout(r, 250))

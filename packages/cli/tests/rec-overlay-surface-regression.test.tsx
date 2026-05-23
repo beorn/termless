@@ -34,53 +34,71 @@
 import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
-import type { TerminalReadable } from "silvery"
-import type { Terminal } from "../../../src/terminal/types.ts"
+import type { ForeignSource, XtermAdapterHandle } from "@termless/xtermjs"
+import { createCellBuffer } from "@silvery/ag/viewport-buffer"
+import type { Cell } from "@silvery/ag/types"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
-// ────────────────────────────────────────────────────────────────────────────
-// A fake recorded terminal sized exactly to the viewport-fit derivation —
-// this is what `record-cmd.ts` now feeds the overlay.
-// ────────────────────────────────────────────────────────────────────────────
-function fittedTerminal(cols: number, rows: number, fill = "X"): TerminalReadable {
-  const blank = {
-    char: fill,
-    fg: null,
-    bg: null,
-    bold: false,
-    dim: false,
-    italic: false,
-    underline: false,
-    strikethrough: false,
-    inverse: false,
+/**
+ * Mock ForeignSource shaped like XtermAdapterHandle (extends ForeignSource).
+ * Blits a uniform `fill`-char buffer with a bg color on connect — synchronous,
+ * unlike XtermAdapter's microtask-coalesced blit, so the rendered output
+ * contains the fill char by the time createRenderer returns.
+ *
+ * This is the surface-regression fixture's stand-in for a real XtermAdapter.
+ * Post-B2 (@km/silvery/15739) the production Overlay uses XtermAdapter; the
+ * test verifies what the OVERLAY ROOT paints (host cell coverage, chrome
+ * letterbox, no overflow), which is independent of which ForeignSource impl
+ * provides the inner cells. The structural invariant "every cell has bg" is
+ * what this fixture asserts; XtermAdapter would satisfy it equivalently in
+ * the production path but its microtask-coalesced blit doesn't flush
+ * synchronously under createRenderer.
+ */
+function mockAdapter(cols: number, rows: number, fill = "X"): XtermAdapterHandle {
+  const source: ForeignSource = {
+    connect(ctx) {
+      const buf = createCellBuffer(cols, rows)
+      const cell: Cell = {
+        char: fill,
+        fg: null,
+        bg: "#008000",
+        attrs: {},
+        wide: false,
+        continuation: false,
+      }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) buf.setCell(c, r, cell)
+      }
+      ctx.blit([{ row: 0, col: 0, width: cols, height: rows }], buf)
+    },
+    disconnect() {},
   }
-  const lines = Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ ...blank })))
-  return {
-    cols,
-    rows,
-    getLines: () => lines,
-    getCursor: () => ({ x: 0, y: 0, visible: true }),
-  }
+  return Object.assign(source, {
+    feedAnsi: () => {},
+    inputMode: "none" as const,
+    setInputMode: () => {},
+  })
 }
 
 /**
- * Render the `Overlay` at a given host size with a recorded terminal sized
- * via `clampGridToHost` — the 15614 size contract `record-cmd.ts` now
- * enforces (fixed-default + letterbox + clamp-down).
+ * Render the `Overlay` at a given host size with a recorded grid sized via
+ * `clampGridToHost` — the 15614 size contract `record-cmd.ts` enforces
+ * (fixed-default + letterbox + clamp-down).
  */
 function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
   const grid = clampGridToHost(hostCols, hostRows, style)
-  const terminal = fittedTerminal(grid.cols, grid.rows)
+  const adapter = mockAdapter(grid.cols, grid.rows)
   const store = createOverlayStore({ revision: 0, elapsedMs: 0, blinkTick: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
-  // The mock satisfies the `TerminalReadable` read protocol the Overlay
-  // actually consumes at runtime (cols/rows/getLines/getCursor — what
-  // silvery's `<Terminal>` reads). The full `Terminal` interface is wider
-  // (PTY, mouse, screenshot, region selectors); none of those paths fire
-  // in this surface-ownership test, so the unknown-cast through Terminal
-  // is sound here.
   const app = render(
-    <Overlay terminal={terminal as unknown as Terminal} title="rec" preset={chromeTokens(style)} store={store} />,
+    <Overlay
+      adapter={adapter}
+      cols={grid.cols}
+      rows={grid.rows}
+      title="rec"
+      preset={chromeTokens(style)}
+      store={store}
+    />,
   )
   return { app, grid }
 }
