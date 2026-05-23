@@ -20,38 +20,25 @@ import {
   MIN_GRID_COLS,
   MIN_GRID_ROWS,
 } from "../src/rec-live-overlay.tsx"
-import type { Terminal } from "../../../src/terminal/types.ts"
 
-// Minimal fake Terminal stub for the smoke test. The overlay's silvery
-// mount may fail in a non-TTY test environment (no real stdout), so the
-// tests only verify the handle surface — start/stop, idempotency, no
-// throws when called against the fake.
-function fakeTerm(): Terminal {
-  return {
-    cols: 5,
-    rows: 2,
-    getLines: () => [[], []],
-    getCursor: () => ({ x: 0, y: 0, visible: true, style: null }),
-    // The remaining TerminalReadable members aren't read by <Terminal>.
-    getText: () => "",
-    getTextRange: () => "",
-    getCell: () => ({}) as never,
-    getLine: () => [],
-    getMode: () => false,
-    getTitle: () => "",
-    getScrollback: () => ({ viewportOffset: 0, totalLines: 0, screenLines: 2 }),
-  } as unknown as Terminal
-}
+// Post-B2 the overlay creates its own XtermAdapter internally (from
+// the cols/rows opts) — the pre-B2 fakeTerm() stub is gone. The tests
+// here verify only the public handle surface (start/stop, idempotency,
+// no throws); full component rendering is covered by silvery's own
+// `viewport-mvp.test.tsx`.
 
 describe("startRecLiveOverlay — public handle", () => {
   it("returns a handle with the documented shape", () => {
     const out = makeMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
+    expect(typeof handle.feed).toBe("function")
     expect(typeof handle.rerender).toBe("function")
     expect(typeof handle.repaint).toBe("function")
     expect(typeof handle.setElapsedMs).toBe("function")
@@ -61,11 +48,13 @@ describe("startRecLiveOverlay — public handle", () => {
 
   it("stop() is idempotent", () => {
     const out = makeMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
     handle.stop()
     // Second call must not throw.
@@ -77,11 +66,13 @@ describe("startRecLiveOverlay — public handle", () => {
     // mouse-mode escapes to the host. The overlay must NOT add a blanket
     // `\x1b[?1003h` at startup — that's the bug upstream `8d293a5` fixed.
     const out = makeMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
     // No mouse-mode enable should be present.
     expect(out.written.some((s) => /\x1b\[\?(?:1000|1002|1003|1006)h/.test(s))).toBe(false)
@@ -92,15 +83,19 @@ describe("startRecLiveOverlay — public handle", () => {
     expect(out.written.some((s) => s.includes("\x1b[?25h"))).toBe(true)
   })
 
-  it("rerender / setElapsedMs / repaint do not throw before silvery mounts", () => {
+  it("feed / rerender / setElapsedMs / repaint do not throw before silvery mounts", () => {
     const out = makeMockStream()
-    const handle = startRecLiveOverlay(fakeTerm(), {
+    const handle = startRecLiveOverlay({
       out,
       chromeStyle: "none",
       hostCols: () => 80,
       hostRows: () => 24,
+      cols: 80,
+      rows: 24,
     })
     expect(() => {
+      handle.feed("hello world\r\n")
+      handle.feed(new Uint8Array([0x41, 0x42, 0x43]))
       handle.rerender()
       handle.repaint()
       handle.setElapsedMs(1500)

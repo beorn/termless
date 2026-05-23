@@ -496,13 +496,20 @@ async function interactiveRecord(
   let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
   if (useOverlay) {
     const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
-    liveView = startRecLiveOverlay(headlessTerminal, {
+    liveView = startRecLiveOverlay({
       // `effectiveChrome`, not the raw `liveChrome` request — the overlay
       // and the grid-size derivation must agree on the SAME chrome style,
       // or the size contract breaks. `resolveLiveChrome` may have
       // downgraded a `macos`/`windows` request to `none` for a small host.
       chromeStyle: effectiveChrome,
       title: cmdLabel,
+      // Post-B2: the overlay creates its own XtermAdapter internally
+      // (replaces the pre-B2 <SilveryTerminal terminal={headlessTerminal}/>
+      // pattern). The adapter is sized to the recorded grid — record-cmd's
+      // headlessTerminal still exists for the asciicast/screenshot pipeline
+      // but is no longer the live overlay's render source.
+      cols: gridCols,
+      rows: gridRows,
     })
   }
 
@@ -544,12 +551,14 @@ async function interactiveRecord(
         const mouseSeqs = text.match(/\x1b\[\?(?:1000|1002|1003|1005|1006|1015)[hl]/g)
         if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
       }
-      // Live preview routing: when the chrome overlay is mounted, render the
-      // headless grid through Silvery instead of piping raw bytes to the host
-      // terminal. `--live-chrome none` keeps the historical raw-stdout-pipe
-      // behavior — byte-identical to pre-change.
+      // Live preview routing: when the chrome overlay is mounted, feed the
+      // PTY bytes into the overlay's XtermAdapter (silvery's <Viewport>
+      // renders them inside the chrome). The headlessTerminal also still
+      // receives the bytes above (for the asciicast/screenshot capture
+      // pipeline — orthogonal consumer). `--live-chrome none` keeps the
+      // historical raw-stdout-pipe behavior — byte-identical to pre-change.
       if (liveView) {
-        liveView.rerender()
+        liveView.feed(text)
       } else {
         process.stdout.write(data)
       }

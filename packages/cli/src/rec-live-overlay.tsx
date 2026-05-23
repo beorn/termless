@@ -1,14 +1,19 @@
 /**
- * Live recording overlay — silvery-mounted mirror of the headless
- * terminal's grid inside a centred chrome window on the host.
+ * Live recording overlay — silvery `<Viewport>` + XtermAdapter composition.
  *
  * Architecture
  * ────────────
- * - Silvery's <Terminal> component renders the headless terminal's
- *   grid via the same `rowToAnsi`-equivalent encoder the previous
- *   direct-ANSI painter used. Silvery owns alt-screen entry, cursor
- *   positioning (via cursorOffset on <Terminal>), incremental paints,
- *   and resize handling.
+ * - Silvery's `<Viewport>` component mounts the PTY mirror inside a
+ *   bordered chrome `<Box>`. The Viewport is silvery's nested-cell-domain
+ *   composition primitive (see `@silvery/ag/viewport-types.ts`) — it owns
+ *   an opaque cell buffer that bypasses silvery's bg-coherence invariant
+ *   for the foreign cells. Chrome (status bar, title bar, border) is
+ *   normal silvery `<Box>` + `<Text>`; the Viewport is a leaf inside that
+ *   chrome.
+ * - The XtermAdapter (`@termless/xtermjs`) implements the `ForeignSource`
+ *   contract. It feeds ANSI bytes from the PTY child into its private
+ *   xterm.js Terminal, then mirrors the post-write buffer into the
+ *   Viewport via `ctx.blit()` on a coalesced microtask.
  * - The host process keeps stdin for itself (record-cmd's stdin → PTY
  *   pipe must reach the recorded child unmodified). Silvery is mounted
  *   with `{ input: false }` so it never grabs stdin — see
@@ -23,25 +28,29 @@
  *   leak SGR mouse bytes into non-mouse-aware shells — the bug upstream
  *   `8d293a5` fixed).
  *
- * State flow: the handle methods (rerender / setElapsedMs / stop)
+ * State flow: the handle methods (feed / rerender / setElapsedMs / stop)
  * push values into a small external store; the <Overlay> component
- * subscribes via `useSyncExternalStore` and re-renders. Silvery's
- * convergence loop coalesces multiple bumps into one paint.
+ * subscribes via `useSyncExternalStore` and re-renders. The XtermAdapter's
+ * microtask flush coalesces multiple feed bursts into one paint cycle.
  *
  * The public API surface (`RecLiveOverlayOptions`, `RecLiveOverlayHandle`,
- * `startRecLiveOverlay`) is unchanged — record-cmd.ts and any other
- * callers see the same shape.
+ * `startRecLiveOverlay`) has changed shape this commit: it now takes
+ * `cols`/`rows` instead of a `Terminal` argument, and the handle exposes
+ * a `feed(data)` method that record-cmd calls per PTY data burst. See
+ * `@km/silvery/15739-viewport-rec-rewire-integration` for the rationale.
+ *
+ * Phase B2 of `@km/silvery/15731-surface-nested-composition-primitive`.
  */
 
-import React from "react"
-import { Box, Terminal as SilveryTerminal, Text, createTerm } from "silvery"
+import React, { useEffect, useMemo, useRef } from "react"
+import { Box, Text, Viewport, createTerm } from "silvery"
 import { run as silveryRun } from "silvery/runtime"
-import type { Terminal } from "../../../src/terminal/types.ts"
+import { XtermAdapter, type XtermAdapterHandle } from "@termless/xtermjs"
 import { CSI_LEAVE_ALT_SCREEN, CSI_SHOW_CURSOR, SGR_RESET } from "../../../src/render/ansi.ts"
 import type { ChromeStyle } from "../../../src/render/chrome.ts"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Public API — preserved 1:1 with the previous direct-ANSI implementation.
+// Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Options for {@link startRecLiveOverlay}. */
@@ -56,6 +65,16 @@ export interface RecLiveOverlayOptions {
   hostCols?: () => number
   /** Read the host's rows. Defaults to `out.rows`. */
   hostRows?: () => number
+  /**
+   * Recorded grid columns — defaults to {@link DEFAULT_GRID_COLS} (80).
+   * record-cmd passes its derived grid size (after `clampGridToHost`).
+   */
+  cols?: number
+  /**
+   * Recorded grid rows — defaults to {@link DEFAULT_GRID_ROWS} (30).
+   * record-cmd passes its derived grid size (after `clampGridToHost`).
+   */
+  rows?: number
   /** Frame rate cap. Defaults to 30 fps. */
   fps?: number
   /** Initial elapsed milliseconds — usually 0. */
@@ -64,7 +83,22 @@ export interface RecLiveOverlayOptions {
 
 /** Handle returned by {@link startRecLiveOverlay}. */
 export interface RecLiveOverlayHandle {
-  /** Request the painter to repaint on the next frame tick. */
+  /**
+   * Feed PTY bytes (raw or decoded text) into the embedded XtermAdapter
+   * so the Viewport's cell buffer reflects the recorded program's latest
+   * output. record-cmd calls this from its `onData` callback alongside
+   * `headlessTerminal.feed(text)` — the two consumers (asciicast/image
+   * capture via headlessTerminal vs live overlay via adapter) are peers
+   * on the same byte stream, not chained subscribers.
+   */
+  feed(data: Uint8Array | string): void
+  /**
+   * Request the painter to repaint on the next frame tick. Historically
+   * record-cmd called this after writing to the headless terminal. Since
+   * `feed()` already bumps the revision counter (which the React tree
+   * picks up via useSyncExternalStore), this is a no-op alias kept for
+   * API-shape stability with the pre-Viewport version.
+   */
   rerender(): void
   /** Force an immediate full repaint (e.g. on host resize). */
   repaint(): void
@@ -108,11 +142,11 @@ export const DEFAULT_GRID_ROWS = 30
 /**
  * Chrome overhead — the cells the overlay's silvery component tree consumes
  * AROUND the recorded grid, per chrome style. This is the single source of
- * truth for the size contract: the recorded child PTY (and the headless
- * terminal mirroring it) MUST be sized to `host − chromeOverhead` so the
- * `<Terminal>` grid always fits the viewport that displays it. Sizing the
- * recorded child independently of this is the root cause of
- * `@km/termless/15589` (host-scrollback bleed + recorded-app line-wrap).
+ * truth for the size contract: the recorded child PTY (and the XtermAdapter
+ * mirroring it) MUST be sized to `host − chromeOverhead` so the Viewport
+ * grid always fits the viewport that displays it. Sizing the recorded child
+ * independently of this is the root cause of `@km/termless/15589`
+ * (host-scrollback bleed + recorded-app line-wrap).
  *
  * Layout (see {@link Overlay}):
  * - status bar:  1 row
@@ -176,12 +210,9 @@ export function resolveLiveChrome(hostCols: number, hostRows: number, requested:
  *   - host ≥ DEFAULT_GRID + chromeOverhead → grid = DEFAULT_GRID (letterbox)
  *   - host < DEFAULT_GRID + chromeOverhead → grid = max(MIN_GRID, host - chromeOverhead)
  *
- * This supersedes the size-fit rule from `.claude/arch-decisions/
- * 2026-05-22-termless-rec-viewport-fit.md` §1. The user explicitly rejected
- * size-fit: "and now `km view` uses the entire width/height of the terminal
- * by default (not the default 80×30)?" Per chief 2026-05-22 #undead reopen
- * verdict, fixed-default + letterbox replaces size-fit. Bead:
- * `@km/termless/15589-rec-compositing-bleed-wrap/15614-sizing-fixed-letterbox`.
+ * Pure function — no silvery, no XtermAdapter, no TTY. Same semantics as
+ * the pre-Viewport version; the contract is independent of which component
+ * renders the grid.
  */
 export function clampGridToHost(
   hostCols: number,
@@ -208,8 +239,7 @@ function formatElapsed(ms: number): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chrome — silvery component tree. Replaces ~250 LOC of direct-ANSI border
-// drawing with declarative <Box borderStyle="round">.
+// Chrome — silvery component tree.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ChromePresetTokens {
@@ -267,13 +297,15 @@ export function createOverlayStore(initial: OverlayState): {
 type OverlayStore = ReturnType<typeof createOverlayStore>
 
 /**
- * Props for {@link Overlay}. Exported alongside the component so the
- * `@km/termless/15589` regression test can render it through
- * `@silvery/test`'s `createRenderer` and assert the surface-ownership +
- * no-overflow contract without spinning up a real PTY.
+ * Props for {@link Overlay}. Exported alongside the component so tests
+ * (and future regression checks for `@km/termless/15589`) can render it
+ * through `@silvery/test`'s `createRenderer` and assert the surface-
+ * ownership + no-overflow contract without spinning up a real PTY.
  */
 export interface OverlayProps {
-  terminal: Terminal
+  adapter: XtermAdapterHandle
+  cols: number
+  rows: number
   title: string
   preset: ChromePresetTokens
   store: OverlayStore
@@ -281,19 +313,20 @@ export interface OverlayProps {
 
 /**
  * The live-overlay React tree — status bar + spacer + (optionally bordered)
- * recorded grid, centred on a full-surface background that the overlay
- * OWNS. Exported for the regression test; production code reaches it via
- * {@link startRecLiveOverlay}.
+ * recorded grid via `<Viewport>`, centred on a full-surface background
+ * that the overlay OWNS. Exported for tests; production code reaches it
+ * via {@link startRecLiveOverlay}.
  */
 export function Overlay(props: OverlayProps): React.ReactElement {
-  const { terminal, title, preset, store } = props
+  const { adapter, cols, rows, title, preset, store } = props
 
   // useSyncExternalStore — every store.set() bumps re-render through
   // silvery's convergence loop. Multiple bumps in the same React batch
   // coalesce into one paint (silvery's incremental renderer handles
-  // the actual diff).
+  // the actual diff). The XtermAdapter's own microtask flush coalesces
+  // viewport-buffer dirty bits separately.
   const state = React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
-  const { revision, elapsedMs, blinkTick } = state
+  const { elapsedMs, blinkTick } = state
 
   const blinkOn = blinkTick % 2 === 0
   const elapsedStr = formatElapsed(elapsedMs)
@@ -306,7 +339,23 @@ export function Overlay(props: OverlayProps): React.ReactElement {
     </Box>
   )
 
-  const grid = <SilveryTerminal terminal={terminal} revision={revision} cursor={true} />
+  // Viewport replaces the pre-B2 <SilveryTerminal terminal={terminal} />
+  // call site. The bg-coherence violation that bead @km/silvery/15506
+  // patchworked (chalk bg color from the recorded program vs silvery's
+  // bufferBg) is structurally impossible across the Viewport boundary —
+  // silvery's pipeline dispatches on type === "silvery-viewport" and skips
+  // the bg-coherence check entirely. captureInput="none" because the
+  // overlay is non-interactive (record-cmd owns stdin → PTY pipe).
+  const grid = (
+    <Viewport
+      cols={cols}
+      rows={rows}
+      source={adapter}
+      focusable={false}
+      captureInput="none"
+      cursorVisible={true}
+    />
+  )
 
   // The root box MUST own the full host surface. `width="100%" height="100%"`
   // sizes it to the silvery viewport (= host terminal); `backgroundColor`
@@ -384,13 +433,16 @@ export function Overlay(props: OverlayProps): React.ReactElement {
  * routing; keystrokes (Ctrl-D / Ctrl-C / typing / mouse bytes) reach the
  * recorded child unmodified.
  */
-export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOptions = {}): RecLiveOverlayHandle {
+export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOverlayHandle {
   const out = opts.out ?? process.stdout
   const chromeStyle: ChromeStyle = opts.chromeStyle ?? "macos"
   const preset = chromeTokens(chromeStyle)
   const title = opts.title ?? ""
   const fps = opts.fps ?? DEFAULT_FPS
   const tickMs = Math.max(16, Math.floor(1000 / fps))
+
+  const cols = opts.cols ?? DEFAULT_GRID_COLS
+  const rows = opts.rows ?? DEFAULT_GRID_ROWS
 
   const hostCols = opts.hostCols ?? (() => out.columns ?? 80)
   const hostRows = opts.hostRows ?? (() => out.rows ?? 24)
@@ -400,6 +452,14 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
     elapsedMs: opts.startElapsedMs ?? 0,
     blinkTick: 0,
   })
+
+  // XtermAdapter wraps @xterm/headless inside the @silvery/ag ForeignSource
+  // lifecycle. record-cmd calls `handle.feed(data)` for each PTY byte burst;
+  // the adapter feeds those bytes into its internal xterm Terminal and
+  // mirrors the post-write buffer into the Viewport via ctx.blit() on a
+  // coalesced microtask. Cell domain is opaque to silvery — bg-coherence
+  // bypass is structural.
+  const adapter = XtermAdapter({ cols, rows, captureInput: "none" })
 
   let stopped = false
   let pendingRerender = false
@@ -426,19 +486,23 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
   // Mount silvery. `mode: "fullscreen"` enters the alt screen. `input:
   // false` mirrors the createTerm flag and defence-in-depth-gates every
   // probe + cleanup path that would otherwise touch stdin.
-  silveryRun(<Overlay terminal={terminal} title={title} preset={preset} store={store} />, term, {
-    mode: "fullscreen",
-    input: false,
-    // Mouse OFF for silvery — the host owns mouse-mode (see above).
-    mouse: false,
-    // Selection OFF — recordings typically don't want silvery's drag-
-    // select interfering with the recorded program's own selection.
-    selection: false,
-    // Focus reporting OFF — irrelevant for a non-interactive overlay.
-    focusReporting: false,
-    cols: hostCols(),
-    rows: hostRows(),
-  })
+  silveryRun(
+    <Overlay adapter={adapter} cols={cols} rows={rows} title={title} preset={preset} store={store} />,
+    term,
+    {
+      mode: "fullscreen",
+      input: false,
+      // Mouse OFF for silvery — the host owns mouse-mode (see above).
+      mouse: false,
+      // Selection OFF — recordings typically don't want silvery's drag-
+      // select interfering with the recorded program's own selection.
+      selection: false,
+      // Focus reporting OFF — irrelevant for a non-interactive overlay.
+      focusReporting: false,
+      cols: hostCols(),
+      rows: hostRows(),
+    },
+  )
     .then((handle) => {
       appHandle = handle
     })
@@ -453,10 +517,10 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
       }
     })
 
-  // FPS-capped paint coalescing: the recording loop calls `rerender()`
-  // per PTY byte burst (potentially thousands of times per second). We
-  // flip a dirty bit and only bump the store on the next FPS tick.
-  // Silvery's incremental renderer collapses identical paints further.
+  // FPS-capped paint coalescing: feed() flips a dirty bit and only bumps
+  // the store on the next FPS tick. Silvery's incremental renderer
+  // collapses identical paints further; the XtermAdapter's own microtask
+  // flush coalesces viewport-buffer dirty bits separately.
   const tickTimer = setInterval(() => {
     if (stopped) return
     if (!pendingRerender) return
@@ -482,6 +546,11 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
   void hostRows
 
   return {
+    feed(data: Uint8Array | string) {
+      if (stopped) return
+      adapter.feedAnsi(data)
+      pendingRerender = true
+    },
     rerender() {
       pendingRerender = true
     },
@@ -500,6 +569,8 @@ export function startRecLiveOverlay(terminal: Terminal, opts: RecLiveOverlayOpti
       clearInterval(blinkTimer)
       try {
         appHandle?.unmount()
+        // Silvery's unmount calls adapter.disconnect() via the Viewport
+        // unmount lifecycle — no need to call it ourselves.
       } catch {
         // Best-effort — the alt-screen exit below restores the host
         // regardless.
