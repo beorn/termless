@@ -5,6 +5,7 @@ export {
   type XtermAdapterHandle,
   type XtermAdapterOptions,
 } from "./viewport-adapter.ts"
+export type { ForeignSource } from "@silvery/ag"
 
 import { createXtermBackend } from "./backend.ts"
 import type { TerminalBackend, TerminalOptions } from "../../../src/terminal/types.ts"
