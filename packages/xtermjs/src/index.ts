@@ -1,4 +1,10 @@
 export { createXtermBackend } from "./backend.ts"
+export {
+  XtermAdapter,
+  type XtermAdapterChild,
+  type XtermAdapterHandle,
+  type XtermAdapterOptions,
+} from "./viewport-adapter.ts"
 
 import { createXtermBackend } from "./backend.ts"
 import type { TerminalBackend, TerminalOptions } from "../../../src/terminal/types.ts"
