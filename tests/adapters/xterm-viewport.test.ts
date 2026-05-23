@@ -18,10 +18,7 @@
 
 import { describe, test, expect, vi } from "vitest"
 
-import {
-  XtermAdapter,
-  type XtermAdapterChild,
-} from "../../packages/xtermjs/src/viewport-adapter.ts"
+import { XtermAdapter, type XtermAdapterChild } from "../../packages/xtermjs/src/viewport-adapter.ts"
 import type { CellBuffer, ViewportContext, ViewportRect } from "@silvery/ag/viewport-types"
 
 interface FakeCtxRecord {
@@ -32,7 +29,10 @@ interface FakeCtxRecord {
   invalidateAllCalls: number
 }
 
-function createFakeContext(cols: number, rows: number): {
+function createFakeContext(
+  cols: number,
+  rows: number,
+): {
   ctx: ViewportContext
   rec: FakeCtxRecord
 } {

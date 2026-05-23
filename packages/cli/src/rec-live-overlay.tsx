@@ -347,14 +347,7 @@ export function Overlay(props: OverlayProps): React.ReactElement {
   // the bg-coherence check entirely. captureInput="none" because the
   // overlay is non-interactive (record-cmd owns stdin → PTY pipe).
   const grid = (
-    <Viewport
-      cols={cols}
-      rows={rows}
-      source={adapter}
-      focusable={false}
-      captureInput="none"
-      cursorVisible={true}
-    />
+    <Viewport cols={cols} rows={rows} source={adapter} focusable={false} captureInput="none" cursorVisible={true} />
   )
 
   // The root box MUST own the full host surface. `width="100%" height="100%"`
@@ -486,23 +479,19 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
   // Mount silvery. `mode: "fullscreen"` enters the alt screen. `input:
   // false` mirrors the createTerm flag and defence-in-depth-gates every
   // probe + cleanup path that would otherwise touch stdin.
-  silveryRun(
-    <Overlay adapter={adapter} cols={cols} rows={rows} title={title} preset={preset} store={store} />,
-    term,
-    {
-      mode: "fullscreen",
-      input: false,
-      // Mouse OFF for silvery — the host owns mouse-mode (see above).
-      mouse: false,
-      // Selection OFF — recordings typically don't want silvery's drag-
-      // select interfering with the recorded program's own selection.
-      selection: false,
-      // Focus reporting OFF — irrelevant for a non-interactive overlay.
-      focusReporting: false,
-      cols: hostCols(),
-      rows: hostRows(),
-    },
-  )
+  silveryRun(<Overlay adapter={adapter} cols={cols} rows={rows} title={title} preset={preset} store={store} />, term, {
+    mode: "fullscreen",
+    input: false,
+    // Mouse OFF for silvery — the host owns mouse-mode (see above).
+    mouse: false,
+    // Selection OFF — recordings typically don't want silvery's drag-
+    // select interfering with the recorded program's own selection.
+    selection: false,
+    // Focus reporting OFF — irrelevant for a non-interactive overlay.
+    focusReporting: false,
+    cols: hostCols(),
+    rows: hostRows(),
+  })
     .then((handle) => {
       appHandle = handle
     })
