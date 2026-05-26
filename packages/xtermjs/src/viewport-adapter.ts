@@ -26,8 +26,11 @@
 import xtermPkg from "@xterm/headless"
 import { Unicode11Addon } from "@xterm/addon-unicode11"
 
-import type { Cell, CellAttrs } from "@silvery/ag/types"
 import type {
+  Cell,
+  CellAttrs,
+  CellBuffer,
+  ForeignSource,
   IslandContext,
   IslandGuest,
   IslandHandle,
@@ -35,14 +38,10 @@ import type {
   IslandKeyEvent,
   IslandMouseEvent,
   IslandProtocolModes,
-} from "@silvery/ag/island-types"
-import type {
-  CellBuffer,
-  ForeignSource,
   ViewportContext,
   ViewportInputMode,
   ViewportRect,
-} from "@silvery/ag/viewport-types"
+} from "./silvery-compat.ts"
 
 type IBufferCell = import("@xterm/headless").IBufferCell
 

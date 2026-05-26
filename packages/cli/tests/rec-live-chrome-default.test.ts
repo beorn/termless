@@ -55,7 +55,7 @@ describe("rec --live-chrome defaults to centered live macOS chrome (2026-05-26)"
     // "user passed --live-chrome none" from "user didn't pass anything".
     // The runtime then chooses macos for bare rec, or inherits concrete
     // output chrome styles.
-    const optionBlock = RECORD_CMD_SRC.match(/"--live-chrome <style>"[\s\S]{0,800}?\)\n/)?.[0]
+    const optionBlock = RECORD_CMD_SRC.match(/"--live-chrome <style>"[\s\S]{0,800}?\)\r?\n/)?.[0]
     expect(optionBlock, "could not locate --live-chrome option block").toBeTruthy()
     // The .option() call's third positional arg is the default value. We
     // need to NOT have it — match the closing `)` after the help string

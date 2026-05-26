@@ -19,7 +19,7 @@
 import { describe, test, expect, vi } from "vitest"
 
 import { XtermAdapter, type XtermAdapterChild } from "../../packages/xtermjs/src/viewport-adapter.ts"
-import type { CellBuffer, ViewportContext, ViewportRect } from "@silvery/ag/viewport-types"
+import type { CellBuffer, ViewportContext, ViewportRect } from "../../packages/xtermjs/src/silvery-compat.ts"
 
 interface FakeCtxRecord {
   blits: { rects: readonly ViewportRect[]; buffer: CellBuffer }[]

@@ -29,6 +29,7 @@
         "vue": "^3.5.31",
       },
       "optionalDependencies": {
+        "@napi-rs/canvas": "^1.0.0",
         "@resvg/resvg-js": "^2.6.2",
         "@twemoji/svg": "^15.0.0",
         "ghostty-web": "^0.4.0",
@@ -204,7 +205,11 @@
       },
       "peerDependencies": {
         "@termless/core": "*",
+        "silvery": ">=0.4.2",
       },
+      "optionalPeers": [
+        "silvery",
+      ],
     },
   },
   "overrides": {
@@ -1444,8 +1449,6 @@
     "@napi-rs/wasm-tools-wasm32-wasi/@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.1", "", { "dependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1", "@tybys/wasm-util": "^0.10.1" } }, "sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A=="],
 
     "@rolldown/binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
-
-    "@termless/cli/@termless/core": ["@termless/monorepo@root:", {}],
 
     "@termless/xtermjs/@termless/core": ["@termless/monorepo@root:", {}],
 

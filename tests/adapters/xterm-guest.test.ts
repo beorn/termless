@@ -9,7 +9,7 @@
 import { describe, expect, test } from "vitest"
 
 import { xtermGuest, type XtermGuestChild } from "../../packages/xtermjs/src/index.ts"
-import type { IslandContext } from "@silvery/ag/island-types"
+import type { IslandContext } from "../../packages/xtermjs/src/silvery-compat.ts"
 
 function createContext(cols: number, rows: number): IslandContext {
   const controller = new AbortController()

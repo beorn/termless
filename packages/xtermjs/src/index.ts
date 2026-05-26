@@ -9,7 +9,7 @@ export {
   type XtermGuestHandle,
   type XtermGuestOptions,
 } from "./viewport-adapter.ts"
-export type { ForeignSource } from "@silvery/ag"
+export type { ForeignSource } from "./silvery-compat.ts"
 
 import { createXtermBackend } from "./backend.ts"
 import type { TerminalBackend, TerminalOptions } from "../../../src/terminal/types.ts"
