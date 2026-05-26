@@ -1,9 +1,13 @@
 export { createXtermBackend } from "./backend.ts"
 export {
   XtermAdapter,
+  xtermGuest,
   type XtermAdapterChild,
   type XtermAdapterHandle,
   type XtermAdapterOptions,
+  type XtermGuestChild,
+  type XtermGuestHandle,
+  type XtermGuestOptions,
 } from "./viewport-adapter.ts"
 export type { ForeignSource } from "@silvery/ag"
 

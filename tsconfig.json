@@ -13,7 +13,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["@types/bun"],
+    "types": ["@types/bun", "react"],
     "lib": ["ESNext", "DOM"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"],

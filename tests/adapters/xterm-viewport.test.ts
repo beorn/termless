@@ -210,21 +210,13 @@ describe("XtermAdapter", () => {
     const { ctx } = createFakeContext(10, 2)
     a.connect(ctx)
 
-    // Driving onData requires triggering an xterm-internal event. The
-    // public path that fires it is `terminal.input(...)`, but we have no
-    // direct handle on the embedded terminal here — so we exercise the
-    // forwarding plumbing via the stdout pipe (the path that fires for a
-    // real PTY child) and assert the listener is registered.
     expect(stdoutListeners.length).toBe(1)
 
-    // Drive the listener manually with some bytes; this proves the pipe is
-    // wired so feedAnsi/stdout share the same write path.
-    stdoutListeners[0]!(new TextEncoder().encode("ok"))
-    // child.stdin should not have received anything yet — feeding the
-    // terminal doesn't trigger onData; only programmatic input() does.
-    // This assertion guards against the easy mis-wiring where stdout
-    // bytes get echoed back to stdin.
-    expect(stdinWrites.length).toBe(0)
+    // DSR asks the terminal to report its cursor position. xterm emits the
+    // response through onData, which the adapter must forward to child.stdin
+    // while interactive capture is enabled.
+    a.feedAnsi("\x1b[6n")
+    expect(stdinWrites).toEqual(["\x1b[1;1R"])
   })
 
   test("disconnect() unsubscribes the child stdout listener", () => {

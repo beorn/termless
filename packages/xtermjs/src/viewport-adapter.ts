@@ -28,6 +28,15 @@ import { Unicode11Addon } from "@xterm/addon-unicode11"
 
 import type { Cell, CellAttrs } from "@silvery/ag/types"
 import type {
+  IslandContext,
+  IslandGuest,
+  IslandHandle,
+  IslandInputEvent,
+  IslandKeyEvent,
+  IslandMouseEvent,
+  IslandProtocolModes,
+} from "@silvery/ag/island-types"
+import type {
   CellBuffer,
   ForeignSource,
   ViewportContext,
@@ -40,16 +49,48 @@ type IBufferCell = import("@xterm/headless").IBufferCell
 const { Terminal } = xtermPkg
 
 type XTerminal = InstanceType<typeof Terminal>
+type XtermDataChunk = Buffer | Uint8Array | string
 
 /** Minimal PTY-child shape — duck-typed so the adapter doesn't depend on a specific spawn library. */
-export interface XtermAdapterChild {
-  stdout: {
-    on(event: "data", listener: (chunk: Buffer | Uint8Array | string) => void): unknown
-    off?(event: "data", listener: (chunk: Buffer | Uint8Array | string) => void): unknown
+export interface XtermGuestChild {
+  stdout?: {
+    on(event: "data", listener: (chunk: XtermDataChunk) => void): unknown
+    off?(event: "data", listener: (chunk: XtermDataChunk) => void): unknown
   }
   stdin?: {
     write(chunk: Uint8Array | string): unknown
   }
+  write?(chunk: string): unknown
+  resize?(cols: number, rows: number): unknown
+  kill?(signal?: string | number): unknown
+  close?(): unknown
+  exited?: Promise<number | { code?: number; reason?: string }>
+}
+
+/** Legacy Viewport adapter child shape. */
+export interface XtermAdapterChild extends XtermGuestChild {
+  stdout: NonNullable<XtermGuestChild["stdout"]>
+}
+
+/** Options accepted by {@link xtermGuest}. */
+export interface XtermGuestOptions {
+  cols: number
+  rows: number
+  child?: XtermGuestChild
+  /** Scrollback rows kept by the embedded Terminal. Default: 0 (overlay-style use). */
+  scrollback?: number
+  /** Protocol modes the PTY guest asks the host to enable while focused. */
+  modes?: IslandProtocolModes
+}
+
+export interface XtermGuestHandle extends IslandHandle {
+  /** Feed raw ANSI bytes directly into the embedded xterm Terminal mirror. */
+  feedAnsi(chunk: Uint8Array | string): void
+}
+
+interface XtermIslandHandleOptions extends XtermGuestOptions {
+  onTitle?: (title: string) => void
+  shouldForwardTerminalData?: () => boolean
 }
 
 /** Options accepted by {@link XtermAdapter}. */
@@ -201,15 +242,16 @@ function snapshotBuffer(term: XTerminal): CellBuffer {
   }
 }
 
-/**
- * Construct an {@link XtermAdapter} ForeignSource.
- *
- * @example
- *   const adapter = XtermAdapter({ cols: 80, rows: 24, child: pty, captureInput: "all" })
- *   <Viewport cols={80} rows={24} source={adapter} captureInput="all" />
- */
-export function XtermAdapter(opts: XtermAdapterOptions): XtermAdapterHandle {
-  let term: XTerminal | null = new Terminal({
+// xterm.js `write()` is async — the parser drains on the next microtask.
+// The internal `_writeBuffer.writeSync(...)` path parses immediately, which
+// is required so snapshots reflect the bytes just fed. Same trick the
+// termless backend uses for tests.
+function writeSync(t: XTerminal, data: string): void {
+  ;(t as unknown as { _core: { _writeBuffer: { writeSync(d: string): void } } })._core._writeBuffer.writeSync(data)
+}
+
+function createXtermTerminal(opts: { cols: number; rows: number; scrollback?: number }): XTerminal {
+  const term = new Terminal({
     cols: opts.cols,
     rows: opts.rows,
     scrollback: opts.scrollback ?? 0,
@@ -217,94 +259,275 @@ export function XtermAdapter(opts: XtermAdapterOptions): XtermAdapterHandle {
   })
   term.loadAddon(new Unicode11Addon())
   term.unicode.activeVersion = "11"
+  return term
+}
 
-  let ctx: ViewportContext | null = null
-  let inputMode: ViewportInputMode = opts.captureInput ?? "none"
-  const disposables: { dispose(): void }[] = []
+function defaultXtermGuestModes(): IslandProtocolModes {
+  return {
+    bracketedPaste: true,
+    kittyKeyboard: true,
+    mouseTracking: "any",
+    focusReporting: true,
+  }
+}
+
+function createAsyncEventStream(
+  add: (listener: (event: IslandInputEvent) => void) => () => void,
+): AsyncIterable<IslandInputEvent> {
+  return {
+    [Symbol.asyncIterator]() {
+      const queue: IslandInputEvent[] = []
+      let pending: ((result: IteratorResult<IslandInputEvent>) => void) | null = null
+      let done = false
+      const unsubscribe = add((event) => {
+        if (done) return
+        if (pending) {
+          const resolve = pending
+          pending = null
+          resolve({ value: event, done: false })
+        } else {
+          queue.push(event)
+        }
+      })
+
+      return {
+        next(): Promise<IteratorResult<IslandInputEvent>> {
+          if (queue.length > 0) return Promise.resolve({ value: queue.shift()!, done: false })
+          if (done) return Promise.resolve({ value: undefined, done: true })
+          return new Promise((resolve) => {
+            pending = resolve
+          })
+        },
+        return(): Promise<IteratorResult<IslandInputEvent>> {
+          done = true
+          unsubscribe()
+          if (pending) {
+            const resolve = pending
+            pending = null
+            resolve({ value: undefined, done: true })
+          }
+          return Promise.resolve({ value: undefined, done: true })
+        },
+      }
+    },
+  }
+}
+
+function normalizeExit(result: number | { code?: number; reason?: string }): { code?: number; reason?: string } {
+  return typeof result === "number" ? { code: result } : result
+}
+
+function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHandle {
+  let term: XTerminal | null = createXtermTerminal(opts)
+  let cols = opts.cols
+  let rows = opts.rows
+  let buffer: CellBuffer = snapshotBuffer(term)
+  let disposed = false
+  let outputScheduled = false
   const decoder = new TextDecoder()
-  let flushScheduled = false
+  const sizeListeners = new Set<(size: { cols: number; rows: number }) => void>()
+  const outputListeners = new Set<() => void>()
+  const modeListeners = new Set<(modes: IslandProtocolModes) => void>()
+  const keyListeners = new Set<(event: IslandKeyEvent) => void>()
+  const mouseListeners = new Set<(event: IslandMouseEvent) => void>()
+  const pasteListeners = new Set<(text: string) => void>()
+  const inputEventListeners = new Set<(event: IslandInputEvent) => void>()
+  const modes = opts.modes ?? defaultXtermGuestModes()
+  const disposables: { dispose(): void }[] = []
+  let resolveExit: ((exit: { code?: number; reason?: string }) => void) | null = null
+  const exit = opts.child?.exited
+    ? opts.child.exited.then(normalizeExit)
+    : new Promise<{ code?: number; reason?: string }>((resolve) => {
+        resolveExit = resolve
+      })
 
-  // xterm.js `write()` is async — the parser drains on the next microtask.
-  // The internal `_writeBuffer.writeSync(...)` path parses immediately, which
-  // is required so the snapshot captured inside our microtask flush reflects
-  // the bytes we just fed. Same trick the termless backend uses for tests.
-  function writeSync(t: XTerminal, data: string): void {
-    ;(t as unknown as { _core: { _writeBuffer: { writeSync(d: string): void } } })._core._writeBuffer.writeSync(data)
+  function notifySize(): void {
+    const size = { cols, rows }
+    for (const listener of sizeListeners) listener(size)
   }
 
-  const onStdoutData = (chunk: Buffer | Uint8Array | string): void => {
-    if (!term) return
+  function notifyOutput(): void {
+    for (const listener of outputListeners) listener()
+  }
+
+  function scheduleOutput(): void {
+    if (outputScheduled || !term) return
+    outputScheduled = true
+    queueMicrotask(() => {
+      outputScheduled = false
+      if (!term || disposed) return
+      buffer = snapshotBuffer(term)
+      notifyOutput()
+    })
+  }
+
+  function feedAnsi(chunk: Uint8Array | string): void {
+    if (!term || disposed) return
     const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
     writeSync(term, data)
-    scheduleFlush()
+    scheduleOutput()
   }
 
-  function scheduleFlush(): void {
-    if (flushScheduled || !term || !ctx) return
-    flushScheduled = true
-    // Use microtask so a burst of writes coalesces into a single blit.
-    queueMicrotask(flush)
+  const onStdoutData = (chunk: XtermDataChunk): void => {
+    feedAnsi(typeof chunk === "string" ? chunk : chunk instanceof Buffer ? chunk : new Uint8Array(chunk))
+  }
+  opts.child?.stdout?.on("data", onStdoutData)
+  if (opts.onTitle) {
+    disposables.push(term.onTitleChange(opts.onTitle))
   }
 
-  function flush(): void {
-    flushScheduled = false
-    if (!term || !ctx) return
-    const cols = term.cols
-    const rows = term.rows
-    const snapshot = snapshotBuffer(term)
-    const fullRect: ViewportRect = { row: 0, col: 0, width: cols, height: rows }
-    ctx.blit([fullRect], snapshot)
-    const buf = term.buffer.active
-    ctx.setCursor({ row: buf.cursorY, col: buf.cursorX })
+  function writeToChild(data: string): void {
+    if (opts.child?.write) {
+      opts.child.write(data)
+    } else {
+      opts.child?.stdin?.write(data)
+    }
   }
 
-  const handle: XtermAdapterHandle = {
-    connect(c: ViewportContext): void {
-      ctx = c
-      if (!term) return
+  if (opts.child && (opts.child.write || opts.child.stdin)) {
+    disposables.push(
+      term.onData((data: string) => {
+        if (opts.shouldForwardTerminalData?.() ?? true) writeToChild(data)
+      }),
+    )
+  }
 
-      disposables.push(
-        term.onCursorMove(() => {
-          if (!term || !ctx) return
-          const buf = term.buffer.active
-          ctx.setCursor({ row: buf.cursorY, col: buf.cursorX })
-        }),
-      )
-      disposables.push(
-        term.onTitleChange((title: string) => {
-          ctx?.emitTitle?.(title)
-        }),
-      )
+  function signalChild(signal: "SIGINT" | "SIGTSTP" | "SIGTERM" | "SIGKILL", fallback: string | null): void {
+    if (opts.child?.kill) {
+      opts.child.kill(signal)
+      return
+    }
+    if (fallback != null) {
+      writeToChild(fallback)
+      return
+    }
+    void opts.child?.close?.()
+  }
 
-      opts.child?.stdout.on("data", onStdoutData)
+  function resize(nextCols: number, nextRows: number): void {
+    if (!term || disposed) return
+    opts.child?.resize?.(nextCols, nextRows)
+    term.resize(nextCols, nextRows)
+    cols = nextCols
+    rows = nextRows
+    buffer = snapshotBuffer(term)
+    notifySize()
+    notifyOutput()
+  }
 
-      if (opts.child?.stdin) {
-        disposables.push(
-          term.onData((data: string) => {
-            if (inputMode === "keys" || inputMode === "all") {
-              opts.child!.stdin!.write(data)
-            }
-          }),
-        )
-      }
+  function emitInputEvent(event: IslandInputEvent): void {
+    for (const listener of inputEventListeners) listener(event)
+  }
 
-      ctx.requestInputMode(inputMode)
-
-      // Initial paint — guarantees the Viewport renders a defined buffer on
-      // the first frame, before any PTY bytes arrive.
-      scheduleFlush()
+  const handle: XtermGuestHandle = {
+    size: {
+      get cols() {
+        return cols
+      },
+      get rows() {
+        return rows
+      },
+      subscribe(listener) {
+        sizeListeners.add(listener)
+        return () => sizeListeners.delete(listener)
+      },
+      requestResize: resize,
     },
-
-    disconnect(): void {
-      for (const d of disposables) {
+    output: {
+      get buffer() {
+        return buffer
+      },
+      get cursor() {
+        if (!term) return null
+        const active = term.buffer.active
+        return { row: active.cursorY, col: active.cursorX, style: "block" as const }
+      },
+      get cursorVisible() {
+        return term !== null
+      },
+      subscribe(listener) {
+        outputListeners.add(listener)
+        return () => outputListeners.delete(listener)
+      },
+      writeCells(_dirtyRects, nextBuffer) {
+        buffer = nextBuffer
+        notifyOutput()
+      },
+      invalidateAll() {
+        notifyOutput()
+      },
+    },
+    input: {
+      onKey(handler) {
+        keyListeners.add(handler)
+        return () => keyListeners.delete(handler)
+      },
+      onMouse(handler) {
+        mouseListeners.add(handler)
+        return () => mouseListeners.delete(handler)
+      },
+      onPaste(handler) {
+        pasteListeners.add(handler)
+        return () => pasteListeners.delete(handler)
+      },
+      feed(bytes) {
+        writeToChild(decoder.decode(bytes))
+        emitInputEvent({ kind: "feed", bytes })
+      },
+      events() {
+        return createAsyncEventStream((listener) => {
+          inputEventListeners.add(listener)
+          return () => inputEventListeners.delete(listener)
+        })
+      },
+      sendEof() {
+        writeToChild("\x04")
+      },
+    },
+    modes: {
+      get modes() {
+        return modes
+      },
+      subscribe(listener) {
+        modeListeners.add(listener)
+        return () => modeListeners.delete(listener)
+      },
+    },
+    signals: {
+      sendSigint() {
+        signalChild("SIGINT", "\x03")
+      },
+      sendSigtstp() {
+        signalChild("SIGTSTP", "\x1a")
+      },
+      sendSigterm() {
+        signalChild("SIGTERM", null)
+      },
+      sendSigkill() {
+        signalChild("SIGKILL", null)
+      },
+      exit,
+    },
+    feedAnsi,
+    dispose() {
+      if (disposed) return
+      disposed = true
+      opts.child?.stdout?.off?.("data", onStdoutData)
+      for (const disposable of disposables) {
         try {
-          d.dispose()
+          disposable.dispose()
         } catch {
-          // Disposable may already be torn down; ignore.
+          // Ignore.
         }
       }
       disposables.length = 0
-      opts.child?.stdout.off?.("data", onStdoutData)
+      sizeListeners.clear()
+      outputListeners.clear()
+      modeListeners.clear()
+      keyListeners.clear()
+      mouseListeners.clear()
+      pasteListeners.clear()
+      inputEventListeners.clear()
       if (term) {
         try {
           term.dispose()
@@ -313,18 +536,83 @@ export function XtermAdapter(opts: XtermAdapterOptions): XtermAdapterHandle {
         }
         term = null
       }
+      resolveExit?.({ reason: "disposed" })
+      resolveExit = null
+    },
+  }
+
+  return handle
+}
+
+export function xtermGuest(opts: XtermGuestOptions): IslandGuest {
+  return {
+    capabilities: { input: true, modes: true, resize: true },
+    init(ctx: IslandContext): Promise<IslandHandle> {
+      const handle = createXtermIslandHandle({ ...opts, cols: ctx.cols, rows: ctx.rows })
+      ctx.abortSignal.addEventListener("abort", () => void handle.dispose(), { once: true })
+      ctx.emit({ type: "ready" })
+      return Promise.resolve(handle)
+    },
+  }
+}
+
+/**
+ * Construct an {@link XtermAdapter} ForeignSource.
+ *
+ * @deprecated Use {@link xtermGuest} with silvery `<Island>` instead. This
+ * shim shares the same xterm island core during the Viewport migration window.
+ *
+ * @example
+ *   const adapter = XtermAdapter({ cols: 80, rows: 24, child: pty, captureInput: "all" })
+ *   <Viewport cols={80} rows={24} source={adapter} captureInput="all" />
+ */
+export function XtermAdapter(opts: XtermAdapterOptions): XtermAdapterHandle {
+  let ctx: ViewportContext | null = null
+  let inputMode: ViewportInputMode = opts.captureInput ?? "none"
+  let island: XtermGuestHandle | null = createXtermIslandHandle({
+    ...opts,
+    onTitle: (title) => ctx?.emitTitle?.(title),
+    shouldForwardTerminalData: () => inputMode === "keys" || inputMode === "all",
+  })
+  let unsubscribeOutput: (() => void) | null = null
+
+  function flush(): void {
+    if (!island || !ctx) return
+    const cols = island.size.cols
+    const rows = island.size.rows
+    const fullRect: ViewportRect = { row: 0, col: 0, width: cols, height: rows }
+    ctx.blit([fullRect], island.output.buffer)
+    const cursor = island.output.cursor
+    if (cursor) ctx.setCursor({ row: cursor.row, col: cursor.col })
+  }
+
+  const handle: XtermAdapterHandle = {
+    connect(c: ViewportContext): void {
+      ctx = c
+      if (!island) return
+      unsubscribeOutput = island.output.subscribe(flush)
+
+      ctx.requestInputMode(inputMode)
+
+      // Initial paint — guarantees the Viewport renders a defined buffer on
+      // the first frame, before any PTY bytes arrive.
+      flush()
+    },
+
+    disconnect(): void {
+      unsubscribeOutput?.()
+      unsubscribeOutput = null
+      void island?.dispose()
+      island = null
       ctx = null
     },
 
     desiredSize(): { cols: number; rows: number } {
-      return { cols: opts.cols, rows: opts.rows }
+      return { cols: island?.size.cols ?? opts.cols, rows: island?.size.rows ?? opts.rows }
     },
 
     feedAnsi(chunk: Uint8Array | string): void {
-      if (!term) return
-      const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
-      writeSync(term, data)
-      scheduleFlush()
+      island?.feedAnsi(chunk)
     },
 
     get inputMode(): ViewportInputMode {
