@@ -22,8 +22,8 @@ export interface Cell {
   fg: string | null
   bg: string | null
   attrs: CellAttrs
-  wide?: boolean
-  continuation?: boolean
+  wide: boolean
+  continuation: boolean
 }
 
 export interface CellBuffer {
