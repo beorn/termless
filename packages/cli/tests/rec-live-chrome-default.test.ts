@@ -1,9 +1,8 @@
 /**
- * Regression test: `termless rec --live-chrome` defaults to whatever
- * `--chrome` is set to (user mental model: "I asked for chrome, give me
- * chrome"). Bare `rec` still has both chrome and live-chrome off — that
- * preserves the 2026-05-22 safety default against the compositing-leak
- * bugs in the silvery-mounted overlay path.
+ * Regression test: `termless rec --live-chrome` defaults to a live macOS
+ * chrome again now that the overlay is an Island boundary. When output
+ * `--chrome` is set to a concrete style, live chrome follows that style;
+ * `--live-chrome none` remains the explicit opt-out.
  *
  * Background (history):
  *
@@ -17,17 +16,19 @@
  *   The 2026-05-22 default-off interim was too aggressive — it caught
  *   even the explicit-chrome opt-in path. See
  *   `@km/termless/rec-live-chrome-centered-frame`.
- * - 2026-05-26 fix: `--live-chrome` inherits from `--chrome` when
- *   unspecified, so `--chrome macos` opts into BOTH bordered output AND
- *   centered macOS chrome on the live preview. Bare `rec` still has both
- *   `none`. Pass `--live-chrome none` explicitly to keep output chrome
- *   while opting out of the live overlay.
+ * - 2026-05-26 Phase 2 interim: `--live-chrome` inherited from `--chrome`
+ *   when unspecified, so `--chrome macos` opted into BOTH bordered output
+ *   AND centered macOS chrome on the live preview. Bare `rec` still had
+ *   both `none` while Islands was incomplete.
+ * - 2026-05-26 Phase 3: rec-live-overlay moved to `<Island guest={xtermGuest}>`.
+ *   The structural boundary exists, so bare `rec` can show the centered REC
+ *   chrome by default again. Pass `--live-chrome none` to opt out.
  *
  * If this test starts failing because the default was flipped back to
- * unconditional `"none"`, verify FIRST that the user's "I want chrome
- * on live recording" feature can still be reached via a single-flag
- * opt-in. Until islands ships the by-construction-correct overlay,
- * passing `--chrome` MUST imply `--live-chrome` of the same style.
+ * unconditional `"none"`, verify FIRST that the centered live REC overlay
+ * still appears for bare `rec`. Passing `--chrome` MUST keep implying a
+ * matching `--live-chrome` style, unless the user explicitly passes
+ * `--live-chrome none`.
  */
 
 import { describe, expect, test } from "vitest"
@@ -36,28 +37,24 @@ import { join } from "node:path"
 
 const RECORD_CMD_SRC = readFileSync(join(__dirname, "..", "src", "record-cmd.ts"), "utf8")
 
-describe("rec --live-chrome inherits from --chrome when unspecified (2026-05-26)", () => {
-  test("runtime: liveChromeStyle defaults to chromeStyle when --live-chrome is unset", () => {
-    // The runtime resolution: liveChrome = opts.liveChrome ?? chromeStyle.
-    // This is the load-bearing line — without it, `rec --chrome macos`
-    // gives bordered output but flush-top-left raw-stdout live preview.
+describe("rec --live-chrome defaults to centered live macOS chrome (2026-05-26)", () => {
+  test("runtime: bare rec defaults liveChromeStyle to macos, styled output syncs live style", () => {
     expect(RECORD_CMD_SRC).toMatch(
-      /const liveChromeStyle:\s*ChromeStyle\s*=\s*\(opts\.liveChrome[^)]*\)\s*\?\?\s*chromeStyle/,
+      /const defaultLiveChromeStyle:\s*ChromeStyle\s*=\s*chromeStyle\s*===\s*"none"\s*\?\s*"macos"\s*:\s*chromeStyle/,
     )
-    // Must NOT fall back to a hardcoded literal — that's the 2026-05-22
-    // interim shape that produced the user-visible regression.
+    expect(RECORD_CMD_SRC).toMatch(
+      /const liveChromeStyle:\s*ChromeStyle\s*=\s*\(opts\.liveChrome[^)]*\)\s*\?\?\s*defaultLiveChromeStyle/,
+    )
     expect(RECORD_CMD_SRC).not.toMatch(
       /const liveChromeStyle:\s*ChromeStyle\s*=\s*\(opts\.liveChrome[^)]*\)\s*\?\?\s*"none"/,
-    )
-    expect(RECORD_CMD_SRC).not.toMatch(
-      /const liveChromeStyle:\s*ChromeStyle\s*=\s*\(opts\.liveChrome[^)]*\)\s*\?\?\s*"macos"/,
     )
   })
 
   test("CLI --live-chrome option declares NO default value (commander leaves it undefined)", () => {
     // Removing the commander default is what lets the runtime distinguish
     // "user passed --live-chrome none" from "user didn't pass anything".
-    // The runtime then inherits from chromeStyle.
+    // The runtime then chooses macos for bare rec, or inherits concrete
+    // output chrome styles.
     const optionBlock = RECORD_CMD_SRC.match(/"--live-chrome <style>"[\s\S]{0,800}?\)\n/)?.[0]
     expect(optionBlock, "could not locate --live-chrome option block").toBeTruthy()
     // The .option() call's third positional arg is the default value. We
@@ -67,11 +64,10 @@ describe("rec --live-chrome inherits from --chrome when unspecified (2026-05-26)
     expect(optionBlock).not.toMatch(/,\s*"macos"\s*,?\s*\)\s*$/m)
   })
 
-  test("CLI --chrome option still defaults to 'none' — the safety default for bare `rec`", () => {
-    // `--chrome` is the FIRST flag the user reaches for. Its default is
-    // load-bearing: bare `rec` ⇒ `chromeStyle = "none"` ⇒ inherited
-    // `liveChromeStyle = "none"` ⇒ overlay disabled ⇒ no compositing-
-    // leak bugs hit users who don't ask for chrome.
+  test("CLI --chrome option still defaults to 'none' for rendered output", () => {
+    // Output artifacts stay unframed by default. Live preview is now a
+    // separate by-construction-safe default (`macos`) unless the user passes
+    // `--live-chrome none`.
     // The --chrome option line is single-line; locate by the literal flag
     // marker and assert the trailing `, "none")` default-value tail.
     const chromeLine = RECORD_CMD_SRC.split("\n").find((line) => line.includes('"--chrome <style>"'))
@@ -79,10 +75,12 @@ describe("rec --live-chrome inherits from --chrome when unspecified (2026-05-26)
     expect(chromeLine).toMatch(/,\s*"none"\)\s*$/)
   })
 
-  test("CLI help text documents the inheritance behavior", () => {
-    // The help string should explain "--live-chrome inherits from --chrome".
+  test("CLI help text documents the default and opt-out behavior", () => {
+    // The help string should explain the live macOS default plus the explicit
+    // opt-out and output-chrome sync behavior.
     // Future readers (humans + LLMs) need to see this without grep-spelunking
     // the runtime default site.
-    expect(RECORD_CMD_SRC).toMatch(/Defaults? to whatever\s+\\?`--chrome\\?`/i)
+    expect(RECORD_CMD_SRC).toMatch(/defaults? to a centered macOS chrome/i)
+    expect(RECORD_CMD_SRC).toMatch(/--live-chrome none/i)
   })
 })

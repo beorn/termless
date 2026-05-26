@@ -377,20 +377,20 @@ async function interactiveRecord(
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
   const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "browser" | "auto" | undefined) ?? "auto"
-  // Defensive default `"none"` — by the time this function runs, the caller
-  // (recordAction) has ALREADY resolved liveChrome by inheriting from --chrome
+  // Defensive default `"macos"` — by the time this function runs, the caller
+  // (recordAction) has ALREADY resolved liveChrome to the Phase-3 default
   // when --live-chrome wasn't explicit, so a defined value should always be
-  // passed. The `?? "none"` keeps the fallback safe in case a future caller
-  // forgets the inheritance. See @km/termless/rec-live-chrome-centered-frame.
+  // passed. The fallback keeps future callers on the by-construction-safe
+  // centered live overlay unless they explicitly choose `none`.
   //
   // History: 2026-05-22 (`7425ba5`) flipped the default macos→none after 6
   // rounds of compositing-leak bugs (15551/15575/15586/15589.A/B/C/D +
   // round-6 OSC-probe + keystroke-echo + Ctrl-D-dead). 2026-05-26 fixed the
   // user-reported "explicit --chrome macos still shows raw-stdout" regression
-  // by making --live-chrome INHERIT from --chrome instead of falling back to
-  // a hardcoded literal. The structural cleanup (silvery <Island> primitive —
-  // @km/silvery/15646-islands) lifts this whole conditional.
-  const liveChrome: ChromeStyle = opts.liveChrome ?? "none"
+  // by making --live-chrome inherit from concrete --chrome values. Phase 3
+  // moved the overlay to `<Island guest={xtermGuest}>`, so bare `rec` can
+  // safely show centered macOS live chrome again.
+  const liveChrome: ChromeStyle = opts.liveChrome ?? "macos"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
   const termFont = detectTerminalFont()
@@ -506,9 +506,9 @@ async function interactiveRecord(
       // downgraded a `macos`/`windows` request to `none` for a small host.
       chromeStyle: effectiveChrome,
       title: cmdLabel,
-      // Post-B2: the overlay creates its own XtermAdapter internally
+      // Post-Islands: the overlay creates its own xtermGuest internally
       // (replaces the pre-B2 <SilveryTerminal terminal={headlessTerminal}/>
-      // pattern). The adapter is sized to the recorded grid — record-cmd's
+      // pattern). The guest is sized to the recorded grid — record-cmd's
       // headlessTerminal still exists for the asciicast/screenshot pipeline
       // but is no longer the live overlay's render source.
       cols: gridCols,
@@ -555,7 +555,7 @@ async function interactiveRecord(
         if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
       }
       // Live preview routing: when the chrome overlay is mounted, feed the
-      // PTY bytes into the overlay's XtermAdapter (silvery's <Viewport>
+      // PTY bytes into the overlay's xtermGuest (silvery's <Island>
       // renders them inside the chrome). The headlessTerminal also still
       // receives the bytes above (for the asciicast/screenshot capture
       // pipeline — orthogonal consumer). `--live-chrome none` keeps the
@@ -916,14 +916,14 @@ async function recordAction(
     return
   }
   const chromeStyle: ChromeStyle = (opts.chrome as ChromeStyle | undefined) ?? "none"
-  // `--live-chrome` defaults to whatever `--chrome` is — so `rec --chrome macos`
-  // gives chrome on BOTH the output AND the live preview (user mental model:
-  // "I asked for chrome, give me chrome"). Bare `rec` still defaults to `none`
-  // for both, preserving the 2026-05-22 safety default against the compositing
-  // leak bugs in the silvery-mounted overlay path. Pass `--live-chrome none`
-  // explicitly to opt out of the live overlay while keeping the output chrome.
+  // `--live-chrome` defaults to a centered macOS live preview for bare `rec`.
+  // If `--chrome` asks for a concrete output style, live chrome follows that
+  // style so `rec --chrome windows` doesn't show mismatched live macOS chrome.
+  // Pass `--live-chrome none` explicitly to opt out of the live overlay while
+  // keeping output chrome.
   // See @km/termless/rec-live-chrome-centered-frame.
-  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? chromeStyle
+  const defaultLiveChromeStyle: ChromeStyle = chromeStyle === "none" ? "macos" : chromeStyle
+  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? defaultLiveChromeStyle
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -1072,10 +1072,9 @@ export function registerRecordCommand(program: Command): void {
     .option(
       "--live-chrome <style>",
       `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")}. ` +
-        `Defaults to whatever \`--chrome\` is set to — passing \`--chrome macos\` opts into both ` +
-        `bordered output AND a centered macOS chrome on the live preview. Pass \`--live-chrome none\` ` +
-        `explicitly to keep the output chrome while opting OUT of the live overlay (e.g. on a narrow ` +
-        `host, or while the silvery <Island> compositing rework ships — see @km/silvery/15646-islands).`,
+        `Defaults to a centered macOS chrome for bare recordings; concrete \`--chrome\` styles also ` +
+        `set the live style. Pass \`--live-chrome none\` explicitly to keep raw stdout live preview ` +
+        `while still rendering output chrome.`,
     )
     .option("--title <text>", "Title text in the window chrome bar (default: the recorded command)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")

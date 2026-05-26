@@ -1,19 +1,15 @@
 /**
- * Live recording overlay — silvery `<Viewport>` + XtermAdapter composition.
+ * Live recording overlay — silvery `<Island>` + xtermGuest composition.
  *
  * Architecture
  * ────────────
- * - Silvery's `<Viewport>` component mounts the PTY mirror inside a
- *   bordered chrome `<Box>`. The Viewport is silvery's nested-cell-domain
- *   composition primitive (see `@silvery/ag/viewport-types.ts`) — it owns
- *   an opaque cell buffer that bypasses silvery's bg-coherence invariant
- *   for the foreign cells. Chrome (status bar, title bar, border) is
- *   normal silvery `<Box>` + `<Text>`; the Viewport is a leaf inside that
- *   chrome.
- * - The XtermAdapter (`@termless/xtermjs`) implements the `ForeignSource`
- *   contract. It feeds ANSI bytes from the PTY child into its private
- *   xterm.js Terminal, then mirrors the post-write buffer into the
- *   Viewport via `ctx.blit()` on a coalesced microtask.
+ * - Silvery's `<Island>` component mounts the PTY mirror inside a bordered
+ *   chrome `<Box>`. The Island owns the external cell buffer boundary, so
+ *   chrome (status bar, title bar, border) remains normal silvery `<Box>` +
+ *   `<Text>` while recorded PTY content stays an opaque guest cell grid.
+ * - The xtermGuest (`@termless/xtermjs`) implements the `IslandGuest`
+ *   contract. It feeds ANSI bytes into its private xterm.js Terminal, then
+ *   exposes the post-write buffer through the Island output owner.
  * - The host process keeps stdin for itself (record-cmd's stdin → PTY
  *   pipe must reach the recorded child unmodified). Silvery is mounted
  *   with `{ input: false }` so it never grabs stdin — see
@@ -30,7 +26,7 @@
  *
  * State flow: the handle methods (feed / rerender / setElapsedMs / stop)
  * push values into a small external store; the <Overlay> component
- * subscribes via `useSyncExternalStore` and re-renders. The XtermAdapter's
+ * subscribes via `useSyncExternalStore` and re-renders. xtermGuest's
  * microtask flush coalesces multiple feed bursts into one paint cycle.
  *
  * The public API surface (`RecLiveOverlayOptions`, `RecLiveOverlayHandle`,
@@ -42,10 +38,10 @@
  * Phase B2 of `@km/silvery/15731-surface-nested-composition-primitive`.
  */
 
-import React, { useEffect, useMemo, useRef } from "react"
-import { Box, Text, Viewport, createTerm } from "silvery"
+import React from "react"
+import { Box, Island, Text, createTerm, type IslandGuest } from "silvery"
 import { run as silveryRun } from "silvery/runtime"
-import { XtermAdapter, type XtermAdapterHandle } from "@termless/xtermjs"
+import { xtermGuest, type XtermGuestChild } from "@termless/xtermjs"
 import { CSI_LEAVE_ALT_SCREEN, CSI_SHOW_CURSOR, SGR_RESET } from "../../../src/render/ansi.ts"
 import type { ChromeStyle } from "../../../src/render/chrome.ts"
 
@@ -84,11 +80,11 @@ export interface RecLiveOverlayOptions {
 /** Handle returned by {@link startRecLiveOverlay}. */
 export interface RecLiveOverlayHandle {
   /**
-   * Feed PTY bytes (raw or decoded text) into the embedded XtermAdapter
-   * so the Viewport's cell buffer reflects the recorded program's latest
+   * Feed PTY bytes (raw or decoded text) into the embedded xtermGuest
+   * so the Island's cell buffer reflects the recorded program's latest
    * output. record-cmd calls this from its `onData` callback alongside
    * `headlessTerminal.feed(text)` — the two consumers (asciicast/image
-   * capture via headlessTerminal vs live overlay via adapter) are peers
+   * capture via headlessTerminal vs live overlay via xtermGuest) are peers
    * on the same byte stream, not chained subscribers.
    */
   feed(data: Uint8Array | string): void
@@ -97,7 +93,7 @@ export interface RecLiveOverlayHandle {
    * record-cmd called this after writing to the headless terminal. Since
    * `feed()` already bumps the revision counter (which the React tree
    * picks up via useSyncExternalStore), this is a no-op alias kept for
-   * API-shape stability with the pre-Viewport version.
+   * API-shape stability with the pre-Island version.
    */
   rerender(): void
   /** Force an immediate full repaint (e.g. on host resize). */
@@ -142,8 +138,8 @@ export const DEFAULT_GRID_ROWS = 30
 /**
  * Chrome overhead — the cells the overlay's silvery component tree consumes
  * AROUND the recorded grid, per chrome style. This is the single source of
- * truth for the size contract: the recorded child PTY (and the XtermAdapter
- * mirroring it) MUST be sized to `host − chromeOverhead` so the Viewport
+ * truth for the size contract: the recorded child PTY (and the xtermGuest
+ * mirroring it) MUST be sized to `host − chromeOverhead` so the Island
  * grid always fits the viewport that displays it. Sizing the recorded child
  * independently of this is the root cause of `@km/termless/15589`
  * (host-scrollback bleed + recorded-app line-wrap).
@@ -210,8 +206,8 @@ export function resolveLiveChrome(hostCols: number, hostRows: number, requested:
  *   - host ≥ DEFAULT_GRID + chromeOverhead → grid = DEFAULT_GRID (letterbox)
  *   - host < DEFAULT_GRID + chromeOverhead → grid = max(MIN_GRID, host - chromeOverhead)
  *
- * Pure function — no silvery, no XtermAdapter, no TTY. Same semantics as
- * the pre-Viewport version; the contract is independent of which component
+ * Pure function — no silvery, no xtermGuest, no TTY. Same semantics as
+ * the pre-Island version; the contract is independent of which component
  * renders the grid.
  */
 export function clampGridToHost(
@@ -303,7 +299,7 @@ type OverlayStore = ReturnType<typeof createOverlayStore>
  * ownership + no-overflow contract without spinning up a real PTY.
  */
 export interface OverlayProps {
-  adapter: XtermAdapterHandle
+  guest: IslandGuest
   cols: number
   rows: number
   title: string
@@ -313,18 +309,18 @@ export interface OverlayProps {
 
 /**
  * The live-overlay React tree — status bar + spacer + (optionally bordered)
- * recorded grid via `<Viewport>`, centred on a full-surface background
+ * recorded grid via `<Island>`, centred on a full-surface background
  * that the overlay OWNS. Exported for tests; production code reaches it
  * via {@link startRecLiveOverlay}.
  */
 export function Overlay(props: OverlayProps): React.ReactElement {
-  const { adapter, cols, rows, title, preset, store } = props
+  const { guest, cols, rows, title, preset, store } = props
 
   // useSyncExternalStore — every store.set() bumps re-render through
   // silvery's convergence loop. Multiple bumps in the same React batch
   // coalesce into one paint (silvery's incremental renderer handles
-  // the actual diff). The XtermAdapter's own microtask flush coalesces
-  // viewport-buffer dirty bits separately.
+  // the actual diff). xtermGuest's own microtask flush coalesces island
+  // output-buffer dirty bits separately.
   const state = React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
   const { elapsedMs, blinkTick } = state
 
@@ -339,15 +335,14 @@ export function Overlay(props: OverlayProps): React.ReactElement {
     </Box>
   )
 
-  // Viewport replaces the pre-B2 <SilveryTerminal terminal={terminal} />
-  // call site. The bg-coherence violation that bead @km/silvery/15506
-  // patchworked (chalk bg color from the recorded program vs silvery's
-  // bufferBg) is structurally impossible across the Viewport boundary —
-  // silvery's pipeline dispatches on type === "silvery-viewport" and skips
-  // the bg-coherence check entirely. captureInput="none" because the
-  // overlay is non-interactive (record-cmd owns stdin → PTY pipe).
+  // Island replaces the previous <Viewport source={XtermAdapter}> shim. The
+  // bg-coherence violation that bead @km/silvery/15506 patchworked (chalk bg
+  // color from the recorded program vs silvery's bufferBg) is structurally
+  // impossible across the Island boundary. The overlay is non-interactive:
+  // record-cmd owns stdin → PTY pipe, so per-island input/modes are narrowed
+  // off even though xtermGuest supports them for interactive uses.
   const grid = (
-    <Viewport cols={cols} rows={rows} source={adapter} focusable={false} captureInput="none" cursorVisible={true} />
+    <Island guest={guest} cols={cols} rows={rows} focusable={false} capabilities={{ input: false, modes: false }} />
   )
 
   // The root box MUST own the full host surface. `width="100%" height="100%"`
@@ -414,6 +409,44 @@ export function Overlay(props: OverlayProps): React.ReactElement {
   )
 }
 
+interface BufferedXtermGuest {
+  guest: IslandGuest
+  feed(data: Uint8Array | string): void
+}
+
+type XtermStdoutListener = Parameters<NonNullable<XtermGuestChild["stdout"]>["on"]>[1]
+
+function createBufferedXtermGuest(cols: number, rows: number): BufferedXtermGuest {
+  const listeners = new Set<XtermStdoutListener>()
+  const pending: Array<Uint8Array | string> = []
+  const child: XtermGuestChild = {
+    stdout: {
+      on(event, listener) {
+        if (event !== "data") return undefined
+        listeners.add(listener)
+        const backlog = pending.splice(0)
+        for (const chunk of backlog) listener(chunk)
+        return undefined
+      },
+      off(event, listener) {
+        if (event === "data") listeners.delete(listener)
+        return undefined
+      },
+    },
+  }
+
+  return {
+    guest: xtermGuest({ cols, rows, child, modes: {} }),
+    feed(data) {
+      if (listeners.size === 0) {
+        pending.push(data)
+        return
+      }
+      for (const listener of listeners) listener(data)
+    },
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public entry point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -446,13 +479,11 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
     blinkTick: 0,
   })
 
-  // XtermAdapter wraps @xterm/headless inside the @silvery/ag ForeignSource
+  // xtermGuest wraps @xterm/headless inside the @silvery/ag IslandGuest
   // lifecycle. record-cmd calls `handle.feed(data)` for each PTY byte burst;
-  // the adapter feeds those bytes into its internal xterm Terminal and
-  // mirrors the post-write buffer into the Viewport via ctx.blit() on a
-  // coalesced microtask. Cell domain is opaque to silvery — bg-coherence
-  // bypass is structural.
-  const adapter = XtermAdapter({ cols, rows, captureInput: "none" })
+  // the buffered child stdout shape lets the guest subscribe when its Island
+  // lifecycle starts without losing early PTY bytes.
+  const overlayGuest = createBufferedXtermGuest(cols, rows)
 
   let stopped = false
   let pendingRerender = false
@@ -479,19 +510,23 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
   // Mount silvery. `mode: "fullscreen"` enters the alt screen. `input:
   // false` mirrors the createTerm flag and defence-in-depth-gates every
   // probe + cleanup path that would otherwise touch stdin.
-  silveryRun(<Overlay adapter={adapter} cols={cols} rows={rows} title={title} preset={preset} store={store} />, term, {
-    mode: "fullscreen",
-    input: false,
-    // Mouse OFF for silvery — the host owns mouse-mode (see above).
-    mouse: false,
-    // Selection OFF — recordings typically don't want silvery's drag-
-    // select interfering with the recorded program's own selection.
-    selection: false,
-    // Focus reporting OFF — irrelevant for a non-interactive overlay.
-    focusReporting: false,
-    cols: hostCols(),
-    rows: hostRows(),
-  })
+  silveryRun(
+    <Overlay guest={overlayGuest.guest} cols={cols} rows={rows} title={title} preset={preset} store={store} />,
+    term,
+    {
+      mode: "fullscreen",
+      input: false,
+      // Mouse OFF for silvery — the host owns mouse-mode (see above).
+      mouse: false,
+      // Selection OFF — recordings typically don't want silvery's drag-
+      // select interfering with the recorded program's own selection.
+      selection: false,
+      // Focus reporting OFF — irrelevant for a non-interactive overlay.
+      focusReporting: false,
+      cols: hostCols(),
+      rows: hostRows(),
+    },
+  )
     .then((handle) => {
       appHandle = handle
     })
@@ -508,8 +543,8 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
 
   // FPS-capped paint coalescing: feed() flips a dirty bit and only bumps
   // the store on the next FPS tick. Silvery's incremental renderer
-  // collapses identical paints further; the XtermAdapter's own microtask
-  // flush coalesces viewport-buffer dirty bits separately.
+  // collapses identical paints further; xtermGuest's own microtask flush
+  // coalesces island-buffer dirty bits separately.
   const tickTimer = setInterval(() => {
     if (stopped) return
     if (!pendingRerender) return
@@ -537,7 +572,7 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
   return {
     feed(data: Uint8Array | string) {
       if (stopped) return
-      adapter.feedAnsi(data)
+      overlayGuest.feed(data)
       pendingRerender = true
     },
     rerender() {
@@ -558,8 +593,8 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
       clearInterval(blinkTimer)
       try {
         appHandle?.unmount()
-        // Silvery's unmount calls adapter.disconnect() via the Viewport
-        // unmount lifecycle — no need to call it ourselves.
+        // Silvery's unmount disposes the Island guest lifecycle — no need to
+        // reach through to xtermGuest internals here.
       } catch {
         // Best-effort — the alt-screen exit below restores the host
         // regardless.

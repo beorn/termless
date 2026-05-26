@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **`termless rec` default `--live-chrome` flipped from `macos` to `none` (raw-stdout passthrough)** — the silvery-mounted bordered-chrome overlay path had 6 rounds of compositing-leak bugs (host-scrollback bleed, CJK width drift, OSC palette-probe responses leaking as visible cells, keystroke echo into the recorded grid, Ctrl-D not reaching the stop handler). The structural fix is the silvery `<Island>` primitive ([`@km/silvery/15646-islands`](../../@km/silvery/15646-islands.md)) — a quarter-investment epic. Meanwhile, the default flips to `none`: the recorded program (km view, nvim, htop, any TUI) renders directly to the host terminal, which handles probes natively. The headless backend continues to capture for `.cast`/`.gif`/`.png` artifacts — recordings work exactly as before, just without the live silvery chrome wrapper. Opt back into the legacy overlay with `--live-chrome macos` (or `windows`); the path remains for users who explicitly want it and accept the bug class. The opt-in path will become by-construction-correct when the `<Island>` primitive ships.
+- **`termless rec` default live chrome restored to centered `macos`** — the live overlay now mounts recorded PTY output through silvery `<Island guest={xtermGuest}>`, so the old compositing-leak class is isolated at the island boundary instead of patched by disabling chrome. Bare `termless rec` shows the centered REC chrome again; concrete `--chrome macos|windows` styles also set the live style; `--live-chrome none` remains the explicit raw-stdout passthrough.
 
 ### Added
 

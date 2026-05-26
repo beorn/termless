@@ -21,7 +21,7 @@ import {
   MIN_GRID_ROWS,
 } from "../src/rec-live-overlay.tsx"
 
-// Post-B2 the overlay creates its own XtermAdapter internally (from
+// Post-Islands the overlay creates its own xtermGuest internally (from
 // the cols/rows opts) — the pre-B2 fakeTerm() stub is gone. The tests
 // here verify only the public handle surface (start/stop, idempotency,
 // no throws); full component rendering is covered by silvery's own

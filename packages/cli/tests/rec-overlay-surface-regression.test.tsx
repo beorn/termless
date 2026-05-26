@@ -34,51 +34,78 @@
 import React from "react"
 import { describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
-import type { XtermAdapterHandle } from "@termless/xtermjs"
-import type { ForeignSource, ViewportContext } from "@silvery/ag/viewport-types"
-import { createCellBuffer } from "@silvery/ag/viewport-buffer"
+import { ScopeProvider } from "silvery"
+import { createScope } from "@silvery/scope"
+import { createCellBuffer, type MutableCellBuffer } from "@silvery/ag/viewport-buffer"
 import type { Cell } from "@silvery/ag/types"
+import type { IslandGuest, IslandHandle, IslandOutputOwner, IslandSizeOwner } from "@silvery/ag/island-types"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
 /**
- * Mock ForeignSource shaped like XtermAdapterHandle (extends ForeignSource).
- * Blits a uniform `fill`-char buffer with a bg color on connect — synchronous,
- * unlike XtermAdapter's microtask-coalesced blit, so the rendered output
- * contains the fill char by the time createRenderer returns.
- *
- * This is the surface-regression fixture's stand-in for a real XtermAdapter.
- * Post-B2 (@km/silvery/15739) the production Overlay uses XtermAdapter; the
- * test verifies what the OVERLAY ROOT paints (host cell coverage, chrome
- * letterbox, no overflow), which is independent of which ForeignSource impl
- * provides the inner cells. The structural invariant "every cell has bg" is
- * what this fixture asserts; XtermAdapter would satisfy it equivalently in
- * the production path but its microtask-coalesced blit doesn't flush
- * synchronously under createRenderer.
+ * Mock IslandGuest that blits a uniform `fill`-char buffer with a bg color.
+ * This is the surface-regression fixture's stand-in for the real xtermGuest;
+ * the test verifies what the OVERLAY ROOT paints (host cell coverage, chrome
+ * letterbox, no overflow), independent of which IslandGuest provides the
+ * inner cells.
  */
-function mockAdapter(cols: number, rows: number, fill = "X"): XtermAdapterHandle {
-  const source: ForeignSource = {
-    connect(ctx: ViewportContext) {
-      const buf = createCellBuffer(cols, rows)
-      const cell: Cell = {
-        char: fill,
-        fg: null,
-        bg: "#008000",
-        attrs: {},
-        wide: false,
-        continuation: false,
-      }
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) buf.setCell(c, r, cell)
-      }
-      ctx.blit([{ row: 0, col: 0, width: cols, height: rows }], buf)
-    },
-    disconnect() {},
+function fillBuffer(buf: MutableCellBuffer, fill: string): MutableCellBuffer {
+  const cell: Cell = {
+    char: fill,
+    fg: null,
+    bg: "#008000",
+    attrs: {},
+    wide: false,
+    continuation: false,
   }
-  return Object.assign(source, {
-    feedAnsi: () => {},
-    inputMode: "none" as const,
-    setInputMode: () => {},
-  })
+  for (let r = 0; r < buf.rows; r++) {
+    for (let c = 0; c < buf.cols; c++) buf.setCell(c, r, cell)
+  }
+  return buf
+}
+
+function mockGuest(fill = "X"): IslandGuest {
+  const subscribers = new Set<() => void>()
+  return {
+    init(ctx) {
+      let cols = ctx.cols
+      let rows = ctx.rows
+      const buf = fillBuffer(createCellBuffer(cols, rows), fill)
+      const size: IslandSizeOwner = {
+        get cols() {
+          return cols
+        },
+        get rows() {
+          return rows
+        },
+        subscribe: () => () => {},
+        requestResize(nextCols, nextRows) {
+          cols = nextCols
+          rows = nextRows
+        },
+      }
+      const output: IslandOutputOwner = {
+        buffer: buf,
+        cursor: null,
+        cursorVisible: false,
+        subscribe(listener) {
+          subscribers.add(listener)
+          return () => subscribers.delete(listener)
+        },
+        writeCells() {},
+        invalidateAll() {
+          for (const listener of subscribers) listener()
+        },
+      }
+      const handle: IslandHandle = { size, output, dispose() {} }
+      ctx.emit({ type: "ready" })
+      return Promise.resolve(handle)
+    },
+  }
+}
+
+async function flushIslandMount(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0))
+  await new Promise<void>((resolve) => setTimeout(resolve, 0))
 }
 
 /**
@@ -86,30 +113,29 @@ function mockAdapter(cols: number, rows: number, fill = "X"): XtermAdapterHandle
  * `clampGridToHost` — the 15614 size contract `record-cmd.ts` enforces
  * (fixed-default + letterbox + clamp-down).
  */
-function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
+async function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
   const grid = clampGridToHost(hostCols, hostRows, style)
-  const adapter = mockAdapter(grid.cols, grid.rows)
+  const guest = mockGuest()
   const store = createOverlayStore({ revision: 0, elapsedMs: 0, blinkTick: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
-  const app = render(
-    <Overlay
-      adapter={adapter}
-      cols={grid.cols}
-      rows={grid.rows}
-      title="rec"
-      preset={chromeTokens(style)}
-      store={store}
-    />,
+  const scope = createScope("rec-overlay-island-test")
+  const tree = () => (
+    <ScopeProvider scope={scope}>
+      <Overlay guest={guest} cols={grid.cols} rows={grid.rows} title="rec" preset={chromeTokens(style)} store={store} />
+    </ScopeProvider>
   )
+  const app = render(tree())
+  await flushIslandMount()
+  app.rerender(tree())
   return { app, grid }
 }
 
 describe("rec live overlay — surface ownership (no host-scrollback bleed)", () => {
   for (const style of ["macos", "windows", "none"] as const) {
-    test(`${style}: the overlay root paints EVERY host cell — no unpainted margin`, () => {
+    test(`${style}: the overlay root paints EVERY host cell — no unpainted margin`, async () => {
       const HOST_COLS = 120
       const HOST_ROWS = 40
-      const { app } = renderOverlay(HOST_COLS, HOST_ROWS, style)
+      const { app } = await renderOverlay(HOST_COLS, HOST_ROWS, style)
       const buffer = app.lastBuffer()
       expect(buffer).not.toBeNull()
       if (!buffer) return
@@ -130,12 +156,12 @@ describe("rec live overlay — surface ownership (no host-scrollback bleed)", ()
     })
   }
 
-  test("the rendered overlay never exceeds the host viewport (no overflow)", () => {
+  test("the rendered overlay never exceeds the host viewport (no overflow)", async () => {
     // CLS-style invariant: with the viewport-fit contract the laid-out tree
     // fits the host. A pre-fix 80×30 grid in an 80-col host overflowed.
     const HOST_COLS = 80
     const HOST_ROWS = 30
-    const { app } = renderOverlay(HOST_COLS, HOST_ROWS, "macos")
+    const { app } = await renderOverlay(HOST_COLS, HOST_ROWS, "macos")
     const buffer = app.lastBuffer()
     expect(buffer).not.toBeNull()
     if (!buffer) return
@@ -145,7 +171,7 @@ describe("rec live overlay — surface ownership (no host-scrollback bleed)", ()
 })
 
 describe("rec live overlay — recorded grid fits its container (no line-wrap)", () => {
-  test("the recorded-grid <Text> rows render at the fitted width, not 80", () => {
+  test("the recorded-grid Island rows render at the fitted width, not 80", async () => {
     // Pre-15589: hardcoded 80 grid in 80-col host overflowed (chrome pushed
     // it to 82 → wrap). Post-15589 (size-fit, now superseded): grid was
     // `host − chrome` (= 78 here). Post-15614 (fixed-default + clamp-down):
@@ -154,7 +180,7 @@ describe("rec live overlay — recorded grid fits its container (no line-wrap)",
     // the grid stays at 80 (letterboxed), which is the user-decided contract.
     const HOST_COLS = 80
     const HOST_ROWS = 30
-    const { app, grid } = renderOverlay(HOST_COLS, HOST_ROWS, "macos")
+    const { app, grid } = await renderOverlay(HOST_COLS, HOST_ROWS, "macos")
     // Narrow host: clamp-down to host − chrome = 78×25.
     expect(grid.cols).toBe(78)
     // The recorded fill char appears on screen — the grid rendered.
@@ -165,12 +191,12 @@ describe("rec live overlay — recorded grid fits its container (no line-wrap)",
     expect(grid.cols + 2).toBe(HOST_COLS)
   })
 
-  test("a wide host LETTERBOXES the recorded grid at 80×30 — does NOT grow with the host (15614)", () => {
+  test("a wide host LETTERBOXES the recorded grid at 80×30 — does NOT grow with the host (15614)", async () => {
     // Pre-15614 contract (size-fit, REJECTED by the user): grid grew with
     // host — 200×60 host yielded a 198×55 grid. Post-15614 (user-decided
     // fixed-default + letterbox): the grid STAYS AT 80×30 regardless of
     // host width. The chrome box is letterboxed inside the 200×60 host.
-    const { grid } = renderOverlay(200, 60, "macos")
+    const { grid } = await renderOverlay(200, 60, "macos")
     expect(grid.cols).toBe(80)
     expect(grid.rows).toBe(30)
   })
