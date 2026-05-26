@@ -482,6 +482,64 @@ describe("screenshotSvg", () => {
     expect(svg).toContain("a &amp; b &lt;c&gt;")
   })
 
+  // Helper — extract the font-size attribute of the title <text> element.
+  // The renderer emits the title with the windowTitle string inside; we find
+  // the matching <text …>title</text> element and pull its font-size.
+  function titleFontSizeFrom(svg: string, title: string): number | null {
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const re = new RegExp(`<text[^>]*>${escaped}<\\/text>`)
+    const match = svg.match(re)
+    if (!match) return null
+    const sizeMatch = match[0].match(/font-size="(\d+(?:\.\d+)?)"/)
+    return sizeMatch ? Number(sizeMatch[1]) : null
+  }
+
+  test("windowTitle font-size scales with cell fontSize (macos bar)", () => {
+    // Regression test for @km/termless/19232 — title was hardcoded at 13px,
+    // independent of cell fontSize. User reported the chrome title looking
+    // "much smaller than the terminal text inside". Fix: title scales with
+    // fontSize, capped by the bar so it can't overflow vertically.
+    const term = createMockReadable(["Hi"])
+
+    // Default fontSize is 16. Title should be ~16, not 13.
+    const svgDefault = screenshotSvg(term, { windowBar: "colorful", windowTitle: "demo" })
+    const sizeDefault = titleFontSizeFrom(svgDefault, "demo")
+    expect(sizeDefault).not.toBeNull()
+    // The title should be at LEAST the cell fontSize (16) — not the old hardcoded 13.
+    expect(sizeDefault!).toBeGreaterThanOrEqual(16)
+
+    // Larger cells: fontSize 20. Title should grow.
+    const svgLarge = screenshotSvg(term, { fontSize: 20, windowBar: "colorful", windowTitle: "demo" })
+    const sizeLarge = titleFontSizeFrom(svgLarge, "demo")
+    expect(sizeLarge).not.toBeNull()
+    expect(sizeLarge!).toBeGreaterThanOrEqual(sizeDefault!)
+  })
+
+  test("windowTitle font-size capped by windowBarSize (no overflow)", () => {
+    // For very large fontSize, the title must not exceed roughly half the
+    // bar height — otherwise it overflows the chrome bar vertically.
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, {
+      fontSize: 80, // absurdly large
+      windowBar: "colorful",
+      windowBarSize: 38,
+      windowTitle: "x",
+    })
+    const size = titleFontSizeFrom(svg, "x")
+    expect(size).not.toBeNull()
+    // Cap is ~bar * 0.5 = 19; allow some headroom.
+    expect(size!).toBeLessThanOrEqual(24)
+  })
+
+  test("windowTitle font-size scales with cell fontSize (windows bar)", () => {
+    // Same regression for the windows-style title bar.
+    const term = createMockReadable(["Hi"])
+    const svg = screenshotSvg(term, { windowBar: "windows", windowTitle: "demo.sh" })
+    const size = titleFontSizeFrom(svg, "demo.sh")
+    expect(size).not.toBeNull()
+    expect(size!).toBeGreaterThanOrEqual(16)
+  })
+
   // ── Drop shadow ──
 
   test("shadow emits a feDropShadow filter and applies it", () => {

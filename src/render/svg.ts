@@ -513,8 +513,15 @@ function renderWindowBar(
   borderRadius: number,
   themeBg: string,
   title: string | null,
+  fontSize: number,
 ): string[] {
   if (style === "none") return []
+
+  // Title text scales with the cell fontSize so the chrome bar's title reads
+  // at a similar weight to the terminal content inside — capped at ~half the
+  // bar height so it can't overflow vertically. The cap floor of 13 preserves
+  // pre-19232 behavior on small bars (windowBarSize ≤ 28).
+  const titleFontSize = Math.max(13, Math.min(fontSize, Math.round(barHeight * 0.5)))
 
   const parts: string[] = []
   const barColor = deriveBarColor(themeBg)
@@ -561,7 +568,7 @@ function renderWindowBar(
     // Title text — left-aligned, the Windows convention.
     if (title) {
       parts.push(
-        `<text x="14" y="${cy}" font-size="13" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
+        `<text x="14" y="${cy}" font-size="${titleFontSize}" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
       )
     }
     return parts
@@ -596,7 +603,7 @@ function renderWindowBar(
   if (title) {
     const titleStartX = dotStartX + 40 + dotRadius + 14 // 80
     parts.push(
-      `<text x="${titleStartX}" y="${dotY}" font-size="13" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="bold" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
+      `<text x="${titleStartX}" y="${dotY}" font-size="${titleFontSize}" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="bold" fill="${titleColor}" dominant-baseline="central">${escapeXml(title)}</text>`,
     )
   }
 
@@ -610,6 +617,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   const {
     cellWidth,
     cellHeight,
+    fontSize,
     themeFg,
     themeBg,
     padding,
@@ -736,7 +744,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   // Window bar
   if (windowBar !== "none") {
     parts.push(`<g transform="translate(${margin}, ${margin})">`)
-    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius, themeBg, windowTitle))
+    parts.push(...renderWindowBar(innerWidth, barHeight, windowBar, borderRadius, themeBg, windowTitle, fontSize))
     parts.push(`</g>`)
   }
 
