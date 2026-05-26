@@ -14,6 +14,8 @@ import {
   collectOutputPath,
   compatRecord,
   COMPAT_TERMINALS,
+  classifyRecorderInput,
+  shouldUpdateHostWindowTitle,
 } from "../src/record-cmd.ts"
 
 function stripAnsi(text: string): string {
@@ -242,6 +244,18 @@ describe("recording UX formatting", () => {
     expect(recordingTitle("km view ./vault")).toBe("● REC — km view ./vault")
     expect(recordingTitle("km view ./vault", 154_000)).toBe("● REC 2:34 — km view ./vault")
     expect(setTitleSequence("● REC — km view ./vault")).toBe("\x1b]0;● REC — km view ./vault\x07")
+  })
+
+  it("treats Ctrl-D as the recorder-owned stop key", () => {
+    expect(classifyRecorderInput(new Uint8Array([0x04]))).toBe("stop")
+    expect(classifyRecorderInput(new Uint8Array([0x03]))).toBe("forward")
+    expect(classifyRecorderInput(new TextEncoder().encode("d"))).toBe("forward")
+  })
+
+  it("does not update the host window title while the live overlay owns output", () => {
+    expect(shouldUpdateHostWindowTitle("macos")).toBe(false)
+    expect(shouldUpdateHostWindowTitle("windows")).toBe(false)
+    expect(shouldUpdateHostWindowTitle("none")).toBe(true)
   })
 })
 

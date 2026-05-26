@@ -31,6 +31,7 @@
 
 import type { Command } from "@silvery/commander"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import { executeTape } from "../../../src/recording/tape/executor.ts"
@@ -68,6 +69,25 @@ export const RESTORE_TITLE_SEQUENCE = "\x1b[23;0t"
 export const REC_CHILD_ENV: Readonly<Record<string, string>> = Object.freeze({
   TERMLESS_REC: "1",
 })
+
+export function recordingChildDebugLogPath(now = Date.now(), pid = process.pid): string {
+  return `${tmpdir()}/termless-rec-child-${pid}-${now}.log`
+}
+
+export function recordingChildEnv(baseEnv: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const debug = baseEnv.DEBUG
+    ? baseEnv.DEBUG.includes("-silvery:guard")
+      ? baseEnv.DEBUG
+      : `${baseEnv.DEBUG},-silvery:guard`
+    : undefined
+
+  return {
+    ...REC_CHILD_ENV,
+    ...(baseEnv.DEBUG_LOG ? { DEBUG_LOG: baseEnv.DEBUG_LOG } : { DEBUG_LOG: recordingChildDebugLogPath() }),
+    ...(baseEnv.LOG_LEVEL ? { LOG_LEVEL: baseEnv.LOG_LEVEL } : { LOG_LEVEL: "warn" }),
+    ...(debug ? { DEBUG: debug } : {}),
+  }
+}
 
 export const DEFAULT_COLS = 80
 /** Default terminal rows — room for real apps without dominating the page. */
@@ -174,6 +194,16 @@ export function recordingTitle(cmdLabel: string, elapsedMs?: number): string {
 
 export function setTitleSequence(title: string): string {
   return `\x1b]0;${title.replace(/[\x00-\x1f\x7f]/g, " ")}\x07`
+}
+
+export type RecorderInputAction = "forward" | "stop"
+
+export function classifyRecorderInput(bytes: Uint8Array): RecorderInputAction {
+  return bytes.length === 1 && bytes[0] === 0x04 ? "stop" : "forward"
+}
+
+export function shouldUpdateHostWindowTitle(liveChrome: ChromeStyle): boolean {
+  return liveChrome === "none"
 }
 
 // =============================================================================
@@ -428,15 +458,22 @@ async function interactiveRecord(
   const startTime = Date.now()
 
   // Window title with live timer (invisible in recording — only on real terminal).
-  process.stderr.write(SAVE_TITLE_SEQUENCE)
-  let titleRestored = false
+  //
+  // The silvery live overlay owns process output while it is mounted. Writing
+  // OSC title bytes to stderr during that window is captured by silvery's
+  // output guard and replayed as visible escape garbage on exit. Keep title
+  // updates only for the raw-stdout live path; the overlay has its own visible
+  // REC clock.
+  const updateHostWindowTitle = shouldUpdateHostWindowTitle(liveChrome)
+  if (updateHostWindowTitle) process.stderr.write(SAVE_TITLE_SEQUENCE)
+  let titleRestored = !updateHostWindowTitle
   const restoreTitle = () => {
     if (titleRestored) return
     process.stderr.write(RESTORE_TITLE_SEQUENCE)
     titleRestored = true
   }
   const setTitle = (title: string) => process.stderr.write(setTitleSequence(title))
-  setTitle(recordingTitle(cmdLabel))
+  if (updateHostWindowTitle) setTitle(recordingTitle(cmdLabel))
   // Per-second cadence: drive the overlay's elapsed clock + toggle the
   // window-bar dot (●  vs   ) so the host title appears to blink alongside
   // the on-screen ● REC indicator. The live overlay's own 30 fps paint
@@ -449,7 +486,7 @@ async function interactiveRecord(
     const titleLabel = blinkOn
       ? recordingTitle(cmdLabel, elapsed)
       : recordingTitle(cmdLabel, elapsed).replace("● ", "  ")
-    setTitle(titleLabel)
+    if (updateHostWindowTitle) setTitle(titleLabel)
     if (liveView) liveView.setElapsedMs(elapsed)
   }, 1000)
 
@@ -533,9 +570,13 @@ async function interactiveRecord(
     command: cmd,
     cols: gridCols,
     rows: gridRows,
-    // `REC_CHILD_ENV` — generic recording-mode env signal (see export
-    // above). Honoring CLIs bail probe-driven theme detection when set.
-    env: { ...REC_CHILD_ENV },
+    // `recordingChildEnv()` — generic recording-mode env signal (see export
+    // above) plus DEBUG_LOG hygiene. Honoring CLIs bail probe-driven theme
+    // detection when `TERMLESS_REC=1` is set. If the user did not already
+    // provide DEBUG_LOG, give the child a temp log sink so its own
+    // alt-screen output guard does not replay diagnostic chatter into the
+    // recorded PTY on exit.
+    env: recordingChildEnv(),
     onData: (data: Uint8Array) => {
       const text = ptyDecoder.decode(data, { stream: true })
       // Record output event for asciicast
@@ -665,6 +706,12 @@ async function interactiveRecord(
       // empty-bytes path would silently drop every keystroke and Ctrl-C
       // alike. See `@km/termless/15541-rec-recording-mode-ux`.
       const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk)
+
+      if (classifyRecorderInput(bytes) === "stop") {
+        void pty.close()
+        return
+      }
+
       inputEvents.push({ time: Date.now() - startTime, bytes: new Uint8Array(bytes) })
 
       // Update keystroke label for overlay

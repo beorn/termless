@@ -39,8 +39,8 @@
  */
 
 import React from "react"
-import { Box, Island, Text, createTerm, type IslandGuest } from "silvery"
-import { run as silveryRun } from "silvery/runtime"
+import { Box, Island, Text, type IslandGuest } from "silvery"
+import { run as silveryRun, type RunOptions } from "silvery/runtime"
 import { xtermGuest, type XtermGuestChild } from "@termless/xtermjs"
 import { CSI_LEAVE_ALT_SCREEN, CSI_SHOW_CURSOR, SGR_RESET } from "../../../src/render/ansi.ts"
 import type { ChromeStyle } from "../../../src/render/chrome.ts"
@@ -102,6 +102,14 @@ export interface RecLiveOverlayHandle {
   setElapsedMs(ms: number): void
   /** Stop the painter, restore the host terminal, leave alt screen. */
   stop(): void
+}
+
+type RecorderOverlayRunOptions = RunOptions & {
+  /**
+   * Runtime-supported by silvery createApp; not exposed on every supported
+   * silvery RunOptions type yet.
+   */
+  guardOutput?: boolean
 }
 
 const DEFAULT_FPS = 30
@@ -498,34 +506,32 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
   // means it doesn't own host mouse mode, so the snooper's emissions
   // land on the host terminal directly.
 
-  // Construct a Term with stdin ownership opted out. The Term still owns
-  // stdout (so silvery owns the alt-screen entry / paint / cursor) but
-  // the host's stdin → PTY pipe runs unmodified.
-  const term = createTerm({
+  // Mount silvery. `mode: "fullscreen"` enters the alt screen. `input:
+  // false` defence-in-depth-gates every probe + cleanup path that would
+  // otherwise touch stdin.
+  const runOptions: RecorderOverlayRunOptions = {
+    mode: "fullscreen",
     stdout: out,
     stdin: process.stdin,
     input: false,
-  })
+    // Mouse OFF for silvery — the host owns mouse-mode (see above).
+    mouse: false,
+    // Selection OFF — recordings typically don't want silvery's drag-
+    // select interfering with the recorded program's own selection.
+    selection: false,
+    // Focus reporting OFF — irrelevant for a non-interactive overlay.
+    focusReporting: false,
+    // The recorder is itself the host process. Silvery's output guard is
+    // useful for normal apps, but here its activation/deactivation logs and
+    // buffered replay become visible recorder noise after Ctrl-D.
+    guardOutput: false,
+    cols: hostCols(),
+    rows: hostRows(),
+  }
 
-  // Mount silvery. `mode: "fullscreen"` enters the alt screen. `input:
-  // false` mirrors the createTerm flag and defence-in-depth-gates every
-  // probe + cleanup path that would otherwise touch stdin.
   silveryRun(
     <Overlay guest={overlayGuest.guest} cols={cols} rows={rows} title={title} preset={preset} store={store} />,
-    term,
-    {
-      mode: "fullscreen",
-      input: false,
-      // Mouse OFF for silvery — the host owns mouse-mode (see above).
-      mouse: false,
-      // Selection OFF — recordings typically don't want silvery's drag-
-      // select interfering with the recorded program's own selection.
-      selection: false,
-      // Focus reporting OFF — irrelevant for a non-interactive overlay.
-      focusReporting: false,
-      cols: hostCols(),
-      rows: hostRows(),
-    },
+    runOptions,
   )
     .then((handle) => {
       appHandle = handle
@@ -610,11 +616,6 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
         out.write(SGR_RESET + CSI_LEAVE_ALT_SCREEN + CSI_SHOW_CURSOR)
       } catch {
         /* terminal may be gone */
-      }
-      try {
-        ;(term as unknown as Disposable)[Symbol.dispose]?.()
-      } catch {
-        // Best-effort term cleanup.
       }
     },
   }

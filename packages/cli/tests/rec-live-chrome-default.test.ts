@@ -83,4 +83,9 @@ describe("rec --live-chrome defaults to centered live macOS chrome (2026-05-26)"
     expect(RECORD_CMD_SRC).toMatch(/defaults? to a centered macOS chrome/i)
     expect(RECORD_CMD_SRC).toMatch(/--live-chrome none/i)
   })
+
+  test("live overlay disables silvery output guard chatter", () => {
+    const overlaySrc = readFileSync(join(__dirname, "..", "src", "rec-live-overlay.tsx"), "utf8")
+    expect(overlaySrc).toMatch(/guardOutput:\s*false/)
+  })
 })

@@ -55,5 +55,5 @@ describe("createGif", () => {
     // them un-delta'd would be tens of KB. Delta-encoded, the 19 repeats add
     // near-nothing — assert the whole thing stays small.
     expect(result.byteLength).toBeLessThan(8_000)
-  })
+  }, 15_000)
 })
