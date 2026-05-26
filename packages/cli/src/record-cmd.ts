@@ -377,16 +377,19 @@ async function interactiveRecord(
   const raw = opts.raw ?? false
   const showKeys = opts.showKeys ?? false
   const renderer = (opts.renderer as "canvas" | "resvg" | "swash" | "browser" | "auto" | undefined) ?? "auto"
-  // Default `"none"` — raw-stdout passthrough. Pre-2026-05-22 the default was
-  // `"macos"` (silvery-mounted bordered chrome around the recorded grid), but
-  // 6 recurrences of compositing-leak bugs (15551/15575/15586/15589.A/B/C/D +
-  // the round-6 OSC-probe + keystroke-echo + Ctrl-D-dead defects) made the
-  // user-visible defaults garbled. The structural fix (silvery <Island>
-  // primitive — @km/silvery/15646-islands) is a quarter-investment epic;
-  // meanwhile the default flips to `"none"` so users see clean recordings
-  // today. Pass `--live-chrome macos` explicitly to opt into the legacy
-  // silvery overlay path. After islands ships, the overlay path returns
-  // by-construction-correct under a new default.
+  // Defensive default `"none"` — by the time this function runs, the caller
+  // (recordAction) has ALREADY resolved liveChrome by inheriting from --chrome
+  // when --live-chrome wasn't explicit, so a defined value should always be
+  // passed. The `?? "none"` keeps the fallback safe in case a future caller
+  // forgets the inheritance. See @km/termless/rec-live-chrome-centered-frame.
+  //
+  // History: 2026-05-22 (`7425ba5`) flipped the default macos→none after 6
+  // rounds of compositing-leak bugs (15551/15575/15586/15589.A/B/C/D +
+  // round-6 OSC-probe + keystroke-echo + Ctrl-D-dead). 2026-05-26 fixed the
+  // user-reported "explicit --chrome macos still shows raw-stdout" regression
+  // by making --live-chrome INHERIT from --chrome instead of falling back to
+  // a hardcoded literal. The structural cleanup (silvery <Island> primitive —
+  // @km/silvery/15646-islands) lifts this whole conditional.
   const liveChrome: ChromeStyle = opts.liveChrome ?? "none"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
@@ -913,8 +916,14 @@ async function recordAction(
     return
   }
   const chromeStyle: ChromeStyle = (opts.chrome as ChromeStyle | undefined) ?? "none"
-  // Default `"none"` — see comment at the runtime default site above.
-  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? "none"
+  // `--live-chrome` defaults to whatever `--chrome` is — so `rec --chrome macos`
+  // gives chrome on BOTH the output AND the live preview (user mental model:
+  // "I asked for chrome, give me chrome"). Bare `rec` still defaults to `none`
+  // for both, preserving the 2026-05-22 safety default against the compositing
+  // leak bugs in the silvery-mounted overlay path. Pass `--live-chrome none`
+  // explicitly to opt out of the live overlay while keeping the output chrome.
+  // See @km/termless/rec-live-chrome-centered-frame.
+  const liveChromeStyle: ChromeStyle = (opts.liveChrome as ChromeStyle | undefined) ?? chromeStyle
   // ── Compat mode: record against the peekaboo backend (real desktop terminal) ──
   if (opts.compat) {
     await compatRecord(command, {
@@ -1062,11 +1071,11 @@ export function registerRecordCommand(program: Command): void {
     .option("--chrome <style>", `Window chrome on rendered output: ${CHROME_STYLES.join(", ")} (default: none)`, "none")
     .option(
       "--live-chrome <style>",
-      `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")} (default: none — raw-stdout passthrough). ` +
-        `Pass \`macos\` or \`windows\` to opt into the silvery-mounted bordered chrome ` +
-        `(temporarily disabled by default 2026-05-22 due to compositing-leak bugs in the overlay path; ` +
-        `re-enabled by-construction-correct when the silvery <Island> primitive ships — see @km/silvery/15646-islands).`,
-      "none",
+      `Window chrome on the LIVE recorder UI: ${CHROME_STYLES.join(", ")}. ` +
+        `Defaults to whatever \`--chrome\` is set to — passing \`--chrome macos\` opts into both ` +
+        `bordered output AND a centered macOS chrome on the live preview. Pass \`--live-chrome none\` ` +
+        `explicitly to keep the output chrome while opting OUT of the live overlay (e.g. on a narrow ` +
+        `host, or while the silvery <Island> compositing rework ships — see @km/silvery/15646-islands).`,
     )
     .option("--title <text>", "Title text in the window chrome bar (default: the recorded command)")
     .option("--compat", "Compat capture — record in a real desktop terminal app (macOS)")
