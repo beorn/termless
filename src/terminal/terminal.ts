@@ -361,6 +361,11 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return screenshotPng(terminal, pngOptions)
   }
 
+  function screenshotOptionsToPng(opts?: ScreenshotOptions): PngScreenshotOptions | undefined {
+    if (!opts) return undefined
+    return { ...opts, scale: opts.dpr ?? 2 } as PngScreenshotOptions
+  }
+
   /**
    * Auto-picking screenshot — see Terminal.screenshot in types.ts for the
    * decision tree.
@@ -376,7 +381,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   async function screenshotAuto(opts?: ScreenshotOptions): Promise<Uint8Array> {
     // Forced renderer — bypass the decision tree.
     if (opts?.renderer === "canvas") return screenshotAsCanvasPng(opts)
-    if (opts?.renderer === "resvg") return screenshotPng(terminal, opts as PngScreenshotOptions)
+    if (opts?.renderer === "resvg") return screenshotPng(terminal, screenshotOptionsToPng(opts))
     if (opts?.renderer === "swash") return screenshotAsSwashPng(opts)
     if (opts?.renderer === "browser") return screenshotAsBrowserPng(opts)
 
@@ -402,7 +407,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
         /Cannot find (module|package)|MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/.test(err.message)
       ) {
         // 3. resvg fallback.
-        return screenshotPng(terminal, opts as PngScreenshotOptions | undefined)
+        return screenshotPng(terminal, screenshotOptionsToPng(opts))
       }
       throw err
     }
@@ -421,7 +426,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     if (!rasterizer.cellsToPng) {
       throw new Error("swash renderer did not expose a cells path")
     }
-    const scale = (opts as { scale?: number } | undefined)?.scale ?? 2
+    const scale = opts?.dpr ?? 2
     return rasterizer.cellsToPng(terminal, scale)
   }
 
@@ -435,7 +440,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   async function screenshotAsBrowserPng(opts?: ScreenshotOptions): Promise<Uint8Array> {
     const { selectRasterizer } = await import("../view/rasterizer.ts")
     const rasterizer = await selectRasterizer("browser")
-    const scale = (opts as { scale?: number } | undefined)?.scale ?? 2
+    const scale = opts?.dpr ?? 2
     // The browser renderer needs a self-contained SVG — embed the bundled
     // fonts so Chromium renders deterministically, not from host fonts.
     const svgOpts: SvgScreenshotOptions = {

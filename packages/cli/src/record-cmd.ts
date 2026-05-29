@@ -1077,7 +1077,7 @@ async function recordAction(
           // in. Without chrome, keep the auto-picker for best raster fidelity.
           const png =
             chromeStyle === "none"
-              ? await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto", scale })
+              ? await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto", dpr: scale })
               : await terminal.screenshotPng({ ...stillChrome, scale })
           writeFileSync(resolve(target.path), png)
         } else if (target.format === "svg") {
