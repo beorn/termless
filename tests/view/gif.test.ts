@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { createGif } from "../../src/view/gif.ts"
 import type { AnimationFrame } from "../../src/view/animation-types.ts"
 
@@ -13,6 +13,11 @@ const frame2: AnimationFrame = {
 }
 
 describe("createGif", () => {
+  afterEach(() => {
+    vi.doUnmock("../../src/view/rasterizer.ts")
+    vi.resetModules()
+  })
+
   it("produces valid GIF for 2 frames", async () => {
     const result = await createGif([frame1, frame2], { scale: 1 })
 
@@ -56,4 +61,50 @@ describe("createGif", () => {
     // near-nothing — assert the whole thing stays small.
     expect(result.byteLength).toBeLessThan(8_000)
   }, 15_000)
+
+  it("uses cell-native rasterization when chrome is present and a snapshot is available", async () => {
+    const calls = { svg: 0, cells: 0 }
+    const solidBitmap = (width: number, height: number, rgba: [number, number, number, number]) => {
+      const pixels = new Uint8Array(width * height * 4)
+      for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = rgba[0]
+        pixels[i + 1] = rgba[1]
+        pixels[i + 2] = rgba[2]
+        pixels[i + 3] = rgba[3]
+      }
+      return { pixels, width, height }
+    }
+
+    vi.doMock("../../src/view/rasterizer.ts", () => ({
+      selectRasterizer: async () => ({
+        kind: "swash",
+        rasterize: async () => {
+          calls.svg++
+          return solidBitmap(4, 4, [200, 0, 0, 255])
+        },
+        toPng: async () => new Uint8Array(),
+        rasterizeCells: async () => {
+          calls.cells++
+          return solidBitmap(2, 2, [0, 200, 0, 255])
+        },
+      }),
+    }))
+
+    const { createGif: createGifWithMockRasterizer } = await import("../../src/view/gif.ts")
+    const frame: AnimationFrame = {
+      svg: [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4">',
+        '<g class="windowBar"></g>',
+        '<g transform="translate(1, 1)"><text>📋</text></g>',
+        "</svg>",
+      ].join(""),
+      snapshot: {} as AnimationFrame["snapshot"],
+      duration: 100,
+    }
+
+    await createGifWithMockRasterizer([frame], { scale: 1, renderer: "swash" })
+
+    expect(calls.svg).toBeGreaterThan(0)
+    expect(calls.cells).toBe(1)
+  })
 })
