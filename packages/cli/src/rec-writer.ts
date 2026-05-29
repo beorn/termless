@@ -95,7 +95,7 @@ export interface WriteOutputsOptions {
 export function tapeFrameTraceDir(tapePath: string): string {
   const ext = extname(tapePath)
   const base = ext.length > 0 ? basename(tapePath, ext) : basename(tapePath)
-  return join(dirname(tapePath), `${base}.frames`)
+  return join(dirname(tapePath), `${base}.frames`).replaceAll("\\", "/")
 }
 
 function tapeFramesSetting(tapePath: string, framesDir: string): string {
