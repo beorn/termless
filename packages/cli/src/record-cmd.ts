@@ -96,6 +96,12 @@ export const DEFAULT_ROWS = 30
 export const DEFAULT_FPS = 12
 /** Hard cap on frames captured — a long session must not produce a 50 MB GIF. */
 export const FRAME_CAP = 300
+/**
+ * Default raster resolution multiplier. `2` doubles the native cell metrics
+ * so README-width downscaling stays crisp; `1` writes smaller native-size
+ * artifacts.
+ */
+export const DEFAULT_SCALE = 2
 /** Frame-capture interval in ms, derived from {@link DEFAULT_FPS}. */
 const FRAME_INTERVAL_MS = Math.round(1000 / DEFAULT_FPS)
 
@@ -204,6 +210,11 @@ export function classifyRecorderInput(bytes: Uint8Array): RecorderInputAction {
 
 export function shouldUpdateHostWindowTitle(liveChrome: ChromeStyle): boolean {
   return liveChrome === "none"
+}
+
+export function normalizeRecordingScale(scale: number | undefined): number {
+  if (scale === undefined) return DEFAULT_SCALE
+  return Number.isFinite(scale) && scale >= 1 ? scale : DEFAULT_SCALE
 }
 
 // =============================================================================
@@ -414,6 +425,7 @@ async function interactiveRecord(
     chrome?: ChromeStyle
     title?: string
     liveChrome?: ChromeStyle
+    scale: number
   },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
@@ -840,6 +852,7 @@ async function interactiveRecord(
       outputEvents,
       frames: animationFrames,
       renderer,
+      scale: opts.scale,
     }
 
     const { runRecordSummary } = await import("./rec-summary.tsx")
@@ -966,8 +979,10 @@ async function recordAction(
     liveChrome?: string
     frames?: boolean
     framesDir?: string
+    scale?: number
   },
 ): Promise<void> {
+  const scale = normalizeRecordingScale(opts.scale)
   // Validate --chrome up front so a typo fails fast with the valid set.
   if (opts.chrome != null && !isChromeStyle(opts.chrome)) {
     console.error(`Error: unknown --chrome "${opts.chrome}". Valid: ${CHROME_STYLES.join(", ")}.`)
@@ -1062,8 +1077,8 @@ async function recordAction(
           // in. Without chrome, keep the auto-picker for best raster fidelity.
           const png =
             chromeStyle === "none"
-              ? await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto" })
-              : await terminal.screenshotPng(stillChrome)
+              ? await terminal.screenshot({ renderer: (opts.renderer as never) ?? "auto", scale })
+              : await terminal.screenshotPng({ ...stillChrome, scale })
           writeFileSync(resolve(target.path), png)
         } else if (target.format === "svg") {
           writeFileSync(resolve(target.path), terminal.screenshotSvg(stillChrome), "utf-8")
@@ -1098,6 +1113,7 @@ async function recordAction(
     chrome: chromeStyle,
     title: opts.title,
     liveChrome: liveChromeStyle,
+    scale,
   })
 }
 
@@ -1127,6 +1143,12 @@ export function registerRecordCommand(program: Command): void {
     )
     .option("--cols <n>", "Terminal columns", parseNum, DEFAULT_COLS)
     .option("--rows <n>", "Terminal rows", parseNum, DEFAULT_ROWS)
+    .option(
+      "--scale <n>",
+      "Raster resolution multiplier for .gif/.apng/.png — 1 = native, 2 = retina",
+      parseNum,
+      DEFAULT_SCALE,
+    )
     .option("--timeout <ms>", "Wait timeout in ms", parseNum, 5000)
     .option("--text", "Print terminal text to stdout")
     .option("--keys <keys>", "Comma-separated key names to press, then capture a still")
@@ -1154,6 +1176,7 @@ export function registerRecordCommand(program: Command): void {
     ["$ termless record -o demos/ -- bun km view", "Trailing / → folder: out.{rec,gif,cast,tape}"],
     ["$ termless record -o a.gif -o a.cast -- km", "Repeatable, extensioned → exactly those files"],
     ["$ termless record -o shot.png -- bun km view", "An extension → that single file"],
+    ["$ termless record --scale 1 -o demo.gif -- km", "Native resolution; default is crisp 2x"],
   ])
 
   cmd.addHelpSection("Compat capture (macOS, --compat):", [

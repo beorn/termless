@@ -195,6 +195,8 @@ async function loadSwash(): Promise<SwashModule> {
  * SVG, so the SVG-input methods delegate to `resvg` as a faithful fallback
  * for the SVG-based gif / apng pipelines.
  */
+const SWASH_EDGE_PADDING = 4
+
 async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
   // resvg is the SVG-input fallback — swash only consumes the cell grid.
   const svgFallback = createResvgRasterizer(await loadResvg())
@@ -203,8 +205,7 @@ async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
     const bmp = mod.renderCells(terminal, {
       cellWidth: 9.6 * s,
       cellHeight: 20 * s,
-      fontSize: 16 * s,
-      baseline: 20 * 0.78 * s,
+      padding: Math.round(SWASH_EDGE_PADDING * s),
     })
     return { pixels: new Uint8Array(bmp.pixels), width: bmp.width, height: bmp.height }
   }

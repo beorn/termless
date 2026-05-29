@@ -126,6 +126,9 @@ $ termless record -o shot.png -- bun km view ~/Vault
 # Force the resvg renderer (the common case never touches --renderer)
 $ termless record --renderer resvg -o demo.gif -- bun km view ~/Vault
 
+# Native raster resolution; default is crisp 2x
+$ termless record --scale 1 -o demo.gif -- bun km view ~/Vault
+
 # Compat capture: record in a real desktop terminal app (macOS)
 $ termless record --compat -o c.png -- bun km view ~/Vault
 ```
@@ -140,6 +143,7 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 | `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
 | `--cols <n>`             | Terminal columns                                                                    | `80`        |
 | `--rows <n>`             | Terminal rows                                                                       | `30`        |
+| `--scale <n>`            | Raster resolution multiplier for `.gif`/`.apng`/`.png` — `1` native, `2` retina     | `2`         |
 | `--timeout <ms>`         | Wait timeout in ms                                                                  | `5000`      |
 | `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
 | `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
@@ -154,6 +158,10 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 backend (truecolor + real glyph shaping), `80×30` (GitHub renders README
 images at ~880px content width), ~12 fps, and a ~300-frame cap so a long
 session never produces a 50 MB GIF. Power users override every default.
+
+`--scale` controls raster resolution for `.gif`, `.apng`, and `.png` output.
+The default `2` writes retina-size artifacts that downscale cleanly in GitHub
+READMEs. Use `--scale 1` for native resolution and smaller files.
 
 ### Window chrome {#chrome}
 

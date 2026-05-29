@@ -175,6 +175,10 @@ export function swashFontChain(): SwashFont[] {
 
 const DEFAULT_FG = 0xd4d4d4
 const DEFAULT_BG = 0x1e1e1e
+const DEFAULT_CELL_HEIGHT = 20
+const DEFAULT_CELL_WIDTH = 9.6
+const DEFAULT_FONT_SIZE_RATIO = 17 / 20
+const DEFAULT_BASELINE_RATIO = 0.835
 
 function packRgb(c: RGB | null): number {
   if (!c) return -1
@@ -209,9 +213,9 @@ export interface RenderCellsOptions {
   cellWidth?: number
   /** Cell box height in px (line height). Default 20. */
   cellHeight?: number
-  /** Glyph render size in px. Default 16. */
+  /** Glyph render size in px. Default `cellHeight * 0.85`. */
   fontSize?: number
-  /** Baseline offset from the cell-box top in px. Default `cellHeight * 0.78`. */
+  /** Baseline offset from the cell-box top in px. Default `cellHeight * 0.835`. */
   baseline?: number
   /** Padding on every side in px. Default 0. */
   padding?: number
@@ -234,7 +238,7 @@ export function renderCells(terminal: TerminalReadable, opts: RenderCellsOptions
   const lines = terminal.getLines()
   const rows = lines.length
   const cols = lines.reduce((m, line) => Math.max(m, line.length), 0)
-  const cellHeight = opts.cellHeight ?? 20
+  const cellHeight = opts.cellHeight ?? DEFAULT_CELL_HEIGHT
   const blank: SwashCell = { text: "", fg: -1, bg: -1, bold: false, wide: false, continuation: false }
   const cells: SwashCell[] = []
   for (let row = 0; row < rows; row++) {
@@ -248,10 +252,10 @@ export function renderCells(terminal: TerminalReadable, opts: RenderCellsOptions
     cells,
     cols,
     rows,
-    cellWidth: opts.cellWidth ?? 9.6,
+    cellWidth: opts.cellWidth ?? DEFAULT_CELL_WIDTH,
     cellHeight,
-    fontSize: opts.fontSize ?? 16,
-    baseline: opts.baseline ?? cellHeight * 0.78,
+    fontSize: opts.fontSize ?? cellHeight * DEFAULT_FONT_SIZE_RATIO,
+    baseline: opts.baseline ?? cellHeight * DEFAULT_BASELINE_RATIO,
     fonts: opts.fonts ?? swashFontChain(),
     defaultFg: opts.defaultFg ?? DEFAULT_FG,
     defaultBg: opts.defaultBg ?? DEFAULT_BG,

@@ -38,6 +38,7 @@ function session(): CapturedSession {
       },
     ],
     renderer: "resvg",
+    scale: 2,
   }
 }
 

@@ -16,6 +16,8 @@ import {
   COMPAT_TERMINALS,
   classifyRecorderInput,
   shouldUpdateHostWindowTitle,
+  normalizeRecordingScale,
+  DEFAULT_SCALE,
 } from "../src/record-cmd.ts"
 
 function stripAnsi(text: string): string {
@@ -256,6 +258,15 @@ describe("recording UX formatting", () => {
     expect(shouldUpdateHostWindowTitle("macos")).toBe(false)
     expect(shouldUpdateHostWindowTitle("windows")).toBe(false)
     expect(shouldUpdateHostWindowTitle("none")).toBe(true)
+  })
+
+  it("normalizes invalid raster scale values to the recording default", () => {
+    expect(normalizeRecordingScale(undefined)).toBe(DEFAULT_SCALE)
+    expect(normalizeRecordingScale(Number.NaN)).toBe(DEFAULT_SCALE)
+    expect(normalizeRecordingScale(0)).toBe(DEFAULT_SCALE)
+    expect(normalizeRecordingScale(-1)).toBe(DEFAULT_SCALE)
+    expect(normalizeRecordingScale(1)).toBe(1)
+    expect(normalizeRecordingScale(3)).toBe(3)
   })
 })
 

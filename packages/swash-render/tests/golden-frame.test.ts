@@ -84,6 +84,58 @@ describe.skipIf(!NATIVE)("swash renderer — golden frame", () => {
     }
   })
 
+  it("a col-0 left-overhanging glyph is not clipped against the bitmap edge", () => {
+    const inkAtLeftEdge = (padding: number): number => {
+      const term = createTerminal({ backend: createVt100Backend(), cols: 4, rows: 1 })
+      try {
+        term.feed("\u{E0B0}")
+        const bmp = renderCells(term, { padding })
+        const px = new Uint8Array(bmp.pixels)
+        let edge = 0
+        for (let y = 0; y < bmp.height; y++) {
+          const i = y * bmp.width * 4
+          if (px[i]! + px[i + 1]! + px[i + 2]! > 0x1e * 3 + 30) edge++
+        }
+        return edge
+      } finally {
+        term.close()
+      }
+    }
+
+    expect(inkAtLeftEdge(0)).toBeGreaterThan(0)
+    expect(inkAtLeftEdge(4)).toBe(0)
+  })
+
+  it("glyph ink fills the cell with the tuned default metrics", () => {
+    const inkBandFill = (opts?: { fontSize?: number; baseline?: number }): number => {
+      const term = createTerminal({ backend: createVt100Backend(), cols: 12, rows: 1 })
+      try {
+        term.feed("\u{C0}\u{C9}Mgjpqy{}")
+        const bmp = renderCells(term, opts)
+        const px = new Uint8Array(bmp.pixels)
+        let minY = bmp.height
+        let maxY = 0
+        for (let y = 0; y < bmp.height; y++) {
+          for (let x = 0; x < bmp.width; x++) {
+            const i = (y * bmp.width + x) * 4
+            if (px[i]! + px[i + 1]! + px[i + 2]! > 0x1e * 3 + 30) {
+              minY = Math.min(minY, y)
+              maxY = Math.max(maxY, y)
+            }
+          }
+        }
+        return (maxY - minY + 1) / bmp.height
+      } finally {
+        term.close()
+      }
+    }
+
+    const tuned = inkBandFill()
+    const old = inkBandFill({ fontSize: 16, baseline: 20 * 0.78 })
+    expect(tuned).toBeGreaterThan(0.92)
+    expect(tuned).toBeGreaterThan(old)
+  })
+
   // The spike's headline finding: swash renders color emoji in color.
   it.skipIf(!HAS_COLOR_EMOJI)("renders a color emoji with chromatic ink", () => {
     // The xterm backend tracks wide emoji as one cell; the pure-TS vt100
