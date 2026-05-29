@@ -492,6 +492,19 @@ describe("createTerminal", () => {
     term.close()
   })
 
+  test("raw output capture streams split UTF-8 sequences across feed chunks", () => {
+    const backend = createMockBackend()
+    const term = createTerminal({ backend, cols: 20, rows: 5 })
+    const bytes = new TextEncoder().encode("a░b")
+
+    term.feed(bytes.slice(0, 2))
+    term.feed(bytes.slice(2))
+
+    expect(term.out.getText()).toBe("a░b")
+    expect(term.out.getText()).not.toContain("�")
+    term.close()
+  })
+
   test("find locates text in terminal", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 40, rows: 5 })

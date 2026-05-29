@@ -111,7 +111,7 @@ const DEFAULT_ROWS = 24
 export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let term: XTerminal | null = null
   let title = ""
-  const decoder = new TextDecoder()
+  let decoder = new TextDecoder()
 
   /** Access the internal write buffer for synchronous writes */
   function writeSync(t: XTerminal, data: string): void {
@@ -125,6 +125,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function init(options: TerminalOptions): void {
     if (term) term.dispose()
+    decoder = new TextDecoder()
 
     term = new Terminal({
       cols: options.cols,
@@ -203,7 +204,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
-    const text = decoder.decode(data)
+    const text = decoder.decode(data, { stream: true })
 
     // Synthesize 14t responses out-of-band BEFORE writing the bytes to
     // xterm.js (which would drop them as unhandled when the default
@@ -229,6 +230,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function reset(): void {
     const t = ensureTerm()
+    decoder = new TextDecoder()
     // RIS (Reset to Initial State) escape sequence
     writeSync(t, "\x1bc")
     title = ""

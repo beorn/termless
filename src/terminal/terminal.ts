@@ -81,6 +81,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   const clipboardWrites: string[] = []
   const outputChunks: string[] = []
+  let outputDecoder = new TextDecoder()
 
   const out: OutputView = {
     getText() {
@@ -94,6 +95,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     },
     clear() {
       outputChunks.length = 0
+      outputDecoder = new TextDecoder()
     },
   }
 
@@ -156,7 +158,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   function feed(data: Uint8Array | string): void {
     if (closed) throw new Error("Terminal is closed")
-    const text = typeof data === "string" ? data : new TextDecoder().decode(data)
+    const text = typeof data === "string" ? data : outputDecoder.decode(data, { stream: true })
     captureOutput(text)
     scanOsc52(text)
     const bytes = typeof data === "string" ? encoder.encode(data) : data
@@ -177,7 +179,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       cols,
       rows,
       onData: (data) => {
-        const text = new TextDecoder().decode(data)
+        const text = outputDecoder.decode(data, { stream: true })
         captureOutput(text)
         scanOsc52(text)
         backend.feed(data)

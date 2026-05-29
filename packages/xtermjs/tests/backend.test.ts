@@ -49,6 +49,19 @@ describe("createXtermBackend", () => {
     backend.destroy()
   })
 
+  test("streams split UTF-8 sequences across feed chunks", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const bytes = new TextEncoder().encode("a░b")
+
+    backend.feed(bytes.slice(0, 2))
+    backend.feed(bytes.slice(2))
+
+    const text = backend.getText()
+    expect(text).toContain("a░b")
+    expect(text).not.toContain("�")
+    backend.destroy()
+  })
+
   // ── Colors ──
 
   test("feed ANSI color codes, getCell() has correct fg color", () => {
