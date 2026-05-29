@@ -9,9 +9,13 @@
 ### Added
 
 - **`compat-screenshot` — real desktop-terminal capture** — `termless compat-screenshot -- <cmd>` (CLI) and the `compat-screenshot` MCP tool spawn the user's actual macOS terminal app (Ghostty / kitty / iTerm / Terminal.app), run a TUI command, `screencapture` the window, and clean up. Pixel-perfect for that specific terminal + the user's real font/theme config — the **compat** path. macOS-only; auto-detects the terminal (ghostty > kitty > iterm > terminal) and returns terminal version/font/theme metadata. For routine visual iteration use the canvas renderer instead. New `@termless/peekaboo` exports: `compatScreenshot()`, `assertCompatCapable()`, `detectTerminal()`, `getTerminalAdapter()`. See [@termless/peekaboo README](packages/peekaboo/README.md).
-- **Canvas-rendered screenshots** — `screenshotCanvasPng()` and `terminal.screenshotPng({ renderer: "canvas" })` route through ghostty-web's CanvasRenderer in headless playwright. Real-fidelity truecolor + glyph shaping + DPR 2 retina output. SVG path remains for deterministic snapshots.
+- **Canvas-rendered screenshots** — `screenshotCanvasPng()` and `terminal.screenshot({ renderer: "canvas" })` route through `@termless/ghostty`'s native canvas path: ghostty-web's CanvasRenderer backed by `@napi-rs/canvas`, with no Playwright/Chromium process. Real-fidelity truecolor + glyph shaping + DPR 2 retina output. SVG/resvg remains available for deterministic snapshots.
 - **Frame-trace mode** — `createFrameTracer(terminal, { dir, debounceMs, maxFrames, dedupe })` captures every render-relevant buffer change with timestamp + xxHash64 content dedupe. Append-only streaming-readable `index.jsonl` + `NNNNN.png` per unique frame. New `TerminalCreateOptions.onAfterWrite` hook wires it transparently.
 - **Tape `Set Frames` directive** — `Set Frames "/path/to/trace/"` + optional `Set FrameDebounceMs 16` in `.tape` files enables frame-trace during execution; summary surfaces on `result.frameTrace`. See [Frame-Trace Mode](docs/guide/frame-trace.md).
+
+### Fixed
+
+- **Ghostty backend initialization under Bun** — `initGhostty()` now provides the browser-style `self` global expected by `ghostty-web`, so the backend and native-canvas screenshot tests run directly in Bun without a browser harness.
 
 ## 0.6.0 - 2026-04-09
 

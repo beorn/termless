@@ -62,6 +62,7 @@ export async function initGhostty(): Promise<Ghostty> {
   if (sharedGhostty) return sharedGhostty
   if (initPromise) return initPromise
 
+  ;(globalThis as { self?: unknown }).self ??= globalThis
   initPromise = Ghostty.load().then((g) => {
     sharedGhostty = g
     return g
