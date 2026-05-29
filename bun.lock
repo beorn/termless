@@ -130,6 +130,9 @@
     "packages/swash-render": {
       "name": "@termless/swash-render",
       "version": "0.1.0",
+      "devDependencies": {
+        "@napi-rs/cli": "^3.0.0",
+      },
       "peerDependencies": {
         "@termless/core": "*",
       },
