@@ -119,9 +119,14 @@ function frameCursor(frame: AnimationFrame): { row: number; col: number } {
 }
 
 function frameColsRows(frame: AnimationFrame, session: CapturedSession): { cols: number; rows: number } {
-  return {
-    cols: frame.snapshot?.cols ?? session.cols,
-    rows: frame.snapshot?.rows ?? session.rows,
+  const snapshot = frame.snapshot
+  if (!snapshot) return { cols: session.cols, rows: session.rows }
+  try {
+    const rows = snapshot.getScrollback().screenLines
+    const cols = snapshot.getLines().at(-1)?.length ?? session.cols
+    return { cols, rows }
+  } catch {
+    return { cols: session.cols, rows: session.rows }
   }
 }
 
