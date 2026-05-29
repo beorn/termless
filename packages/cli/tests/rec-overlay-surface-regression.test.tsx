@@ -32,7 +32,7 @@
  */
 
 import React from "react"
-import { describe, expect, test } from "vitest"
+import { afterEach, describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
 import { ScopeProvider } from "silvery"
 import { createScope } from "@silvery/scope"
@@ -40,6 +40,14 @@ import { createCellBuffer, type MutableCellBuffer } from "@silvery/ag/viewport-b
 import type { Cell } from "@silvery/ag/types"
 import type { IslandGuest, IslandHandle, IslandOutputOwner, IslandSizeOwner } from "@silvery/ag/island-types"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
+
+const cleanups: Array<() => Promise<void>> = []
+
+afterEach(async () => {
+  while (cleanups.length > 0) {
+    await cleanups.pop()?.()
+  }
+})
 
 /**
  * Mock IslandGuest that blits a uniform `fill`-char buffer with a bg color.
@@ -116,7 +124,7 @@ async function flushIslandMount(): Promise<void> {
 async function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
   const grid = clampGridToHost(hostCols, hostRows, style)
   const guest = mockGuest()
-  const store = createOverlayStore({ revision: 0, elapsedMs: 0, blinkTick: 0 })
+  const store = createOverlayStore({ revision: 0, elapsedMs: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
   const scope = createScope("rec-overlay-island-test")
   const tree = () => (
@@ -125,6 +133,10 @@ async function renderOverlay(hostCols: number, hostRows: number, style: "macos" 
     </ScopeProvider>
   )
   const app = render(tree())
+  cleanups.push(async () => {
+    app.unmount()
+    await scope[Symbol.asyncDispose]()
+  })
   await flushIslandMount()
   app.rerender(tree())
   return { app, grid }

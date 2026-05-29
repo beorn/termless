@@ -39,7 +39,7 @@
  */
 
 import React from "react"
-import { Box, Island, Text, type IslandGuest } from "silvery"
+import { Box, Island, Text, type IslandGuest, usePulse } from "silvery"
 import { run as silveryRun, type RunOptions } from "silvery/runtime"
 import { xtermGuest, type XtermGuestChild } from "@termless/xtermjs"
 import { CSI_LEAVE_ALT_SCREEN, CSI_SHOW_CURSOR, SGR_RESET } from "../../../src/render/ansi.ts"
@@ -275,7 +275,6 @@ export function chromeTokens(style: ChromeStyle): ChromePresetTokens {
 export interface OverlayState {
   revision: number
   elapsedMs: number
-  blinkTick: number
 }
 
 export function createOverlayStore(initial: OverlayState): {
@@ -330,14 +329,14 @@ export function Overlay(props: OverlayProps): React.ReactElement {
   // the actual diff). xtermGuest's own microtask flush coalesces island
   // output-buffer dirty bits separately.
   const state = React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
-  const { elapsedMs, blinkTick } = state
+  const { elapsedMs } = state
 
-  const blinkOn = blinkTick % 2 === 0
+  const blinkOn = usePulse({ intervalMs: 500 })
   const elapsedStr = formatElapsed(elapsedMs)
 
   const statusBar = (
     <Box flexDirection="row">
-      <Text color={blinkOn ? "red" : undefined}>{blinkOn ? "●" : " "}</Text>
+      <Text color={blinkOn ? "$fg-error" : undefined}>{blinkOn ? "●" : " "}</Text>
       <Text>{` REC ${elapsedStr}  `}</Text>
       <Text color="$fg-muted">· Ctrl+D to stop</Text>
     </Box>
@@ -484,7 +483,6 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
   const store = createOverlayStore({
     revision: 0,
     elapsedMs: opts.startElapsedMs ?? 0,
-    blinkTick: 0,
   })
 
   // xtermGuest wraps @xterm/headless inside the @silvery/ag IslandGuest
@@ -558,14 +556,6 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
     store.set({ revision: store.getSnapshot().revision + 1 })
   }, tickMs)
 
-  // Blink/clock — half-second cadence, independent of grid revisions.
-  // We bump `blinkTick` rather than poking React directly so the
-  // overlay's useSyncExternalStore picks up the change.
-  const blinkTimer = setInterval(() => {
-    if (stopped) return
-    store.set({ blinkTick: store.getSnapshot().blinkTick + 1 })
-  }, 500)
-
   // Host resize — silvery's Size owner subscribes to the same
   // process.stdout `resize` event we'd subscribe to, so the React
   // tree's layout reflows automatically. We don't need a manual
@@ -589,14 +579,11 @@ export function startRecLiveOverlay(opts: RecLiveOverlayOptions = {}): RecLiveOv
     },
     setElapsedMs(ms: number) {
       store.set({ elapsedMs: ms })
-      // The blink + clock interval picks up the new elapsedMs on its
-      // own; forcing an extra tick here would defeat the FPS cap.
     },
     stop() {
       if (stopped) return
       stopped = true
       clearInterval(tickTimer)
-      clearInterval(blinkTimer)
       try {
         appHandle?.unmount()
         // Silvery's unmount disposes the Island guest lifecycle — no need to
