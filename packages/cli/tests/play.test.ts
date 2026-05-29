@@ -6,6 +6,7 @@ import { parseTape } from "../../../src/recording/tape/parser.ts"
 import {
   compareSeparateOutputDir,
   playFrameReplayFromTape,
+  playAction,
   resolveBackendNames,
   writeComparisonOutput,
 } from "../src/play-cmd.ts"
@@ -128,6 +129,23 @@ describe("frame replay", () => {
 
       expect(result.framesDir).toBe(framesDir)
       expect(result.frameCount).toBe(2)
+      expect(readFileSync(output).subarray(0, 6).toString("ascii")).toBe("GIF89a")
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("uses the recorded frame trace for plain GIF output when the sidecar exists", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-frames-"))
+    try {
+      const tapePath = join(dir, "demo.tape")
+      const framesDir = join(dir, "demo.frames")
+      const output = join(dir, "demo.gif")
+      writeTrace(framesDir)
+      writeFileSync(tapePath, 'Set Frames "./demo.frames"\nExpect "this-text-never-appears" 1ms\n')
+
+      await playAction(tapePath, { output: [output] })
+
       expect(readFileSync(output).subarray(0, 6).toString("ascii")).toBe("GIF89a")
     } finally {
       rmSync(dir, { recursive: true, force: true })

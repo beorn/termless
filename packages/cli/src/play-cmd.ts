@@ -63,6 +63,18 @@ function isImagePath(path: string): boolean {
   return /\.(gif|svg|png|apng)$/i.test(path)
 }
 
+function isRecordedFrameOutputPath(path: string): boolean {
+  return /\.(gif|png)$/i.test(path)
+}
+
+function tapeFrameTraceExists(tapePath: string, tape: TapeFile): boolean {
+  try {
+    return existsSync(join(resolveTapeFramesDir(tapePath, tape.settings.Frames), "index.jsonl"))
+  } catch {
+    return false
+  }
+}
+
 /** Resolve the output directory for `--compare separate`. */
 export function compareSeparateOutputDir(output?: string): string {
   if (!output) return "."
@@ -365,7 +377,7 @@ async function playCast(
 // Action
 // =============================================================================
 
-async function playAction(
+export async function playAction(
   file: string,
   opts: {
     output?: string[]
@@ -426,6 +438,18 @@ async function playAction(
       cols: opts.cols || undefined,
       rows: opts.rows || undefined,
     })
+    return
+  }
+
+  if (
+    outputs.length > 0 &&
+    outputs.every(isRecordedFrameOutputPath) &&
+    !opts.backend &&
+    !opts.showKeys &&
+    !opts.theme &&
+    tapeFrameTraceExists(file, tape)
+  ) {
+    await playFrameReplayFromTape(file, tape, { output: outputs })
     return
   }
 
