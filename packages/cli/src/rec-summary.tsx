@@ -17,7 +17,13 @@
 import React, { useEffect, useState } from "react"
 import { Box, Muted, Spinner, Strong, Text, render, useApp } from "silvery"
 import type { OutputTarget } from "./output-targets.ts"
-import { writeOutputs, type CapturedSession, type WriteOutputsProgress } from "./rec-writer.ts"
+import {
+  writeOutputs,
+  type CapturedSession,
+  type OutputFrameTraceOptions,
+  type TapeWriteContext,
+  type WriteOutputsProgress,
+} from "./rec-writer.ts"
 
 /** One row's lifecycle state. */
 type FileState =
@@ -137,11 +143,12 @@ export function RecordSummary({
 export async function runRecordSummary(
   props: Omit<RecordSummaryProps, "writeFiles"> & {
     session: CapturedSession
-    eventsToTape: (s: CapturedSession) => string
+    frameTrace?: OutputFrameTraceOptions
+    eventsToTape: (s: CapturedSession, context?: TapeWriteContext) => string
   },
 ): Promise<void> {
   const writeFiles: RecordSummaryProps["writeFiles"] = (onProgress) =>
-    writeOutputs(props.targets, props.session, props.eventsToTape, onProgress)
+    writeOutputs(props.targets, props.session, props.eventsToTape, onProgress, { frameTrace: props.frameTrace })
 
   await render(<RecordSummary {...props} writeFiles={writeFiles} />, undefined, { mode: "inline" }).run()
 }

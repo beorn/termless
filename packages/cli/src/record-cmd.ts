@@ -325,10 +325,22 @@ export function bytesToTapeCommand(bytes: Uint8Array, raw = false): string | typ
   return null // unknown — skip in .tape output
 }
 
+export interface TapeHeaderOptions {
+  framesDir?: string
+  frameDebounceMs?: number
+}
+
 /** Convert recorded events to .tape format string */
-export function eventsToTape(events: Array<{ time: number; bytes: Uint8Array }>, shell: string, raw = false): string {
+export function eventsToTape(
+  events: Array<{ time: number; bytes: Uint8Array }>,
+  shell: string,
+  raw = false,
+  tape?: TapeHeaderOptions,
+): string {
   const lines: string[] = []
   lines.push(`Set Shell "${shell}"`)
+  if (tape?.framesDir) lines.push(`Set Frames "${tape.framesDir}"`)
+  if (tape?.frameDebounceMs !== undefined) lines.push(`Set FrameDebounceMs ${tape.frameDebounceMs}`)
   lines.push("")
 
   let pendingType = ""
@@ -397,6 +409,8 @@ async function interactiveRecord(
     raw?: boolean
     showKeys?: boolean
     renderer?: string
+    frames?: boolean
+    framesDir?: string
     chrome?: ChromeStyle
     title?: string
     liveChrome?: ChromeStyle
@@ -838,7 +852,8 @@ async function interactiveRecord(
       frameCount: animationFrames.length,
       targets,
       session,
-      eventsToTape: (s) => eventsToTape(s.inputEvents, s.command.join(" "), raw),
+      frameTrace: { enabled: opts.frames !== false, dir: opts.framesDir },
+      eventsToTape: (s, context) => eventsToTape(s.inputEvents, s.command.join(" "), raw, context?.tape),
     })
   } finally {
     // Best-effort cleanup for the unhappy path (exception before teardown).
@@ -949,6 +964,8 @@ async function recordAction(
     chrome?: string
     title?: string
     liveChrome?: string
+    frames?: boolean
+    framesDir?: string
   },
 ): Promise<void> {
   // Validate --chrome up front so a typo fails fast with the valid set.
@@ -1076,6 +1093,8 @@ async function recordAction(
     raw: opts.raw,
     showKeys: opts.showKeys,
     renderer: opts.renderer,
+    frames: opts.frames,
+    framesDir: opts.framesDir,
     chrome: chromeStyle,
     title: opts.title,
     liveChrome: liveChromeStyle,
@@ -1114,6 +1133,8 @@ export function registerRecordCommand(program: Command): void {
     .option("--wait-for <text>", "Wait for text before pressing keys")
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
+    .option("--frames-dir <path>", "Frame trace sidecar directory for .tape output")
+    .option("--no-frames", "Do not write a .frames sidecar next to .tape output")
     .option("--theme <name>", "Color theme for screenshots (e.g. dracula, nord, monokai)")
     .option("--chrome <style>", `Window chrome on rendered output: ${CHROME_STYLES.join(", ")} (default: none)`, "none")
     .option(

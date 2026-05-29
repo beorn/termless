@@ -17,9 +17,10 @@
  * | `.tape`         | input events          | none                              |
  */
 
+import { createHash } from "node:crypto"
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { basename, dirname, extname, join, relative, resolve } from "node:path"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { OutputFormat, OutputTarget } from "./output-targets.ts"
 
@@ -68,11 +69,152 @@ function writeCast(path: string, session: CapturedSession): void {
 // =============================================================================
 
 /**
+ * Context passed to the tape serializer for target-specific header settings.
+ */
+export interface TapeWriteContext {
+  target: OutputTarget
+  tape?: {
+    framesDir?: string
+    frameDebounceMs?: number
+  }
+}
+
+export interface OutputFrameTraceOptions {
+  enabled?: boolean
+  dir?: string
+  frameDebounceMs?: number
+  renderFramePng?: (frame: AnimationFrame, index: number, session: CapturedSession) => Promise<Uint8Array>
+}
+
+/** Options controlling extra sidecars emitted by {@link writeOutputs}. */
+export interface WriteOutputsOptions {
+  frameTrace?: OutputFrameTraceOptions
+}
+
+/** Derive the default `<name>.frames` sidecar directory for a `.tape` target. */
+export function tapeFrameTraceDir(tapePath: string): string {
+  const ext = extname(tapePath)
+  const base = ext.length > 0 ? basename(tapePath, ext) : basename(tapePath)
+  return join(dirname(tapePath), `${base}.frames`)
+}
+
+function tapeFramesSetting(tapePath: string, framesDir: string): string {
+  let rel = relative(dirname(resolve(tapePath)), resolve(framesDir)).replaceAll("\\", "/")
+  if (rel === "") return "."
+  if (!rel.startsWith(".") && !rel.startsWith("/")) rel = `./${rel}`
+  return rel
+}
+
+function frameHash(frame: AnimationFrame): string {
+  return createHash("sha1").update(frame.svg).digest("hex")
+}
+
+function frameCursor(frame: AnimationFrame): { row: number; col: number } {
+  try {
+    const cursor = frame.snapshot?.getCursor()
+    return { row: cursor?.y ?? 0, col: cursor?.x ?? 0 }
+  } catch {
+    return { row: 0, col: 0 }
+  }
+}
+
+function frameColsRows(frame: AnimationFrame, session: CapturedSession): { cols: number; rows: number } {
+  return {
+    cols: frame.snapshot?.cols ?? session.cols,
+    rows: frame.snapshot?.rows ?? session.rows,
+  }
+}
+
+/**
+ * Write a complete frame-trace sidecar from the frames already captured by
+ * `record`. The trace is target-derived output, so it intentionally reuses the
+ * post-frame-gate session frames instead of subscribing to the live terminal.
+ */
+export async function writeFrameTraceSidecar(
+  dir: string,
+  session: CapturedSession,
+  options: OutputFrameTraceOptions = {},
+): Promise<void> {
+  rmSync(dir, { recursive: true, force: true })
+  mkdirSync(dir, { recursive: true })
+
+  const { selectRasterizer } = await import("../../../src/view/rasterizer.ts")
+  const rasterizer = options.renderFramePng ? null : await selectRasterizer(session.renderer)
+  const hashToSeq = new Map<string, number>()
+  const lines: string[] = []
+  const baseTs = Date.now()
+  let elapsedMs = 0
+
+  try {
+    for (let index = 0; index < session.frames.length; index++) {
+      const frame = session.frames[index]!
+      const seq = index + 1
+      const hash = frameHash(frame)
+      const duplicateOf = hashToSeq.get(hash) ?? null
+      let png: string | null = null
+      let renderMs = 0
+
+      if (duplicateOf === null) {
+        const started = performance.now()
+        const bytes = options.renderFramePng
+          ? await options.renderFramePng(frame, index, session)
+          : await rasterizer!.toPng(frame.svg, 2)
+        renderMs = +(performance.now() - started).toFixed(2)
+        png = `${String(seq).padStart(5, "0")}.png`
+        writeFileSync(join(dir, png), bytes)
+        hashToSeq.set(hash, seq)
+      }
+
+      const ts = baseTs + elapsedMs
+      lines.push(
+        JSON.stringify({
+          seq,
+          ts,
+          iso: new Date(ts).toISOString(),
+          hash,
+          duplicate_of: duplicateOf,
+          bytes_in_since_last: 0,
+          ansi_input_preview: "",
+          buffer: { ...frameColsRows(frame, session), cursor: frameCursor(frame) },
+          duration_since_prev_ms: index === 0 ? 0 : session.frames[index - 1]!.duration,
+          render_ms: renderMs,
+          png,
+        }),
+      )
+      elapsedMs += frame.duration
+    }
+  } finally {
+    await rasterizer?.dispose?.()
+  }
+
+  writeFileSync(join(dir, "index.jsonl"), lines.join("\n") + (lines.length > 0 ? "\n" : ""))
+  try {
+    const { writeViewer } = await import("../../../src/view/viewer.ts")
+    writeViewer(dir)
+  } catch {
+    // The trace itself is the contract; viewer generation is best-effort.
+  }
+}
+
+function frameTraceOptionsForTape(
+  target: OutputTarget,
+  options: OutputFrameTraceOptions | undefined,
+): OutputFrameTraceOptions | null {
+  if (!options || options.enabled === false) return null
+  return { ...options, dir: options.dir ?? tapeFrameTraceDir(target.path) }
+}
+
+/**
  * Write a `.tape` from the captured input events. `eventsToTape` is supplied by
  * the caller (it lives in `record-cmd.ts` alongside the key-mapping table).
  */
-function writeTape(path: string, session: CapturedSession, eventsToTape: (s: CapturedSession) => string): void {
-  writeFileSync(path, eventsToTape(session))
+function writeTape(
+  path: string,
+  session: CapturedSession,
+  eventsToTape: (s: CapturedSession, context?: TapeWriteContext) => string,
+  context: TapeWriteContext,
+): void {
+  writeFileSync(path, eventsToTape(session, context))
 }
 
 // =============================================================================
@@ -221,10 +363,12 @@ export interface WriteOutputsProgress {
 export async function writeOutputs(
   targets: readonly OutputTarget[],
   session: CapturedSession,
-  eventsToTape: (s: CapturedSession) => string,
+  eventsToTape: (s: CapturedSession, context?: TapeWriteContext) => string,
   onProgress?: WriteOutputsProgress,
+  options: WriteOutputsOptions = {},
 ): Promise<Array<{ path: string; bytes: number }>> {
   const written: Array<{ path: string; bytes: number }> = []
+  const writtenTraceDirs = new Set<string>()
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i]!
     onProgress?.({ phase: "start", target, index: i, total: targets.length })
@@ -234,7 +378,31 @@ export async function writeOutputs(
         writeCast(target.path, session)
         break
       case "tape":
-        writeTape(target.path, session, eventsToTape)
+        {
+          const frameTrace = frameTraceOptionsForTape(target, options.frameTrace)
+          const framesDir = frameTrace?.dir
+          const context: TapeWriteContext = {
+            target,
+            ...(framesDir
+              ? {
+                  tape: {
+                    framesDir: tapeFramesSetting(target.path, framesDir),
+                    ...(frameTrace.frameDebounceMs !== undefined
+                      ? { frameDebounceMs: frameTrace.frameDebounceMs }
+                      : {}),
+                  },
+                }
+              : {}),
+          }
+          writeTape(target.path, session, eventsToTape, context)
+          if (frameTrace?.dir) {
+            const resolvedDir = resolve(frameTrace.dir)
+            if (!writtenTraceDirs.has(resolvedDir)) {
+              await writeFrameTraceSidecar(frameTrace.dir, session, frameTrace)
+              writtenTraceDirs.add(resolvedDir)
+            }
+          }
+        }
         break
       case "rec":
         await writeRec(target.path, session)
