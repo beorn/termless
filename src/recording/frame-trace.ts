@@ -386,11 +386,11 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   let firstTs: number | null = null
   let truncated = false
   let stopped = false
-  // The in-flight `captureFrame()` promise, if a debounced capture has fired
-  // and is mid-flight (awaiting `renderFn` / writing to disk). `stop()` awaits
-  // this so a caller that does `await tracer.stop()` then `rmSync(dir)` is
-  // race-free by construction — no late `appendFileSync`/`writeFile` can hit
-  // an already-removed directory.
+  // Debounced capture ticks must run in order. If async renders overlap,
+  // several captures can pass the maxFrames guard before earlier frames commit.
+  // The queue tail also gives `stop()` one handle to await so `await
+  // tracer.stop()` then `rmSync(dir)` is race-free by construction.
+  let captureQueue: Promise<void> = Promise.resolve()
   let inFlightCapture: Promise<void> | null = null
 
   function flushPending(): void {
@@ -481,13 +481,14 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
     if (pendingTimer) clearTimeout(pendingTimer)
     pendingTimer = setTimeout(() => {
       pendingTimer = null
-      // Track the fired capture so `stop()` can await it. A capture is async
-      // (`renderFn` + disk writes); without this handle a `stop()` that races
-      // a just-fired debounce would return before the capture's late
+      // Queue the fired capture so async renders cannot overlap. A capture is
+      // async (`renderFn` + disk writes); without this handle a `stop()` that
+      // races a just-fired debounce would return before the capture's late
       // `writeFile`/`appendFileSync`, letting a caller's `rmSync(dir)` trip an
       // ENOENT. `.catch` keeps the fire-and-forget tick rejection-free; errors
       // inside `captureFrame` are already swallowed at their own call sites.
-      const capture = captureFrame().catch(() => {})
+      const capture = captureQueue.then(() => captureFrame()).catch(() => {})
+      captureQueue = capture
       inFlightCapture = capture
       void capture.then(() => {
         if (inFlightCapture === capture) inFlightCapture = null

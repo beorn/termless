@@ -129,16 +129,23 @@ describe("createFrameTracer", () => {
         rows: 2,
         onAfterWrite: (data) => hook?.(data),
       })
-      const tracer = createFrameTracer(term, { dir: dir3, debounceMs: 2, maxFrames: 2, renderFn: stubRender })
+      let renderCalls = 0
+      const slowRender = async (t: Terminal): Promise<Uint8Array> => {
+        renderCalls++
+        await new Promise((r) => setTimeout(r, 20))
+        return stubRender(t)
+      }
+      const tracer = createFrameTracer(term, { dir: dir3, debounceMs: 1, maxFrames: 2, renderFn: slowRender })
       hook = tracer.onWrite
 
       for (let i = 0; i < 5; i++) {
         term.feed(`${i}`)
-        await new Promise((r) => setTimeout(r, 8))
+        await new Promise((r) => setTimeout(r, 3))
       }
 
       const summary = await tracer.stop()
       expect(summary.count).toBeLessThanOrEqual(2)
+      expect(renderCalls).toBeLessThanOrEqual(2)
       expect(summary.truncated).toBe(true)
     } finally {
       rmSync(dir3, { recursive: true, force: true })
