@@ -23,13 +23,20 @@ information swash exists to preserve.
 
 ## Build
 
-The native `.node` binary must be built before use (phase 1 ships macOS-arm64;
-cross-platform prebuilds are a later phase):
+```sh
+bun run build:prebuild     # napi-rs platform-suffixed .node, e.g. darwin-arm64
+```
+
+The package loader also accepts the legacy local development binary
+`termless-swash-render.node`, produced with:
 
 ```sh
-bun run build:native       # cargo build --release
-bun run postbuild:native   # copy the dylib/so/dll to termless-swash-render.node
+bun run build:native
+bun run postbuild:native
 ```
+
+Published packages must not include `native/target`; platform binaries belong
+in napi-rs optional packages or release artifacts, not in the main tarball.
 
 ## Usage
 

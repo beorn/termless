@@ -412,7 +412,7 @@ export async function selectRasterizer(kind: RendererKind = "auto"): Promise<Ras
     } catch (e) {
       throw new Error(
         "--renderer swash requires the @termless/swash-render native binding. Build it:\n" +
-          "  cd packages/swash-render && bun run build:native && bun run postbuild:native\n" +
+          "  cd packages/swash-render && bun run build:prebuild\n" +
           `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
       )
     }

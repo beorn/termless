@@ -78,25 +78,115 @@ interface NativeModule {
 let nativeModule: NativeModule | null = null
 let loadError: Error | null = null
 
+function isFileMusl(path: string): boolean {
+  return path.includes("libc.musl-") || path.includes("ld-musl-")
+}
+
+function isMuslLinux(): boolean {
+  if (process.platform !== "linux") return false
+  try {
+    if (readFileSync("/usr/bin/ldd", "utf8").includes("musl")) return true
+  } catch {
+    // Fall through to Node's process report when /usr/bin/ldd is absent.
+  }
+  const report =
+    typeof process.report?.getReport === "function"
+      ? (process.report.getReport() as { header?: { glibcVersionRuntime?: string }; sharedObjects?: string[] })
+      : null
+  if (report?.header && "glibcVersionRuntime" in report.header) return false
+  if (Array.isArray(report?.sharedObjects)) return report.sharedObjects.some(isFileMusl)
+  return false
+}
+
+function nativePlatformSuffix(
+  platform: NodeJS.Platform = process.platform,
+  arch: NodeJS.Architecture = process.arch,
+  musl = isMuslLinux(),
+): string | null {
+  if (platform === "darwin") {
+    if (arch === "arm64") return "darwin-arm64"
+    if (arch === "x64") return "darwin-x64"
+  }
+  if (platform === "win32") {
+    if (arch === "arm64") return "win32-arm64-msvc"
+    if (arch === "x64") return "win32-x64-msvc"
+  }
+  if (platform === "linux") {
+    const abi = musl ? "musl" : "gnu"
+    if (arch === "arm64") return `linux-arm64-${abi}`
+    if (arch === "x64") return `linux-x64-${abi}`
+  }
+  return null
+}
+
+function nativeLoadCandidates(
+  platform: NodeJS.Platform = process.platform,
+  arch: NodeJS.Architecture = process.arch,
+  musl = isMuslLinux(),
+): string[] {
+  const candidates = ["../termless-swash-render.node"]
+  const suffix = nativePlatformSuffix(platform, arch, musl)
+  if (suffix) {
+    candidates.push(`../termless-swash-render.${suffix}.node`)
+    candidates.push(`@termless/swash-render-${suffix}`)
+  }
+  return candidates
+}
+
+/** @internal — exposed for loader contract tests. */
+export function _swashNativeLoadCandidatesForTesting(
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+  musl = false,
+): string[] {
+  return nativeLoadCandidates(platform, arch, musl)
+}
+
+/** @internal — reset cached load state for tests. */
+export function _resetSwashRenderNativeForTesting(): void {
+  nativeModule = null
+  loadError = null
+}
+
 /**
  * Load the native swash-render `.node` addon. Throws a clear, actionable
- * error if the binary is missing (it must be built from the Rust crate).
+ * error if the binary is missing. Supports the legacy local build
+ * (`termless-swash-render.node`), napi-rs platform-suffixed prebuilds, and the
+ * optional platform-package layout used by napi-rs native packages.
  */
 export function loadSwashRenderNative(): NativeModule {
   if (nativeModule) return nativeModule
   if (loadError) throw loadError
-  try {
-    const require = createRequire(import.meta.url)
-    nativeModule = require("../termless-swash-render.node") as NativeModule
-    return nativeModule
-  } catch (e) {
-    loadError = new Error(
-      "Failed to load @termless/swash-render native module. Build it first:\n" +
-        "  cd packages/swash-render && bun run build:native && bun run postbuild:native\n" +
-        `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
-    )
-    throw loadError
+  const require = createRequire(import.meta.url)
+  const errors: string[] = []
+  const override = process.env.NAPI_RS_NATIVE_LIBRARY_PATH
+  if (override) {
+    try {
+      nativeModule = require(override) as NativeModule
+      return nativeModule
+    } catch (e) {
+      errors.push(`${override}: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
+  for (const candidate of nativeLoadCandidates()) {
+    try {
+      nativeModule = require(candidate) as NativeModule
+      return nativeModule
+    } catch (e) {
+      errors.push(`${candidate}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  const tried = nativeLoadCandidates()
+    .map((c) => `  - ${c}`)
+    .join("\n")
+  const original = errors.length ? `\n\nLoad attempts:\n${errors.map((e) => `  - ${e}`).join("\n")}` : ""
+  loadError = new Error(
+    "Failed to load @termless/swash-render native module.\n" +
+      "Install the matching optional prebuild package, or build a local prebuild:\n" +
+      "  cd packages/swash-render && bun run build:prebuild\n\n" +
+      `Tried:\n${tried}${original}`,
+  )
+  throw loadError
 }
 
 /** Whether the native swash binding is present and loadable. */

@@ -25,8 +25,10 @@
   },
   "files": [
     "dist",
-    "native",
-    "*.node"
+    "native/Cargo.lock",
+    "native/Cargo.toml",
+    "native/build.rs",
+    "native/src"
   ],
   "type": "module",
   "module": "./src/index.ts",
@@ -43,11 +45,26 @@
     }
   },
   "scripts": {
+    "build:prebuild": "bunx @napi-rs/cli@3.5.1 build --manifest-path native/Cargo.toml --package-json-path package.json --platform --release --no-js --dts native/target/index.d.ts --output-dir .",
+    "check:packlist": "bun scripts/check-packlist.ts",
     "build:native": "cd native && cargo build --release",
     "postbuild:native": "node -e \"const fs=require('fs'),p='native/target/release/';for(const f of fs.readdirSync(p))if(/^libtermless_swash_render_native\\.(dylib|so)$/.test(f)||f==='termless_swash_render_native.dll')fs.copyFileSync(p+f,'termless-swash-render.node')\""
   },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0"
+  },
   "peerDependencies": {
     "@termless/core": "*"
+  },
+  "napi": {
+    "binaryName": "termless-swash-render",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu"
+    ]
   },
   "tsdown": {
     "clean": true,

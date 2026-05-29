@@ -31,6 +31,33 @@ jobs:
       - run: bun vitest run
       - run: bun run typecheck
 
+  # Swash native prebuild gate — proves the napi-rs addon builds and loads on
+  # the same OS matrix where the recorder is tested. The binaries stay CI
+  # artifacts/build outputs here; publishing platform packages is a separate
+  # release decision.
+  swash-prebuild:
+    name: swash prebuild (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-22.04-arm
+          - macos-latest
+          - macos-14
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bun install
+      - run: bun run --filter @termless/swash-render build:prebuild
+      - run: bun run --filter @termless/swash-render check:packlist
+      - run: bun vitest run packages/swash-render/tests/native-loader.test.ts packages/swash-render/tests/golden-frame.test.ts
+
   # Canvas engine matrix — @napi-rs/canvas + ghostty-web cross-platform gate.
   # Hard prerequisite for Phase 9 (Playwright deletion). Until this is green
   # everywhere, the resvg fallback in Terminal.screenshot() is the safety net.
