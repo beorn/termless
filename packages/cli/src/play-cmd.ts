@@ -383,6 +383,7 @@ async function playAction(
     marginFill?: string
     speed?: number
     framerate?: number
+    frameReplay?: boolean
   },
 ): Promise<void> {
   // stdin support: read from stdin if file is "-"
