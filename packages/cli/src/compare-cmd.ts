@@ -23,8 +23,8 @@
 import type { Command } from "@silvery/commander"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { isReady as isBackendReadyForCanvas } from "../../../src/backend/backends.ts"
-import { compareCanvas } from "../../../src/recording/tape/compare-canvas.ts"
+import { backend as resolveBackend } from "../../../src/backend/backends.ts"
+import { compareCanvas, type CanvasBackendSpec } from "../../../src/recording/tape/compare-canvas.ts"
 import { type CompareMode, compareTape } from "../../../src/recording/tape/compare.ts"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import { compareSeparateOutputDir, resolveBackendNames, writeComparisonOutput } from "./play-cmd.ts"
@@ -78,27 +78,25 @@ export async function compareAction(file: string, opts: CompareCliOpts): Promise
   // any pixel difference is attributable to a backend's VT parser, not to a
   // rendering-engine difference.
   if (mode === "side-by-side" || mode === "diff") {
-    const usable: string[] = []
+    const usable: CanvasBackendSpec[] = []
     for (const name of backends) {
-      let ready = false
       try {
-        ready = isBackendReadyForCanvas(name)
+        usable.push({ name, backend: await resolveBackend(name) })
       } catch {
-        ready = false
-      }
-      if (ready) {
-        usable.push(name)
-      } else {
         console.log(`  Warning: backend "${name}" is not installed/built — skipping`)
       }
     }
     if (usable.length < 2) {
       throw new Error(
-        `compare --mode ${mode} needs at least 2 installed backends; usable: ${usable.join(", ") || "(none)"}`,
+        `compare --mode ${mode} needs at least 2 installed backends; usable: ${
+          usable.map((spec) => (typeof spec === "string" ? spec : spec.name)).join(", ") || "(none)"
+        }`,
       )
     }
 
-    console.log(`Canvas-comparing across ${usable.length} backends (${usable.join(", ")})...`)
+    console.log(
+      `Canvas-comparing across ${usable.length} backends (${usable.map((spec) => (typeof spec === "string" ? spec : spec.name)).join(", ")})...`,
+    )
 
     const wantsGif = (firstOutput ?? "").toLowerCase().endsWith(".gif")
     const canvasResult = await compareCanvas(tape, {

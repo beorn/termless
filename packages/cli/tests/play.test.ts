@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -148,6 +148,36 @@ describe("frame replay", () => {
 
       expect(readFileSync(output).subarray(0, 6).toString("ascii")).toBe("GIF89a")
     } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("play compare", () => {
+  it("delegates side-by-side canvas comparison through the play alias", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-compare-"))
+    const calls: Array<{ file: string; opts: { backend?: string; mode?: string; output?: string } }> = []
+    try {
+      const tapePath = join(dir, "demo.tape")
+      const output = join(dir, "comparison.png")
+      writeFileSync(tapePath, 'Set Width 8\nSet Height 3\nType "hi"\nScreenshot\n')
+      vi.doMock("../src/compare-cmd.ts", () => ({
+        compareAction: async (file: string, opts: { backend?: string; mode?: string; output?: string }) => {
+          calls.push({ file, opts })
+          writeFileSync(opts.output!, new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+        },
+      }))
+
+      await playAction(tapePath, {
+        backend: "xtermjs,vt100",
+        compare: "side-by-side",
+        output: [output],
+      })
+
+      expect(calls).toEqual([{ file: tapePath, opts: { backend: "xtermjs,vt100", mode: "side-by-side", output } }])
+      expect(readFileSync(output).subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a")
+    } finally {
+      vi.doUnmock("../src/compare-cmd.ts")
       rmSync(dir, { recursive: true, force: true })
     }
   })
