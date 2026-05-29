@@ -17,9 +17,9 @@
 import type { Command } from "@silvery/commander"
 
 const parseNum = (v: string) => parseInt(v, 10)
-import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs"
-import { dirname, resolve } from "node:path"
-import { parseTape } from "../../../src/recording/tape/parser.ts"
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { basename, dirname, extname, join, resolve } from "node:path"
+import { parseTape, type TapeFile } from "../../../src/recording/tape/parser.ts"
 import { executeTape } from "../../../src/recording/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveTheme } from "../../../src/recording/tape/themes.ts"
@@ -71,6 +71,23 @@ export function compareSeparateOutputDir(output?: string): string {
     return trimmed.length > 0 ? trimmed : output
   }
   return dirname(output)
+}
+
+function siblingFramesDir(tapePath: string): string {
+  const ext = extname(tapePath)
+  const base = ext.length > 0 ? basename(tapePath, ext) : basename(tapePath)
+  return join(dirname(tapePath), `${base}.frames`)
+}
+
+export function resolveTapeFramesDir(tapePath: string, framesSetting: string | undefined): string {
+  if (framesSetting) {
+    const baseDir = tapePath === "-" ? process.cwd() : dirname(resolve(tapePath))
+    return resolve(baseDir, framesSetting)
+  }
+  if (tapePath === "-") {
+    throw new Error("play --frame-replay from stdin needs Set Frames in the tape header")
+  }
+  return siblingFramesDir(resolve(tapePath))
 }
 
 /** Write a composed comparison SVG, rasterizing it when the user requests `.png`. */
@@ -183,6 +200,70 @@ async function writeImageOutput(path: string, frames: AnimationFrame[]): Promise
   console.log(`  Saved: ${path} (${sizeStr})`)
 }
 
+export interface FrameReplayResult {
+  framesDir: string
+  frameCount: number
+  outputCount: number
+}
+
+async function writeFrameReplayOutput(
+  path: string,
+  frames: Array<{ png: Uint8Array; duration: number }>,
+): Promise<void> {
+  if (frames.length === 0) {
+    throw new Error("play --frame-replay: frame trace has no PNG frames")
+  }
+
+  const resolved = resolve(path)
+  mkdirSync(dirname(resolved), { recursive: true })
+  const lower = path.toLowerCase()
+  if (lower.endsWith(".gif")) {
+    const { createGifFromPngs } = await import("../../../src/view/gif.ts")
+    writeFileSync(resolved, await createGifFromPngs(frames))
+    return
+  }
+  if (lower.endsWith(".png")) {
+    writeFileSync(resolved, frames[frames.length - 1]!.png)
+    return
+  }
+  throw new Error("play --frame-replay can write .gif or .png outputs from recorded PNG frames")
+}
+
+export async function playFrameReplayFromTape(
+  tapePath: string,
+  tape: TapeFile,
+  opts: { output?: string[] } = {},
+): Promise<FrameReplayResult> {
+  const framesDir = resolveTapeFramesDir(tapePath, tape.settings.Frames)
+  const indexFile = join(framesDir, "index.jsonl")
+  if (!existsSync(indexFile)) {
+    throw new Error(`play --frame-replay: no frame trace found at ${indexFile}`)
+  }
+
+  const { loadVisualTrace } = await import("../../../src/recording/load-visual-trace.ts")
+  const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
+  const recording = loadVisualTrace(framesDir, { backend: tape.settings.Backend ?? "unknown" })
+  const frames = recordingToPngFrames(recording, framesDir)
+  const outputs = opts.output ?? []
+
+  for (const output of outputs) {
+    await writeFrameReplayOutput(output, frames)
+    console.log(`Frame replay saved: ${output}`)
+  }
+
+  if (outputs.length === 0) {
+    const { writeViewer } = await import("../../../src/view/viewer.ts")
+    const result = writeViewer(framesDir)
+    console.log(`Frame replay viewer: ${result.viewerFile}`)
+  }
+
+  return {
+    framesDir,
+    frameCount: recording.frames?.length ?? frames.length,
+    outputCount: outputs.length,
+  }
+}
+
 // =============================================================================
 // Asciicast playback
 // =============================================================================
@@ -203,6 +284,7 @@ async function playCast(
     marginFill?: string
     speed?: number
     framerate?: number
+    frameReplay?: boolean
   },
 ): Promise<void> {
   const { parseAsciicast, replayAsciicast } = await import("../../../src/recording/asciicast/reader.ts")
@@ -324,6 +406,11 @@ async function playAction(
   }
 
   const tape = parseTape(source)
+
+  if (opts.frameReplay) {
+    await playFrameReplayFromTape(file, tape, { output: outputs })
+    return
+  }
 
   const backends = resolveBackendNames(opts.backend)
 
@@ -650,12 +737,14 @@ export function registerPlayCommand(program: Command): void {
     .option("--margin-fill <color>", "Outer margin fill color (e.g. #1a1a2e)")
     .option("--speed <n>", "Playback speed multiplier (e.g. 2 for 2x)", Number.parseFloat)
     .option("--framerate <n>", "Output framerate in FPS", parseNum)
+    .option("--frame-replay", "Replay the tape's recorded .frames sidecar without spawning a PTY")
 
   cmd.addHelpSection("Examples:", [
     ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],
     ["$ termless play demo.cast", "Play an asciicast recording"],
     ["$ termless play -o demo.gif demo.tape", "Convert tape to animated GIF"],
     ["$ termless play -o demo.svg demo.tape", "Convert to animated SVG"],
+    ["$ termless play --frame-replay -o demo.gif demo.tape", "Animate the recorded .frames sidecar"],
     ["$ termless play demo.tape -b ghostty,xtermjs --compare side-by-side -o c.png", "Cross-backend panels"],
     ["$ termless play demo.tape -b ghostty,xtermjs --compare diff -o d.png", "Parser-divergence overlay"],
     ["$ cat demo.tape | termless play -", "Play from stdin"],
