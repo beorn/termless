@@ -34,6 +34,7 @@ import { registerRecordCommand } from "./record-cmd.ts"
 import { registerViewCommand } from "./view-cmd.ts"
 import { registerPlayCommand } from "./play-cmd.ts"
 import { registerCompareCommand } from "./compare-cmd.ts"
+import { registerInspectCommand } from "./inspect-cmd.ts"
 import { registerBackendCommand } from "./backend-cmd.tsx"
 import { registerDoctorCommand } from "./doctor-cmd.tsx"
 
@@ -50,6 +51,7 @@ program.addHelpSection("Recording verbs:", [
   ["$ termless view ./trace --format gif -o demo.gif", "view — animate a recording to a GIF"],
   ["$ termless play demo.tape", "play — re-execute a recording"],
   ["$ termless compare demo.tape -b vterm,ghostty", "compare — diff a recording across backends"],
+  ["$ termless inspect demo.tape", "inspect — summarize a tape bundle"],
 ])
 
 program.addHelpSection("Config & diagnostics:", [
@@ -66,6 +68,7 @@ registerRecordCommand(program)
 registerViewCommand(program)
 registerPlayCommand(program)
 registerCompareCommand(program)
+registerInspectCommand(program)
 registerBackendCommand(program)
 registerDoctorCommand(program)
 

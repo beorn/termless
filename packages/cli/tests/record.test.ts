@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { hasFrameChanged, generateHtmlSlideshow, type RecordedFrame } from "../src/record.ts"
 import {
   isTerminalResponse,
@@ -502,20 +502,28 @@ describe("record --compat", () => {
 
   it("rejects an empty command with exit code 1", async () => {
     const prevExit = process.exitCode
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
       await compatRecord([], { cols: 120, rows: 40 })
       expect(process.exitCode).toBe(1)
+      expect(errorSpy).toHaveBeenCalledWith("Error: --compat needs a command. Pass the TUI command after `--`.")
     } finally {
+      errorSpy.mockRestore()
       process.exitCode = prevExit
     }
   })
 
   it("rejects an unknown --terminal with exit code 1", async () => {
     const prevExit = process.exitCode
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
       await compatRecord(["bun", "km"], { cols: 120, rows: 40, terminal: "alacritty" })
       expect(process.exitCode).toBe(1)
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Error: unknown --terminal "alacritty". Valid: ghostty, kitty, iterm, terminal.',
+      )
     } finally {
+      errorSpy.mockRestore()
       process.exitCode = prevExit
     }
   })
