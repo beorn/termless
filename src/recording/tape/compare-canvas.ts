@@ -33,9 +33,18 @@ import type { TapeFile } from "./parser.ts"
 import type { Cell, CursorState, Terminal, TerminalBackend, TerminalReadable } from "../../terminal/types.ts"
 import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../../terminal/snapshot.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
-import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
-import { pngDimensions } from "../../compare.ts"
+import { pngDimensions, type CanvasTheme } from "../../compare.ts"
 import { encodePng, decodePngRgba, type RgbaImage } from "./png-codec.ts"
+
+interface RenderOptions {
+  cols?: number
+  rows?: number
+  fontSize?: number
+  fontFamily?: string
+  fontPath?: string
+  dpr?: number
+  theme?: CanvasTheme
+}
 
 // =============================================================================
 // Types
@@ -119,6 +128,9 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
   const gap = options.gap ?? 12
 
   const results: CanvasBackendResult[] = []
+  const { renderTerminalPng } = (await import("@termless/ghostty")) as {
+    renderTerminalPng: (terminal: TerminalReadable, options: RenderOptions) => Promise<Uint8Array>
+  }
 
   // ── Run the tape through each backend, render every frame via the canvas ──
   for (const spec of options.backends) {

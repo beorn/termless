@@ -18,6 +18,7 @@ jobs:
           bun-version: latest
       - run: bun install
       - run: bun run test
+      - run: bun run build:all
       - uses: pnpm/action-setup@v4
         with:
           version: 9

@@ -1,7 +1,10 @@
-import { Terminal } from "@xterm/xterm"
+// @xterm/xterm is CJS in Node's ESM loader; use default import for compatibility.
+import xterm from "@xterm/xterm"
 import { compilePlaybackSource } from "./compile.ts"
 import { createPlaybackController } from "./controller.ts"
 import type { CompiledPlayback, TermlessPlayer, TermlessPlayerOptions } from "./types.ts"
+
+const { Terminal } = xterm
 
 export type { TermlessPlayer, TermlessPlayerOptions } from "./types.ts"
 

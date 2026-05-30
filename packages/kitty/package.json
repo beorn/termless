@@ -1,6 +1,6 @@
 {
   "name": "@termless/kitty",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Kitty backend for termless — uses kitty's VT parser via subprocess bridge (GPL-3.0 dependency, not distributed)",
   "keywords": [
     "headless",
@@ -27,7 +27,7 @@
     "build"
   ],
   "type": "module",
-  "module": "./src/index.ts",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": "./src/index.ts"
   },

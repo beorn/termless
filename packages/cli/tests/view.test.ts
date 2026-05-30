@@ -2,7 +2,7 @@
  * `termless view` — the view verb. Scrub mode writes a self-contained
  * `viewer.html`; animate mode (`--format gif`) writes a GIF.
  */
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -16,6 +16,19 @@ const FIXTURE = join(here, "../../../tests/fixtures/legacy-frame-trace")
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), "view-cmd-test-"))
 }
+
+let logSpy: ReturnType<typeof vi.spyOn>
+let errSpy: ReturnType<typeof vi.spyOn>
+
+beforeEach(() => {
+  logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+  errSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+})
+
+afterEach(() => {
+  logSpy.mockRestore()
+  errSpy.mockRestore()
+})
 
 describe("termless view — scrub mode (default)", () => {
   it("writes a self-contained viewer.html alongside a frame-trace recording", async () => {

@@ -27,7 +27,47 @@
  */
 
 import type { Terminal, SvgScreenshotOptions } from "./terminal/types.ts"
-import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
+
+export interface CanvasTheme {
+  background?: string
+  foreground?: string
+  cursor?: string
+  cursorAccent?: string
+  selectionBackground?: string
+  selectionForeground?: string
+  black?: string
+  red?: string
+  green?: string
+  yellow?: string
+  blue?: string
+  magenta?: string
+  cyan?: string
+  white?: string
+  brightBlack?: string
+  brightRed?: string
+  brightGreen?: string
+  brightYellow?: string
+  brightBlue?: string
+  brightMagenta?: string
+  brightCyan?: string
+  brightWhite?: string
+}
+
+interface CanvasRenderOptions {
+  cols?: number
+  rows?: number
+  fontSize?: number
+  fontFamily?: string
+  fontPath?: string
+  dpr?: number
+  theme?: CanvasTheme
+  returnMeta?: boolean
+}
+
+interface CanvasRenderMeta {
+  cellWidth?: number
+  cellHeight?: number
+}
 
 export interface CrossRendererOptions {
   /**
@@ -120,7 +160,7 @@ export async function captureCrossRenderer(
   // Phase 9: routes through @termless/ghostty's renderTerminalPng (native
   // canvas via @napi-rs/canvas + ghostty-web WASM). Replaces the deleted
   // screenshotCanvasPng (Playwright + Chromium) path.
-  const canvasOptions: RenderOptions & { returnMeta: true } = {
+  const canvasOptions: CanvasRenderOptions & { returnMeta: true } = {
     returnMeta: true,
     ...(options.cols != null ? { cols: options.cols } : {}),
     ...(options.rows != null ? { rows: options.rows } : {}),
@@ -129,9 +169,15 @@ export async function captureCrossRenderer(
     ...(options.fontSize ? { fontSize: options.fontSize } : {}),
     ...(options.fontFamily ? { fontFamily: options.fontFamily } : {}),
   }
+  const { renderTerminalPng } = (await import("@termless/ghostty")) as {
+    renderTerminalPng: (
+      terminal: Terminal,
+      options: CanvasRenderOptions & { returnMeta: true },
+    ) => Promise<Uint8Array | { png: Uint8Array; meta: CanvasRenderMeta }>
+  }
   const canvasResult = (await renderTerminalPng(terminal, canvasOptions)) as unknown as {
     png: Uint8Array
-    meta: RenderMeta
+    meta: CanvasRenderMeta
   }
   const canvasBytes = canvasResult.png
   const canvasMeta = canvasResult.meta

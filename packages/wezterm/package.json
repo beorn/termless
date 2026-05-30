@@ -1,6 +1,6 @@
 {
   "name": "@termless/wezterm",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "headless",
@@ -25,12 +25,10 @@
     "directory": "packages/wezterm"
   },
   "files": [
-    "dist",
-    "native",
-    "*.node"
+    "dist"
   ],
   "type": "module",
-  "module": "./src/index.ts",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": "./src/index.ts"
   },

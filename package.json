@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
@@ -61,7 +61,8 @@
     "cli": "bun packages/cli/src/cli.ts",
     "publish:all": "bun run publish:core && bun run publish:packages",
     "publish:core": "pnpm publish --access public --no-git-checks",
-    "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/viterm packages/peekaboo packages/web-player packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust; do (cd $pkg && pnpm publish --access public --no-git-checks); done"
+    "publish:packages": "for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/vt220 packages/viterm packages/peekaboo packages/web-player packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust packages/vterm packages/swash-render; do (cd $pkg && pnpm publish --access public --no-git-checks); done",
+    "build:all": "bunx tsdown && for pkg in packages/xtermjs packages/ghostty packages/ghostty-native packages/vt100 packages/vt220 packages/viterm packages/peekaboo packages/web-player packages/cli packages/alacritty packages/wezterm packages/kitty packages/libvterm packages/vt100-rust packages/vterm packages/swash-render; do (cd $pkg && bunx tsdown); done"
   },
   "devDependencies": {
     "@termless/alacritty": "workspace:*",

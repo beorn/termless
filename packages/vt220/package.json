@@ -1,6 +1,6 @@
 {
   "name": "@termless/vt220",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Pure TypeScript VT220 backend for termless — 8 colors, insert/delete, selective erase",
   "keywords": [
     "ansi-parser",
@@ -29,7 +29,7 @@
     "dist"
   ],
   "type": "module",
-  "module": "./src/index.ts",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": "./src/index.ts"
   },

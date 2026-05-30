@@ -1,6 +1,6 @@
 {
   "name": "@termless/ghostty-native",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Native Ghostty backend for termless — Ghostty VT Zig module via napigen N-API bindings",
   "keywords": [
     "ghostty",
@@ -29,7 +29,7 @@
     "dist"
   ],
   "type": "module",
-  "module": "./src/index.ts",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": "./src/index.ts"
   },

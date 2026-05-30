@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -15,6 +15,16 @@ const catalog = {
   names: () => ["vterm", "ghostty", "alacritty", "vt100"],
   ready: (name: string) => name !== "alacritty",
 }
+
+let logSpy: ReturnType<typeof vi.spyOn>
+
+beforeEach(() => {
+  logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+})
+
+afterEach(() => {
+  logSpy.mockRestore()
+})
 
 describe("resolveBackendNames", () => {
   it("leaves unspecified backend selection to the player default", () => {
