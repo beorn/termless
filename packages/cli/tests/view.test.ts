@@ -2,12 +2,23 @@
  * `termless view` — the view verb. Scrub mode writes a self-contained
  * `viewer.html`; animate mode (`--format gif`) writes a GIF.
  */
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { viewAction } from "../src/view-cmd.ts"
+
+// `viewAction` is a CLI verb — it intentionally writes user-facing progress
+// (`Viewer: …`, `Saved: …`) and error (`Error: …`) lines to the console. The
+// shared vitest setup fails any test that emits console output, so suppress it
+// here (these tests assert on files / exit code, not the chatter). Spying also
+// overrides the setup's capture spy so the guard sees no output. Restored
+// automatically by the setup's afterEach `vi.restoreAllMocks()`.
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {})
+  vi.spyOn(console, "error").mockImplementation(() => {})
+})
 
 const here = dirname(fileURLToPath(import.meta.url))
 /** The legacy frame-trace fixture — a bare `index.jsonl` + `00001.png`. */

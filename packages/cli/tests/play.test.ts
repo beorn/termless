@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -70,6 +70,14 @@ describe("comparison output helpers", () => {
 })
 
 describe("frame replay", () => {
+  // Frame-replay verbs print a user-facing `Frame replay saved: …` line; the
+  // shared vitest setup fails on any console output, so suppress it (these
+  // tests assert on the emitted GIF, not the chatter). Restored by the setup's
+  // afterEach `vi.restoreAllMocks()`.
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {})
+  })
+
   const onePixelPng = new Uint8Array(
     Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
