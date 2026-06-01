@@ -80,6 +80,20 @@ export interface XtermGuestOptions {
   scrollback?: number
   /** Protocol modes the PTY guest asks the host to enable while focused. */
   modes?: IslandProtocolModes
+  /**
+   * Preserve the guest's palette INDICES (basic-16 / 256) instead of resolving
+   * them to a fixed standard-palette RGB. Default `false` (resolve to RGB —
+   * compositing isolation for recording / rec-overlay guests).
+   *
+   * Set `true` for a LIVE multiplexer pane (silvermux): the index is emitted as
+   * `ansi256(N)`, the host re-emits `38;5;N`, and the OUTER terminal renders it
+   * with ITS OWN palette — so the guest shell looks identical inside the mux and
+   * outside it. Without this, `\x1b[32m` is baked to standard `#008000` and the
+   * outer terminal's theme palette is bypassed (the "paler inside silvermux"
+   * bug). Truecolor cells have no index and pass through as exact RGB either way.
+   * @km/silvery/19426.
+   */
+  palettePassthrough?: boolean
 }
 
 export interface XtermGuestHandle extends IslandHandle {
@@ -173,8 +187,15 @@ const PALETTE_256: readonly string[] = buildPalette256()
 
 const BLANK_CELL: Cell = { char: " ", fg: null, bg: null, attrs: {}, wide: false, continuation: false }
 
+/** Convert an xterm palette index to either a passthrough `ansi256(N)` token
+ * (outer terminal owns the palette) or a fixed standard-palette RGB hex. */
+function paletteColor(index: number, passthrough: boolean): string | null {
+  if (passthrough) return `ansi256(${index})`
+  return PALETTE_256[index] ?? null
+}
+
 /** Convert an xterm IBufferCell into a silvery Cell. */
-function convertCell(c: IBufferCell | undefined): Cell {
+function convertCell(c: IBufferCell | undefined, palettePassthrough: boolean): Cell {
   if (!c) return BLANK_CELL
 
   const width = c.getWidth()
@@ -185,11 +206,11 @@ function convertCell(c: IBufferCell | undefined): Cell {
 
   let fg: string | null = null
   if (c.isFgRGB()) fg = rgbHex(c.getFgColor())
-  else if (c.isFgPalette()) fg = PALETTE_256[c.getFgColor()] ?? null
+  else if (c.isFgPalette()) fg = paletteColor(c.getFgColor(), palettePassthrough)
 
   let bg: string | null = null
   if (c.isBgRGB()) bg = rgbHex(c.getBgColor())
-  else if (c.isBgPalette()) bg = PALETTE_256[c.getBgColor()] ?? null
+  else if (c.isBgPalette()) bg = paletteColor(c.getBgColor(), palettePassthrough)
 
   const attrs: CellAttrs = {}
   if (c.isBold()) attrs.bold = true
@@ -219,7 +240,7 @@ function convertCell(c: IBufferCell | undefined): Cell {
  * The snapshot is taken once per blit so the silvery pipeline can read cells
  * during render without racing the xterm parser.
  */
-function snapshotBuffer(term: XTerminal): CellBuffer {
+function snapshotBuffer(term: XTerminal, palettePassthrough: boolean): CellBuffer {
   const cols = term.cols
   const rows = term.rows
   const cells: Cell[] = new Array(cols * rows)
@@ -228,7 +249,7 @@ function snapshotBuffer(term: XTerminal): CellBuffer {
   for (let row = 0; row < rows; row++) {
     const line = buf.getLine(row + baseY)
     for (let col = 0; col < cols; col++) {
-      cells[row * cols + col] = convertCell(line?.getCell(col))
+      cells[row * cols + col] = convertCell(line?.getCell(col), palettePassthrough)
     }
   }
   return {
@@ -320,7 +341,8 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   let term: XTerminal | null = createXtermTerminal(opts)
   let cols = opts.cols
   let rows = opts.rows
-  let buffer: CellBuffer = snapshotBuffer(term)
+  const palettePassthrough = opts.palettePassthrough ?? false
+  let buffer: CellBuffer = snapshotBuffer(term, palettePassthrough)
   let disposed = false
   let outputScheduled = false
   const decoder = new TextDecoder()
@@ -355,7 +377,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     queueMicrotask(() => {
       outputScheduled = false
       if (!term || disposed) return
-      buffer = snapshotBuffer(term)
+      buffer = snapshotBuffer(term, palettePassthrough)
       notifyOutput()
     })
   }
@@ -409,7 +431,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     term.resize(nextCols, nextRows)
     cols = nextCols
     rows = nextRows
-    buffer = snapshotBuffer(term)
+    buffer = snapshotBuffer(term, palettePassthrough)
     notifySize()
     notifyOutput()
   }
