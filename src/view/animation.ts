@@ -5,7 +5,14 @@
  * Individual encoders are also exported directly for fine-grained control.
  */
 
-export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation-types.ts"
+export type {
+  AnimationFrame,
+  AnimationOptions,
+  AnimationFormat,
+  FrameLayer,
+  FrameLayerOffset,
+} from "./animation-types.ts"
+export { frameLayers, rasterizeFrameLayers } from "./frame-layers.ts"
 export { createAnimatedSvg } from "./animated-svg.ts"
 export { createGif } from "./gif.ts"
 export { createApng } from "./apng.ts"

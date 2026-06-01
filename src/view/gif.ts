@@ -14,7 +14,8 @@
 
 // Module declarations live in ./gifenc.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
-import { selectRasterizer, type RasterBitmap, type RendererKind } from "./rasterizer.ts"
+import { rasterizeFrameLayers } from "./frame-layers.ts"
+import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
 
 // Lazy-cached imports
 let gifencModule: typeof import("gifenc") | null = null
@@ -27,56 +28,6 @@ async function loadGifenc() {
   } catch {
     throw new Error("createGif() requires gifenc. Install it:\n  bun add gifenc")
   }
-}
-
-function svgHasChrome(svg: string): boolean {
-  return /windowBar|windowTitle|<rect[^>]*rx="\d+"/.test(svg)
-}
-
-function svgContentOffset(svg: string, scale: number): { x: number; y: number } {
-  const transforms = [...svg.matchAll(/<g[^>]*\btransform="translate\(\s*([\d.-]+)[,\s]+([\d.-]+)\s*\)"/g)]
-  const contentTransform = transforms.at(-1)
-  if (!contentTransform) return { x: 0, y: 0 }
-  return {
-    x: Math.round(Number(contentTransform[1]) * scale),
-    y: Math.round(Number(contentTransform[2]) * scale),
-  }
-}
-
-function compositeBitmap(base: RasterBitmap, overlay: RasterBitmap, offset: { x: number; y: number }): RasterBitmap {
-  const pixels = new Uint8Array(base.pixels)
-  for (let y = 0; y < overlay.height; y++) {
-    const dy = y + offset.y
-    if (dy < 0 || dy >= base.height) continue
-    for (let x = 0; x < overlay.width; x++) {
-      const dx = x + offset.x
-      if (dx < 0 || dx >= base.width) continue
-
-      const si = (y * overlay.width + x) * 4
-      const di = (dy * base.width + dx) * 4
-      const srcAlpha = overlay.pixels[si + 3]! / 255
-      if (srcAlpha <= 0) continue
-      if (srcAlpha >= 1) {
-        pixels[di] = overlay.pixels[si]!
-        pixels[di + 1] = overlay.pixels[si + 1]!
-        pixels[di + 2] = overlay.pixels[si + 2]!
-        pixels[di + 3] = overlay.pixels[si + 3]!
-        continue
-      }
-
-      const dstAlpha = pixels[di + 3]! / 255
-      const outAlpha = srcAlpha + dstAlpha * (1 - srcAlpha)
-      if (outAlpha <= 0) continue
-
-      const dstWeight = (dstAlpha * (1 - srcAlpha)) / outAlpha
-      const srcWeight = srcAlpha / outAlpha
-      pixels[di] = Math.round(overlay.pixels[si]! * srcWeight + pixels[di]! * dstWeight)
-      pixels[di + 1] = Math.round(overlay.pixels[si + 1]! * srcWeight + pixels[di + 1]! * dstWeight)
-      pixels[di + 2] = Math.round(overlay.pixels[si + 2]! * srcWeight + pixels[di + 2]! * dstWeight)
-      pixels[di + 3] = Math.round(outAlpha * 255)
-    }
-  }
-  return { ...base, pixels }
 }
 
 /**
@@ -110,21 +61,11 @@ export async function createGif(
 
   const gif = GIFEncoder()
 
-  // Cell-native path: a renderer that exposes `rasterizeCells` (swash) skips
-  // the SVG round-trip when the frame carries a snapshot — that is what makes
-  // color emoji and exact glyph coverage survive into the GIF. If the SVG
-  // also carries chrome, rasterize the chrome SVG and overwrite only the
-  // terminal content rectangle with the cell-native bitmap.
+  // Cell-native path: the frame-layer projection lets a renderer that exposes
+  // `rasterizeCells` (swash) skip the SVG round-trip for cells while still
+  // rasterizing SVG/chrome/decorations through the SVG path.
   const rasterize = async (frame: AnimationFrame) => {
-    if (forceSvg || !frame.snapshot || !rasterizer.rasterizeCells) {
-      return rasterizer.rasterize(frame.svg, scale)
-    }
-
-    const cells = await rasterizer.rasterizeCells(frame.snapshot, scale)
-    if (!svgHasChrome(frame.svg)) return cells
-
-    const chrome = await rasterizer.rasterize(frame.svg, scale)
-    return compositeBitmap(chrome, cells, svgContentOffset(frame.svg, scale))
+    return rasterizeFrameLayers(frame, rasterizer, scale, { forceSvg })
   }
 
   // Shared global palette. A terminal recording's colour set barely changes

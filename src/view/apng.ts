@@ -11,6 +11,7 @@
 
 // Module declarations live in ./upng.d.ts (picked up via tsconfig `include` glob).
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
+import { rasterizeFrameLayers } from "./frame-layers.ts"
 import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
 
 // Lazy-cached imports
@@ -59,11 +60,7 @@ export async function createApng(
     for (const frame of frames) {
       const duration = frame.duration || defaultDuration
 
-      // Cell-native path (swash): skip the SVG round-trip when a snapshot exists.
-      const rendered =
-        frame.snapshot && rasterizer.rasterizeCells
-          ? await rasterizer.rasterizeCells(frame.snapshot, scale)
-          : await rasterizer.rasterize(frame.svg, scale)
+      const rendered = await rasterizeFrameLayers(frame, rasterizer, scale)
 
       // Use first frame's dimensions as the canvas size
       if (width === 0) {

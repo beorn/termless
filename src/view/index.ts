@@ -25,7 +25,14 @@ export { createGif, createGifFromPngs } from "./gif.ts"
 export type { PngFrame } from "./gif.ts"
 export { createApng } from "./apng.ts"
 export { renderAnimation, detectFormat } from "./animation.ts"
-export type { AnimationFrame, AnimationOptions, AnimationFormat } from "./animation-types.ts"
+export { frameLayers, rasterizeFrameLayers } from "./frame-layers.ts"
+export type {
+  AnimationFrame,
+  AnimationOptions,
+  AnimationFormat,
+  FrameLayer,
+  FrameLayerOffset,
+} from "./animation-types.ts"
 
 // Recording-domain bridge: derive animation frames from a Recording.
 export { recordingToPngFrames, recordingToAnimationFrames } from "./from-recording.ts"
