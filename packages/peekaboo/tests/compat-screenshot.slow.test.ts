@@ -57,14 +57,12 @@ async function canCapture(): Promise<boolean> {
 describe("compat-screenshot: live capture (opt-in, macOS + GUI)", () => {
   it("captures `echo hello` in each installed terminal app", async () => {
     if (!(await canCapture())) {
-      console.log("[skip] live capture — set TERMLESS_PEEKABOO_LIVE=1 on macOS+GUI to enable")
       return
     }
 
     let capturedAny = false
     for (const terminal of COMPAT_TERMINAL_PREFERENCE as readonly CompatTerminal[]) {
       if (!(await isTerminalInstalled(terminal))) {
-        console.log(`[skip] ${terminal} not installed`)
         continue
       }
       const result = await compatScreenshot({
@@ -85,19 +83,15 @@ describe("compat-screenshot: live capture (opt-in, macOS + GUI)", () => {
         // ignore
       }
     }
-    if (!capturedAny) {
-      console.log("[skip] no supported terminal app installed — nothing captured")
-    }
+    void capturedAny
   }, 60_000)
 
   it("auto-detects a terminal when none specified", async () => {
     if (!(await canCapture())) {
-      console.log("[skip] auto-detect — set TERMLESS_PEEKABOO_LIVE=1 on macOS+GUI to enable")
       return
     }
     const detected = await detectTerminal()
     if (!detected) {
-      console.log("[skip] no terminal app installed")
       return
     }
     const result = await compatScreenshot({ cmd: "echo hello", cols: 80, rows: 24, waitTimeoutMs: 6_000 })
