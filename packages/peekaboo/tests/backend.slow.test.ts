@@ -9,6 +9,17 @@ import { describe, it, expect, afterEach } from "vitest"
 import { createPeekabooBackend } from "../src/backend.ts"
 import type { PtyHandle } from "../../../src/terminal/pty.ts"
 
+async function waitForText(readText: () => string, expected: string, timeout = 3000): Promise<string> {
+  const start = Date.now()
+  let text = ""
+  while (Date.now() - start < timeout) {
+    text = readText()
+    if (text.includes(expected)) return text
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+  return text
+}
+
 describe("peekaboo backend", () => {
   let pty: PtyHandle | null = null
 
@@ -174,10 +185,7 @@ describe("peekaboo backend", () => {
 
       pty = await backend.spawnCommand(["echo", "hello from peekaboo"])
 
-      // Wait for output to arrive
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const text = backend.getText()
+      const text = await waitForText(() => backend.getText(), "hello from peekaboo")
       expect(text).toContain("hello from peekaboo")
 
       backend.destroy()

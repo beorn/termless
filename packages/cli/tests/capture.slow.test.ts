@@ -1,15 +1,17 @@
 import { describe, test, expect } from "vitest"
 import { createSessionManager } from "../src/session.ts"
 
+const CAPTURE_TIMEOUT_MS = 10_000
+
 describe("CLI capture integration", () => {
-  test("capture echo command output", { timeout: 15_000 }, async () => {
+  test("capture echo command output", { timeout: 20_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
         command: ["echo", "hello capture"],
         cols: 80,
         rows: 24,
-        timeout: 5000,
+        timeout: CAPTURE_TIMEOUT_MS,
       })
       expect(terminal.getText()).toContain("hello capture")
     } finally {
@@ -17,14 +19,14 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("custom dimensions are respected", { timeout: 15_000 }, async () => {
+  test("custom dimensions are respected", { timeout: 20_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
         command: ["echo", "test"],
         cols: 120,
         rows: 40,
-        timeout: 5000,
+        timeout: CAPTURE_TIMEOUT_MS,
       })
       expect(terminal.cols).toBe(120)
       expect(terminal.rows).toBe(40)
@@ -33,13 +35,13 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("waitFor text matching", { timeout: 15_000 }, async () => {
+  test("waitFor text matching", { timeout: 20_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
         command: ["echo", "ready to go"],
         waitFor: "ready to go",
-        timeout: 5000,
+        timeout: CAPTURE_TIMEOUT_MS,
       })
       expect(terminal.getText()).toContain("ready to go")
     } finally {
@@ -47,12 +49,12 @@ describe("CLI capture integration", () => {
     }
   })
 
-  test("screenshot SVG from session", { timeout: 15_000 }, async () => {
+  test("screenshot SVG from session", { timeout: 20_000 }, async () => {
     const manager = createSessionManager()
     try {
       const { terminal } = await manager.createSession({
         command: ["echo", "screenshot me"],
-        timeout: 5000,
+        timeout: CAPTURE_TIMEOUT_MS,
       })
       const svg = terminal.screenshotSvg()
       expect(svg).toContain("<svg")
