@@ -1,19 +1,22 @@
+# vendor-kit: links@555b6891ef94 — generated; edit packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
 name: links
 
-# Per-PR link checking via lychee. The cheapest fast-feedback layer for
-# broken links in repo docs; complements the cross-site /marketing
+# Per-PR + weekly link checking via lychee. The cheapest fast-feedback layer
+# for broken links in repo docs; complements the cross-site /marketing
 # link-check (monthly cadence, catches bit-rot from external sites).
 #
-# Shared accept/exclude args keep per-PR and monthly checks aligned —
-# a link should not pass per-PR but fail monthly.
-#
-# Tracked at @km/infra/14942-lychee-action-rollout.
+# Hardening (2026-06-10, 19779): GITHUB_TOKEN makes github.com checks
+# authenticated — the unauthenticated Monday-cron stampede across vendor
+# repos drew secondary rate limiting that surfaced as 504 storms (5 repos
+# red, zero real dead links). Cron minutes are staggered per repo via the
+# manifest var for the same reason. --max-retries absorbs transient
+# external 5xx (one-off 503s).
 
 on:
   pull_request:
     paths: ["**/*.md", "**/*.html", "docs/**"]
   schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+    - cron: "30 6 * * 1" # Mondays 06:xx UTC, staggered per repo
   workflow_dispatch:
 
 jobs:
@@ -22,6 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: lycheeverse/lychee-action@v2
+        env:
+          # Authenticated github.com checks — API-rate-limited instead of
+          # anonymously throttled into 504s.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           # Scoped glob: lint top-level + docs only — skips node_modules
           # entirely (which the workspace pulls in via bun install on CI
@@ -30,9 +37,10 @@ jobs:
           # paths (/guide/…) without erroring; --exclude '^file:' then
           # skips the resulting file:// checks since VitePress validates
           # internal links at build time. Accept 401 for rate-limited
-          # endpoints. CHANGELOG v0.0.1 placeholder GitHub URLs excluded.
+          # endpoints. CHANGELOG v0.0.1 placeholder URLs excluded.
           args: |
             --max-concurrency 24
+            --max-retries 2
             --no-progress
             --root-dir '${{ github.workspace }}/docs'
             --accept '200..=204,206,301,302,303,307,308,401,403,429'

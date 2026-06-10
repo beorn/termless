@@ -1,8 +1,10 @@
 {
-  "modules": ["release", "verify", "format-check", "oxfmt"],
+  "modules": ["release", "verify", "format-check", "oxfmt", "links"],
   "vars": {
     "testCommand": "bun run test",
-    "bunVersion": "1.3.13"
+    "bunVersion": "1.3.13",
+    "linksCronMinute": "30",
+    "linksExtraTargets": "            'packages/*/README.md'\n"
   },
   "overrides": {
     "release": "bespoke publish:all loop over core + 14 packages/* \u2014 generic single-publish template doesn't apply",
