@@ -80,9 +80,7 @@ describe("19764 truecolor screenshot color drift", () => {
   test("truecolor SGR grey survives the backend → screenshot path", () => {
     const term = createTerminal({ backend: createXtermBackend(), cols: 10, rows: 1 })
     // 24-bit fg: grey, red, gold.
-    term.feed(
-      "\x1b[38;2;60;60;60mG" + "\x1b[38;2;220;50;50mR" + "\x1b[38;2;255;215;0mD" + "\x1b[0m",
-    )
+    term.feed("\x1b[38;2;60;60;60mG" + "\x1b[38;2;220;50;50mR" + "\x1b[38;2;255;215;0mD" + "\x1b[0m")
     const row = term.getLines()[0]!
     expect(row[0]!.fg).toEqual(GREY) // grey, NOT teal
     expect(row[1]!.fg).toEqual(RED)

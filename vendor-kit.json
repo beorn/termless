@@ -1,0 +1,9 @@
+{
+  "modules": ["release", "verify", "format-check", "oxfmt"],
+  "vars": { "testCommand": "bun run test", "bunVersion": "1.3.13" },
+  "overrides": {
+    "release": "bespoke publish:all loop over core + 14 packages/* — generic single-publish template doesn't apply",
+    "verify": "per-package tsdown build loop over packages/* with private/no-tsdown skip logic",
+    "oxfmt": "carries $schema pointer + docs/.vitepress/dist/ ignore beyond canonical settings"
+  }
+}
