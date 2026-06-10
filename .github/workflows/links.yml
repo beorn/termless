@@ -1,4 +1,4 @@
-# vendor-kit: links@555b6891ef94 — generated; edit packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
+# vendor-kit: links@95c96a90baf6 — generated; edit packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
 name: links
 
 # Per-PR + weekly link checking via lychee. The cheapest fast-feedback layer
@@ -37,7 +37,10 @@ jobs:
           # paths (/guide/…) without erroring; --exclude '^file:' then
           # skips the resulting file:// checks since VitePress validates
           # internal links at build time. Accept 401 for rate-limited
-          # endpoints. CHANGELOG v0.0.1 placeholder URLs excluded.
+          # endpoints. CHANGELOG v0.0.1 placeholder URLs excluded. Optional
+          # files use GLOB form ('CHANGELOG*.md') — lychee URL-interprets a
+          # literal arg naming a missing file (http://changelog.md/ …), while
+          # an unmatched glob is skipped.
           args: |
             --max-concurrency 24
             --max-retries 2
@@ -48,8 +51,8 @@ jobs:
             --exclude '^file:'
             --exclude 'github\.com/.*/(compare|releases/tag)/v0\.0\.1'
             README.md
-            CHANGELOG.md
-            CLAUDE.md
+            'CHANGELOG*.md'
+            'CLAUDE*.md'
             'docs/**/*.md'
             'docs/**/*.html'
             'packages/*/README.md'
