@@ -29,7 +29,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
-import { dirname, join, relative, resolve, sep } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 // ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ function walk(dir: string, onFile: (full: string) => void): void {
 }
 
 function segmentsOf(relPath: string): string[] {
-  return relPath.split(sep).filter(Boolean)
+  return relPath.split(/[\\/]+/).filter(Boolean)
 }
 
 function firstForbiddenSegment(relPath: string): string | undefined {
