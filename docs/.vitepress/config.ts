@@ -68,6 +68,20 @@ export default defineConfig({
   base: "/",
   lastUpdated: true,
 
+  // Privacy guard (defense-in-depth): never let internal artifacts become routes.
+  // Internal AI reviews, design notes, and drafts must never publish as pages on
+  // this public site. Keep this in sync with scripts/check-private-leak.ts.
+  srcExclude: [
+    "reviews/**",
+    "**/reviews/**",
+    "internal/**",
+    "**/internal/**",
+    "drafts/**",
+    "**/drafts/**",
+    "**/*.private.md",
+    "**/*.draft.md",
+  ],
+
   sitemap: { hostname: "https://termless.dev" },
 
   markdown: {

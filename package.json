@@ -58,6 +58,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
+    "check-private": "bun scripts/check-private-leak.ts",
     "cli": "bun packages/cli/src/cli.ts",
     "publish:all": "bun run publish:core && bun run publish:packages",
     "publish:core": "pnpm publish --access public --no-git-checks",

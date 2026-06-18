@@ -31,6 +31,9 @@ jobs:
 
       - run: bunx --bun vitepress build docs
 
+      - name: Check for private-content leak
+        run: bun scripts/check-private-leak.ts
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist
