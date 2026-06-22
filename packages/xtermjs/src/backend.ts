@@ -225,7 +225,47 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   }
 
   function resize(cols: number, rows: number): void {
-    ensureTerm().resize(cols, rows)
+    const t = ensureTerm()
+    const oldCols = t.cols
+    t.resize(cols, rows)
+    // On a width DECREASE, xterm.js does NOT truncate the ALT-screen grid the way
+    // real terminals + @termless/ghostty-native do — over-wide rows keep their
+    // stale cells. A full-width *styled* row (e.g. a fullscreen TUI's bg fill)
+    // then reports a width past `cols` forever, because `translateToString(true)`
+    // won't trim styled trailing cells. Clear cells in [cols, oldCols) so the
+    // headless emulator matches real-terminal alt-grid truncation. Shrink-only;
+    // growth and equal-width are untouched. (Bead 20335 — the dogfood-19738
+    // `waitNoOverflow` 12s timeout; fix belongs here, NOT in silvery's output
+    // phase, where the only residue-clearing escape `\x1b[2J` was deliberately
+    // removed by the 20297 pane-flicker fix.)
+    if (cols < oldCols) clampActiveBufferWidth(t, cols, oldCols)
+  }
+
+  /**
+   * Clear each active-buffer line's cells in [cols, oldCols) via the xterm.js
+   * internal BufferLine API, so stale styled residue past a shrunk width is
+   * trimmed by `translateToString(true)`. Loud (NO SILENT ERRORS) if the
+   * internal API is ever absent — a silent no-op would re-open 20335.
+   */
+  function clampActiveBufferWidth(t: XTerminal, cols: number, oldCols: number): void {
+    // xterm.js exposes line mutation only on its internal buffer — same `_core`
+    // access pattern as getExtendedAttrs below.
+    const buffer = (t as any)._core?.buffer
+    const lines = buffer?.lines
+    if (!lines || typeof lines.get !== "function" || typeof buffer.getNullCell !== "function") {
+      throw new Error(
+        "xterm.js internal buffer API (buffer.lines / getNullCell) unavailable — cannot clamp " +
+          "alt-screen width on shrink (20335). xterm.js internals changed; update clampActiveBufferWidth.",
+      )
+    }
+    const nullCell = buffer.getNullCell()
+    const count: number = lines.length
+    for (let i = 0; i < count; i++) {
+      const line = lines.get(i)
+      if (!line || typeof line.replaceCells !== "function") continue
+      const end: number = Math.min(oldCols, line.length)
+      if (cols < end) line.replaceCells(cols, end, nullCell)
+    }
   }
 
   function reset(): void {
