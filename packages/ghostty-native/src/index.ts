@@ -1,4 +1,4 @@
-export { createGhosttyNativeBackend } from "./backend.ts"
+export { createGhosttyNativeBackend, isGhosttyNativeAvailable, loadGhosttyNative } from "./backend.ts"
 
 import { createGhosttyNativeBackend } from "./backend.ts"
 import type { TerminalBackend, TerminalOptions } from "../../../src/terminal/types.ts"

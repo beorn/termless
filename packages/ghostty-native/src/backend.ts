@@ -97,7 +97,12 @@ interface NativeModule {
 
 let nativeModule: NativeModule | null = null
 
-export function loadGhosttyNative(): NativeModule {
+/**
+ * Try to load the native module WITHOUT throwing — null when it is absent or
+ * unbuildable. Shared by the throwing loader and the availability probe so both
+ * agree on the exact search paths. Caches on success.
+ */
+function tryLoadGhosttyNative(): NativeModule | null {
   if (nativeModule) return nativeModule
 
   // Try multiple locations — the build script copies to the package root,
@@ -114,12 +119,29 @@ export function loadGhosttyNative(): NativeModule {
     }
   }
 
+  return null
+}
+
+export function loadGhosttyNative(): NativeModule {
+  const m = tryLoadGhosttyNative()
+  if (m) return m
+
   throw new Error(
     "Ghostty native module not found. Build it first:\n" +
       "  cd packages/ghostty-native && bash build/build.sh\n" +
       "\n" +
       "Requirements: Zig 0.15.2+ (available via nix: nix-shell -p zig)",
   )
+}
+
+/**
+ * Whether the Ghostty native `.node` module is present and loadable WITHOUT
+ * throwing. Lets optional-native-dependent tests skip-with-loud-note when it is
+ * unbuilt (e.g. a CI lane on Zig < 0.15.2) instead of hard-failing on absence —
+ * the deliberate, announced inverse of a silent swallow.
+ */
+export function isGhosttyNativeAvailable(): boolean {
+  return tryLoadGhosttyNative() !== null
 }
 
 // ═══════════════════════════════════════════════════════
