@@ -286,7 +286,13 @@ function defaultXtermGuestModes(): IslandProtocolModes {
   return {
     bracketedPaste: true,
     kittyKeyboard: true,
-    mouseTracking: "any",
+    // A freshly-spawned guest has NOT enabled mouse reporting. It starts "off"
+    // and is updated to the live mode by scanning the child's DECSET output (see
+    // `scanMouseDecset`). A plain shell never enables mouse, so a host with
+    // mode-aware mouse routing will not feed it mouse events (no ANSI echo) and
+    // clicks fall through to the host. Was "any", which made every guest claim
+    // it wanted mouse — the root of the shell-input-trap mouse echo (20349).
+    mouseTracking: "off",
     focusReporting: true,
   }
 }
@@ -355,6 +361,41 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   const inputEventListeners = new Set<(event: IslandInputEvent) => void>()
   const modes = opts.modes ?? defaultXtermGuestModes()
   const disposables: { dispose(): void }[] = []
+
+  // Mouse-mode tracking (20349). The guest must report its REAL mouse-reporting
+  // state so a mode-aware host only forwards mouse to it once the child program
+  // turns mouse on (DECSET 1000/1002/1003). We scan the child's output for those
+  // private-mode set/reset sequences; if `opts.modes` was supplied by the caller
+  // we respect that fixed override and skip scanning.
+  const trackMouse = opts.modes === undefined
+  const mouseModes = { m1000: false, m1002: false, m1003: false }
+  function recomputeMouseTracking(): void {
+    const next: IslandProtocolModes["mouseTracking"] = mouseModes.m1003
+      ? "any"
+      : mouseModes.m1002
+        ? "drag"
+        : mouseModes.m1000
+          ? "click"
+          : "off"
+    if (modes.mouseTracking === next) return
+    modes.mouseTracking = next
+    for (const listener of modeListeners) listener(modes)
+  }
+  const MOUSE_DECSET = /\x1b\[\?([\d;]+)([hl])/g
+  function scanMouseDecset(data: string): void {
+    if (!trackMouse || !data.includes("\x1b[?")) return
+    let changed = false
+    MOUSE_DECSET.lastIndex = 0
+    for (let m = MOUSE_DECSET.exec(data); m !== null; m = MOUSE_DECSET.exec(data)) {
+      const on = m[2] === "h"
+      for (const param of m[1]!.split(";")) {
+        if (param === "1000") ((mouseModes.m1000 = on), (changed = true))
+        else if (param === "1002") ((mouseModes.m1002 = on), (changed = true))
+        else if (param === "1003") ((mouseModes.m1003 = on), (changed = true))
+      }
+    }
+    if (changed) recomputeMouseTracking()
+  }
   let resolveExit: ((exit: { code?: number; reason?: string }) => void) | null = null
   const exit = opts.child?.exited
     ? opts.child.exited.then(normalizeExit)
@@ -385,6 +426,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   function feedAnsi(chunk: Uint8Array | string): void {
     if (!term || disposed) return
     const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
+    scanMouseDecset(data)
     writeSync(term, data)
     scheduleOutput()
   }
