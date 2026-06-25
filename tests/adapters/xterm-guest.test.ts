@@ -87,13 +87,42 @@ describe("xtermGuest", () => {
     expect(handle.modes?.modes).toMatchObject({
       bracketedPaste: true,
       kittyKeyboard: true,
-      mouseTracking: "any",
+      mouseTracking: "off",
       focusReporting: true,
     })
     expect(handle.signals?.sendSigint).toBeTypeOf("function")
     expect(handle.signals?.sendSigtstp).toBeTypeOf("function")
     expect(handle.signals?.sendSigterm).toBeTypeOf("function")
     expect(handle.signals?.sendSigkill).toBeTypeOf("function")
+
+    await handle.dispose()
+  })
+
+  test("tracks mouse reporting mode from child DECSET output", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 10, rows: 2 }).init(createContext(10, 2))
+    const notifications: Array<NonNullable<typeof handle.modes>["modes"]["mouseTracking"]> = []
+    handle.modes!.subscribe((modes) => {
+      notifications.push(modes.mouseTracking)
+    })
+
+    expect(handle.modes!.modes.mouseTracking).toBe("off")
+
+    child.emitStdout("\x1b[?1000h")
+    expect(handle.modes!.modes.mouseTracking).toBe("click")
+
+    child.emitStdout("\x1b[?1002h")
+    expect(handle.modes!.modes.mouseTracking).toBe("drag")
+
+    child.emitStdout("\x1b[?1003h")
+    expect(handle.modes!.modes.mouseTracking).toBe("any")
+
+    child.emitStdout("\x1b[?1003l")
+    expect(handle.modes!.modes.mouseTracking).toBe("drag")
+
+    child.emitStdout("\x1b[?1000;1002l")
+    expect(handle.modes!.modes.mouseTracking).toBe("off")
+    expect(notifications).toEqual(["click", "drag", "any", "drag", "off"])
 
     await handle.dispose()
   })
