@@ -68,6 +68,10 @@ function flushMicrotasks(): Promise<void> {
   return new Promise((resolve) => queueMicrotask(resolve))
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 describe("xtermGuest", () => {
   test("declares island capabilities and returns the six sub-owner surface", async () => {
     const child = createChild()
@@ -145,6 +149,69 @@ describe("xtermGuest", () => {
     expect(handle.output.cursorVisible).toBe(true)
 
     unsubscribe()
+    await handle.dispose()
+  })
+
+  test("coalesces async stdout bursts when an output window is configured", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({
+      child,
+      cols: 10,
+      rows: 2,
+      outputCoalesceMs: 5,
+    }).init(createContext(10, 2))
+    let paints = 0
+    handle.output.subscribe(() => {
+      paints += 1
+    })
+
+    child.emitStdout("a")
+    await flushMicrotasks()
+    child.emitStdout("b")
+    await flushMicrotasks()
+    child.emitStdout("c")
+    await flushMicrotasks()
+
+    expect(paints, "separate async chunks should not each force an island paint inside the coalesce window").toBe(0)
+
+    await sleep(15)
+
+    expect(paints).toBe(1)
+    expect(handle.output.buffer.getCell(0, 0).char).toBe("a")
+    expect(handle.output.buffer.getCell(1, 0).char).toBe("b")
+    expect(handle.output.buffer.getCell(2, 0).char).toBe("c")
+
+    child.emitStdout("d")
+    await sleep(15)
+
+    expect(paints).toBe(2)
+    expect(handle.output.buffer.getCell(3, 0).char).toBe("d")
+
+    await handle.dispose()
+  })
+
+  test("scrollViewport moves through xterm scrollback without writing mouse bytes to the child", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(createContext(10, 2))
+    let paints = 0
+    handle.output.subscribe(() => {
+      paints += 1
+    })
+
+    child.emitStdout("line-0\r\nline-1\r\nline-2\r\nline-3")
+    await flushMicrotasks()
+
+    expect(handle.output.buffer.getCell(0, 0).char).toBe("l")
+    expect(handle.output.buffer.getCell(5, 0).char).toBe("2")
+    expect(handle.output.buffer.getCell(5, 1).char).toBe("3")
+
+    handle.scrollViewport(-1)
+
+    expect(handle.output.buffer.getCell(5, 0).char).toBe("1")
+    expect(handle.output.buffer.getCell(5, 1).char).toBe("2")
+    expect(child.stdinWrites, "local viewport scroll must not send SGR mouse bytes to the child").toEqual([])
+    expect(paints).toBeGreaterThanOrEqual(2)
+
     await handle.dispose()
   })
 

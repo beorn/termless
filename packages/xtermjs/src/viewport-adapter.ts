@@ -78,6 +78,12 @@ export interface XtermGuestOptions {
   child?: XtermGuestChild
   /** Scrollback rows kept by the embedded Terminal. Default: 0 (overlay-style use). */
   scrollback?: number
+  /**
+   * Coalesce output snapshots/notifications for chatty live PTY streams.
+   * Default `0` preserves the historical microtask flush. A small non-zero
+   * window lets hosts cap island invalidation pressure without dropping bytes.
+   */
+  outputCoalesceMs?: number
   /** Protocol modes the PTY guest asks the host to enable while focused. */
   modes?: IslandProtocolModes
   /**
@@ -99,6 +105,8 @@ export interface XtermGuestOptions {
 export interface XtermGuestHandle extends IslandHandle {
   /** Feed raw ANSI bytes directly into the embedded xterm Terminal mirror. */
   feedAnsi(chunk: Uint8Array | string): void
+  /** Scroll the embedded terminal viewport. Negative scrolls toward older scrollback. */
+  scrollViewport(delta: number): void
 }
 
 interface XtermIslandHandleOptions extends XtermGuestOptions {
@@ -245,9 +253,9 @@ function snapshotBuffer(term: XTerminal, palettePassthrough: boolean): CellBuffe
   const rows = term.rows
   const cells: Cell[] = new Array(cols * rows)
   const buf = term.buffer.active
-  const baseY = buf.baseY
+  const viewportY = buf.viewportY
   for (let row = 0; row < rows; row++) {
-    const line = buf.getLine(row + baseY)
+    const line = buf.getLine(row + viewportY)
     for (let col = 0; col < cols; col++) {
       cells[row * cols + col] = convertCell(line?.getCell(col), palettePassthrough)
     }
@@ -351,6 +359,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   let buffer: CellBuffer = snapshotBuffer(term, palettePassthrough)
   let disposed = false
   let outputScheduled = false
+  let outputTimer: ReturnType<typeof setTimeout> | null = null
   const decoder = new TextDecoder()
   const sizeListeners = new Set<(size: { cols: number; rows: number }) => void>()
   const outputListeners = new Set<() => void>()
@@ -412,15 +421,32 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     for (const listener of outputListeners) listener()
   }
 
+  const outputCoalesceMs = Math.max(0, opts.outputCoalesceMs ?? 0)
+
+  function cancelScheduledOutput(): void {
+    if (outputTimer !== null) {
+      clearTimeout(outputTimer)
+      outputTimer = null
+    }
+    outputScheduled = false
+  }
+
+  function flushScheduledOutput(): void {
+    outputScheduled = false
+    outputTimer = null
+    if (!term || disposed) return
+    buffer = snapshotBuffer(term, palettePassthrough)
+    notifyOutput()
+  }
+
   function scheduleOutput(): void {
     if (outputScheduled || !term) return
     outputScheduled = true
-    queueMicrotask(() => {
-      outputScheduled = false
-      if (!term || disposed) return
-      buffer = snapshotBuffer(term, palettePassthrough)
-      notifyOutput()
-    })
+    if (outputCoalesceMs > 0) {
+      outputTimer = setTimeout(flushScheduledOutput, outputCoalesceMs)
+      return
+    }
+    queueMicrotask(flushScheduledOutput)
   }
 
   function feedAnsi(chunk: Uint8Array | string): void {
@@ -473,6 +499,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     term.resize(nextCols, nextRows)
     cols = nextCols
     rows = nextRows
+    cancelScheduledOutput()
     buffer = snapshotBuffer(term, palettePassthrough)
     notifySize()
     notifyOutput()
@@ -480,6 +507,14 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
 
   function emitInputEvent(event: IslandInputEvent): void {
     for (const listener of inputEventListeners) listener(event)
+  }
+
+  function scrollViewport(delta: number): void {
+    if (!term || disposed || delta === 0) return
+    term.scrollLines(delta)
+    cancelScheduledOutput()
+    buffer = snapshotBuffer(term, palettePassthrough)
+    notifyOutput()
   }
 
   const handle: XtermGuestHandle = {
@@ -572,9 +607,11 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
       exit,
     },
     feedAnsi,
+    scrollViewport,
     dispose() {
       if (disposed) return
       disposed = true
+      cancelScheduledOutput()
       opts.child?.stdout?.off?.("data", onStdoutData)
       for (const disposable of disposables) {
         try {
