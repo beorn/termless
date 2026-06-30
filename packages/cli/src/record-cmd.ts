@@ -235,16 +235,18 @@ function detectTerminalFont(): string | undefined {
 }
 
 /**
- * Compose a CSS font-family chain that starts with the user's detected
- * terminal font and falls back to termless's bundled families. The
- * rasterizer only has the bundled families registered, so without these
- * fallbacks, Nerd Font + symbol + emoji glyphs render as tofu when the
- * primary face is anything other than a bundled one.
+ * Compose a CSS font-family chain for recorded artifacts.
+ *
+ * The bundled fixed-pitch face must stay first so command output columns stay
+ * on the terminal cell grid even when a detected host font is unavailable to
+ * the SVG rasterizer or resolves to a proportional fallback. The detected host
+ * face remains in the chain after Termless's bundled coverage as a last-mile
+ * glyph fallback only.
  *
  * Exported for tests.
  */
 export function composeFontFamily(primary: string): string {
-  return `'${primary}', 'TermlessMono', 'TermlessSymbols', 'TermlessNerd', 'TermlessEmoji', 'Menlo', 'Monaco', monospace`
+  return `'TermlessMono', 'TermlessSymbols', 'TermlessNerd', 'TermlessEmoji', '${primary}', 'Menlo', 'Monaco', monospace`
 }
 
 // =============================================================================

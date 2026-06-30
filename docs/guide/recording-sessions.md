@@ -118,10 +118,10 @@ Use inline tape commands with `-t` for reproducible, non-interactive recordings:
 
 ```bash
 # Inline commands (newlines via \n)
-$ termless rec -t 'Type "hello world"\nEnter\nSleep 1s\nScreenshot' bash
+$ termless rec -t 'Type "hello world"\nEnter\nSleep 1s\nScreenshot' -- bash
 
 # With an output file
-$ termless rec -t 'Type "ls -la"\nEnter\nScreenshot' -o listing.png bash
+$ termless rec -t 'Type "ls -la"\nEnter\nScreenshot' -o listing.png -- bash
 ```
 
 ### Key-press stills

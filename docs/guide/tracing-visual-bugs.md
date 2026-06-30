@@ -36,7 +36,7 @@ recorded alongside. Identical buffer states (by xxHash64) skip the PNG and recor
 ### Via the CLI
 
 ```bash
-$ termless record --frames -o trace.rec bun km view ~/Vault
+$ termless record --frames -o trace.rec -- bun km view ~/Vault
 ```
 
 ### Via a `.tape`

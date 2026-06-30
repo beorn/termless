@@ -34,7 +34,7 @@ web playback.
 
 ```bash
 # Record directly to .cast
-$ termless record -o demo.cast my-app
+$ termless record -o demo.cast -- my-app
 
 # Play back a .cast recording
 $ termless play demo.cast

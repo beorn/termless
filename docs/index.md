@@ -104,7 +104,7 @@ Capture a terminal session as a Recording, then play it back as animated output 
 
 ```bash
 # Record a command to a recording
-$ termless record -o demo.tape ls -la
+$ termless record -o demo.tape -- ls -la
 
 # Play it back as an animated GIF
 $ termless play -o demo.gif demo.tape

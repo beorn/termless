@@ -7,7 +7,7 @@ description: Generate SVG and PNG screenshots from terminal state via native can
 
 Termless generates screenshots from terminal state. SVG is built in with zero dependencies. PNG output flows through `Terminal.screenshot()` — an auto-picker that prefers the native canvas pipeline (`@napi-rs/canvas` + ghostty-web WASM, via `@termless/ghostty`) and falls back to `@resvg/resvg-js` on hosts where the native canvas isn't available. There's no Chromium dependency anywhere in the pipeline.
 
-For one-off command-output images, use `termless record --screenshot`. For reproducible docs, demos, and regression fixtures, write a `.tape` and render it with `termless play`. Both paths render from parsed terminal state, so ANSI styling, cursor state, and screen geometry stay inspectable before they become an image.
+For one-off command-output images, use `termless record -o <image> -- <cmd>`. For reproducible docs, demos, and regression fixtures, write a `.tape` and render it with `termless play`. Both paths render from parsed terminal state, so ANSI styling, cursor state, and screen geometry stay inspectable before they become an image.
 
 ## Basic Usage
 
@@ -113,16 +113,16 @@ termless play demo.tape -o demo.png --window-bar colorful --padding 18 --margin 
 
 ## Command Output Captures
 
-For a single command, `termless record --screenshot` is the shortest path:
+For a single command, `termless record -o <image> -- <cmd>` is the shortest path:
 
 ```bash
-termless record --cols 100 --rows 30 --screenshot /tmp/listing.png -- ls -la
+termless record --cols 100 --rows 30 -o /tmp/listing.png -- ls -la
 ```
 
 This runs the command in a PTY, waits for content, captures the terminal state, and writes SVG or PNG based on the filename extension. Add `--keys` and `--wait-for` for simple interactive captures:
 
 ```bash
-termless record --wait-for "ready>" --keys j,j,Enter --screenshot /tmp/app.svg -- bun km view /path/to/vault
+termless record --wait-for "ready>" --keys j,j,Enter -o /tmp/app.svg -- bun km view /path/to/vault
 ```
 
 Use `.tape` when the capture needs setup, timing, hidden commands, multiple screenshots, or a future GIF/APNG/SVG recording.

@@ -400,7 +400,7 @@ Record terminal sessions and play them back as animated output -- no ffmpeg, no 
 
 ```bash
 # Record a command to a tape file
-termless record -o demo.tape ls -la
+termless record -o demo.tape -- ls -la
 
 # Play back as an animated GIF
 termless play -o demo.gif demo.tape
@@ -409,10 +409,10 @@ termless play -o demo.gif demo.tape
 termless play -b vterm,ghostty --compare side-by-side demo.tape
 
 # Scripted recording with inline tape commands
-termless rec -t 'Type "hello"\nEnter\nScreenshot' bash
+termless rec -t 'Type "hello"\nEnter\nScreenshot' -- bash
 
 # Record to asciicast format
-termless record -o demo.cast my-app
+termless record -o demo.cast -- my-app
 ```
 
 Output formats: GIF, animated SVG, APNG, PNG, asciicast v2 -- all pure JS, no ffmpeg. See the [Recording & Playback docs](https://termless.dev/guide/recording-sessions) for full details.
@@ -423,11 +423,11 @@ For scripting and AI agents, `@termless/cli` provides recording, playback, and a
 
 ```bash
 # Record and play terminal sessions
-termless record -o demo.tape ls -la
+termless record -o demo.tape -- ls -la
 termless play -o demo.gif demo.tape
 
 # Capture mode: run command, press keys, take screenshot
-termless record --keys j,j,Enter --screenshot /tmp/out.svg bun km view /path
+termless record --keys j,j,Enter -o /tmp/out.svg -- bun km view /path
 
 # MCP server for AI agents (Claude Code, etc.)
 termless mcp

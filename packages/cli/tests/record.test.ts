@@ -18,6 +18,7 @@ import {
   shouldUpdateHostWindowTitle,
   normalizeRecordingScale,
   DEFAULT_SCALE,
+  composeFontFamily,
 } from "../src/record-cmd.ts"
 
 function stripAnsi(text: string): string {
@@ -267,6 +268,13 @@ describe("recording UX formatting", () => {
     expect(normalizeRecordingScale(-1)).toBe(DEFAULT_SCALE)
     expect(normalizeRecordingScale(1)).toBe(1)
     expect(normalizeRecordingScale(3)).toBe(3)
+  })
+
+  it("keeps the bundled fixed-pitch face first for recorded artifact frames", () => {
+    const family = composeFontFamily("Some Detected Host Font")
+
+    expect(family.startsWith("'TermlessMono',")).toBe(true)
+    expect(family.indexOf("'TermlessEmoji'")).toBeLessThan(family.indexOf("'Some Detected Host Font'"))
   })
 })
 
