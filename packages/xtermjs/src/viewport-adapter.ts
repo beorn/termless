@@ -105,6 +105,8 @@ export interface XtermGuestOptions {
 export interface XtermGuestHandle extends IslandHandle {
   /** Feed raw ANSI bytes directly into the embedded xterm Terminal mirror. */
   feedAnsi(chunk: Uint8Array | string): void
+  /** Current embedded terminal viewport/scrollback state. */
+  getScrollback(): { viewportOffset: number; totalLines: number; screenLines: number }
   /** Scroll the embedded terminal viewport. Negative scrolls toward older scrollback. */
   scrollViewport(delta: number): void
 }
@@ -517,6 +519,16 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     notifyOutput()
   }
 
+  function getScrollback(): { viewportOffset: number; totalLines: number; screenLines: number } {
+    if (!term || disposed) return { viewportOffset: 0, totalLines: 0, screenLines: rows }
+    const active = term.buffer.active
+    return {
+      viewportOffset: active.viewportY,
+      totalLines: active.length,
+      screenLines: rows,
+    }
+  }
+
   const handle: XtermGuestHandle = {
     size: {
       get cols() {
@@ -607,6 +619,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
       exit,
     },
     feedAnsi,
+    getScrollback,
     scrollViewport,
     dispose() {
       if (disposed) return

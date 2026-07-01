@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest"
 
-import { xtermGuest, type XtermGuestChild } from "../../packages/xtermjs/src/index.ts"
+import { xtermGuest, type XtermGuestChild, type XtermGuestHandle } from "../../packages/xtermjs/src/index.ts"
 import type { IslandContext } from "../../packages/xtermjs/src/silvery-compat.ts"
 
 function createContext(cols: number, rows: number): IslandContext {
@@ -192,7 +192,9 @@ describe("xtermGuest", () => {
 
   test("scrollViewport moves through xterm scrollback without writing mouse bytes to the child", async () => {
     const child = createChild()
-    const handle = await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(createContext(10, 2))
+    const handle = (await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(
+      createContext(10, 2),
+    )) as XtermGuestHandle
     let paints = 0
     handle.output.subscribe(() => {
       paints += 1
@@ -204,11 +206,17 @@ describe("xtermGuest", () => {
     expect(handle.output.buffer.getCell(0, 0).char).toBe("l")
     expect(handle.output.buffer.getCell(5, 0).char).toBe("2")
     expect(handle.output.buffer.getCell(5, 1).char).toBe("3")
+    const atTail = handle.getScrollback()
+    expect(atTail.screenLines).toBe(2)
+    expect(atTail.totalLines).toBeGreaterThan(2)
 
     handle.scrollViewport(-1)
+    const afterScroll = handle.getScrollback()
 
     expect(handle.output.buffer.getCell(5, 0).char).toBe("1")
     expect(handle.output.buffer.getCell(5, 1).char).toBe("2")
+    expect(afterScroll.viewportOffset).toBeLessThan(atTail.viewportOffset)
+    expect(afterScroll.totalLines).toBe(atTail.totalLines)
     expect(child.stdinWrites, "local viewport scroll must not send SGR mouse bytes to the child").toEqual([])
     expect(paints).toBeGreaterThanOrEqual(2)
 
