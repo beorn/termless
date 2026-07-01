@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest"
 
-import { xtermGuest, type XtermGuestChild } from "../../packages/xtermjs/src/index.ts"
+import { xtermGuest, type XtermGuestChild, type XtermGuestHandle } from "../../packages/xtermjs/src/index.ts"
 import type { IslandContext } from "../../packages/xtermjs/src/silvery-compat.ts"
 
 function createContext(cols: number, rows: number): IslandContext {
@@ -192,7 +192,9 @@ describe("xtermGuest", () => {
 
   test("scrollViewport moves through xterm scrollback without writing mouse bytes to the child", async () => {
     const child = createChild()
-    const handle = await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(createContext(10, 2))
+    const handle = (await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(
+      createContext(10, 2),
+    )) as XtermGuestHandle
     let paints = 0
     handle.output.subscribe(() => {
       paints += 1
@@ -211,6 +213,31 @@ describe("xtermGuest", () => {
     expect(handle.output.buffer.getCell(5, 1).char).toBe("2")
     expect(child.stdinWrites, "local viewport scroll must not send SGR mouse bytes to the child").toEqual([])
     expect(paints).toBeGreaterThanOrEqual(2)
+
+    await handle.dispose()
+  })
+
+  test("exposes scrollback geometry for host scroll chrome", async () => {
+    const child = createChild()
+    const handle = (await xtermGuest({ child, cols: 10, rows: 2, scrollback: 20 }).init(
+      createContext(10, 2),
+    )) as XtermGuestHandle
+
+    expect(handle.getScrollback()).toEqual({ viewportOffset: 0, totalLines: 2, screenLines: 2 })
+
+    child.emitStdout("line-0\r\nline-1\r\nline-2\r\nline-3")
+    await flushMicrotasks()
+
+    const atTail = handle.getScrollback()
+    expect(atTail.screenLines).toBe(2)
+    expect(atTail.totalLines).toBeGreaterThan(2)
+    expect(atTail.viewportOffset).toBe(atTail.totalLines - atTail.screenLines)
+
+    handle.scrollViewport(-1)
+    const scrolled = handle.getScrollback()
+    expect(scrolled.viewportOffset).toBe(atTail.viewportOffset - 1)
+    expect(scrolled.totalLines).toBe(atTail.totalLines)
+    expect(scrolled.screenLines).toBe(atTail.screenLines)
 
     await handle.dispose()
   })
