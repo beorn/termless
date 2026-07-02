@@ -38,7 +38,12 @@ const backends: [string, BackendFactory][] = [
 function visibleText(backend: TerminalBackend): string {
   return backend
     .getLines()
-    .map((line) => line.map((cell) => cell.char || " ").join("").replace(/\s+$/, ""))
+    .map((line) =>
+      line
+        .map((cell) => cell.char || " ")
+        .join("")
+        .replace(/\s+$/, ""),
+    )
     .filter((line) => line.length > 0)
     .join("\n")
 }
@@ -90,11 +95,7 @@ describe("journal replay through termless backends", () => {
   test("malformed events fail loud", async () => {
     const backend = createVtermBackend()
     await backend.init(20, 4)
-    expect(() =>
-      replayJournal({ events: [{ kind: "output", offset: 1, at: 1 }] }, backend),
-    ).toThrow(/missing bytesB64/)
-    expect(() =>
-      replayJournal({ events: [{ kind: "resize", offset: 1, at: 1 }] }, backend),
-    ).toThrow(/missing size/)
+    expect(() => replayJournal({ events: [{ kind: "output", offset: 1, at: 1 }] }, backend)).toThrow(/missing bytesB64/)
+    expect(() => replayJournal({ events: [{ kind: "resize", offset: 1, at: 1 }] }, backend)).toThrow(/missing size/)
   })
 })
