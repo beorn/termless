@@ -46,17 +46,17 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "devDependencies": {
         "@napi-rs/cli": "^3.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "bin": {
         "termless": "./src/cli.ts",
       },
@@ -70,12 +70,12 @@
         "zod": "^3.24.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
-        "@termless/ghostty": "*",
-        "@termless/peekaboo": "*",
-        "@termless/vt100": "*",
-        "@termless/vterm": "*",
-        "@termless/xtermjs": "*",
+        "@termless/core": "0.8.1",
+        "@termless/ghostty": "0.8.1",
+        "@termless/peekaboo": "0.8.1",
+        "@termless/vt100": "0.8.1",
+        "@termless/vterm": "0.8.1",
+        "@termless/xtermjs": "0.8.1",
       },
       "optionalPeers": [
         "@termless/ghostty",
@@ -86,128 +86,128 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.3.1",
+      "version": "0.8.2",
       "dependencies": {
         "@napi-rs/canvas": "^1.0.0",
         "ghostty-web": "^0.4.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "dependencies": {
         "@xterm/headless": "^5.5.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
-        "@termless/xtermjs": "*",
+        "@termless/core": "0.8.1",
+        "@termless/xtermjs": "0.8.1",
       },
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.1.0",
+      "version": "0.8.1",
       "devDependencies": {
         "@napi-rs/cli": "^3.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
         "vitest": ">=2.0.0",
       },
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "dependencies": {
         "vt100.js": "^0.3.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.1.1",
+      "version": "0.8.1",
       "dependencies": {
         "vt220.js": "^0.1.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "dependencies": {
         "vterm.js": "^0.1.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.1.0",
+      "version": "0.8.1",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.3.1",
+      "version": "0.8.1",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^5.5.0",
       },
       "peerDependencies": {
-        "@termless/core": "*",
+        "@termless/core": "0.8.1",
         "silvery": ">=0.4.2",
       },
       "optionalPeers": [
