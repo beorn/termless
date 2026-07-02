@@ -45,15 +45,18 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
-        "import": "./dist/index.mjs"
+        "import": "./dist/index.mjs",
+        "default": "./dist/index.mjs"
       },
       "./matchers": {
         "types": "./dist/matchers.d.mts",
-        "import": "./dist/matchers.mjs"
+        "import": "./dist/matchers.mjs",
+        "default": "./dist/matchers.mjs"
       },
       "./fixture": {
         "types": "./dist/fixture.d.mts",
-        "import": "./dist/fixture.mjs"
+        "import": "./dist/fixture.mjs",
+        "default": "./dist/fixture.mjs"
       }
     }
   },
