@@ -442,3 +442,10 @@ See the [CLI & MCP docs](https://termless.dev/reference/cli) for full options.
 ## License
 
 MIT
+
+
+> **Runtime boundary:** Termless is TEST/DEV infrastructure — recording,
+> replay, conformance, and visual fixtures. It is never a Hab runtime
+> dependency; runtime terminal persistence lives in km's terminal-session
+> substrate, which Termless consumes through structurally-typed journal
+> fixtures (see src/recording/journal-replay.ts).

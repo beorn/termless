@@ -179,6 +179,13 @@ export { recordingToPngFrames, recordingToAnimationFrames } from "./view/from-re
 export type { FromRecordingOptions } from "./view/from-recording.ts"
 
 // Asciicast v2 format
+export {
+  parseJournalFixture,
+  replayJournal,
+  type JournalReplayEvent,
+  type JournalReplayInput,
+  type JournalReplayResult,
+} from "./recording/journal-replay.ts"
 export { parseAsciicast, replayAsciicast } from "./recording/asciicast/reader.ts"
 export type { ReplayOptions } from "./recording/asciicast/reader.ts"
 export { createAsciicastWriter } from "./recording/asciicast/writer.ts"

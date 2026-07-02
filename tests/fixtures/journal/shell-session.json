@@ -1,0 +1,13 @@
+{
+  "size": { "cols": 20, "rows": 4 },
+  "events": [
+    { "kind": "lifecycle", "offset": 1, "at": 1, "state": "launching" },
+    { "kind": "lifecycle", "offset": 2, "at": 2, "state": "awake" },
+    { "kind": "output", "offset": 3, "at": 3, "bytesB64": "b25lDQp0d28NCnRocmVlDQpmb3VyDQpmaXZlDQo=" },
+    { "kind": "input", "offset": 4, "at": 4, "bytesB64": "ZWNobyBoaQ0=" },
+    { "kind": "resize", "offset": 5, "at": 5, "size": { "cols": 30, "rows": 6 } },
+    { "kind": "output", "offset": 6, "at": 6, "bytesB64": "YWZ0ZXItcmVzaXplDQo=" },
+    { "kind": "truncation", "offset": 7, "at": 7, "retainedFromOffset": 3 },
+    { "kind": "lifecycle", "offset": 8, "at": 8, "state": "exited" }
+  ]
+}
