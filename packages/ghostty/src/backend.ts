@@ -38,7 +38,12 @@ import type {
   WarningExtension,
   ScreenshotOptions,
 } from "../../../src/terminal/types.ts"
-import { pushWarning } from "../../../src/terminal/warnings.ts"
+// MUST come from the @termless/core package specifier, not the monorepo-
+// relative path: the warning registry is STATEFUL, and a relative import gets
+// inlined into this package's published bundle — giving ghostty a private
+// registry while consumers drain @termless/core's (silvery fresh-clone bug,
+// km vendor-CI seam 2026-07-02). Pure helpers may inline; state must not.
+import { pushWarning } from "@termless/core"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { renderTerminalPng } from "./render.ts"
 import type { RenderOptions } from "./render.ts"
