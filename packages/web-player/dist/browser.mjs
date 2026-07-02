@@ -1,4 +1,4 @@
-import { r as compilePlaybackSource, t as createPlaybackController } from "./controller-YzWg3Kod.mjs";
+import { r as compilePlaybackSource, t as createPlaybackController } from "./controller-XhcbLJvH.mjs";
 import { Terminal } from "@xterm/xterm";
 //#region src/browser.ts
 function createTermlessPlayer(element, source, options = {}) {

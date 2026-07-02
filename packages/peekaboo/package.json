@@ -1,6 +1,6 @@
 {
   "name": "@termless/peekaboo",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Peekaboo backend for termless — OS-level terminal automation and testing via real terminal apps",
   "keywords": [
     "accessibility",
@@ -46,8 +46,8 @@
     "@xterm/headless": "^5.5.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.0",
-    "@termless/xtermjs": "0.8.0"
+    "@termless/core": "0.8.1",
+    "@termless/xtermjs": "0.8.1"
   },
   "tsdown": {
     "clean": true,

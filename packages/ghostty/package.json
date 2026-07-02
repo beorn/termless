@@ -1,6 +1,6 @@
 {
   "name": "@termless/ghostty",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Ghostty backend for termless — Ghostty's VT parser via WASM for cross-terminal TUI testing",
   "keywords": [
     "ghostty",
@@ -46,7 +46,7 @@
     "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.0"
+    "@termless/core": "0.8.1"
   },
   "tsdown": {
     "clean": true,

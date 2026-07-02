@@ -1,6 +1,6 @@
 {
   "name": "@termless/vterm",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Full-featured vterm.js backend for termless — modern terminal emulator with complete VT standards coverage",
   "keywords": [
     "ansi-parser",
@@ -45,7 +45,7 @@
     "vterm.js": "^0.1.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.0"
+    "@termless/core": "0.8.1"
   },
   "tsdown": {
     "clean": true,
