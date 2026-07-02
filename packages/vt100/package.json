@@ -46,7 +46,7 @@
     "vt100.js": "^0.3.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.1"
+    "@termless/core": "^0.8.1"
   },
   "tsdown": {
     "clean": true,

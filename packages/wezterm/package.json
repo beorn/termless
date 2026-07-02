@@ -48,7 +48,7 @@
     "postbuild:native": "cp native/target/release/libtermless_wezterm_native.dylib termless-wezterm.node"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.1"
+    "@termless/core": "^0.8.1"
   },
   "tsdown": {
     "clean": true,

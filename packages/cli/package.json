@@ -57,12 +57,12 @@
     "zod": "^3.24.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.1",
-    "@termless/ghostty": "0.8.1",
-    "@termless/peekaboo": "0.8.1",
-    "@termless/vt100": "0.8.1",
-    "@termless/vterm": "0.8.1",
-    "@termless/xtermjs": "0.8.1"
+    "@termless/core": "^0.8.1",
+    "@termless/ghostty": "^0.8.1",
+    "@termless/peekaboo": "^0.8.1",
+    "@termless/vt100": "^0.8.1",
+    "@termless/vterm": "^0.8.1",
+    "@termless/xtermjs": "^0.8.1"
   },
   "peerDependenciesMeta": {
     "@termless/ghostty": {

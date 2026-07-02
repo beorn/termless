@@ -44,7 +44,7 @@
     "@napi-rs/cli": "^3.0.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.1"
+    "@termless/core": "^0.8.1"
   },
   "napi": {
     "binaryName": "termless-alacritty-native",

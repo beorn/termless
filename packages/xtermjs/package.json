@@ -46,7 +46,7 @@
     "@xterm/headless": "^5.5.0"
   },
   "peerDependencies": {
-    "@termless/core": "0.8.1",
+    "@termless/core": "^0.8.1",
     "silvery": ">=0.4.2"
   },
   "peerDependenciesMeta": {
