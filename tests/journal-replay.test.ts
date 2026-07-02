@@ -21,7 +21,7 @@ const backends: [string, BackendFactory][] = [
     "vterm",
     async () => {
       const backend = createVtermBackend()
-      await backend.init(20, 4)
+      await backend.init({ cols: 20, rows: 4 })
       return backend
     },
   ],
@@ -29,7 +29,7 @@ const backends: [string, BackendFactory][] = [
     "vt220",
     async () => {
       const backend = createVt220Backend()
-      await backend.init(20, 4)
+      await backend.init({ cols: 20, rows: 4 })
       return backend
     },
   ],
@@ -84,7 +84,7 @@ describe("journal replay through termless backends", () => {
 
   test("scrollback survives replay: pre-resize overflow lines are retained", async () => {
     const backend = createVtermBackend()
-    await backend.init(20, 4)
+    await backend.init({ cols: 20, rows: 4 })
     replayJournal(parseJournalFixture(FIXTURE), backend)
     // After the resize the screen is 6 rows; the 5 pre-resize lines plus
     // post-resize output overflow it, so the buffer exceeds the screen.
@@ -94,7 +94,7 @@ describe("journal replay through termless backends", () => {
 
   test("malformed events fail loud", async () => {
     const backend = createVtermBackend()
-    await backend.init(20, 4)
+    await backend.init({ cols: 20, rows: 4 })
     expect(() => replayJournal({ events: [{ kind: "output", offset: 1, at: 1 }] }, backend)).toThrow(/missing bytesB64/)
     expect(() => replayJournal({ events: [{ kind: "resize", offset: 1, at: 1 }] }, backend)).toThrow(/missing size/)
   })

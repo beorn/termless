@@ -125,8 +125,76 @@ interface RetryOptions {
   timeout?: number
 }
 
+// Augmentation MUST target "@vitest/expect" (where `Matchers<T>` is declared;
+// vitest only re-exports the type) — augmenting "vitest" creates a fresh,
+// unmerged interface and TS2339/TS2551 persist on every call site. Same rule
+// documented in src/jest-matchers.ts. The `<T = any>` default must match
+// vitest's own declaration exactly.
+declare module "@vitest/expect" {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Matchers<T = any> {
+    // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
+    toContainText(text: string, options?: RetryOptions): void
+    toHaveText(text: string, options?: RetryOptions): void
+    toMatchLines(lines: string[], options?: RetryOptions): void
+
+    // Raw output (OutputView) — pass { timeout } for Playwright-style auto-retry
+    toContainOutput(text: string, options?: RetryOptions): void
+
+    // Cell Style — composable (CellView)
+    toHaveAttrs(attrs: CellAttrs): void
+
+    // Cell Style — individual (CellView)
+    /** @deprecated Use toHaveAttrs({ bold: true }) */
+    toBeBold(): void
+    /** @deprecated Use toHaveAttrs({ italic: true }) */
+    toBeItalic(): void
+    /** @deprecated Use toHaveAttrs({ dim: true }) */
+    toBeDim(): void
+    /** @deprecated Use toHaveAttrs({ strikethrough: true }) */
+    toBeStrikethrough(): void
+    /** @deprecated Use toHaveAttrs({ inverse: true }) */
+    toBeInverse(): void
+    /** @deprecated Use toHaveAttrs({ wide: true }) */
+    toBeWide(): void
+    /** @deprecated Use toHaveAttrs({ underline: true }) or toHaveAttrs({ underline: "curly" }) */
+    toHaveUnderline(style?: UnderlineStyle): void
+    /** @deprecated Use toHaveAttrs({ fg: color }) */
+    toHaveFg(color: string | RGB): void
+    /** @deprecated Use toHaveAttrs({ bg: color }) */
+    toHaveBg(color: string | RGB): void
+
+    // Cursor — composable (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    toHaveCursor(props: CursorProps, options?: RetryOptions): void
+
+    // Cursor — individual (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    /** @deprecated Use toHaveCursor({ x, y }) */
+    toHaveCursorAt(x: number, y: number, options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ style }) */
+    toHaveCursorStyle(style: CursorStyle, options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ visible: true }) */
+    toHaveCursorVisible(options?: RetryOptions): void
+    /** @deprecated Use toHaveCursor({ visible: false }) */
+    toHaveCursorHidden(options?: RetryOptions): void
+    toBeInMode(mode: TerminalMode, options?: RetryOptions): void
+    toHaveTitle(title: string, options?: RetryOptions): void
+    toHaveScrollbackLines(n: number, options?: RetryOptions): void
+    toBeAtBottomOfScrollback(options?: RetryOptions): void
+
+    // Clipboard (Terminal)
+    toHaveClipboardText(text: string): void
+
+    // Snapshot (TerminalReadable)
+    toMatchTerminalSnapshot(options?: { name?: string }): void
+    toMatchSvgSnapshot(options?: { name?: string; theme?: SvgTheme }): void
+  }
+}
+
+// Belt-and-braces: some resolution paths (per-package vitest installs)
+// consume the extension point re-declared in "vitest" itself; augment both.
 declare module "vitest" {
-  interface Matchers<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Matchers<T = any> {
     // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
