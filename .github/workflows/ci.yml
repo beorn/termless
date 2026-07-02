@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Core (root vitest config) — runs on every supported platform.
   # Excludes packages/ghostty/tests/** by design; the canvas-engine matrix
