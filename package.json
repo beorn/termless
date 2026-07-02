@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
@@ -111,7 +111,9 @@
   },
   "tsdown": {
     "clean": true,
-    "dts": true,
+    "dts": {
+      "eager": true
+    },
     "entry": [
       "src/index.ts"
     ],
