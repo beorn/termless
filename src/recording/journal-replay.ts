@@ -96,7 +96,7 @@ function expectB64(event: JournalReplayEvent): string {
 }
 
 function base64ToBytes(encoded: string): Uint8Array {
-  const binary = atob(encoded)
+  const binary = globalThis.atob(encoded)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
