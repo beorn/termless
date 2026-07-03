@@ -1,7 +1,7 @@
 /**
  * Terminal-session journal replay.
  *
- * Replays a persistent terminal-session journal (km's `@hh/terminal-session`
+ * Replays a persistent terminal-session journal (km's `@hab/terminal-session`
  * shape) through any termless Terminal/TerminalBackend for deterministic
  * recording, conformance, and visual fixtures. The input types are kept
  * STRUCTURAL — no dependency on the producing package — following the same
