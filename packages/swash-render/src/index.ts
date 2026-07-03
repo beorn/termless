@@ -20,7 +20,7 @@
  *   cd packages/swash-render && bun run build:native && bun run postbuild:native
  */
 
-import { createRequire } from "node:module"
+import { requireNativeAddon } from "./load-native.ts"
 import { bundledFontFiles } from "../../../src/render/fonts.ts"
 import { readFileSync, existsSync } from "node:fs"
 import type { TerminalReadable, Cell, RGB } from "../../../src/terminal/types.ts"
@@ -157,12 +157,11 @@ export function _resetSwashRenderNativeForTesting(): void {
 export function loadSwashRenderNative(): NativeModule {
   if (nativeModule) return nativeModule
   if (loadError) throw loadError
-  const require = createRequire(import.meta.url)
   const errors: string[] = []
   const override = process.env.NAPI_RS_NATIVE_LIBRARY_PATH
   if (override) {
     try {
-      nativeModule = require(override) as NativeModule
+      nativeModule = requireNativeAddon<NativeModule>(override)
       return nativeModule
     } catch (e) {
       errors.push(`${override}: ${e instanceof Error ? e.message : String(e)}`)
@@ -170,7 +169,7 @@ export function loadSwashRenderNative(): NativeModule {
   }
   for (const candidate of nativeLoadCandidates()) {
     try {
-      nativeModule = require(candidate) as NativeModule
+      nativeModule = requireNativeAddon<NativeModule>(candidate)
       return nativeModule
     } catch (e) {
       errors.push(`${candidate}: ${e instanceof Error ? e.message : String(e)}`)

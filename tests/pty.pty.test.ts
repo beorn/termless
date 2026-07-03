@@ -19,8 +19,9 @@ const isBun = typeof globalThis.Bun !== "undefined"
 let hasPty = isBun
 if (!isBun) {
   try {
-    const { createRequire } = await import("node:module")
-    createRequire(import.meta.url)("node-pty")
+    // Availability probe via the ESM graph — node-pty (a CJS native addon) is
+    // importable by specifier; no createRequire needed for a presence check.
+    await import("node-pty")
     hasPty = true
   } catch {
     hasPty = false

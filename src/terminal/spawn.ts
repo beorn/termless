@@ -6,7 +6,7 @@
  * - Node.js: `node-pty` (optional peer dependency — throws if not installed)
  */
 
-import { createRequire } from "node:module"
+import { loadNodePty } from "../load-native.ts"
 
 export interface PortablePtyProcess {
   /** Write data to the PTY stdin. */
@@ -120,51 +120,8 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
 }
 
 // ── Node.js implementation (node-pty) ──
-
-/** Minimal interface matching what we use from node-pty's IPty. */
-interface NodePtyInstance {
-  write(data: string): void
-  resize(cols: number, rows: number): void
-  kill(signal?: string): void
-  destroy(): void
-  onData: (callback: (data: string) => void) => { dispose(): void }
-  onExit: (callback: (e: { exitCode: number; signal?: number }) => void) => { dispose(): void }
-  pid: number
-}
-
-/** Minimal interface for the node-pty module. */
-interface NodePtyModule {
-  spawn(
-    file: string,
-    args: string[],
-    options: {
-      name?: string
-      cols: number
-      rows: number
-      cwd?: string
-      env?: Record<string, string>
-    },
-  ): NodePtyInstance
-}
-
-/**
- * Load node-pty synchronously using createRequire.
- *
- * node-pty is a CommonJS native addon, so createRequire is the correct way
- * to load it from ESM. This keeps spawnPortablePty() synchronous.
- */
-function loadNodePty(): NodePtyModule {
-  try {
-    const nodeRequire = createRequire(import.meta.url)
-    return nodeRequire("node-pty") as NodePtyModule
-  } catch {
-    throw new Error(
-      "node-pty is required for PTY support on Node.js but was not found.\n" +
-        "Install it with: npm install node-pty\n" +
-        "Note: node-pty requires native compilation tools (Python, C++ compiler).",
-    )
-  }
-}
+// node-pty loading (a synchronous CommonJS native addon) is centralized in
+// ../load-native.ts — the package's single createRequire seam.
 
 function spawnNodePty(options: PortablePtySpawnOptions): PortablePtyProcess {
   const { argv, cols, rows, cwd, env, onData } = options
