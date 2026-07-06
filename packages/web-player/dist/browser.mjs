@@ -1,10 +1,11 @@
 import { r as compilePlaybackSource, t as createPlaybackController } from "./controller-XhcbLJvH.mjs";
-import { Terminal } from "@xterm/xterm";
+import xterm from "@xterm/xterm";
 //#region src/browser.ts
+const { Terminal: Terminal$1 } = xterm;
 function createTermlessPlayer(element, source, options = {}) {
 	const playback = typeof source === "string" ? compilePlaybackSource(source, options) : source;
 	const providedTerminal = options.terminal;
-	const terminal = providedTerminal ?? new Terminal({
+	const terminal = providedTerminal ?? new Terminal$1({
 		cols: playback.cols,
 		rows: playback.rows,
 		convertEol: true,
