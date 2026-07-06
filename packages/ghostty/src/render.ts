@@ -33,8 +33,8 @@
 
 import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
-import { createRequire } from "node:module"
 import { join } from "node:path"
+import { resolveGhosttyWebWasm } from "./load-native.ts"
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas"
 import type { TerminalReadable } from "../../../src/terminal/types.ts"
 import {
@@ -286,9 +286,8 @@ let ghosttyModuleCache: { mod: GhosttyWebModule; wasmPath: string } | null = nul
 async function loadGhosttyWeb(): Promise<{ mod: GhosttyWebModule; wasmPath: string }> {
   if (ghosttyModuleCache) return ghosttyModuleCache
   try {
-    const req = createRequire(import.meta.url)
     // Resolve via the wasm subpath (always exported) and walk up to package root.
-    const wasmPath = req.resolve("ghostty-web/ghostty-vt.wasm")
+    const wasmPath = resolveGhosttyWebWasm()
     const pkgRoot = wasmPath.slice(0, wasmPath.length - "/ghostty-vt.wasm".length)
     const pkgJsonPath = `${pkgRoot}/package.json`
     const pkgJson = JSON.parse((await readFile(pkgJsonPath)).toString()) as {

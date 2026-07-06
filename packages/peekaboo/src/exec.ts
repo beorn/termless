@@ -5,8 +5,6 @@
  * keeping peekaboo's OS automation code runtime-agnostic.
  */
 
-import { createRequire } from "node:module"
-
 const isBun = typeof globalThis.Bun !== "undefined"
 
 export interface ExecResult {
@@ -121,9 +119,10 @@ async function execNode(
 }
 
 function execDetachedNode(argv: string[]): { pid: number; exited: Promise<number> } {
-  // Use createRequire for synchronous access to child_process
-  const nodeRequire = createRequire(import.meta.url)
-  const { spawn } = nodeRequire("node:child_process") as typeof import("node:child_process")
+  // sync-node-builtin: multi-target lazy guard via getBuiltinModule (ESM-only wave-3).
+  // node:child_process is a builtin (not a native addon), so getBuiltinModule gives
+  // synchronous access without createRequire or a browser-bundled static import.
+  const { spawn } = process.getBuiltinModule("node:child_process")
 
   const child = spawn(argv[0]!, argv.slice(1), {
     stdio: ["ignore", "ignore", "ignore"],

@@ -30,9 +30,7 @@
  */
 
 import { readFileSync } from "node:fs"
-import { createRequire } from "node:module"
-
-const require = createRequire(import.meta.url)
+import { resolveOptionalAsset } from "../load-native.ts"
 
 /**
  * Convert an emoji codepoint sequence to the Twemoji asset filename stem.
@@ -103,7 +101,7 @@ export function loadTwemojiSvg(key: string): string | null {
   const cached = dataUriCache.get(key)
   if (cached !== undefined) return cached
   try {
-    const path = require.resolve(`@twemoji/svg/${key}.svg`)
+    const path = resolveOptionalAsset(`@twemoji/svg/${key}.svg`)
     const svg = readFileSync(path, "utf8")
     const b64 = Buffer.from(svg).toString("base64")
     const uri = `data:image/svg+xml;base64,${b64}`

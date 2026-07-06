@@ -15,12 +15,12 @@ import "../packages/viterm/src/matchers.ts"
 // Skip gracefully when not installed (Bun uses native PTY instead).
 
 const isBun = typeof globalThis.Bun !== "undefined"
+const nodePtySpecifier = "node-pty"
 
 let hasPty = isBun
 if (!isBun) {
   try {
-    const { createRequire } = await import("node:module")
-    createRequire(import.meta.url)("node-pty")
+    await import(nodePtySpecifier)
     hasPty = true
   } catch {
     hasPty = false
