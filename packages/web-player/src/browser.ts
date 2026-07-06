@@ -1,4 +1,8 @@
-import { Terminal } from "@xterm/xterm"
+// @xterm/xterm is CJS; Node's ESM named-export detection can't see Terminal.
+// Default-import interop works under Node, bundlers, and vitest alike.
+import xterm from "@xterm/xterm"
+
+const { Terminal } = xterm
 import { compilePlaybackSource } from "./compile.ts"
 import { createPlaybackController } from "./controller.ts"
 import type { CompiledPlayback, TermlessPlayer, TermlessPlayerOptions } from "./types.ts"
