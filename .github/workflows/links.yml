@@ -1,4 +1,4 @@
-# vendor-kit: links@95c96a90baf6 — generated; edit packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
+# vendor-kit: links@a3a922f4fa46 — generated; edit km/packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
 name: links
 
 # Per-PR + weekly link checking via lychee. The cheapest fast-feedback layer
@@ -11,6 +11,15 @@ name: links
 # red, zero real dead links). Cron minutes are staggered per repo via the
 # manifest var for the same reason. --max-retries absorbs transient
 # external 5xx (one-off 503s).
+#
+# Hardening (2026-07-06, 20887): some external sites (e.g. asciinema.org)
+# consistently time out from GitHub Actions egress IPs while resolving fine
+# from other networks — --max-retries can't fix a host that only stalls for
+# datacenter ASNs. `linksExtraExcludes` (manifest var, per-repo) is a
+# `--exclude` block for such CI-hostile hosts; use it instead of loosening
+# `--accept` or dropping the link from docs. Keep exclusions narrow (exact
+# host/path, not a broad prefix) so real breakage on the same site still
+# fails the check.
 
 on:
   pull_request:
@@ -50,6 +59,7 @@ jobs:
             --exclude '^(mailto|tel|javascript):'
             --exclude '^file:'
             --exclude 'github\.com/.*/(compare|releases/tag)/v0\.0\.1'
+            --exclude '^https://asciinema\.org/?$'
             README.md
             'CHANGELOG*.md'
             'CLAUDE*.md'

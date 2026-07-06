@@ -4,7 +4,8 @@
     "testCommand": "bun run test",
     "bunVersion": "1.3.13",
     "linksCronMinute": "30",
-    "linksExtraTargets": "            'packages/*/README.md'\n"
+    "linksExtraTargets": "            'packages/*/README.md'\n",
+    "linksExtraExcludes": "            --exclude '^https://asciinema\\.org/?$'\n"
   },
   "overrides": {
     "release": "bespoke publish:all loop over core + 14 packages/* \u2014 generic single-publish template doesn't apply",
