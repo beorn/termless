@@ -23,7 +23,7 @@
  * passed because they used hand-built fake grids; only real `km view` ANSI
  * (chalk bg + framework-emitted padding) hit the conflict. The fixture
  * `fixtures/km-view-160x50.ansi` is a raw PTY capture of
- * `bun apps/km-cli/src/index.ts view <vault>` at 160×50 — it is parsed by a
+ * `km view <vault>` (the km TUI) at 160×50 — it is parsed by a
  * real terminal backend at test time, not a pre-baked cell grid.
  *
  * Pairs with `vendor/silvery/tests/features/terminal-bg-conflict.test.tsx`
