@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "alt screen",
+  "cols": 10,
+  "rows": 5,
+  "input": "Primary\u001b[?1049hAlt\u001b[?1049l",
+  "expectedScreen": "Primary",
+  "sourceLine": 945,
+  "license": "MIT"
+}

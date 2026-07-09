@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: csi param too long",
+  "sourceLine": 3378,
+  "zigBody": "test \"stream: csi param too long\" {\n    const H = struct {\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = self;\n            _ = action;\n            _ = value;\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111C\");\n}"
+}

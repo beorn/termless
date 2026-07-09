@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "ignores query actions",
+  "sourceLine": 1089,
+  "zigBody": "test \"ignores query actions\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // These should be ignored without error\n    s.nextSlice(\"\\x1B[c\"); // Device attributes\n    s.nextSlice(\"\\x1B[5n\"); // Device status report\n    s.nextSlice(\"\\x1B[6n\"); // Cursor position report\n    s.nextSlice(\"\\x1B]4;0;?\\x1B\\\\\"); // OSC color query\n    s.nextSlice(\"\\x1B]21;foreground=?\\x1B\\\\\"); // Kitty color query\n\n    // Terminal should still be functional\n    s.nextSlice(\"Test\");\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Test\", str);\n}"
+}

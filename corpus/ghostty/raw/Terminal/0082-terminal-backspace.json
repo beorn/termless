@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: backspace",
+  "sourceLine": 6098,
+  "zigBody": "test \"Terminal: backspace\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // BS\n    for (\"hello\") |c| try t.print(c);\n    t.backspace();\n    try t.print('y');\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 5), t.screens.active.cursor.x);\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"helly\", str);\n    }\n}"
+}

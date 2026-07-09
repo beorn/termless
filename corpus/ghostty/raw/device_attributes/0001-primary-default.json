@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "device_attributes.zig",
+  "testName": "primary default",
+  "sourceLine": 174,
+  "zigBody": "test \"primary default\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try (Primary{}).encode(&writer);\n    try testing.expectEqualStrings(\"\\x1b[?62;22c\", writer.buffered());\n}"
+}

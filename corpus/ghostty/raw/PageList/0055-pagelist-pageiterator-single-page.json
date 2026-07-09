@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList pageIterator single page",
+  "sourceLine": 7952,
+  "zigBody": "test \"PageList pageIterator single page\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // The viewport should be within a single page\n    try testing.expect(s.pages.first.?.next == null);\n\n    // Iterate the active area\n    var it = s.pageIterator(.right_down, .{ .active = .{} }, null);\n    {\n        const chunk = it.next().?;\n        try testing.expect(chunk.node == s.pages.first.?);\n        try testing.expectEqual(@as(usize, 0), chunk.start);\n        try testing.expectEqual(@as(usize, s.rows), chunk.end);\n    }\n\n    // Should only have one chunk\n    try testing.expect(it.next() == null);\n}"
+}

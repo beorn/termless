@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "erase operations",
+  "cols": 20,
+  "rows": 10,
+  "input": "Hello World\u001b[1;6H\u001b[K",
+  "expectedScreen": "Hello",
+  "sourceLine": 863,
+  "license": "MIT"
+}

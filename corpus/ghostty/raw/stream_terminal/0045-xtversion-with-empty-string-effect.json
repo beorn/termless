@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "xtversion with empty string effect",
+  "sourceLine": 1807,
+  "zigBody": "test \"xtversion with empty string effect\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[:0]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = data;\n        }\n        fn xtversion(_: *Handler) []const u8 {\n            return \"\";\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.xtversion = &S.xtversion;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Empty string from effect should fall back to \"libghostty\"\n    s.nextSlice(\"\\x1b[>0q\");\n    try testing.expectEqualStrings(\"\\x1bP>|libghostty\\x1b\\\\\", S.written.?);\n}"
+}

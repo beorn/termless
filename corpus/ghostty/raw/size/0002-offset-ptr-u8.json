@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size.zig",
+  "testName": "Offset ptr u8",
+  "sourceLine": 187,
+  "zigBody": "test \"Offset ptr u8\" {\n    const testing = std.testing;\n    const offset: Offset(u8) = .{ .offset = 42 };\n    const base_int: usize = @intFromPtr(&offset);\n    const actual = offset.ptr(&offset);\n    try testing.expectEqual(@as(usize, base_int + 42), @intFromPtr(actual));\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page capacity adjust cols sweep",
+  "sourceLine": 2587,
+  "zigBody": "test \"Page capacity adjust cols sweep\" {\n    var cap = std_capacity;\n    const original_cols = cap.cols;\n    const original_size = Page.layout(cap).total_size;\n    for (1..original_cols * 2) |c| {\n        cap = try cap.adjust(.{ .cols = @as(u16, @intCast(c)) });\n        const adjusted_size = Page.layout(cap).total_size;\n        try testing.expectEqual(original_size, adjusted_size);\n        // If we layout a page with 1 more row and it's still the same size\n        // then adjust is not producing enough rows.\n        var bigger = cap;\n        bigger.rows += 1;\n        const bigger_size = Page.layout(bigger).total_size;\n        try testing.expect(bigger_size > original_size);\n    }\n}"
+}

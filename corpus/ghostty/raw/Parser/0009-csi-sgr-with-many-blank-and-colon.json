@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: SGR with many blank and colon",
+  "sourceLine": 633,
+  "zigBody": "test \"csi: SGR with many blank and colon\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"[58:2::240:143:104\") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    {\n        const a = p.next('m');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.csi_dispatch;\n        try testing.expect(d.final == 'm');\n        try testing.expect(d.params.len == 6);\n        try testing.expectEqual(@as(u16, 58), d.params[0]);\n        try testing.expect(d.params_sep.isSet(0));\n        try testing.expectEqual(@as(u16, 2), d.params[1]);\n        try testing.expect(d.params_sep.isSet(1));\n        try testing.expectEqual(@as(u16, 0), d.params[2]);\n        try testing.expect(d.params_sep.isSet(2));\n        try testing.expectEqual(@as(u16, 240), d.params[3]);\n        try testing.expect(d.params_sep.isSet(3));\n        try testing.expectEqual(@as(u16, 143), d.params[4]);\n        try testing.expect(d.params_sep.isSet(4));\n        try testing.expectEqual(@as(u16, 104), d.params[5]);\n        try testing.expect(!d.params_sep.isSet(5));\n    }\n}"
+}

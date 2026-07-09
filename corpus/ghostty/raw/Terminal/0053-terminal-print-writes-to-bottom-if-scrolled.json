@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print writes to bottom if scrolled",
+  "sourceLine": 5385,
+  "zigBody": "test \"Terminal: print writes to bottom if scrolled\" {\n    var t = try init(testing.allocator, .{ .cols = 5, .rows = 2 });\n    defer t.deinit(testing.allocator);\n\n    // Basic grid writing\n    for (\"hello\") |c| try t.print(c);\n    t.setCursorPos(0, 0);\n\n    // Make newlines so we create scrollback\n    // 3 pushes hello off the screen\n    try t.index();\n    try t.index();\n    try t.index();\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\", str);\n    }\n\n    // Scroll to the top\n    t.screens.active.scroll(.{ .top = {} });\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"hello\", str);\n    }\n\n    // Type\n    try t.print('A');\n    t.screens.active.scroll(.{ .active = {} });\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nA\", str);\n    }\n\n    try testing.expect(t.isDirty(.{ .active = .{\n        .x = t.screens.active.cursor.x,\n        .y = t.screens.active.cursor.y,\n    } }));\n}"
+}

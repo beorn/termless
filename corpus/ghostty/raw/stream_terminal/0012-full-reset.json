@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "full reset",
+  "sourceLine": 1034,
+  "zigBody": "test \"full reset\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Make some changes\n    s.nextSlice(\"Hello\");\n    s.nextSlice(\"\\x1B[10;20H\");\n    s.nextSlice(\"\\x1B[5;20r\"); // Set scroll region\n    s.nextSlice(\"\\x1B[?7l\"); // Disable wraparound\n    s.nextSlice(\"\\x1B_25a1;r;cp=e0a0;AAAAAAAAAAAAAA==\\x1B\\\\\");\n    try testing.expect(t.glyph_glossary.contains(0xE0A0));\n\n    // Full reset\n    s.nextSlice(\"\\x1Bc\");\n\n    // Verify reset state\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.scrolling_region.top);\n    try testing.expectEqual(@as(usize, 23), t.scrolling_region.bottom);\n    try testing.expect(t.modes.get(.wraparound));\n    try testing.expect(!t.glyph_glossary.contains(0xE0A0));\n}"
+}

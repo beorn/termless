@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: XTSHIFTESCAPE",
+  "sourceLine": 3198,
+  "zigBody": "test \"stream: XTSHIFTESCAPE\" {\n    const H = struct {\n        escape: ?bool = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            switch (action) {\n                .mouse_shift_capture => self.escape = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[>2s\");\n    try testing.expect(s.handler.escape == null);\n\n    s.nextSlice(\"\\x1B[>s\");\n    try testing.expect(s.handler.escape.? == false);\n\n    s.nextSlice(\"\\x1B[>0s\");\n    try testing.expect(s.handler.escape.? == false);\n\n    s.nextSlice(\"\\x1B[>1s\");\n    try testing.expect(s.handler.escape.? == true);\n\n    // Invalid and ignored by the handler\n    s.nextSlice(\"\\x1B[1 s\");\n    try testing.expect(s.handler.escape.? == true);\n}"
+}

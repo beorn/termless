@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page appendGrapheme larger than chunk",
+  "sourceLine": 2708,
+  "zigBody": "test \"Page appendGrapheme larger than chunk\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    const rac = page.getRowAndCell(0, 0);\n    rac.cell.* = .init(0x09);\n\n    const count = grapheme_chunk_len * 10;\n    for (0..count) |i| {\n        try page.appendGrapheme(rac.row, rac.cell, @intCast(0x0A + i));\n    }\n\n    const cps = page.lookupGrapheme(rac.cell).?;\n    try testing.expectEqual(@as(usize, count), cps.len);\n    for (0..count) |i| {\n        try testing.expectEqual(@as(u21, @intCast(0x0A + i)), cps[i]);\n    }\n}"
+}

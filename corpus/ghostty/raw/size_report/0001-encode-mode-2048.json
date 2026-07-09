@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size_report.zig",
+  "testName": "encode mode 2048",
+  "sourceLine": 92,
+  "zigBody": "test \"encode mode 2048\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try encode(&writer, .mode_2048, testSize());\n\n    try std.testing.expectEqualStrings(\"\\x1B[48;24;80;432;720t\", writer.buffered());\n}"
+}

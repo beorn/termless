@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: DECCOLM preserves SGR bg",
+  "sourceLine": 13844,
+  "zigBody": "test \"Terminal: DECCOLM preserves SGR bg\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .direct_color_bg = .{\n        .r = 0xFF,\n        .g = 0,\n        .b = 0,\n    } });\n    t.modes.set(.enable_mode_3, true);\n    try t.deccolm(alloc, .@\"80_cols\");\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{ .x = 0, .y = 0 } }).?;\n        try testing.expect(list_cell.cell.content_tag == .bg_color_rgb);\n        try testing.expectEqual(Cell.RGB{\n            .r = 0xFF,\n            .g = 0,\n            .b = 0,\n        }, list_cell.cell.content.color_rgb);\n    }\n}"
+}

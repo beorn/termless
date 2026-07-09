@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page capacity adjust cols down to 1",
+  "sourceLine": 2559,
+  "zigBody": "test \"Page capacity adjust cols down to 1\" {\n    const original = std_capacity;\n    const original_size = Page.layout(original).total_size;\n    const adjusted = try original.adjust(.{ .cols = 1 });\n    const adjusted_size = Page.layout(adjusted).total_size;\n    try testing.expectEqual(original_size, adjusted_size);\n    // If we layout a page with 1 more row and it's still the same size\n    // then adjust is not producing enough rows.\n    var bigger = adjusted;\n    bigger.rows += 1;\n    const bigger_size = Page.layout(bigger).total_size;\n    try testing.expect(bigger_size > original_size);\n}"
+}

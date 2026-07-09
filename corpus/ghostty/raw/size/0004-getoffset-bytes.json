@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size.zig",
+  "testName": "getOffset bytes",
+  "sourceLine": 205,
+  "zigBody": "test \"getOffset bytes\" {\n    const testing = std.testing;\n    var widgets: []const u8 = \"ABCD\";\n    const offset = getOffset(u8, widgets.ptr, &widgets[2]);\n    try testing.expectEqual(@as(OffsetInt, 2), offset.offset);\n}"
+}

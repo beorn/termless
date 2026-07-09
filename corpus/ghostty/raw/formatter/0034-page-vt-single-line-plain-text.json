@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Page VT single line plain text",
+  "sourceLine": 3299,
+  "zigBody": "test \"Page VT single line plain text\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    s.nextSlice(\"hello\");\n\n    const pages = &t.screens.active.pages;\n    const page = &pages.pages.last.?.data;\n\n    var formatter: PageFormatter = .init(page, .vt);\n\n    var point_map: std.ArrayList(Coordinate) = .empty;\n    defer point_map.deinit(alloc);\n    formatter.point_map = .{ .alloc = alloc, .map = &point_map };\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n    try testing.expectEqualStrings(\"hello\", output);\n\n    // Verify point map\n    try testing.expectEqual(output.len, point_map.items.len);\n    for (0..5) |i| try testing.expectEqual(\n        Coordinate{ .x = @intCast(i), .y = 0 },\n        point_map.items[i],\n    );\n}"
+}

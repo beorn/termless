@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: input that forces scroll",
+  "sourceLine": 3798,
+  "zigBody": "test \"Terminal: input that forces scroll\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 1, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Basic grid writing\n    for (\"abcdef\") |c| try t.print(c);\n    try testing.expectEqual(@as(usize, 4), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"b\\nc\\nd\\ne\\nf\", str);\n    }\n}"
+}

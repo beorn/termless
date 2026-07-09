@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index bottom of scroll region creates scrollback",
+  "sourceLine": 8885,
+  "zigBody": "test \"Terminal: index bottom of scroll region creates scrollback\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.setTopAndBottomMargin(1, 3);\n    try t.printString(\"1\\n2\\n3\");\n    t.setCursorPos(4, 1);\n    try t.print('X');\n    t.setCursorPos(3, 1);\n    try t.index();\n    try t.print('Y');\n\n    {\n        const str = try t.screens.active.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\nY\\nX\", str);\n    }\n    {\n        const str = try t.screens.active.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"1\\n2\\n3\\nY\\nX\", str);\n    }\n}"
+}

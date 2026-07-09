@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size.zig",
+  "testName": "Offset ptr structural",
+  "sourceLine": 195,
+  "zigBody": "test \"Offset ptr structural\" {\n    const Struct = struct { x: u32, y: u32 };\n    const testing = std.testing;\n    const offset: Offset(Struct) = .{ .offset = @alignOf(Struct) * 4 };\n    const base_int: usize = std.mem.alignForward(usize, @intFromPtr(&offset), @alignOf(Struct));\n    const base: [*]u8 = @ptrFromInt(base_int);\n    const actual = offset.ptr(base);\n    try testing.expectEqual(@as(usize, base_int + offset.offset), @intFromPtr(actual));\n}"
+}

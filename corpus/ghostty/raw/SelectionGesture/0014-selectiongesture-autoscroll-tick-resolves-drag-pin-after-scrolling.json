@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture autoscroll tick resolves drag pin after scrolling",
+  "sourceLine": 1657,
+  "zigBody": "test \"SelectionGesture autoscroll tick resolves drag pin after scrolling\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 3, .max_scrollback = 10 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"1111\\n2222\\n3333\\n4444\\n5555\");\n    t.scrollViewport(.{ .delta = -2 });\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    var press_event = testPress(&t, 1, 1, try std.time.Instant.now());\n    press_event.xpos = 10;\n    _ = try gesture.press(&t, press_event);\n\n    _ = gesture.drag(&t, testDrag(&t, 3, 2, 39, 100));\n    try testing.expectEqual(.down, gesture.left_drag_autoscroll);\n\n    const viewport: point.Coordinate = .{ .x = 3, .y = 2 };\n    const pre_scroll_pin = t.screens.active.pages.pin(.{ .viewport = viewport }).?;\n    const sel = gesture.autoscrollTick(&t, testAutoscrollTick(viewport, 39, 100)).?;\n    const post_scroll_pin = t.screens.active.pages.pin(.{ .viewport = viewport }).?;\n\n    try testing.expect(!pre_scroll_pin.eql(post_scroll_pin));\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 1, 1),\n        post_scroll_pin,\n        false,\n    ), sel);\n}"
+}

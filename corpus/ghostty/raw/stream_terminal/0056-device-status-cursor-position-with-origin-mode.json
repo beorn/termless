@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "device status: cursor position with origin mode",
+  "sourceLine": 2100,
+  "zigBody": "test \"device status: cursor position with origin mode\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (written) |old| testing.allocator.free(old);\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.written = null;\n    defer if (S.written) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Set scroll region rows 5-20\n    s.nextSlice(\"\\x1B[5;20r\");\n    // Enable origin mode\n    s.nextSlice(\"\\x1B[?6h\");\n    // Move to row 3, col 5 within the region\n    s.nextSlice(\"\\x1B[3;5H\");\n    // Query cursor position\n    s.nextSlice(\"\\x1B[6n\");\n    // Should report position relative to the scroll region\n    try testing.expectEqualStrings(\"\\x1B[3;5R\", S.written.?);\n}"
+}

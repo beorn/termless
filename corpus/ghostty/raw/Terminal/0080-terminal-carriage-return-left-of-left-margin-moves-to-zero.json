@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: carriage return left of left margin moves to zero",
+  "sourceLine": 6078,
+  "zigBody": "test \"Terminal: carriage return left of left margin moves to zero\" {\n    var t = try init(testing.allocator, .{ .cols = 5, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    t.screens.active.cursor.x = 1;\n    t.scrolling_region.left = 2;\n    t.carriageReturn();\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n}"
+}

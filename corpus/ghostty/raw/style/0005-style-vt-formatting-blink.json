@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Style VT formatting blink",
+  "sourceLine": 610,
+  "zigBody": "test \"Style VT formatting blink\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .flags = .{ .blink = true } };\n    try builder.writer.print(\"{f}\", .{style.formatterVt()});\n    try testing.expectEqualStrings(\"\\x1b[0m\\x1b[5m\", builder.writer.buffered());\n}"
+}

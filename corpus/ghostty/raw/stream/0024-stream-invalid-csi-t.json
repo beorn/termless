@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: invalid CSI t",
+  "sourceLine": 3426,
+  "zigBody": "test \"stream: invalid CSI t\" {\n    const H = struct {\n        style: ?csi.SizeReportStyle = null,\n\n        pub fn sendSizeReport(self: *@This(), style: csi.SizeReportStyle) void {\n            self.style = style;\n        }\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = self;\n            _ = action;\n            _ = value;\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[19t\");\n    try testing.expectEqual(null, s.handler.style);\n}"
+}

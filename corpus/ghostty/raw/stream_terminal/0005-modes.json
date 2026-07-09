@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "modes",
+  "sourceLine": 899,
+  "zigBody": "test \"modes\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Test wraparound mode\n    try testing.expect(t.modes.get(.wraparound));\n    s.nextSlice(\"\\x1B[?7l\"); // Disable wraparound\n    try testing.expect(!t.modes.get(.wraparound));\n    s.nextSlice(\"\\x1B[?7h\"); // Enable wraparound\n    try testing.expect(t.modes.get(.wraparound));\n}"
+}

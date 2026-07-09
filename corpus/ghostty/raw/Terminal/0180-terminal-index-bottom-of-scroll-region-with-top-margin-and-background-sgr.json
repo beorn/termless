@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index bottom of scroll region with top margin and background SGR",
+  "sourceLine": 8972,
+  "zigBody": "test \"Terminal: index bottom of scroll region with top margin and background SGR\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"1\\n2\\n3\\n4\\n5\");\n    t.setTopAndBottomMargin(2, 4);\n    t.setCursorPos(4, 1);\n    try t.setAttribute(.{ .direct_color_bg = .{\n        .r = 0xFF,\n        .g = 0,\n        .b = 0,\n    } });\n    try t.index();\n\n    // The region (rows 2-4) scrolled up, rows outside are unchanged.\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"1\\n3\\n4\\n\\n5\", str);\n    }\n\n    // The cursor is on the new blank row.\n    try testing.expectEqual(@as(usize, 3), t.screens.active.cursor.y);\n\n    // The new blank row must be filled with our background color.\n    for (0..t.cols) |x| {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = @intCast(x),\n            .y = 3,\n        } }).?;\n        try testing.expect(list_cell.cell.content_tag == .bg_color_rgb);\n        try testing.expectEqual(Cell.RGB{\n            .r = 0xFF,\n            .g = 0,\n            .b = 0,\n        }, list_cell.cell.content.color_rgb);\n    }\n}"
+}

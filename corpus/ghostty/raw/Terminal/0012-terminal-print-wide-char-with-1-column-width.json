@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print wide char with 1-column width",
+  "sourceLine": 3955,
+  "zigBody": "test \"Terminal: print wide char with 1-column width\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 1, .rows = 2 });\n    defer t.deinit(alloc);\n\n    try t.print('😀'); // 0x1F600\n\n    // This prints a space so we should be dirty.\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

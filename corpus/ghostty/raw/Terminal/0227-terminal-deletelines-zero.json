@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: deleteLines zero",
+  "sourceLine": 10209,
+  "zigBody": "test \"Terminal: deleteLines zero\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // This should do nothing\n    t.setCursorPos(1, 1);\n    t.deleteLines(0);\n}"
+}

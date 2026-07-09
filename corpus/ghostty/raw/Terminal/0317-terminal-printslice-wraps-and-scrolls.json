@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: printSlice wraps and scrolls",
+  "sourceLine": 12275,
+  "zigBody": "test \"Terminal: printSlice wraps and scrolls\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 2 });\n    defer t.deinit(alloc);\n\n    // 12 chars: fills row 1 (5), row 2 (5), wraps+scrolls, 2 more.\n    try t.printSlice(&.{ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l' });\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"fghij\\nkl\", str);\n    }\n    try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.x);\n    try testing.expect(!t.screens.active.cursor.pending_wrap);\n}"
+}

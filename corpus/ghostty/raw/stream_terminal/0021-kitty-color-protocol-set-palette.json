@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "kitty color protocol set palette",
+  "sourceLine": 1275,
+  "zigBody": "test \"kitty color protocol set palette\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set palette color 5 to magenta using kitty protocol\n    s.nextSlice(\"\\x1b]21;5=rgb:ff/00/ff\\x1b\\\\\");\n    try testing.expectEqual(@as(u8, 0xff), t.colors.palette.current[5].r);\n    try testing.expectEqual(@as(u8, 0x00), t.colors.palette.current[5].g);\n    try testing.expectEqual(@as(u8, 0xff), t.colors.palette.current[5].b);\n    try testing.expect(t.colors.palette.mask.isSet(5));\n    try testing.expect(t.flags.dirty.palette);\n}"
+}

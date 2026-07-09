@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList scroll with max_size 0 no history",
+  "sourceLine": 6207,
+  "zigBody": "test \"PageList scroll with max_size 0 no history\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, 0);\n    defer s.deinit();\n\n    try s.growRows(10);\n\n    // Remember initial viewport position\n    const pt_before = s.getCell(.{ .viewport = .{} }).?.screenPoint();\n\n    // Try to scroll backwards into \"history\" - should be no-op\n    s.scroll(.{ .delta_row = -5 });\n    try testing.expect(s.viewport == .active);\n\n    // Scroll to top - should also be no-op with no scrollback\n    s.scroll(.{ .top = {} });\n    const pt_after = s.getCell(.{ .viewport = .{} }).?.screenPoint();\n    try testing.expectEqual(pt_before, pt_after);\n}"
+}

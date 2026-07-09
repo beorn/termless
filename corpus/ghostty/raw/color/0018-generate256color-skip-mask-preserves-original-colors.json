@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "generate256Color: skip mask preserves original colors",
+  "sourceLine": 1172,
+  "zigBody": "test \"generate256Color: skip mask preserves original colors\" {\n    const testing = std.testing;\n\n    const bg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const fg = RGB{ .r = 255, .g = 255, .b = 255 };\n\n    // Mark a few indices as skipped; they should keep their base value.\n    var skip: PaletteMask = .initEmpty();\n    skip.set(20);\n    skip.set(100);\n    skip.set(240);\n\n    const palette = generate256Color(default, skip, bg, fg, false);\n    try testing.expectEqual(default[20], palette[20]);\n    try testing.expectEqual(default[100], palette[100]);\n    try testing.expectEqual(default[240], palette[240]);\n\n    // A non-skipped index in the cube should differ from the default.\n    try testing.expect(!palette[21].eql(default[21]));\n}"
+}

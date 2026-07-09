@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: insertLines handles style refs",
+  "sourceLine": 6739,
+  "zigBody": "test \"Terminal: insertLines handles style refs\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DEF\");\n    t.carriageReturn();\n    try t.linefeed();\n\n    // For the line being deleted, create a refcounted style\n    try t.setAttribute(.{ .bold = {} });\n    try t.printString(\"GHI\");\n    try t.setAttribute(.{ .unset = {} });\n\n    // verify we have styles in our style map\n    const page = &t.screens.active.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 1), page.styles.count());\n\n    t.setCursorPos(2, 2);\n    t.insertLines(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABC\\n\\nDEF\", str);\n    }\n\n    // verify we have no styles in our style map\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n}"
+}

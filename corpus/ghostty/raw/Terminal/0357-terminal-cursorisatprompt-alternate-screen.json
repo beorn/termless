@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: cursorIsAtPrompt alternate screen",
+  "sourceLine": 13477,
+  "zigBody": "test \"Terminal: cursorIsAtPrompt alternate screen\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 2 });\n    defer t.deinit(alloc);\n\n    try testing.expect(!t.cursorIsAtPrompt());\n    try t.semanticPrompt(.init(.prompt_start));\n    try testing.expect(t.cursorIsAtPrompt());\n\n    // Secondary screen is never a prompt\n    try t.switchScreenMode(.@\"1049\", true);\n    try testing.expect(!t.cursorIsAtPrompt());\n    try t.semanticPrompt(.init(.prompt_start));\n    try testing.expect(!t.cursorIsAtPrompt());\n}"
+}

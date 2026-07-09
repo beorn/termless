@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index bottom of primary screen background sgr",
+  "sourceLine": 8621,
+  "zigBody": "test \"Terminal: index bottom of primary screen background sgr\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.setCursorPos(5, 1);\n    try t.print('A');\n    try t.setAttribute(.{ .direct_color_bg = .{\n        .r = 0xFF,\n        .g = 0,\n        .b = 0,\n    } });\n    try t.index();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\n\\n\\nA\", str);\n        for (0..5) |x| {\n            const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n                .x = @intCast(x),\n                .y = 4,\n            } }).?;\n            try testing.expect(list_cell.cell.content_tag == .bg_color_rgb);\n            try testing.expectEqual(Cell.RGB{\n                .r = 0xFF,\n                .g = 0,\n                .b = 0,\n            }, list_cell.cell.content.color_rgb);\n        }\n    }\n}"
+}

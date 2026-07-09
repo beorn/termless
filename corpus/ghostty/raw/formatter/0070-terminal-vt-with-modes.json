@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Terminal vt with modes",
+  "sourceLine": 4977,
+  "zigBody": "test \"Terminal vt with modes\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Enable some modes that differ from defaults\n    s.nextSlice(\"\\x1b[?2004h\"); // Bracketed paste\n    s.nextSlice(\"\\x1b[?1000h\"); // Mouse event normal\n    s.nextSlice(\"\\x1b[?7l\"); // Disable wraparound (default is true)\n    s.nextSlice(\"hello\");\n\n    var formatter: TerminalFormatter = .init(&t, .vt);\n    formatter.extra.modes = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // Create a second terminal and apply the output\n    var t2 = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t2.deinit(alloc);\n\n    var s2 = t2.vtStream();\n    defer s2.deinit();\n\n    s2.nextSlice(output);\n\n    // Verify modes match\n    try testing.expectEqual(t.modes.get(.bracketed_paste), t2.modes.get(.bracketed_paste));\n    try testing.expectEqual(t.modes.get(.mouse_event_normal), t2.modes.get(.mouse_event_normal));\n    try testing.expectEqual(t.modes.get(.wraparound), t2.modes.get(.wraparound));\n}"
+}

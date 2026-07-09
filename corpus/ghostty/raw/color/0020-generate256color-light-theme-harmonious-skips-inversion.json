@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "generate256Color: light theme harmonious skips inversion",
+  "sourceLine": 1208,
+  "zigBody": "test \"generate256Color: light theme harmonious skips inversion\" {\n    const testing = std.testing;\n\n    // For a light theme (fg darker than bg), harmonious=true skips the\n    // bg/red swap, producing different cube colors than harmonious=false.\n    const bg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const fg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const inverted = generate256Color(default, .initEmpty(), bg, fg, false);\n    const harmonious = generate256Color(default, .initEmpty(), bg, fg, true);\n\n    // Cube origin (0,0,0) at index 16: without harmonious, bg and red are\n    // swapped so it becomes the red base; with harmonious it stays as bg.\n    try testing.expectEqual(bg, harmonious[16]);\n    try testing.expect(!inverted[16].eql(bg));\n\n    // At least some cube colors should differ between the two modes.\n    var differ: usize = 0;\n    for (16..232) |i| {\n        if (!inverted[i].eql(harmonious[i])) differ += 1;\n    }\n    try testing.expect(differ > 0);\n}"
+}

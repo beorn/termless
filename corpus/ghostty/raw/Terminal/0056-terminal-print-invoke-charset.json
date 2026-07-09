@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print invoke charset",
+  "sourceLine": 5481,
+  "zigBody": "test \"Terminal: print invoke charset\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    t.configureCharset(.G1, .dec_special);\n\n    try t.print('`');\n\n    // Invokecharset but should not mark dirty on its own\n    t.clearDirty();\n    t.invokeCharset(.GL, .G1, false);\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    try t.print('`');\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    try t.print('`');\n    t.invokeCharset(.GL, .G0, false);\n    try t.print('`');\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"`◆◆`\", str);\n    }\n}"
+}

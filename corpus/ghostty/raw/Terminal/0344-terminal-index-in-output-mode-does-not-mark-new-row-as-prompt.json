@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index in output mode does not mark new row as prompt",
+  "sourceLine": 13176,
+  "zigBody": "test \"Terminal: index in output mode does not mark new row as prompt\" {\n    // Output mode should NOT trigger prompt continuation\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Complete prompt cycle: prompt -> input -> output\n    try t.semanticPrompt(.init(.prompt_start));\n    for (\"$ \") |c| try t.print(c);\n    try t.semanticPrompt(.init(.end_prompt_start_input));\n    for (\"ls\") |c| try t.print(c);\n    try t.semanticPrompt(.init(.end_input_start_output));\n\n    // Linefeed while in output mode\n    t.carriageReturn();\n    try t.linefeed();\n\n    // The new row should NOT be marked as a prompt\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 1,\n        } }).?;\n        try testing.expectEqual(.none, list_cell.row.semantic_prompt);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print and change hyperlink",
+  "sourceLine": 5890,
+  "zigBody": "test \"Terminal: print and change hyperlink\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Setup our hyperlink and print\n    try t.screens.active.startHyperlink(\"http://one.example.com\", null);\n    try t.printString(\"123\");\n    try t.screens.active.startHyperlink(\"http://two.example.com\", null);\n    try t.printString(\"456\");\n\n    // Verify all our cells have a hyperlink\n    for (0..3) |x| {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{\n            .x = @intCast(x),\n            .y = 0,\n        } }).?;\n        const cell = list_cell.cell;\n        try testing.expect(cell.hyperlink);\n        const id = list_cell.node.data.lookupHyperlink(cell).?;\n        try testing.expectEqual(@as(hyperlink.Id, 1), id);\n    }\n    for (3..6) |x| {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{\n            .x = @intCast(x),\n            .y = 0,\n        } }).?;\n        const cell = list_cell.cell;\n        try testing.expect(cell.hyperlink);\n        const id = list_cell.node.data.lookupHyperlink(cell).?;\n        try testing.expectEqual(@as(hyperlink.Id, 2), id);\n    }\n\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

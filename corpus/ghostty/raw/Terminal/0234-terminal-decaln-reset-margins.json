@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: decaln reset margins",
+  "sourceLine": 10340,
+  "zigBody": "test \"Terminal: decaln reset margins\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    t.modes.set(.origin, true);\n    t.setTopAndBottomMargin(2, 3);\n    try t.decaln();\n    t.scrollDown(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nEEE\\nEEE\", str);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "x11_color.zig",
+  "testName": "entries",
+  "sourceLine": 98,
+  "zigBody": "test \"entries\" {\n    const testing = std.testing;\n\n    try testing.expect(entries.len > 700);\n    for (entries) |entry| {\n        try testing.expectEqual(entry.color, map.get(entry.name).?);\n        try testing.expectEqual(@as(u8, 0), entry.name.ptr[entry.name.len]);\n    }\n    try testing.expectEqualStrings(\"snow\", entries[0].name);\n}"
+}

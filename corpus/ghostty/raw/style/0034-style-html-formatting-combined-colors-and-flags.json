@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Style HTML formatting combined colors and flags",
+  "sourceLine": 1032,
+  "zigBody": "test \"Style HTML formatting combined colors and flags\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{\n        .fg_color = .{ .rgb = .{ .r = 255, .g = 0, .b = 0 } },\n        .bg_color = .{ .rgb = .{ .r = 0, .g = 0, .b = 255 } },\n        .flags = .{ .bold = true, .italic = true },\n    };\n    try builder.writer.print(\"{f}\", .{style.formatterHtml()});\n    const result = builder.writer.buffered();\n    try testing.expect(std.mem.indexOf(u8, result, \"color: rgb(255, 0, 0);\") != null);\n    try testing.expect(std.mem.indexOf(u8, result, \"background-color: rgb(0, 0, 255);\") != null);\n    try testing.expect(std.mem.indexOf(u8, result, \"font-weight: bold;\") != null);\n    try testing.expect(std.mem.indexOf(u8, result, \"font-style: italic;\") != null);\n}"
+}

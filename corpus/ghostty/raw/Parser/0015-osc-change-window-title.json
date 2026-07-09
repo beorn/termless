@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "osc: change window title",
+  "sourceLine": 844,
+  "zigBody": "test \"osc: change window title\" {\n    var p = init();\n    _ = p.next(0x1B);\n    _ = p.next(']');\n    _ = p.next('0');\n    _ = p.next(';');\n    _ = p.next('a');\n    _ = p.next('b');\n    _ = p.next('c');\n\n    {\n        const a = p.next(0x07); // BEL\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0].? == .osc_dispatch);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n\n        const cmd = a[0].?.osc_dispatch;\n        try testing.expect(cmd == .change_window_title);\n        try testing.expectEqualStrings(\"abc\", cmd.change_window_title);\n    }\n}"
+}

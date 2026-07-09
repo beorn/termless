@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Terminal vt with scrolling region",
+  "sourceLine": 4933,
+  "zigBody": "test \"Terminal vt with scrolling region\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Set scrolling region: top=5, bottom=20\n    s.nextSlice(\"\\x1b[6;21rhello\");\n\n    var formatter: TerminalFormatter = .init(&t, .vt);\n    formatter.extra.scrolling_region = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // Create a second terminal and apply the output\n    var t2 = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t2.deinit(alloc);\n\n    var s2 = t2.vtStream();\n    defer s2.deinit();\n\n    s2.nextSlice(output);\n\n    // Verify scrolling regions match\n    try testing.expectEqual(t.scrolling_region.top, t2.scrolling_region.top);\n    try testing.expectEqual(t.scrolling_region.bottom, t2.scrolling_region.bottom);\n    try testing.expectEqual(t.scrolling_region.left, t2.scrolling_region.left);\n    try testing.expectEqual(t.scrolling_region.right, t2.scrolling_region.right);\n}"
+}

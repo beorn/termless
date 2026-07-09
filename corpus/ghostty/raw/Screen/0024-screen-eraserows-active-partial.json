@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen eraseRows active partial",
+  "sourceLine": 4163,
+  "zigBody": "test \"Screen eraseRows active partial\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    try s.testWriteString(\"1\\n2\\n3\");\n\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .active = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"1\\n2\\n3\", str);\n    }\n\n    s.eraseActive(1);\n\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .active = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"3\", str);\n    }\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"3\", str);\n    }\n}"
+}

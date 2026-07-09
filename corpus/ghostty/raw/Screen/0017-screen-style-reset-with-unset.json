@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen style reset with unset",
+  "sourceLine": 3991,
+  "zigBody": "test \"Screen style reset with unset\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 80, .rows = 24, .max_scrollback = 1000 });\n    defer s.deinit();\n    const page = &s.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n\n    // Set a new style\n    try s.setAttribute(.{ .bold = {} });\n    try testing.expect(s.cursor.style_id != 0);\n    try testing.expectEqual(@as(usize, 1), page.styles.count());\n\n    // Reset to default\n    try s.setAttribute(.{ .unset = {} });\n    try testing.expect(s.cursor.style_id == 0);\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n}"
+}

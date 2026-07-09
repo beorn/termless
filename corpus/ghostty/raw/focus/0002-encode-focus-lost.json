@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "focus.zig",
+  "testName": "encode focus lost",
+  "sourceLine": 34,
+  "zigBody": "test \"encode focus lost\" {\n    var buf: [max_encode_size]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try encode(&writer, .lost);\n    try std.testing.expectEqualStrings(\"\\x1B[O\", writer.buffered());\n}"
+}

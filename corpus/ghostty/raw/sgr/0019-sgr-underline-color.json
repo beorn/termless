@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: underline color",
+  "sourceLine": 801,
+  "zigBody": "test \"sgr: underline color\" {\n    {\n        const v = testParseColon(&[_]u16{ 58, 2, 1, 2, 3 });\n        try testing.expect(v == .underline_color);\n        try testing.expectEqual(@as(u8, 1), v.underline_color.r);\n        try testing.expectEqual(@as(u8, 2), v.underline_color.g);\n        try testing.expectEqual(@as(u8, 3), v.underline_color.b);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 58, 2, 0, 1, 2, 3 });\n        try testing.expect(v == .underline_color);\n        try testing.expectEqual(@as(u8, 1), v.underline_color.r);\n        try testing.expectEqual(@as(u8, 2), v.underline_color.g);\n        try testing.expectEqual(@as(u8, 3), v.underline_color.b);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "kitty color protocol reset palette",
+  "sourceLine": 1291,
+  "zigBody": "test \"kitty color protocol reset palette\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set and then reset palette color\n    const original = t.colors.palette.original[7];\n    s.nextSlice(\"\\x1b]21;7=rgb:aa/bb/cc\\x1b\\\\\");\n    try testing.expect(t.colors.palette.mask.isSet(7));\n\n    s.nextSlice(\"\\x1b]21;7=\\x1b\\\\\");\n    try testing.expectEqual(original, t.colors.palette.current[7]);\n    try testing.expect(!t.colors.palette.mask.isSet(7));\n}"
+}

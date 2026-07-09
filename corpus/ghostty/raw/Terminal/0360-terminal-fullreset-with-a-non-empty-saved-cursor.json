@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: fullReset with a non-empty saved cursor",
+  "sourceLine": 13524,
+  "zigBody": "test \"Terminal: fullReset with a non-empty saved cursor\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    try t.setAttribute(.{ .direct_color_fg = .{ .r = 0xFF, .g = 0, .b = 0x7F } });\n    try t.setAttribute(.{ .direct_color_bg = .{ .r = 0xFF, .g = 0, .b = 0x7F } });\n    t.saveCursor();\n    t.fullReset();\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = t.screens.active.cursor.x,\n            .y = t.screens.active.cursor.y,\n        } }).?;\n        const cell = list_cell.cell;\n        try testing.expect(cell.style_id == 0);\n    }\n\n    try testing.expectEqual(@as(style.Id, 0), t.screens.active.cursor.style_id);\n}"
+}

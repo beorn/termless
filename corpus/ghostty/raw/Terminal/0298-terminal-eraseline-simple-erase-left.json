@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseLine simple erase left",
+  "sourceLine": 11902,
+  "zigBody": "test \"Terminal: eraseLine simple erase left\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    t.setCursorPos(1, 3);\n    t.clearDirty();\n    t.eraseLine(.left, false);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"   DE\", str);\n    }\n}"
+}

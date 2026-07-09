@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture null initial time stays single click",
+  "sourceLine": 1907,
+  "zigBody": "test \"SelectionGesture null initial time stays single click\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    _ = try gesture.press(&t, testPress(&t, 1, 1, null));\n    _ = try gesture.press(&t, testPress(&t, 1, 1, try std.time.Instant.now()));\n\n    try testing.expectEqual(@as(u3, 1), gesture.left_click_count);\n    try testing.expect(gesture.left_click_time != null);\n}"
+}

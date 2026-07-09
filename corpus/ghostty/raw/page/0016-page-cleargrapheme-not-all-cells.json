@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page clearGrapheme not all cells",
+  "sourceLine": 2731,
+  "zigBody": "test \"Page clearGrapheme not all cells\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    const rac = page.getRowAndCell(0, 0);\n    rac.cell.* = .init(0x09);\n    try page.appendGrapheme(rac.row, rac.cell, 0x0A);\n\n    const rac2 = page.getRowAndCell(1, 0);\n    rac2.cell.* = .init(0x09);\n    try page.appendGrapheme(rac2.row, rac2.cell, 0x0A);\n\n    // Clear it\n    page.clearGrapheme(rac.cell);\n    page.updateRowGraphemeFlag(rac.row);\n    try testing.expect(rac.row.grapheme);\n    try testing.expect(!rac.cell.hasGrapheme());\n    try testing.expect(rac2.cell.hasGrapheme());\n}"
+}

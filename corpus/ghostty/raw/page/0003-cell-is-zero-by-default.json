@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Cell is zero by default",
+  "sourceLine": 2535,
+  "zigBody": "test \"Cell is zero by default\" {\n    const cell = Cell.init(0);\n    const cell_int: u64 = @bitCast(cell);\n    try std.testing.expectEqual(@as(u64, 0), cell_int);\n\n    // The zero value should be output type for semantic content.\n    // This is very important for our assumptions elsewhere.\n    try std.testing.expectEqual(Cell.SemanticContent.output, cell.semantic_content);\n}"
+}

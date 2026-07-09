@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size_report.zig",
+  "testName": "encode max values for all fields",
+  "sourceLine": 124,
+  "zigBody": "test \"encode max values for all fields\" {\n    const max_size: Size = .{\n        .rows = std.math.maxInt(@FieldType(Size, \"rows\")),\n        .columns = std.math.maxInt(@FieldType(Size, \"columns\")),\n        .cell_width = std.math.maxInt(@FieldType(Size, \"cell_width\")),\n        .cell_height = std.math.maxInt(@FieldType(Size, \"cell_height\")),\n    };\n\n    const Case = struct {\n        style: Style,\n        expected: []const u8,\n    };\n\n    inline for ([_]Case{\n        .{\n            .style = .mode_2048,\n            .expected = \"\\x1B[48;65535;65535;281470681677825;281470681677825t\",\n        },\n        .{\n            .style = .csi_14_t,\n            .expected = \"\\x1b[4;281470681677825;281470681677825t\",\n        },\n        .{\n            .style = .csi_16_t,\n            .expected = \"\\x1b[6;4294967295;4294967295t\",\n        },\n        .{\n            .style = .csi_18_t,\n            .expected = \"\\x1b[8;65535;65535t\",\n        },\n    }) |case| {\n        var buf: [128]u8 = undefined;\n        var writer: std.Io.Writer = .fixed(&buf);\n        try encode(&writer, case.style, max_size);\n        try std.testing.expectEqualStrings(case.expected, writer.buffered());\n    }\n}"
+}

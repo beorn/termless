@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: underline colon with trailing separator and short slice",
+  "sourceLine": 1083,
+  "zigBody": "test \"sgr: underline colon with trailing separator and short slice\" {\n    var p: Parser = .{\n        .params = &[_]u16{ 58, 4 },\n        .params_sep = sep: {\n            var list = SepList.initEmpty();\n            list.set(0);\n            list.set(1);\n            break :sep list;\n        },\n    };\n\n    // 58:4 is not a valid underline color (sub-param 4 is not 2 or 5),\n    // so it falls through as unknown.\n    try testing.expect(p.next().? == .unknown);\n\n    // Param 4 with a trailing colon but no sub-param is malformed,\n    // so it also falls through as unknown rather than panicking.\n    try testing.expect(p.next().? == .unknown);\n\n    try testing.expect(p.next() == null);\n}"
+}

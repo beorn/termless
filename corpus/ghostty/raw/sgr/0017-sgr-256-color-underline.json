@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: 256 color underline",
+  "sourceLine": 785,
+  "zigBody": "test \"sgr: 256 color underline\" {\n    var p: Parser = .{ .params = &[_]u16{ 58, 5, 9 } };\n    try testing.expect(p.next().? == .@\"256_underline_color\");\n    try testing.expect(p.next() == null);\n}"
+}

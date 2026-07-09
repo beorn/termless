@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "xtversion default",
+  "sourceLine": 1758,
+  "zigBody": "test \"xtversion default\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[:0]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = data;\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Without xtversion effect set, should report \"libghostty\"\n    s.nextSlice(\"\\x1b[>0q\");\n    try testing.expectEqualStrings(\"\\x1bP>|libghostty\\x1b\\\\\", S.written.?);\n}"
+}

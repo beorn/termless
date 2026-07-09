@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "render.zig",
+  "testName": "cursor state in viewport",
+  "sourceLine": 1664,
+  "zigBody": "test \"cursor state in viewport\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 5,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n    s.nextSlice(\"A\\x1b[H\");\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n\n    // Initial update\n    try state.update(alloc, &t);\n    try testing.expectEqual(0, state.cursor.active.x);\n    try testing.expectEqual(0, state.cursor.active.y);\n    try testing.expectEqual(0, state.cursor.viewport.?.x);\n    try testing.expectEqual(0, state.cursor.viewport.?.y);\n    try testing.expectEqual('A', state.cursor.cell.codepoint());\n    try testing.expect(state.cursor.style.default());\n\n    // Set a style on the cursor\n    s.nextSlice(\"\\x1b[1m\"); // Bold\n    try state.update(alloc, &t);\n    try testing.expect(!state.cursor.style.default());\n    try testing.expect(state.cursor.style.flags.bold);\n    s.nextSlice(\"\\x1b[0m\"); // Reset style\n\n    // Move cursor to 2,1\n    s.nextSlice(\"\\x1b[2;3H\");\n    try state.update(alloc, &t);\n    try testing.expectEqual(2, state.cursor.active.x);\n    try testing.expectEqual(1, state.cursor.active.y);\n    try testing.expectEqual(2, state.cursor.viewport.?.x);\n    try testing.expectEqual(1, state.cursor.viewport.?.y);\n}"
+}

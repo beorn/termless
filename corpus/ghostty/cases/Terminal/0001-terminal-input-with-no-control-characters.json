@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/Terminal.zig",
+  "name": "Terminal: input with no control characters",
+  "cols": 40,
+  "rows": 40,
+  "input": "hello",
+  "expectedScreen": "hello",
+  "sourceLine": 3746,
+  "license": "MIT"
+}

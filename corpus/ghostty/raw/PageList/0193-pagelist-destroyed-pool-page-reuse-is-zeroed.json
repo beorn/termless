@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList destroyed pool page reuse is zeroed",
+  "sourceLine": 14475,
+  "zigBody": "test \"PageList destroyed pool page reuse is zeroed\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // Create a page and scribble over its entire backing memory,\n    // then destroy it so the buffer returns to the pool free list.\n    const node = try s.createPage(.{ .cap = initialCapacity(80) });\n    node.data.size.rows = 1;\n    const mem_ptr = node.data.memory.ptr;\n    @memset(node.data.memory, 0xAA);\n    s.destroyNode(node);\n\n    // Reusing the buffer must produce a fully valid, zeroed page.\n    const node2 = try s.createPage(.{ .cap = initialCapacity(80) });\n    try testing.expectEqual(mem_ptr, node2.data.memory.ptr);\n    node2.data.size.rows = node2.data.capacity.rows;\n\n    const cells_len = @as(usize, node2.data.capacity.cols) *\n        @as(usize, node2.data.capacity.rows);\n    const cells = node2.data.cells.ptr(node2.data.memory)[0..cells_len];\n    try testing.expect(std.mem.allEqual(\n        u64,\n        @as([]const u64, @ptrCast(cells)),\n        0,\n    ));\n    node2.data.assertIntegrity();\n    s.destroyNode(node2);\n}"
+}

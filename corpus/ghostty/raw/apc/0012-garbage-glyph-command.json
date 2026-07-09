@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "apc.zig",
+  "testName": "garbage glyph command",
+  "sourceLine": 368,
+  "zigBody": "test \"garbage glyph command\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    h.start();\n    for (\"25a1;X\") |c| h.feed(alloc, c);\n\n    try testing.expect(h.end() == null);\n}"
+}

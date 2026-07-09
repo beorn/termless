@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture double-click drag selects by word backwards",
+  "sourceLine": 1790,
+  "zigBody": "test \"SelectionGesture double-click drag selects by word backwards\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"alpha beta gamma\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    _ = try gesture.press(&t, testPress(&t, 7, 0, time));\n    _ = try gesture.press(&t, testPress(&t, 7, 0, time));\n\n    var drag_event = testDrag(&t, 1, 0, 10, 50);\n    drag_event.word_boundary_codepoints = &.{ ' ' };\n    const sel = gesture.drag(&t, drag_event).?;\n\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 9, 0),\n        false,\n    ), sel);\n}"
+}

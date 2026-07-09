@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "kitty color protocol reset foreground",
+  "sourceLine": 1353,
+  "zigBody": "test \"kitty color protocol reset foreground\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set and reset foreground\n    s.nextSlice(\"\\x1b]21;foreground=rgb:11/22/33\\x1b\\\\\");\n    try testing.expect(t.colors.foreground.get() != null);\n\n    s.nextSlice(\"\\x1b]21;foreground=\\x1b\\\\\");\n    // After reset, should be unset\n    try testing.expect(t.colors.foreground.get() == null);\n}"
+}

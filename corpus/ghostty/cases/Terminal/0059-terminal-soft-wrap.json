@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/Terminal.zig",
+  "name": "Terminal: soft wrap",
+  "cols": 3,
+  "rows": 80,
+  "input": "hello",
+  "expectedScreen": "hel\nlo",
+  "sourceLine": 5543,
+  "license": "MIT"
+}

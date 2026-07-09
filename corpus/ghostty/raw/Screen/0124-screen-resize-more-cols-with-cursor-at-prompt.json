@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: resize more cols with cursor at prompt",
+  "sourceLine": 7891,
+  "zigBody": "test \"Screen: resize more cols with cursor at prompt\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n\n    // zig fmt: off\n    try s.testWriteString(\"ABCDE\\n\"); \n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_eol });\n    try s.testWriteString(\"echo\");\n    // zig fmt: on\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"ABCDE\\n> echo\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    try s.resize(.{\n        .cols = 20,\n        .rows = 3,\n        .prompt_redraw = .true,\n    });\n\n    // Cursor should not move\n    try testing.expectEqual(6, s.cursor.x);\n    try testing.expectEqual(1, s.cursor.y);\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"ABCDE\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
+}

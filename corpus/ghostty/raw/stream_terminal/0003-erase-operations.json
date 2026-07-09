@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "erase operations",
+  "sourceLine": 863,
+  "zigBody": "test \"erase operations\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 20, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Print some text\n    s.nextSlice(\"Hello World\");\n    try testing.expectEqual(@as(usize, 11), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n\n    // Move cursor to position 1,6 and erase from cursor to end of line\n    s.nextSlice(\"\\x1B[1;6H\");\n    s.nextSlice(\"\\x1B[K\");\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Hello\", str);\n}"
+}

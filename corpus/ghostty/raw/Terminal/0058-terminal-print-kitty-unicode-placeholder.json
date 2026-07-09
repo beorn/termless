@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print kitty unicode placeholder",
+  "sourceLine": 5523,
+  "zigBody": "test \"Terminal: print kitty unicode placeholder\" {\n    if (comptime !build_options.kitty_graphics) return error.SkipZigTest;\n\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    try t.print(kitty.graphics.unicode.placeholder);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.x);\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, kitty.graphics.unicode.placeholder), cell.content.codepoint);\n        try testing.expect(list_cell.row.kitty_virtual_placeholder);\n    }\n\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

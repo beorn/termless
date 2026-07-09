@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "modes.zig",
+  "testName": "getReport known ANSI mode",
+  "sourceLine": 342,
+  "zigBody": "test \"getReport known ANSI mode\" {\n    var state: ModeState = .{};\n    state.set(.insert, true);\n    const report = state.getReport(.{ .value = 4, .ansi = true });\n    try testing.expectEqual(Report.State.set, report.state);\n    try testing.expectEqual(true, report.tag.ansi);\n}"
+}

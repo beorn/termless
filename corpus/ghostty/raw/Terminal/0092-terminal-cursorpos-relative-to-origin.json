@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: cursorPos relative to origin",
+  "sourceLine": 6287,
+  "zigBody": "test \"Terminal: cursorPos relative to origin\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.scrolling_region.top = 2;\n    t.scrolling_region.bottom = 3;\n    t.modes.set(.origin, true);\n    t.setCursorPos(1, 1);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\n\\nX\", str);\n    }\n}"
+}

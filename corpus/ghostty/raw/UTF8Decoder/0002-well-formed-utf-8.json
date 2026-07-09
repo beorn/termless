@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "UTF8Decoder.zig",
+  "testName": "Well formed utf-8",
+  "sourceLine": 101,
+  "zigBody": "test \"Well formed utf-8\" {\n    var d: UTF8Decoder = .{};\n    var out: [4]u21 = undefined;\n    var i: usize = 0;\n    // 4 bytes, 3 bytes, 2 bytes, 1 byte\n    for (\"😄✤ÁA\") |byte| {\n        var consumed = false;\n        while (!consumed) {\n            const res = d.next(byte);\n            consumed = res[1];\n            // There are no errors in this sequence, so\n            // every byte should be consumed first try.\n            try testing.expect(consumed == true);\n            if (res[0]) |codepoint| {\n                out[i] = codepoint;\n                i += 1;\n            }\n        }\n    }\n\n    try testing.expect(std.mem.eql(u21, &out, &[_]u21{ 0x1F604, 0x2724, 0xC1, 0x41 }));\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: setLeftAndRightMargin simple",
+  "sourceLine": 6515,
+  "zigBody": "test \"Terminal: setLeftAndRightMargin simple\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DEF\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GHI\");\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(0, 0);\n\n    t.clearDirty();\n    t.eraseChars(1);\n\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(!t.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\" BC\\nDEF\\nGHI\", str);\n    }\n}"
+}

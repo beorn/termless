@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: saveCursor",
+  "sourceLine": 11509,
+  "zigBody": "test \"Terminal: saveCursor\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .bold = {} });\n    t.screens.active.charset.gr = .G3;\n    t.modes.set(.origin, true);\n    t.saveCursor();\n    t.screens.active.charset.gr = .G0;\n    try t.setAttribute(.{ .unset = {} });\n    t.modes.set(.origin, false);\n    t.restoreCursor();\n    try testing.expect(t.screens.active.cursor.style.flags.bold);\n    try testing.expect(t.screens.active.charset.gr == .G3);\n    try testing.expect(t.modes.get(.origin));\n}"
+}

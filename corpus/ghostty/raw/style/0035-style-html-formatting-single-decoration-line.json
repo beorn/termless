@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Style HTML formatting single decoration line",
+  "sourceLine": 1051,
+  "zigBody": "test \"Style HTML formatting single decoration line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .flags = .{ .underline = .single } };\n    try builder.writer.print(\"{f}\", .{style.formatterHtml()});\n    const result = builder.writer.buffered();\n    try testing.expect(std.mem.indexOf(u8, result, \"text-decoration-line: underline;\") != null);\n    try testing.expect(std.mem.indexOf(u8, result, \"text-decoration-style: solid;\") != null);\n}"
+}

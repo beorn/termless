@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: linefeed and carriage return",
+  "sourceLine": 5998,
+  "zigBody": "test \"Terminal: linefeed and carriage return\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Print and CR.\n    for (\"hello\") |c| try t.print(c);\n    t.clearDirty();\n    t.carriageReturn();\n\n    // CR should not mark row dirty because it doesn't change rendering.\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n\n    try t.linefeed();\n\n    // LF marks row dirty due to cursor movement\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 1 } }));\n\n    for (\"world\") |c| try t.print(c);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 5), t.screens.active.cursor.x);\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"hello\\nworld\", str);\n    }\n}"
+}

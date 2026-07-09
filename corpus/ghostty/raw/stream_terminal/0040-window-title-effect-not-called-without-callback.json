@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "window_title effect not called without callback",
+  "sourceLine": 1685,
+  "zigBody": "test \"window_title effect not called without callback\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Should not crash when no callback is set\n    s.nextSlice(\"\\x1b]2;Hello World\\x1b\\\\\");\n\n    // Title should still be set on terminal state\n    try testing.expectEqualStrings(\"Hello World\", t.getTitle().?);\n\n    // Terminal should still be functional\n    s.nextSlice(\"Test\");\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Test\", str);\n}"
+}

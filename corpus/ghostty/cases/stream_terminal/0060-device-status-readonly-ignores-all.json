@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "device status: readonly ignores all",
+  "cols": 80,
+  "rows": 24,
+  "input": "\u001b[5n\u001b[6n\u001b[?996nTest",
+  "expectedScreen": "Test",
+  "sourceLine": 2215,
+  "license": "MIT"
+}

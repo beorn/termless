@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "stream: CSI W with intermediate but no params",
+  "sourceLine": 1645,
+  "zigBody": "test \"stream: CSI W with intermediate but no params\" {\n    // Regression test from AFL++ crash. CSI ? W without\n    // parameters caused an out-of-bounds access on input.params[0].\n    var t: Terminal = try .init(testing.allocator, .{\n        .cols = 80,\n        .rows = 24,\n        .max_scrollback = 100,\n    });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    s.nextSlice(\"\\x1b[?W\");\n}"
+}

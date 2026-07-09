@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "device_attributes.zig",
+  "testName": "primary with multiple features",
+  "sourceLine": 188,
+  "zigBody": "test \"primary with multiple features\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try (Primary{\n        .conformance_level = .vt420,\n        .features = &.{ .columns_132, .selective_erase, .ansi_color },\n    }).encode(&writer);\n    try testing.expectEqualStrings(\"\\x1b[?64;1;6;22c\", writer.buffered());\n}"
+}

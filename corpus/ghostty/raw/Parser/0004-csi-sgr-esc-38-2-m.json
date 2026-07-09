@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: SGR ESC [ 38 : 2 m",
+  "sourceLine": 501,
+  "zigBody": "test \"csi: SGR ESC [ 38 : 2 m\" {\n    var p = init();\n    _ = p.next(0x1B);\n    _ = p.next('[');\n    _ = p.next('3');\n    _ = p.next('8');\n    _ = p.next(':');\n    _ = p.next('2');\n\n    {\n        const a = p.next('m');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.csi_dispatch;\n        try testing.expect(d.final == 'm');\n        try testing.expect(d.params.len == 2);\n        try testing.expectEqual(@as(u16, 38), d.params[0]);\n        try testing.expect(d.params_sep.isSet(0));\n        try testing.expectEqual(@as(u16, 2), d.params[1]);\n        try testing.expect(!d.params_sep.isSet(1));\n    }\n}"
+}

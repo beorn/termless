@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "size report no effect callback",
+  "sourceLine": 1918,
+  "zigBody": "test \"size report no effect callback\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Without size effect, size reports should be silently ignored\n    s.nextSlice(\"\\x1b[14t\");\n    try testing.expect(S.written == null);\n}"
+}

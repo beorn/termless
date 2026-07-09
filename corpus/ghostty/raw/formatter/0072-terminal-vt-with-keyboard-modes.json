@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Terminal vt with keyboard modes",
+  "sourceLine": 5074,
+  "zigBody": "test \"Terminal vt with keyboard modes\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Set modify other keys mode 2\n    s.nextSlice(\"\\x1b[>4;2m\");\n    s.nextSlice(\"hello\");\n\n    var formatter: TerminalFormatter = .init(&t, .vt);\n    formatter.extra.keyboard = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // Create a second terminal and apply the output\n    var t2 = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t2.deinit(alloc);\n\n    var s2 = t2.vtStream();\n    defer s2.deinit();\n\n    s2.nextSlice(output);\n\n    // Verify keyboard mode matches\n    try testing.expectEqual(t.flags.modify_other_keys_2, t2.flags.modify_other_keys_2);\n    try testing.expect(t2.flags.modify_other_keys_2);\n}"
+}

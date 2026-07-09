@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "modes.zig",
+  "testName": "getReport unknown mode",
+  "sourceLine": 350,
+  "zigBody": "test \"getReport unknown mode\" {\n    const state: ModeState = .{};\n    const report = state.getReport(.{ .value = 9999 });\n    try testing.expectEqual(Report.State.not_recognized, report.state);\n}"
+}

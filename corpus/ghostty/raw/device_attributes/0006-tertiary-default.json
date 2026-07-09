@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "device_attributes.zig",
+  "testName": "tertiary default",
+  "sourceLine": 215,
+  "zigBody": "test \"tertiary default\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try (Tertiary{}).encode(&writer);\n    try testing.expectEqualStrings(\"\\x1bP!|00000000\\x1b\\\\\", writer.buffered());\n}"
+}

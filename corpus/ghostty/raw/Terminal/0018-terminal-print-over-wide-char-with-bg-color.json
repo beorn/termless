@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print over wide char with bg color",
+  "sourceLine": 4107,
+  "zigBody": "test \"Terminal: print over wide char with bg color\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    try t.setAttribute(.{ .direct_color_bg = .{\n        .r = 0xFF,\n        .g = 0,\n        .b = 0,\n    } });\n    try t.print(0x1F600); // Smiley face\n    // verify we have styles in our style map\n    {\n        const page = &t.screens.active.cursor.page_pin.node.data;\n        try testing.expectEqual(@as(usize, 1), page.styles.count());\n    }\n\n    // Go back and overwrite with no style\n    t.setCursorPos(0, 0);\n    try t.setAttribute(.{ .unset = {} });\n    try t.print('A'); // Smiley face\n\n    // verify our style is gone\n    {\n        const page = &t.screens.active.cursor.page_pin.node.data;\n        try testing.expectEqual(@as(usize, 0), page.styles.count());\n    }\n\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

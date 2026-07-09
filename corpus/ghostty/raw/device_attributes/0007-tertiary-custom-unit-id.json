@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "device_attributes.zig",
+  "testName": "tertiary custom unit id",
+  "sourceLine": 222,
+  "zigBody": "test \"tertiary custom unit id\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try (Tertiary{ .unit_id = 0xAABBCCDD }).encode(&writer);\n    try testing.expectEqualStrings(\"\\x1bP!|AABBCCDD\\x1b\\\\\", writer.buffered());\n}"
+}

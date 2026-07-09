@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page clone",
+  "sourceLine": 2755,
+  "zigBody": "test \"Page clone\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Write\n    for (0..page.capacity.rows) |y| {\n        const rac = page.getRowAndCell(1, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(y) },\n        };\n    }\n\n    // Clone\n    var page2 = try page.clone();\n    defer page2.deinit();\n    try testing.expectEqual(page2.capacity, page.capacity);\n\n    // Read it again\n    for (0..page2.capacity.rows) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, @intCast(y)), rac.cell.content.codepoint);\n    }\n\n    // Write again\n    for (0..page.capacity.rows) |y| {\n        const rac = page.getRowAndCell(1, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = 0 },\n        };\n    }\n\n    // Read it again, should be unchanged\n    for (0..page2.capacity.rows) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, @intCast(y)), rac.cell.content.codepoint);\n    }\n\n    // Read the original\n    for (0..page.capacity.rows) |y| {\n        const rac = page.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, 0), rac.cell.content.codepoint);\n    }\n}"
+}

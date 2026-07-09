@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: cursorRight to the edge of screen",
+  "sourceLine": 9508,
+  "zigBody": "test \"Terminal: cursorRight to the edge of screen\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.cursorRight(100);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"    X\", str);\n    }\n}"
+}

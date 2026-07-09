@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList resize reflow more cols no wrapped rows",
+  "sourceLine": 11276,
+  "zigBody": "test \"PageList resize reflow more cols no wrapped rows\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 5, 3, 0);\n    defer s.deinit();\n    try testing.expect(s.pages.first == s.pages.last);\n    const page = &s.pages.first.?.data;\n    for (0..s.rows) |y| {\n        for (0..s.cols) |x| {\n            const rac = page.getRowAndCell(x, y);\n            rac.cell.* = .{\n                .content_tag = .codepoint,\n                .content = .{ .codepoint = 'A' },\n            };\n        }\n    }\n\n    // Resize\n    try s.resize(.{ .cols = 10, .reflow = true });\n    try testing.expectEqual(@as(usize, 10), s.cols);\n    try testing.expectEqual(@as(usize, 3), s.totalRows());\n\n    var it = s.rowIterator(.right_down, .{ .screen = .{} }, null);\n    while (it.next()) |offset| {\n        const rac = offset.rowAndCell();\n        const cells = offset.node.data.getCells(rac.row);\n        try testing.expectEqual(@as(usize, 10), cells.len);\n        try testing.expectEqual(@as(u21, 'A'), cells[0].content.codepoint);\n    }\n}"
+}

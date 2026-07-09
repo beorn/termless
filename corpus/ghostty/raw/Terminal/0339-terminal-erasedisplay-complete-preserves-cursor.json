@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseDisplay complete preserves cursor",
+  "sourceLine": 13000,
+  "zigBody": "test \"Terminal: eraseDisplay complete preserves cursor\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    // Set our cursur\n    try t.setAttribute(.{ .bold = {} });\n    try t.printString(\"AAAA\");\n    try testing.expect(t.screens.active.cursor.style_id != style.default_id);\n\n    // Erasing the display may detect that our style is no longer in use\n    // and prune our style, which we don't want because its still our\n    // active cursor.\n    t.eraseDisplay(.complete, false);\n    try testing.expect(t.screens.active.cursor.style_id != style.default_id);\n}"
+}

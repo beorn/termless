@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: lineIterator",
+  "sourceLine": 9748,
+  "zigBody": "test \"Screen: lineIterator\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"1ABCD\\n2EFGH\";\n    try s.testWriteString(str);\n\n    // Test the line iterator\n    var iter = s.lineIterator(s.pages.pin(.{ .viewport = .{} }).?);\n    {\n        const sel = iter.next().?;\n        const actual = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(actual);\n        try testing.expectEqualStrings(\"1ABCD\", actual);\n    }\n    {\n        const sel = iter.next().?;\n        const actual = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(actual);\n        try testing.expectEqualStrings(\"2EFGH\", actual);\n    }\n}"
+}

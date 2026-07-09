@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page init",
+  "sourceLine": 2646,
+  "zigBody": "test \"Page init\" {\n    var page = try Page.init(.{\n        .cols = 120,\n        .rows = 80,\n        .styles = 32,\n    });\n    defer page.deinit();\n}"
+}

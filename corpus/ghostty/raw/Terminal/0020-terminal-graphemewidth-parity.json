@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: graphemeWidth parity",
+  "sourceLine": 4233,
+  "zigBody": "test \"Terminal: graphemeWidth parity\" {\n    try expectGraphemeWidthParity(&.{ 0x2764, 0xFE0F });\n    try expectGraphemeWidthParity(&.{ 'x', 0xFE0F, 0xFE0F });\n    try expectGraphemeWidthParity(&.{ 0x231A, 0xFE0E, 0xFE0F });\n    try expectGraphemeWidthParity(&.{ 0x1F3F4, 0x200D, 0x2620, 0xFE0F });\n    try expectGraphemeWidthParity(&.{ 0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467 });\n    try expectGraphemeWidthParity(&.{ 0x23, 0xFE0F, 0x20E3 });\n    try expectGraphemeWidthParity(&.{ '1', 0x20E3 });\n    try expectGraphemeWidthParity(&.{ 0x1F44B, 0x1F3FF });\n    try expectGraphemeWidthParity(&.{ 0x1F1E6, 0x1F1E7, 0x1F1E8 });\n    try expectGraphemeWidthParity(&.{ 'a', 'b' });\n    try expectGraphemeWidthParity(&.{ 0x0301, 0x0302 });\n}"
+}

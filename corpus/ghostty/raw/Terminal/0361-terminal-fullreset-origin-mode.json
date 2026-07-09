@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: fullReset origin mode",
+  "sourceLine": 13545,
+  "zigBody": "test \"Terminal: fullReset origin mode\" {\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    t.setCursorPos(3, 5);\n    t.modes.set(.origin, true);\n    t.fullReset();\n\n    // Origin mode should be reset and the cursor should be moved\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expect(!t.modes.get(.origin));\n}"
+}

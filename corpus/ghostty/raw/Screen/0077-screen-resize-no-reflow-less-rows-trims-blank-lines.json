@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: resize (no reflow) less rows trims blank lines",
+  "sourceLine": 6237,
+  "zigBody": "test \"Screen: resize (no reflow) less rows trims blank lines\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"1ABCD\";\n    try s.testWriteString(str);\n\n    // Write only a background color into the remaining rows\n    for (1..s.pages.rows) |y| {\n        const list_cell = s.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = @intCast(y),\n        } }).?;\n        list_cell.cell.* = .{\n            .content_tag = .bg_color_rgb,\n            .content = .{ .color_rgb = .{ .r = 0xFF, .g = 0, .b = 0 } },\n        };\n    }\n\n    const cursor = s.cursor;\n    try s.resize(.{ .cols = 6, .rows = 2, .reflow = false });\n\n    // Cursor should not move\n    try testing.expectEqual(cursor.x, s.cursor.x);\n    try testing.expectEqual(cursor.y, s.cursor.y);\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"1ABCD\", contents);\n    }\n}"
+}

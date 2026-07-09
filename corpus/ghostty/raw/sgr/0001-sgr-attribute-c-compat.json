@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: Attribute C compat",
+  "sourceLine": 537,
+  "zigBody": "test \"sgr: Attribute C compat\" {\n    _ = Attribute.C;\n}"
+}

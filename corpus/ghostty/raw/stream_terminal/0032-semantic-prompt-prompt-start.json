@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "semantic prompt prompt_start",
+  "sourceLine": 1488,
+  "zigBody": "test \"semantic prompt prompt_start\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Write some text\n    s.nextSlice(\"Hello\");\n\n    // OSC 133;P marks the start of a prompt (without fresh line behavior)\n    s.nextSlice(\"\\x1b]133;P\\x07\");\n    try testing.expectEqual(.prompt, t.screens.active.cursor.semantic_content);\n    try testing.expectEqual(@as(usize, 5), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: invalid VS16 doesn't mark dirty",
+  "sourceLine": 4317,
+  "zigBody": "test \"Terminal: invalid VS16 doesn't mark dirty\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    // Disable grapheme clustering\n    t.modes.set(.grapheme_cluster, false);\n\n    try t.print('x');\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n\n    t.clearDirty();\n    try t.print(0xFE0F); // VS16 to make wide\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

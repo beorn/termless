@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: clone empty viewport",
+  "sourceLine": 5993,
+  "zigBody": "test \"Screen: clone empty viewport\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n\n    {\n        var s2 = try s.clone(\n            alloc,\n            .{ .viewport = .{ .y = 0 } },\n            .{ .viewport = .{ .y = 0 } },\n        );\n        defer s2.deinit();\n\n        // Test our contents rotated\n        const contents = try s2.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\", contents);\n    }\n}"
+}

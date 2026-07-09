@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "ignores query actions",
+  "cols": 80,
+  "rows": 24,
+  "input": "\u001b[c\u001b[5n\u001b[6n\u001b]4;0;?\u001b\\\u001b]21;foreground=?\u001b\\Test",
+  "expectedScreen": "Test",
+  "sourceLine": 1089,
+  "license": "MIT"
+}

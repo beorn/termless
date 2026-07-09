@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseChars wide char boundary conditions",
+  "sourceLine": 8158,
+  "zigBody": "test \"Terminal: eraseChars wide char boundary conditions\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 1, .cols = 8 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"😀a😀b😀\");\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"😀a😀b😀\", str);\n    }\n\n    t.setCursorPos(1, 2);\n    t.eraseChars(3);\n    t.screens.active.cursor.page_pin.node.data.assertIntegrity();\n\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"     b😀\", str);\n    }\n}"
+}

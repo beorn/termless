@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print right margin outside wrap",
+  "sourceLine": 5747,
+  "zigBody": "test \"Terminal: print right margin outside wrap\" {\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    try t.printString(\"123456789\");\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(3, 5);\n    t.setCursorPos(1, 10);\n    try t.printString(\"XY\");\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"123456789X\\n  Y\", str);\n    }\n}"
+}

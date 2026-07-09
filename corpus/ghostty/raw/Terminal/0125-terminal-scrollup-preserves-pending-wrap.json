@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: scrollUp preserves pending wrap",
+  "sourceLine": 7398,
+  "zigBody": "test \"Terminal: scrollUp preserves pending wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.setCursorPos(1, 5);\n    try t.print('A');\n    t.setCursorPos(2, 5);\n    try t.print('B');\n    t.setCursorPos(3, 5);\n    try t.print('C');\n    try t.scrollUp(1);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"    B\\n    C\\n\\nX\", str);\n    }\n}"
+}

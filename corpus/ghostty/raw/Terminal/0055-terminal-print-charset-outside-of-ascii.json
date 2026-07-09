@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print charset outside of ASCII",
+  "sourceLine": 5456,
+  "zigBody": "test \"Terminal: print charset outside of ASCII\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // G1 should have no effect\n    t.configureCharset(.G1, .dec_special);\n    t.configureCharset(.G2, .dec_special);\n    t.configureCharset(.G3, .dec_special);\n\n    // No dirty to configure charset\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n\n    // Basic grid writing\n    t.configureCharset(.G0, .dec_special);\n    try t.print('`');\n    try t.print(0x1F600);\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"◆ \", str);\n    }\n\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
+}

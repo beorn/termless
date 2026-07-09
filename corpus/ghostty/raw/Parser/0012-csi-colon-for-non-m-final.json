@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: colon for non-m final",
+  "sourceLine": 778,
+  "zigBody": "test \"csi: colon for non-m final\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"[38:2h\") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    try testing.expect(p.state == .ground);\n}"
+}

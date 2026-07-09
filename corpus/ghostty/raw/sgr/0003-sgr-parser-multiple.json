@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: Parser multiple",
+  "sourceLine": 566,
+  "zigBody": "test \"sgr: Parser multiple\" {\n    var p: Parser = .{ .params = &[_]u16{ 0, 38, 2, 40, 44, 52 } };\n    try testing.expect(p.next().? == .unset);\n    try testing.expect(p.next().? == .direct_color_fg);\n    try testing.expect(p.next() == null);\n    try testing.expect(p.next() == null);\n}"
+}

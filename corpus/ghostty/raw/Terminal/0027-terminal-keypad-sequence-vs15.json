@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: keypad sequence VS15",
+  "sourceLine": 4395,
+  "zigBody": "test \"Terminal: keypad sequence VS15\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    // This is: \"#︎\" (number sign with text presentation selector)\n    try t.print(0x23); // # Number sign (valid base)\n    try t.print(0xFE0E); // VS15 (text presentation selector)\n\n    // VS15 should combine with the base character into a single grapheme cluster,\n    // taking 1 cell (narrow character).\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.x);\n\n    // Row should be dirty\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n\n    // The base emoji should be in cell 0 with the skin tone as a grapheme\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0x23), cell.content.codepoint);\n        try testing.expect(cell.hasGrapheme());\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
+}

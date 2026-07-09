@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture triple-click drag selects by line backwards",
+  "sourceLine": 1858,
+  "zigBody": "test \"SelectionGesture triple-click drag selects by line backwards\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"alpha beta\\none two\\nthree four\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    _ = try gesture.press(&t, testPress(&t, 2, 2, time));\n    _ = try gesture.press(&t, testPress(&t, 2, 2, time));\n    _ = try gesture.press(&t, testPress(&t, 2, 2, time));\n\n    const sel = gesture.drag(&t, testDrag(&t, 1, 0, 10, 50)).?;\n\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 9, 2),\n        false,\n    ), sel);\n}"
+}

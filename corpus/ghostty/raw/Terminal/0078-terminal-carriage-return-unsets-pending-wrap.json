@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: carriage return unsets pending wrap",
+  "sourceLine": 6056,
+  "zigBody": "test \"Terminal: carriage return unsets pending wrap\" {\n    var t = try init(testing.allocator, .{ .cols = 5, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Basic grid writing\n    for (\"hello\") |c| try t.print(c);\n    try testing.expect(t.screens.active.cursor.pending_wrap == true);\n    t.carriageReturn();\n    try testing.expect(t.screens.active.cursor.pending_wrap == false);\n}"
+}

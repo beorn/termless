@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: SGR with 17+ parameters for underline color",
+  "sourceLine": 3710,
+  "zigBody": "test \"stream: SGR with 17+ parameters for underline color\" {\n    const H = struct {\n        attrs: ?sgr.Attribute = null,\n        called: bool = false,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            switch (action) {\n                .set_attribute => {\n                    self.attrs = value;\n                    self.called = true;\n                },\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    // Kakoune-style SGR with underline color as 17th parameter\n    // This tests the fix where param 17 was being dropped\n    s.nextSlice(\"\\x1b[4:3;38;2;51;51;51;48;2;170;170;170;58;2;255;97;136;0m\");\n    try testing.expect(s.handler.called);\n}"
+}

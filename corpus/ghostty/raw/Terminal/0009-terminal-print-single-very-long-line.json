@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print single very long line",
+  "sourceLine": 3889,
+  "zigBody": "test \"Terminal: print single very long line\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    // This would crash for issue 1400. So the assertion here is\n    // that we simply do not crash.\n    for (0..1000) |_| try t.print('x');\n}"
+}

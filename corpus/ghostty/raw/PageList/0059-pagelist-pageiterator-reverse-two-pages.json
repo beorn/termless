@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList pageIterator reverse two pages",
+  "sourceLine": 8064,
+  "zigBody": "test \"PageList pageIterator reverse two pages\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // Grow to capacity\n    const page1_node = s.pages.last.?;\n    const page1 = page1_node.data;\n    page1_node.data.pauseIntegrityChecks(true);\n    for (0..page1.capacity.rows - page1.size.rows) |_| {\n        try testing.expect(try s.grow() == null);\n    }\n    page1_node.data.pauseIntegrityChecks(false);\n    try testing.expect(try s.grow() != null);\n\n    // Iterate the active area\n    var it = s.pageIterator(.left_up, .{ .active = .{} }, null);\n    var count: usize = 0;\n    {\n        const chunk = it.next().?;\n        try testing.expect(chunk.node == s.pages.last.?);\n        const start: usize = 0;\n        try testing.expectEqual(start, chunk.start);\n        try testing.expectEqual(start + 1, chunk.end);\n        count += chunk.end - chunk.start;\n    }\n    {\n        const chunk = it.next().?;\n        try testing.expect(chunk.node == s.pages.first.?);\n        const start = chunk.node.data.size.rows - s.rows + 1;\n        try testing.expectEqual(start, chunk.start);\n        try testing.expectEqual(chunk.node.data.size.rows, chunk.end);\n        count += chunk.end - chunk.start;\n    }\n    try testing.expect(it.next() == null);\n    try testing.expectEqual(s.rows, count);\n}"
+}

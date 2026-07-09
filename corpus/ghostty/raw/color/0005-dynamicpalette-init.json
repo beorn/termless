@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "DynamicPalette: init",
+  "sourceLine": 947,
+  "zigBody": "test \"DynamicPalette: init\" {\n    const testing = std.testing;\n\n    var p: DynamicPalette = .init(default);\n    try testing.expectEqual(default, p.current);\n    try testing.expectEqual(default, p.original);\n    try testing.expectEqual(@as(usize, 0), p.mask.count());\n}"
+}

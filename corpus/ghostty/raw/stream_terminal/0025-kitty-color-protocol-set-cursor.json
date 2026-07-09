@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "kitty color protocol set cursor",
+  "sourceLine": 1338,
+  "zigBody": "test \"kitty color protocol set cursor\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set cursor using kitty protocol\n    s.nextSlice(\"\\x1b]21;cursor=rgb:de/f0/12\\x1b\\\\\");\n    const cursor = t.colors.cursor.get().?;\n    try testing.expectEqual(@as(u8, 0xde), cursor.r);\n    try testing.expectEqual(@as(u8, 0xf0), cursor.g);\n    try testing.expectEqual(@as(u8, 0x12), cursor.b);\n}"
+}

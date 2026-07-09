@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Page html with background and foreground colors",
+  "sourceLine": 5297,
+  "zigBody": "test \"Page html with background and foreground colors\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    s.nextSlice(\"hello\");\n\n    const pages = &t.screens.active.pages;\n    const page = &pages.pages.last.?.data;\n    var formatter: PageFormatter = .init(page, .{\n        .emit = .html,\n        .background = .{ .r = 0x12, .g = 0x34, .b = 0x56 },\n        .foreground = .{ .r = 0xab, .g = 0xcd, .b = 0xef },\n    });\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    try testing.expectEqualStrings(\n        \"<div style=\\\"font-family: monospace; white-space: pre;background-color: #123456;color: #abcdef;\\\">hello</div>\",\n        output,\n    );\n}"
+}

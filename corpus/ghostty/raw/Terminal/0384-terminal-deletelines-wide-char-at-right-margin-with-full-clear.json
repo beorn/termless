@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: deleteLines wide char at right margin with full clear",
+  "sourceLine": 14126,
+  "zigBody": "test \"Terminal: deleteLines wide char at right margin with full clear\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(alloc);\n\n    // Place a wide character at col 39 (1-indexed) on several rows.\n    // The wide cell lands at col 38 (0-indexed) with spacer_tail at col 39.\n    t.setCursorPos(10, 39);\n    try t.print(0x4E2D); // '中'\n\n    // Set left/right scroll margins so scrolling_region.right = 38.\n    // clearCells will clear cells[4..39], which includes the wide cell\n    // at col 38 but NOT the spacer_tail at col 39.\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(5, 39);\n\n    // scrollUp with count >= region height causes deleteLines to clear\n    // ALL rows without any shifting, so rowWillBeShifted is never called\n    // and the orphaned spacer_tail at col 39 triggers a page integrity\n    // violation in clearCells.\n    try t.scrollUp(t.rows);\n}"
+}

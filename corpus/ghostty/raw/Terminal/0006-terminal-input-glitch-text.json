@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: input glitch text",
+  "sourceLine": 3832,
+  "zigBody": "test \"Terminal: input glitch text\" {\n    const glitch = @embedFile(\"res/glitch.txt\");\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 30, .rows = 30 });\n    defer t.deinit(alloc);\n\n    // Get our initial grapheme capacity.\n    const grapheme_cap = cap: {\n        const page = t.screens.active.pages.pages.first.?;\n        break :cap page.data.capacity.grapheme_bytes;\n    };\n\n    // Print glitch text until our capacity changes\n    while (true) {\n        const page = t.screens.active.pages.pages.first.?;\n        if (page.data.capacity.grapheme_bytes != grapheme_cap) break;\n        try t.printString(glitch);\n    }\n\n    // We're testing to make sure that grapheme capacity gets increased.\n    const page = t.screens.active.pages.pages.first.?;\n    try testing.expect(page.data.capacity.grapheme_bytes > grapheme_cap);\n}"
+}

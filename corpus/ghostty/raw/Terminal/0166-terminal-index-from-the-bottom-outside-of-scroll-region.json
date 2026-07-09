@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index from the bottom outside of scroll region",
+  "sourceLine": 8560,
+  "zigBody": "test \"Terminal: index from the bottom outside of scroll region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 5 });\n    defer t.deinit(alloc);\n\n    t.setTopAndBottomMargin(1, 2);\n    t.setCursorPos(5, 1);\n    try t.print('A');\n    t.clearDirty();\n    try t.index();\n    try t.print('B');\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 4 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\n\\n\\n\\nAB\", str);\n    }\n}"
+}

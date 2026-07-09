@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: 24-bit bg color",
+  "sourceLine": 791,
+  "zigBody": "test \"sgr: 24-bit bg color\" {\n    {\n        const v = testParseColon(&[_]u16{ 48, 2, 1, 2, 3 });\n        try testing.expect(v == .direct_color_bg);\n        try testing.expectEqual(@as(u8, 1), v.direct_color_bg.r);\n        try testing.expectEqual(@as(u8, 2), v.direct_color_bg.g);\n        try testing.expectEqual(@as(u8, 3), v.direct_color_bg.b);\n    }\n}"
+}

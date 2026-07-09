@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "semantic prompt end_prompt_start_input_terminate_eol clears on linefeed",
+  "sourceLine": 1537,
+  "zigBody": "test \"semantic prompt end_prompt_start_input_terminate_eol clears on linefeed\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set input terminated by EOL\n    s.nextSlice(\"\\x1b]133;I\\x07\");\n    try testing.expectEqual(.input, t.screens.active.cursor.semantic_content);\n\n    // Linefeed should reset semantic content to output\n    s.nextSlice(\"\\n\");\n    try testing.expectEqual(.output, t.screens.active.cursor.semantic_content);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page clone graphemes",
+  "sourceLine": 2805,
+  "zigBody": "test \"Page clone graphemes\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Append some graphemes\n    {\n        const rac = page.getRowAndCell(0, 0);\n        rac.cell.* = .init(0x09);\n        try page.appendGrapheme(rac.row, rac.cell, 0x0A);\n        try page.appendGrapheme(rac.row, rac.cell, 0x0B);\n    }\n\n    // Clone it\n    var page2 = try page.clone();\n    defer page2.deinit();\n    {\n        const rac = page2.getRowAndCell(0, 0);\n        try testing.expect(rac.row.grapheme);\n        try testing.expect(rac.cell.hasGrapheme());\n        try testing.expectEqualSlices(u21, &.{ 0x0A, 0x0B }, page2.lookupGrapheme(rac.cell).?);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: resize with high unique style per cell with wrapping",
+  "sourceLine": 13704,
+  "zigBody": "test \"Terminal: resize with high unique style per cell with wrapping\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 30, .rows = 30 });\n    defer t.deinit(alloc);\n\n    const cell_count: u16 = @intCast(t.rows * t.cols);\n    for (0..cell_count) |i| {\n        const r: u8 = @intCast(i >> 8);\n        const g: u8 = @intCast(i & 0xFF);\n\n        try t.setAttribute(.{ .direct_color_bg = .{\n            .r = r,\n            .g = g,\n            .b = 0,\n        } });\n        try t.print('x');\n    }\n\n    try t.resize(alloc, 60, 30);\n}"
+}

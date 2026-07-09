@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size.zig",
+  "testName": "getOffset structs",
+  "sourceLine": 212,
+  "zigBody": "test \"getOffset structs\" {\n    const testing = std.testing;\n    const Widget = struct { x: u32, y: u32 };\n    const widgets: []const Widget = &.{\n        .{ .x = 1, .y = 2 },\n        .{ .x = 3, .y = 4 },\n        .{ .x = 5, .y = 6 },\n        .{ .x = 7, .y = 8 },\n        .{ .x = 9, .y = 10 },\n    };\n    const offset = getOffset(Widget, widgets.ptr, &widgets[2]);\n    try testing.expectEqual(\n        @as(OffsetInt, @sizeOf(Widget) * 2),\n        offset.offset,\n    );\n}"
+}

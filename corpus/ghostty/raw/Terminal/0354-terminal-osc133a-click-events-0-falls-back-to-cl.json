@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: OSC133A click_events=0 falls back to cl",
+  "sourceLine": 13419,
+  "zigBody": "test \"Terminal: OSC133A click_events=0 falls back to cl\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // OSC 133;A with click_events=0 and cl=v\n    try t.semanticPrompt(.{\n        .action = .fresh_line_new_prompt,\n        .options_unvalidated = \"click_events=0;cl=v\",\n    });\n\n    // Should fall back to cl since click_events is disabled\n    try testing.expectEqual(Screen.SemanticPrompt.SemanticClick{ .cl = .conservative_vertical }, t.screens.active.semantic_prompt.click);\n}"
+}

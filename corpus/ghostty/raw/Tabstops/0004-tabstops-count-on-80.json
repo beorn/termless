@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Tabstops.zig",
+  "testName": "Tabstops: count on 80",
+  "sourceLine": 233,
+  "zigBody": "test \"Tabstops: count on 80\" {\n    // https://superuser.com/questions/710019/why-there-are-11-tabstops-on-a-80-column-console\n\n    var t: Tabstops = try init(testing.allocator, 80, 8);\n    defer t.deinit(testing.allocator);\n\n    // Count the tabstops\n    const count: usize = count: {\n        var v: usize = 0;\n        var i: usize = 0;\n        while (i < 80) : (i += 1) {\n            if (t.get(i)) {\n                v += 1;\n            }\n        }\n\n        break :count v;\n    };\n\n    try testing.expectEqual(@as(usize, 9), count);\n}"
+}

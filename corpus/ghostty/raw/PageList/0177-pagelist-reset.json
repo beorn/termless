@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList reset",
+  "sourceLine": 13803,
+  "zigBody": "test \"PageList reset\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n    s.reset();\n    try testing.expect(s.viewport == .active);\n    try testing.expect(s.pages.first != null);\n    try testing.expectEqual(@as(usize, s.rows), s.totalRows());\n\n    // Active area should be the top\n    try testing.expectEqual(Pin{\n        .node = s.pages.first.?,\n        .y = 0,\n        .x = 0,\n    }, s.getTopLeft(.active));\n}"
+}

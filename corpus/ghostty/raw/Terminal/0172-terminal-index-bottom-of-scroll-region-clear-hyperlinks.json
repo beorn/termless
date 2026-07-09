@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index bottom of scroll region clear hyperlinks",
+  "sourceLine": 8723,
+  "zigBody": "test \"Terminal: index bottom of scroll region clear hyperlinks\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5, .max_scrollback = 0 });\n    defer t.deinit(alloc);\n\n    t.setTopAndBottomMargin(2, 3);\n    t.setCursorPos(2, 1);\n    try t.screens.active.startHyperlink(\"http://example.com\", null);\n    try t.print('A');\n    t.screens.active.endHyperlink();\n    try t.index();\n    t.carriageReturn();\n    try t.print('B');\n    try t.index();\n    t.carriageReturn();\n    try t.print('C');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nB\\nC\", str);\n    }\n\n    for (1..3) |y| {\n        const list_cell = t.screens.active.pages.getCell(.{ .viewport = .{\n            .x = 0,\n            .y = @intCast(y),\n        } }).?;\n        const row = list_cell.row;\n        try testing.expect(!row.hyperlink);\n        const cell = list_cell.cell;\n        try testing.expect(!cell.hyperlink);\n        const id = list_cell.node.data.lookupHyperlink(cell);\n        try testing.expect(id == null);\n        const page = &list_cell.node.data;\n        try testing.expectEqual(0, page.hyperlink_set.count());\n    }\n}"
+}

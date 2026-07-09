@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: reverseIndex from the top",
+  "sourceLine": 8269,
+  "zigBody": "test \"Terminal: reverseIndex from the top\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 5 });\n    defer t.deinit(alloc);\n\n    try t.print('A');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('B');\n    t.carriageReturn();\n    try t.linefeed();\n    t.carriageReturn();\n    try t.linefeed();\n\n    t.setCursorPos(1, 1);\n    t.reverseIndex();\n    try t.print('D');\n\n    t.carriageReturn();\n    try t.linefeed();\n    t.setCursorPos(1, 1);\n    t.reverseIndex();\n    try t.print('E');\n    t.carriageReturn();\n    try t.linefeed();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"E\\nD\\nA\\nB\", str);\n    }\n}"
+}

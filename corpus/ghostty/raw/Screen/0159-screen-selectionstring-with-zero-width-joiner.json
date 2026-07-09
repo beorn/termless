@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: selectionString with zero width joiner",
+  "sourceLine": 9571,
+  "zigBody": "test \"Screen: selectionString with zero width joiner\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 1, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"👨‍\"; // this has a ZWJ\n    try s.testWriteString(str);\n\n    // Integrity check\n    {\n        const pin = s.pages.pin(.{ .screen = .{ .y = 0, .x = 0 } }).?;\n        const cell = pin.rowAndCell().cell;\n        try testing.expectEqual(@as(u21, 0x1F468), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.wide, cell.wide);\n        const cps = pin.node.data.lookupGrapheme(cell).?;\n        try testing.expectEqual(@as(usize, 1), cps.len);\n    }\n\n    // The real test\n    {\n        const sel = Selection.init(\n            s.pages.pin(.{ .screen = .{ .x = 0, .y = 0 } }).?,\n            s.pages.pin(.{ .screen = .{ .x = 1, .y = 0 } }).?,\n            false,\n        );\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = true,\n        });\n        defer alloc.free(contents);\n        const expected = \"👨‍\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
+}

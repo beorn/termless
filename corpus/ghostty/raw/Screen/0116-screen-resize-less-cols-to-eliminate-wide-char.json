@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: resize less cols to eliminate wide char",
+  "sourceLine": 7594,
+  "zigBody": "test \"Screen: resize less cols to eliminate wide char\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 2, .rows = 1, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"😀\";\n    try s.testWriteString(str);\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n    {\n        const list_cell = s.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(Cell.Wide.wide, cell.wide);\n        try testing.expectEqual(@as(u21, '😀'), cell.content.codepoint);\n    }\n\n    // Resize to 1 column can't fit a wide char. So it should be deleted.\n    try s.resize(.{ .cols = 1, .rows = 1 });\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\", contents);\n    }\n    {\n        const list_cell = s.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
+}

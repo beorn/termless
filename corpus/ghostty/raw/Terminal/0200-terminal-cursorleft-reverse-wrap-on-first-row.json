@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: cursorLeft reverse wrap on first row",
+  "sourceLine": 9405,
+  "zigBody": "test \"Terminal: cursorLeft reverse wrap on first row\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.wraparound, true);\n    t.modes.set(.reverse_wrap, true);\n\n    t.setTopAndBottomMargin(3, 0);\n    t.setCursorPos(1, 2);\n    t.cursorLeft(1000);\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n}"
+}

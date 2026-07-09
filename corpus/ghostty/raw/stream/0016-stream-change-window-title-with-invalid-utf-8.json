@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: change window title with invalid utf-8",
+  "sourceLine": 3232,
+  "zigBody": "test \"stream: change window title with invalid utf-8\" {\n    const H = struct {\n        seen: bool = false,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = value;\n            switch (action) {\n                .window_title => self.seen = true,\n                else => {},\n            }\n        }\n    };\n\n    {\n        var s: Stream(H) = .init(.{});\n        s.nextSlice(\"\\x1b]2;abc\\x1b\\\\\");\n        try testing.expect(s.handler.seen);\n    }\n\n    {\n        var s: Stream(H) = .init(.{});\n        s.nextSlice(\"\\x1b]2;abc\\xc0\\x1b\\\\\");\n        try testing.expect(!s.handler.seen);\n    }\n}"
+}

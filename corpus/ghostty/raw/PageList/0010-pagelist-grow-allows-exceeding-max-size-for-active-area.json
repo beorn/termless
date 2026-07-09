@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "PageList.zig",
+  "testName": "PageList grow allows exceeding max size for active area",
+  "sourceLine": 6108,
+  "zigBody": "test \"PageList grow allows exceeding max size for active area\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // Setup our initial page so that we fully take up one page.\n    const cap = try std_capacity.adjust(.{ .cols = 5 });\n    var s = try init(alloc, 5, cap.rows, 0);\n    defer s.deinit();\n    try testing.expectEqual(@as(usize, s.rows), s.totalRows());\n\n    // Grow once because we guarantee at least two pages of\n    // capacity so we want to get to that.\n    _ = try s.grow();\n    const start_pages = s.totalPages();\n    try testing.expect(start_pages >= 2);\n\n    // Surgically modify our pages so that they have a smaller size.\n    {\n        var it = s.pages.first;\n        while (it) |page| : (it = page.next) {\n            page.data.size.rows = 1;\n            page.data.capacity.rows = 1;\n        }\n\n        // Avoid integrity check failures\n        s.total_rows = s.totalRows();\n    }\n\n    // Grow our row and ensure we don't prune pages because we need\n    // enough for the active area.\n    _ = try s.grow();\n    try testing.expectEqual(start_pages + 1, s.totalPages());\n}"
+}

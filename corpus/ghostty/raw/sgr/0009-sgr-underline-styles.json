@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: underline styles",
+  "sourceLine": 640,
+  "zigBody": "test \"sgr: underline styles\" {\n    {\n        const v = testParseColon(&[_]u16{ 4, 2 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .double);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 4, 0 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .none);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 4, 1 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .single);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 4, 3 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .curly);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 4, 4 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .dotted);\n    }\n\n    {\n        const v = testParseColon(&[_]u16{ 4, 5 });\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .dashed);\n    }\n}"
+}

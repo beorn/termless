@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "generate256Color: cube corners black/white with harmonious=false",
+  "sourceLine": 1124,
+  "zigBody": "test \"generate256Color: cube corners black/white with harmonious=false\" {\n    const testing = std.testing;\n\n    const black = RGB{ .r = 0, .g = 0, .b = 0 };\n    const white = RGB{ .r = 255, .g = 255, .b = 255 };\n\n    // Dark theme: bg=black, fg=white.\n    const dark = generate256Color(default, .initEmpty(), black, white, false);\n    try testing.expectEqual(black, dark[16]);\n    try testing.expectEqual(white, dark[231]);\n\n    // Light theme: bg=white, fg=black. The bg/red swap ensures\n    // the cube still runs from black (16) to white (231).\n    const light = generate256Color(default, .initEmpty(), white, black, false);\n    try testing.expectEqual(black, light[16]);\n    try testing.expectEqual(white, light[231]);\n}"
+}

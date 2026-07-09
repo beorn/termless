@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture deinit untracks pin",
+  "sourceLine": 2013,
+  "zigBody": "test \"SelectionGesture deinit untracks pin\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    const tracked = t.screens.active.pages.countTrackedPins();\n    _ = try gesture.press(&t, testPress(&t, 1, 1, try std.time.Instant.now()));\n    try testing.expectEqual(tracked + 1, t.screens.active.pages.countTrackedPins());\n\n    gesture.deinit(&t);\n    try testing.expectEqual(tracked, t.screens.active.pages.countTrackedPins());\n}"
+}

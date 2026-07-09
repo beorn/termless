@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "mouse.zig",
+  "testName": "cursor shape from string",
+  "sourceLine": 161,
+  "zigBody": "test \"cursor shape from string\" {\n    const testing = std.testing;\n    try testing.expectEqual(Shape.default, Shape.fromString(\"default\").?);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index outside of scrolling region",
+  "sourceLine": 8549,
+  "zigBody": "test \"Terminal: index outside of scrolling region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 5 });\n    defer t.deinit(alloc);\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    t.setTopAndBottomMargin(2, 5);\n    try t.index();\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.y);\n}"
+}

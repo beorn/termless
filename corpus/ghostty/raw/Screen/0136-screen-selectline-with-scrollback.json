@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: selectLine with scrollback",
+  "sourceLine": 8374,
+  "zigBody": "test \"Screen: selectLine with scrollback\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 2, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n    try s.testWriteString(\"1A\\n2B\\n3C\\n4D\\n5E\");\n\n    // Selecting first line\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 0,\n            .y = 0,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 0,\n            .y = 0,\n        } }, s.pages.pointFromPin(.active, sel.start()).?);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 1,\n            .y = 0,\n        } }, s.pages.pointFromPin(.active, sel.end()).?);\n    }\n\n    // Selecting last line\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 0,\n            .y = 2,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 0,\n            .y = 2,\n        } }, s.pages.pointFromPin(.active, sel.start()).?);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 1,\n            .y = 2,\n        } }, s.pages.pointFromPin(.active, sel.end()).?);\n    }\n}"
+}

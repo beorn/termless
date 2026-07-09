@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: printRepeat simple",
+  "sourceLine": 12211,
+  "zigBody": "test \"Terminal: printRepeat simple\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"A\");\n    try t.printRepeat(1);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AA\", str);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: multiple newlines in prompt mode marks all rows",
+  "sourceLine": 13284,
+  "zigBody": "test \"Terminal: multiple newlines in prompt mode marks all rows\" {\n    // Multiple newlines should each mark their row as prompt continuation\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Start a prompt\n    try t.semanticPrompt(.init(.prompt_start));\n    for (\"line1\") |c| try t.print(c);\n\n    // Multiple newlines\n    t.carriageReturn();\n    try t.linefeed();\n    for (\"line2\") |c| try t.print(c);\n    t.carriageReturn();\n    try t.linefeed();\n    for (\"line3\") |c| try t.print(c);\n\n    // First row should be prompt\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 0,\n        } }).?;\n        try testing.expectEqual(.prompt, list_cell.row.semantic_prompt);\n    }\n\n    // Second and third rows should be prompt continuation\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 1,\n        } }).?;\n        try testing.expectEqual(.prompt_continuation, list_cell.row.semantic_prompt);\n    }\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 2,\n        } }).?;\n        try testing.expectEqual(.prompt_continuation, list_cell.row.semantic_prompt);\n    }\n}"
+}

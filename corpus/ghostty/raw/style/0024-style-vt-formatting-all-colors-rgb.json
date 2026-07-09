@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Style VT formatting all colors rgb",
+  "sourceLine": 840,
+  "zigBody": "test \"Style VT formatting all colors rgb\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{\n        .fg_color = .{ .rgb = .{ .r = 10, .g = 20, .b = 30 } },\n        .bg_color = .{ .rgb = .{ .r = 40, .g = 50, .b = 60 } },\n        .underline_color = .{ .rgb = .{ .r = 70, .g = 80, .b = 90 } },\n    };\n    try builder.writer.print(\"{f}\", .{style.formatterVt()});\n    try testing.expectEqualStrings(\n        \"\\x1b[0m\\x1b[38;2;10;20;30m\\x1b[48;2;40;50;60m\\x1b[58;2;70;80;90m\",\n        builder.writer.buffered(),\n    );\n}"
+}

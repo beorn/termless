@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: fullReset clears alt screen kitty keyboard state",
+  "sourceLine": 13569,
+  "zigBody": "test \"Terminal: fullReset clears alt screen kitty keyboard state\" {\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    try t.switchScreenMode(.@\"1049\", true);\n    t.screens.active.kitty_keyboard.push(.{\n        .disambiguate = true,\n        .report_events = false,\n        .report_alternates = true,\n        .report_all = true,\n        .report_associated = true,\n    });\n    try t.switchScreenMode(.@\"1049\", false);\n\n    t.fullReset();\n    try testing.expect(t.screens.get(.alternate) == null);\n}"
+}

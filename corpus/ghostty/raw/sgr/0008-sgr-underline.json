@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: underline",
+  "sourceLine": 627,
+  "zigBody": "test \"sgr: underline\" {\n    {\n        const v = testParse(&[_]u16{4});\n        try testing.expect(v == .underline);\n    }\n\n    {\n        const v = testParse(&[_]u16{24});\n        try testing.expect(v == .underline);\n        try testing.expect(v.underline == .none);\n    }\n}"
+}

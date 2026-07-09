@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size.zig",
+  "testName": "Offset",
+  "sourceLine": 180,
+  "zigBody": "test \"Offset\" {\n    // This test is here so that if Offset changes, we can be very aware\n    // of this effect and think about the implications of it.\n    const testing = std.testing;\n    try testing.expect(OffsetInt == u32);\n}"
+}

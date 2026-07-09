@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: resize with high unique style per cell",
+  "sourceLine": 13684,
+  "zigBody": "test \"Terminal: resize with high unique style per cell\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 30, .rows = 30 });\n    defer t.deinit(alloc);\n\n    for (0..t.rows) |y| {\n        for (0..t.cols) |x| {\n            t.setCursorPos(y, x);\n            try t.setAttribute(.{ .direct_color_bg = .{\n                .r = @intCast(x),\n                .g = @intCast(y),\n                .b = 0,\n            } });\n            try t.print('x');\n        }\n    }\n\n    try t.resize(alloc, 60, 30);\n}"
+}

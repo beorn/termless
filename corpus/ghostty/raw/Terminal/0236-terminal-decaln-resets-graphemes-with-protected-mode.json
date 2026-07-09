@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: DECALN resets graphemes with protected mode",
+  "sourceLine": 10387,
+  "zigBody": "test \"Terminal: DECALN resets graphemes with protected mode\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    // Add protected mode. A previous version of DECALN accidentally preserved\n    // protected mode which left dangling managed memory.\n    t.setProtectedMode(.iso);\n\n    // This is: 👨‍👩‍👧 (which may or may not render correctly)\n    t.modes.set(.grapheme_cluster, true);\n    try t.print(0x1F468);\n    try t.print(0x200D);\n    try t.print(0x1F469);\n    try t.print(0x200D);\n    try t.print(0x1F467);\n\n    try t.decaln();\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expect(t.screens.active.cursor.protected);\n    try testing.expect(t.screens.active.protected_mode == .iso);\n\n    for (0..t.rows) |y| try testing.expect(t.isDirty(.{ .active = .{\n        .x = 0,\n        .y = @intCast(y),\n    } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"EEE\\nEEE\\nEEE\", str);\n    }\n}"
+}

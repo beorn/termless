@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "DECALN screen alignment",
+  "cols": 10,
+  "rows": 3,
+  "input": "\u001b#8",
+  "expectedScreen": "EEEEEEEEEE\nEEEEEEEEEE\nEEEEEEEEEE",
+  "sourceLine": 1014,
+  "license": "MIT"
+}

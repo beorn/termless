@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "kitty_keyboard_query",
+  "sourceLine": 1729,
+  "zigBody": "test \"kitty_keyboard_query\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[:0]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = data;\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Default kitty keyboard flags should be 0\n    s.nextSlice(\"\\x1b[?u\");\n    try testing.expectEqualStrings(\"\\x1b[?0u\", S.written.?);\n\n    // Push kitty keyboard mode with flags and query again\n    S.written = null;\n    s.nextSlice(\"\\x1b[>1u\"); // push with disambiguate flag\n    s.nextSlice(\"\\x1b[?u\");\n    try testing.expectEqualStrings(\"\\x1b[?1u\", S.written.?);\n}"
+}

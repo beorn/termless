@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: promptClickMove click right of input same line",
+  "sourceLine": 10791,
+  "zigBody": "test \"Screen: promptClickMove click right of input same line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // Set up: \"> hello\" where \"> \" is prompt and \"hello\" is input\n    // Clicking to the right of the 'o' should move cursor past the input\n\n    var s = try init(alloc, .{ .cols = 20, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Enable line click mode\n    s.semantic_prompt.click = .{ .cl = .line };\n\n    // Write a prompt and input\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"hello\");\n\n    // Move cursor to start of input (column 2, the 'h')\n    s.cursorAbsolute(2, 0);\n\n    // Click beyond the input (column 15) - should move to one past the 'o'\n    const click_pin = s.pages.pin(.{ .active = .{ .x = 15, .y = 0 } }).?;\n    const result = s.promptClickMove(click_pin);\n\n    try testing.expectEqual(@as(usize, 5), result.right);\n    try testing.expectEqual(@as(usize, 0), result.left);\n}"
+}

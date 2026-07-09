@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "osc: 104 empty",
+  "sourceLine": 929,
+  "zigBody": "test \"osc: 104 empty\" {\n    var p: Parser = init();\n    defer p.deinit();\n    p.osc_parser.alloc = std.testing.allocator;\n\n    _ = p.next(0x1B);\n    _ = p.next(']');\n    _ = p.next('1');\n    _ = p.next('0');\n    _ = p.next('4');\n\n    {\n        const a = p.next(0x07);\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0].? == .osc_dispatch);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n\n        const cmd = a[0].?.osc_dispatch;\n        try testing.expect(cmd == .color_operation);\n        try testing.expectEqual(cmd.color_operation.terminator, .bel);\n        try testing.expect(cmd.color_operation.op == .osc_104);\n        try testing.expect(cmd.color_operation.requests.count() == 1);\n        var it = cmd.color_operation.requests.constIterator(0);\n        {\n            const op = it.next().?;\n            try testing.expect(op.* == .reset_palette);\n        }\n        try std.testing.expect(it.next() == null);\n    }\n}"
+}

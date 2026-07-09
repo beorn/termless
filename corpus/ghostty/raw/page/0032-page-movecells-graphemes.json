@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page moveCells graphemes",
+  "sourceLine": 3488,
+  "zigBody": "test \"Page moveCells graphemes\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Write\n    for (0..page.size.cols) |x| {\n        const rac = page.getRowAndCell(x, 0);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(x + 1) },\n        };\n        try page.appendGrapheme(rac.row, rac.cell, 0x0A);\n    }\n    const original_count = page.graphemeCount();\n\n    const src = page.getRow(0);\n    const dst = page.getRow(1);\n    page.moveCells(src, 0, dst, 0, page.size.cols);\n    try testing.expectEqual(original_count, page.graphemeCount());\n\n    // New rows should have text\n    for (0..page.size.cols) |x| {\n        const rac = page.getRowAndCell(x, 1);\n        try testing.expectEqual(\n            @as(u21, @intCast(x + 1)),\n            rac.cell.content.codepoint,\n        );\n        try testing.expectEqualSlices(\n            u21,\n            &.{0x0A},\n            page.lookupGrapheme(rac.cell).?,\n        );\n    }\n\n    // Old row should be blank\n    for (0..page.size.cols) |x| {\n        const rac = page.getRowAndCell(x, 0);\n        try testing.expectEqual(\n            @as(u21, 0),\n            rac.cell.content.codepoint,\n        );\n    }\n}"
+}

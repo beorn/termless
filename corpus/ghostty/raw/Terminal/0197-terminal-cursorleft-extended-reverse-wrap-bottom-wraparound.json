@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: cursorLeft extended reverse wrap bottom wraparound",
+  "sourceLine": 9344,
+  "zigBody": "test \"Terminal: cursorLeft extended reverse wrap bottom wraparound\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 3 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.wraparound, true);\n    t.modes.set(.reverse_wrap_extended, true);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('1');\n    t.cursorLeft(1 + t.cols + 1);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABCDE\\n1\\n    X\", str);\n    }\n}"
+}

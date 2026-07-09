@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: scrollUp left/right scroll region",
+  "sourceLine": 7259,
+  "zigBody": "test \"Terminal: scrollUp left/right scroll region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC123\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DEF456\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GHI789\");\n    t.scrolling_region.left = 1;\n    t.scrolling_region.right = 3;\n    t.setCursorPos(2, 2);\n\n    const cursor = t.screens.active.cursor;\n    t.clearDirty();\n    try t.scrollUp(1);\n    try testing.expectEqual(cursor.x, t.screens.active.cursor.x);\n    try testing.expectEqual(cursor.y, t.screens.active.cursor.y);\n\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 2 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AEF423\\nDHI756\\nG   89\", str);\n    }\n}"
+}

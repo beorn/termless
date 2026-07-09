@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture deep press selects word and consumes drag",
+  "sourceLine": 1711,
+  "zigBody": "test \"SelectionGesture deep press selects word and consumes drag\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"alpha beta\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    _ = try gesture.press(&t, testPress(&t, 1, 0, try std.time.Instant.now()));\n    _ = gesture.drag(&t, testDrag(&t, 1, 0, 10, 1));\n    try testing.expectEqual(.up, gesture.left_drag_autoscroll);\n\n    const sel = gesture.deepPress(&t, .{\n        .word_boundary_codepoints = &.{ ' ' },\n    }).?;\n\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 4, 0),\n        false,\n    ), sel);\n    try testing.expectEqual(@as(u3, 0), gesture.left_click_count);\n    try testing.expectEqual(@as(?std.time.Instant, null), gesture.left_click_time);\n    try testing.expectEqual(true, gesture.left_click_dragged);\n    try testing.expectEqual(.none, gesture.left_drag_autoscroll);\n    try testing.expect(gesture.left_click_pin == null);\n\n    try testing.expectEqual(null, gesture.drag(&t, testDrag(&t, 7, 0, 70, 50)));\n    gesture.release(&t, .{ .pin = testPin(&t, 7, 0) });\n    try testing.expectEqual(true, gesture.left_click_dragged);\n}"
+}

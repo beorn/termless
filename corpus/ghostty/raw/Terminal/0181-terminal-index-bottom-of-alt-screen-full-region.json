@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index bottom of alt screen full region",
+  "sourceLine": 9012,
+  "zigBody": "test \"Terminal: index bottom of alt screen full region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 3, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.switchScreenMode(.@\"1049\", true);\n    try t.printString(\"A\\nB\\nC\");\n    try t.index();\n    t.carriageReturn();\n    try t.print('D');\n\n    // Content scrolled up and the scrolled-out row is discarded, NOT\n    // moved into scrollback (the alt screen has none).\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"B\\nC\\nD\", str);\n    }\n    {\n        const str = try t.screens.active.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"B\\nC\\nD\", str);\n    }\n\n    // Primary screen is untouched.\n    try t.switchScreenMode(.@\"1049\", false);\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\", str);\n    }\n}"
+}

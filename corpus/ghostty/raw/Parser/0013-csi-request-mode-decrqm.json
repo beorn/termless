@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: request mode decrqm",
+  "sourceLine": 791,
+  "zigBody": "test \"csi: request mode decrqm\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"[?2026$\") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    {\n        const a = p.next('p');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.csi_dispatch;\n        try testing.expect(d.final == 'p');\n        try testing.expectEqual(@as(usize, 2), d.intermediates.len);\n        try testing.expectEqual(@as(usize, 1), d.params.len);\n        try testing.expectEqual(@as(u16, '?'), d.intermediates[0]);\n        try testing.expectEqual(@as(u16, '$'), d.intermediates[1]);\n        try testing.expectEqual(@as(u16, 2026), d.params[0]);\n    }\n}"
+}

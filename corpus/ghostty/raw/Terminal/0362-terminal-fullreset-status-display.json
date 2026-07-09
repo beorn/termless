@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: fullReset status display",
+  "sourceLine": 13559,
+  "zigBody": "test \"Terminal: fullReset status display\" {\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    t.status_display = .status_line;\n    t.fullReset();\n    try testing.expect(t.status_display == .main);\n}"
+}

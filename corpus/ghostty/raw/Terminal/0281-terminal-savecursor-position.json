@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: saveCursor position",
+  "sourceLine": 11527,
+  "zigBody": "test \"Terminal: saveCursor position\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    t.setCursorPos(1, 5);\n    try t.print('A');\n    t.saveCursor();\n    t.setCursorPos(1, 1);\n    try t.print('B');\n    t.restoreCursor();\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"B   AX\", str);\n    }\n}"
+}

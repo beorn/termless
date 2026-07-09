@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture release clears autoscroll and records drag",
+  "sourceLine": 1535,
+  "zigBody": "test \"SelectionGesture release clears autoscroll and records drag\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    _ = try gesture.press(&t, testPress(&t, 1, 1, try std.time.Instant.now()));\n    try testing.expectEqual(false, gesture.left_click_dragged);\n\n    _ = gesture.drag(&t, testDrag(&t, 1, 1, 10, 1));\n    try testing.expectEqual(.up, gesture.left_drag_autoscroll);\n    try testing.expectEqual(false, gesture.left_click_dragged);\n\n    gesture.release(&t, .{\n        .pin = testPin(&t, 2, 1),\n    });\n    try testing.expectEqual(.none, gesture.left_drag_autoscroll);\n    try testing.expectEqual(true, gesture.left_click_dragged);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "alt screen",
+  "sourceLine": 945,
+  "zigBody": "test \"alt screen\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Write to primary screen\n    s.nextSlice(\"Primary\");\n    try testing.expectEqual(.primary, t.screens.active_key);\n\n    // Switch to alt screen\n    s.nextSlice(\"\\x1B[?1049h\");\n    try testing.expectEqual(.alternate, t.screens.active_key);\n\n    // Write to alt screen\n    s.nextSlice(\"Alt\");\n\n    // Switch back to primary\n    s.nextSlice(\"\\x1B[?1049l\");\n    try testing.expectEqual(.primary, t.screens.active_key);\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Primary\", str);\n}"
+}

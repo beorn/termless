@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: selectLine across full soft-wrap",
+  "sourceLine": 8240,
+  "zigBody": "test \"Screen: selectLine across full soft-wrap\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD2EFGH\\n3IJKL\");\n\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 2,\n            .y = 1,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 0,\n        } }, s.pages.pointFromPin(.screen, sel.start()).?);\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 4,\n            .y = 1,\n        } }, s.pages.pointFromPin(.screen, sel.end()).?);\n    }\n}"
+}

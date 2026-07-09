@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "TerminalFormatter with selection",
+  "sourceLine": 4275,
+  "zigBody": "test \"TerminalFormatter with selection\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    s.nextSlice(\"line1\\r\\nline2\\r\\nline3\");\n\n    var formatter: TerminalFormatter = .init(&t, .plain);\n    formatter.content = .{ .selection = .init(\n        t.screens.active.pages.pin(.{ .active = .{ .x = 0, .y = 1 } }).?,\n        t.screens.active.pages.pin(.{ .active = .{ .x = 4, .y = 1 } }).?,\n        false,\n    ) };\n\n    try formatter.format(&builder.writer);\n    try testing.expectEqualStrings(\"line2\", builder.writer.buffered());\n}"
+}

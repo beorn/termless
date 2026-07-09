@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "basic print",
+  "cols": 10,
+  "rows": 10,
+  "input": "Hello",
+  "expectedScreen": "Hello",
+  "sourceLine": 829,
+  "license": "MIT"
+}

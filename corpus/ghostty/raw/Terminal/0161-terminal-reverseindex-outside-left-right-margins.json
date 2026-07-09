@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: reverseIndex outside left/right margins",
+  "sourceLine": 8441,
+  "zigBody": "test \"Terminal: reverseIndex outside left/right margins\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC\");\n    t.setCursorPos(2, 1);\n    try t.printString(\"DEF\");\n    t.setCursorPos(3, 1);\n    try t.printString(\"GHI\");\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(2, 3);\n    t.setCursorPos(1, 1);\n    t.reverseIndex();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABC\\nDEF\\nGHI\", str);\n    }\n}"
+}

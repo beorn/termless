@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: insertBlanks shift graphemes",
+  "sourceLine": 10702,
+  "zigBody": "test \"Terminal: insertBlanks shift graphemes\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    try t.printString(\"A\");\n\n    // This is: 👨‍👩‍👧 (which may or may not render correctly)\n    try t.print(0x1F468);\n    try t.print(0x200D);\n    try t.print(0x1F469);\n    try t.print(0x200D);\n    try t.print(0x1F467);\n\n    // We should have one cell with graphemes\n    const page = &t.screens.active.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 1), page.graphemeCount());\n\n    t.setCursorPos(1, 1);\n    t.clearDirty();\n    t.insertBlanks(1);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\" A👨‍👩‍👧\", str);\n    }\n\n    // We should have no graphemes\n    try testing.expectEqual(@as(usize, 1), page.graphemeCount());\n}"
+}

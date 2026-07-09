@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "Page VT style reset properly closes styles",
+  "sourceLine": 5598,
+  "zigBody": "test \"Page VT style reset properly closes styles\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Set bold, then reset with SGR 0\n    s.nextSlice(\"\\x1b[1mbold\\x1b[0mnormal\");\n\n    const pages = &t.screens.active.pages;\n    const page = &pages.pages.last.?.data;\n\n    builder.clearRetainingCapacity();\n    var formatter: PageFormatter = .init(page, .vt);\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // The reset should properly close the bold style\n    try testing.expectEqualStrings(\"\\x1b[0m\\x1b[1mbold\\x1b[0mnormal\", output);\n}"
+}

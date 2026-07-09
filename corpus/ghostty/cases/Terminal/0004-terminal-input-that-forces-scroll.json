@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/Terminal.zig",
+  "name": "Terminal: input that forces scroll",
+  "cols": 1,
+  "rows": 5,
+  "input": "abcdef",
+  "expectedScreen": "b\nc\nd\ne\nf",
+  "sourceLine": 3798,
+  "license": "MIT"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen eraseRows history with more lines",
+  "sourceLine": 4129,
+  "zigBody": "test \"Screen eraseRows history with more lines\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 1000 });\n    defer s.deinit();\n\n    try s.testWriteString(\"A\\nB\\nC\\n1\\n2\\n3\\n4\\n5\\n6\");\n\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .active = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\n4\\n5\\n6\", str);\n    }\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"A\\nB\\nC\\n1\\n2\\n3\\n4\\n5\\n6\", str);\n    }\n\n    s.eraseHistory(null);\n\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .active = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\n4\\n5\\n6\", str);\n    }\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\n4\\n5\\n6\", str);\n    }\n}"
+}

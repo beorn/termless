@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "modes.zig",
+  "testName": "Report.encode ANSI mode",
+  "sourceLine": 372,
+  "zigBody": "test \"Report.encode ANSI mode\" {\n    var buf: [Report.max_size]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    const report: Report = .{ .tag = .{ .value = 4, .ansi = true }, .state = .set };\n    try report.encode(&writer);\n    try testing.expectEqualStrings(\"\\x1B[4;1$y\", writer.buffered());\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "DECALN screen alignment",
+  "sourceLine": 1014,
+  "zigBody": "test \"DECALN screen alignment\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 3 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Run DECALN\n    s.nextSlice(\"\\x1B#8\");\n\n    // Verify entire screen is filled with 'E'\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"EEEEEEEEEE\\nEEEEEEEEEE\\nEEEEEEEEEE\", str);\n\n    // Cursor should be at 1,1\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "OSC 12 set and reset cursor color",
+  "sourceLine": 1199,
+  "zigBody": "test \"OSC 12 set and reset cursor color\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set cursor to blue\n    s.nextSlice(\"\\x1b]12;rgb:00/00/ff\\x1b\\\\\");\n    const cursor = t.colors.cursor.get().?;\n    try testing.expectEqual(@as(u8, 0x00), cursor.r);\n    try testing.expectEqual(@as(u8, 0x00), cursor.g);\n    try testing.expectEqual(@as(u8, 0xff), cursor.b);\n\n    // Reset cursor\n    s.nextSlice(\"\\x1b]112\\x1b\\\\\");\n    // After reset, cursor might be null (using default)\n}"
+}

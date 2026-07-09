@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "window_title effect is called",
+  "sourceLine": 1661,
+  "zigBody": "test \"window_title effect is called\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var title_changed_count: usize = 0;\n        fn titleChanged(_: *Handler) void {\n            title_changed_count += 1;\n        }\n    };\n    S.title_changed_count = 0;\n\n    var handler: Handler = .init(&t);\n    handler.effects.title_changed = &S.titleChanged;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Set window title via OSC 2\n    s.nextSlice(\"\\x1b]2;Hello World\\x1b\\\\\");\n    try testing.expectEqualStrings(\"Hello World\", t.getTitle().?);\n    try testing.expectEqual(@as(usize, 1), S.title_changed_count);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "render.zig",
+  "testName": "string",
+  "sourceLine": 1933,
+  "zigBody": "test \"string\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 5,\n        .rows = 2,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n    s.nextSlice(\"AB\");\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n\n    var w = std.Io.Writer.Allocating.init(alloc);\n    defer w.deinit();\n\n    try state.string(&w.writer, null);\n\n    const result = try w.toOwnedSlice();\n    defer alloc.free(result);\n\n    const expected = \"AB\\x00\\x00\\x00\\n\\x00\\x00\\x00\\x00\\x00\\n\";\n    try testing.expectEqualStrings(expected, result);\n}"
+}

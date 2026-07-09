@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "device attributes: custom response",
+  "sourceLine": 2337,
+  "zigBody": "test \"device attributes: custom response\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (written) |old| testing.allocator.free(old);\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n        fn da(_: *Handler) device_attributes.Attributes {\n            return .{\n                .primary = .{\n                    .conformance_level = .vt420,\n                    .features = &.{ .ansi_color, .clipboard },\n                },\n                .secondary = .{\n                    .device_type = .vt420,\n                    .firmware_version = 100,\n                },\n            };\n        }\n    };\n    S.written = null;\n    defer if (S.written) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.device_attributes = &S.da;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    s.nextSlice(\"\\x1B[c\");\n    try testing.expectEqualStrings(\"\\x1b[?64;22;52c\", S.written.?);\n\n    s.nextSlice(\"\\x1B[>c\");\n    try testing.expectEqualStrings(\"\\x1b[>41;100;0c\", S.written.?);\n}"
+}

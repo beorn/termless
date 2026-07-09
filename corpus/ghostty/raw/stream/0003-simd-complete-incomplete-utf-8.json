@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "simd: complete incomplete utf-8",
+  "sourceLine": 2739,
+  "zigBody": "test \"simd: complete incomplete utf-8\" {\n    const H = struct {\n        c: ?u21 = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            switch (action) {\n                .print => self.c = value.cp,\n                .print_slice => self.c = @intCast(value.cps[value.cps.len - 1]),\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(&.{0xE0}); // 3 byte\n    try testing.expect(s.handler.c == null);\n    s.nextSlice(&.{0xA0}); // still incomplete\n    try testing.expect(s.handler.c == null);\n    s.nextSlice(&.{0x80});\n    try testing.expectEqual(@as(u21, 0x800), s.handler.c.?);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: invisible",
+  "sourceLine": 824,
+  "zigBody": "test \"sgr: invisible\" {\n    var p: Parser = .{ .params = &[_]u16{ 8, 28 } };\n    try testing.expect(p.next().? == .invisible);\n    try testing.expect(p.next().? == .reset_invisible);\n}"
+}

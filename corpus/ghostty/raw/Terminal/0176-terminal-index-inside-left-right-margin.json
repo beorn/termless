@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: index inside left/right margin",
+  "sourceLine": 8851,
+  "zigBody": "test \"Terminal: index inside left/right margin\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"AAAAAA\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"AAAAAA\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"AAAAAA\");\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setTopAndBottomMargin(1, 3);\n    t.setLeftAndRightMargin(1, 3);\n    t.setCursorPos(3, 1);\n\n    t.clearDirty();\n    try t.index();\n\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 2 } }));\n\n    try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AAAAAA\\nAAAAAA\\n   AAA\", str);\n    }\n}"
+}

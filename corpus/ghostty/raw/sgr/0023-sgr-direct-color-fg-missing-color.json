@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: direct color fg missing color",
+  "sourceLine": 860,
+  "zigBody": "test \"sgr: direct color fg missing color\" {\n    // This used to crash\n    var p: Parser = .{ .params = &[_]u16{ 38, 5 } };\n    while (p.next()) |_| {}\n}"
+}

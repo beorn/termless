@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: too many params",
+  "sourceLine": 961,
+  "zigBody": "test \"csi: too many params\" {\n    var p = init();\n    _ = p.next(0x1B);\n    _ = p.next('[');\n    for (0..100) |_| {\n        _ = p.next('1');\n        _ = p.next(';');\n    }\n    _ = p.next('1');\n\n    {\n        const a = p.next('C');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseChars wide char splits proper cell boundaries",
+  "sourceLine": 8181,
+  "zigBody": "test \"Terminal: eraseChars wide char splits proper cell boundaries\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 1, .cols = 30 });\n    defer t.deinit(alloc);\n\n    // This is a test for a bug: https://github.com/ghostty-org/ghostty/issues/2817\n    // To explain the setup:\n    // (1) We need our wide characters starting on an even (1-based) column.\n    // (2) We need our cursor to be in the middle somewhere.\n    // (3) We need our count to be less than our cursor X and on a split cell.\n    // The bug was that we split the wrong cell boundaries.\n\n    try t.printString(\"x食べて下さい\");\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"x食べて下さい\", str);\n    }\n\n    t.setCursorPos(1, 6); // At: て\n    t.eraseChars(4); // Delete: て下\n    t.screens.active.cursor.page_pin.node.data.assertIntegrity();\n\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"x食べ    さい\", str);\n    }\n}"
+}

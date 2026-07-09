@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: resize (no reflow) more cols with scrollback scrolled up",
+  "sourceLine": 6589,
+  "zigBody": "test \"Screen: resize (no reflow) more cols with scrollback scrolled up\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n    const str = \"1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\";\n    try s.testWriteString(str);\n\n    // Cursor at bottom\n    try testing.expectEqual(@as(size.CellCountInt, 1), s.cursor.x);\n    try testing.expectEqual(@as(size.CellCountInt, 2), s.cursor.y);\n\n    s.scroll(.{ .delta_row = -4 });\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"2\\n3\\n4\", contents);\n    }\n\n    try s.resize(.{ .cols = 8, .rows = 3 });\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n\n    // Cursor remains at bottom\n    try testing.expectEqual(@as(size.CellCountInt, 1), s.cursor.x);\n    try testing.expectEqual(@as(size.CellCountInt, 2), s.cursor.y);\n}"
+}

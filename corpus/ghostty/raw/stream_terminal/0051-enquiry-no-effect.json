@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "enquiry no effect",
+  "sourceLine": 1968,
+  "zigBody": "test \"enquiry no effect\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // ENQ without enquiry effect should not write anything\n    s.nextSlice(\"\\x05\");\n    try testing.expect(S.written == null);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "TerminalFormatter plain no selection",
+  "sourceLine": 4206,
+  "zigBody": "test \"TerminalFormatter plain no selection\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    s.nextSlice(\"hello\\r\\nworld\");\n\n    const formatter: TerminalFormatter = .init(&t, .plain);\n\n    try formatter.format(&builder.writer);\n    try testing.expectEqualStrings(\"hello\\nworld\", builder.writer.buffered());\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: OSC133A click_events=1 sets click to click_events",
+  "sourceLine": 13328,
+  "zigBody": "test \"Terminal: OSC133A click_events=1 sets click to click_events\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Verify default state is none\n    try testing.expectEqual(.none, t.screens.active.semantic_prompt.click);\n\n    // OSC 133;A with click_events=1\n    try t.semanticPrompt(.{\n        .action = .fresh_line_new_prompt,\n        .options_unvalidated = \"click_events=1\",\n    });\n\n    try testing.expectEqual(Screen.SemanticPrompt.SemanticClick{ .click_events = .absolute }, t.screens.active.semantic_prompt.click);\n}"
+}

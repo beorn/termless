@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: select replaces existing pins",
+  "sourceLine": 8071,
+  "zigBody": "test \"Screen: select replaces existing pins\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 10, .max_scrollback = 0 });\n    defer s.deinit();\n    try s.testWriteString(\"ABC  DEF\\n 123\\n456\");\n\n    const tracked = s.pages.countTrackedPins();\n    try s.select(Selection.init(\n        s.pages.pin(.{ .active = .{ .x = 0, .y = 0 } }).?,\n        s.pages.pin(.{ .active = .{ .x = 3, .y = 0 } }).?,\n        false,\n    ));\n    try testing.expectEqual(tracked + 2, s.pages.countTrackedPins());\n\n    // Replacing the selection must untrack the prior selection's pins\n    // rather than leak them.\n    try s.select(Selection.init(\n        s.pages.pin(.{ .active = .{ .x = 0, .y = 1 } }).?,\n        s.pages.pin(.{ .active = .{ .x = 2, .y = 1 } }).?,\n        false,\n    ));\n    try testing.expectEqual(tracked + 2, s.pages.countTrackedPins());\n}"
+}

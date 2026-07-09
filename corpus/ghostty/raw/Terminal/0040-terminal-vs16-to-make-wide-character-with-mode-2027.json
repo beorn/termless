@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: VS16 to make wide character with mode 2027",
+  "sourceLine": 4890,
+  "zigBody": "test \"Terminal: VS16 to make wide character with mode 2027\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    try t.print(0x2764); // Heart\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    t.clearDirty();\n    try t.print(0xFE0F); // VS16 to make wide\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    t.clearDirty();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"❤️\", str);\n    }\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0x2764), cell.content.codepoint);\n        try testing.expect(cell.hasGrapheme());\n        try testing.expectEqual(Cell.Wide.wide, cell.wide);\n        const cps = list_cell.node.data.lookupGrapheme(cell).?;\n        try testing.expectEqual(@as(usize, 1), cps.len);\n    }\n}"
+}

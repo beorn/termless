@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: resize less cols reflows cursor after wrapped text",
+  "sourceLine": 7701,
+  "zigBody": "test \"Screen: resize less cols reflows cursor after wrapped text\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var s = try Screen.init(alloc, .{ .cols = 50, .rows = 7, .max_scrollback = 0 });\n    defer s.deinit();\n\n    for (0..30) |_| try s.testWriteString(\"a\");\n\n    try testing.expectEqual(@as(usize, 0), s.cursor.y);\n    try testing.expectEqual(@as(usize, 30), s.cursor.x);\n\n    try s.resize(.{ .cols = 25, .rows = 7 });\n\n    try testing.expectEqual(@as(usize, 1), s.cursor.y);\n    try testing.expectEqual(@as(usize, 5), s.cursor.x);\n}"
+}

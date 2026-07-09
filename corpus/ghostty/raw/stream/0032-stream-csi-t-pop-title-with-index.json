@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: CSI t pop title with index",
+  "sourceLine": 3605,
+  "zigBody": "test \"stream: CSI t pop title with index\" {\n    const H = struct {\n        index: ?u16 = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            switch (action) {\n                .title_pop => self.index = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[23;0;5t\");\n    try testing.expectEqual(@as(u16, 5), s.handler.index.?);\n}"
+}

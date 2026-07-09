@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Parser.zig",
+  "testName": "csi: SGR colon followed by semicolon",
+  "sourceLine": 527,
+  "zigBody": "test \"csi: SGR colon followed by semicolon\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"[48:2\") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    {\n        const a = p.next('m');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n    }\n\n    _ = p.next(0x1B);\n    _ = p.next('[');\n    {\n        const a = p.next('H');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n    }\n}"
+}

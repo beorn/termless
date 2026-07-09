@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: VS15 on already narrow emoji",
+  "sourceLine": 4596,
+  "zigBody": "test \"Terminal: VS15 on already narrow emoji\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    try t.print(0x26C8); // Thunder cloud and rain, width=1\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    t.clearDirty();\n    try t.print(0xFE0E); // VS15 to make narrow\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    t.clearDirty();\n\n    // Character takes up one cell\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.x);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"⛈︎\", str);\n    }\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0x26C8), cell.content.codepoint);\n        try testing.expect(cell.hasGrapheme());\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n        const cps = list_cell.node.data.lookupGrapheme(cell).?;\n        try testing.expectEqual(@as(usize, 1), cps.len);\n    }\n}"
+}

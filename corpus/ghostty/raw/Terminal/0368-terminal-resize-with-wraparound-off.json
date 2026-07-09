@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: resize with wraparound off",
+  "sourceLine": 13644,
+  "zigBody": "test \"Terminal: resize with wraparound off\" {\n    const alloc = testing.allocator;\n    const cols = 4;\n    const rows = 2;\n    var t = try init(alloc, .{ .cols = cols, .rows = rows });\n    defer t.deinit(alloc);\n\n    t.modes.set(.wraparound, false);\n    try t.print('0');\n    try t.print('1');\n    try t.print('2');\n    try t.print('3');\n    const new_cols = 2;\n    try t.resize(alloc, new_cols, rows);\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"01\", str);\n}"
+}

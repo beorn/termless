@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: send report with CSI t",
+  "sourceLine": 3395,
+  "zigBody": "test \"stream: send report with CSI t\" {\n    const H = struct {\n        style: ?csi.SizeReportStyle = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            switch (action) {\n                .size_report => self.style = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[14t\");\n    try testing.expectEqual(csi.SizeReportStyle.csi_14_t, s.handler.style);\n\n    s.nextSlice(\"\\x1b[16t\");\n    try testing.expectEqual(csi.SizeReportStyle.csi_16_t, s.handler.style);\n\n    s.nextSlice(\"\\x1b[18t\");\n    try testing.expectEqual(csi.SizeReportStyle.csi_18_t, s.handler.style);\n\n    s.nextSlice(\"\\x1b[21t\");\n    try testing.expectEqual(csi.SizeReportStyle.csi_21_t, s.handler.style);\n}"
+}

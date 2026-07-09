@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: resize less cols with wide char then print",
+  "sourceLine": 13612,
+  "zigBody": "test \"Terminal: resize less cols with wide char then print\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try t.print('x');\n    try t.print('😀'); // 0x1F600\n    try t.resize(alloc, 2, 3);\n    t.setCursorPos(1, 2);\n    try t.print('😀'); // 0x1F600\n}"
+}

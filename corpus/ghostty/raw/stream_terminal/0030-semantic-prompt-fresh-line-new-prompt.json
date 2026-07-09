@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "semantic prompt fresh line new prompt",
+  "sourceLine": 1447,
+  "zigBody": "test \"semantic prompt fresh line new prompt\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Write some text and then send OSC 133;A (fresh_line_new_prompt)\n    s.nextSlice(\"Hello\");\n    s.nextSlice(\"\\x1b]133;A\\x07\");\n\n    // Should do a fresh line (carriage return + index)\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.y);\n\n    // Should set cursor semantic_content to prompt\n    try testing.expectEqual(.prompt, t.screens.active.cursor.semantic_content);\n\n    // Test with redraw option\n    s.nextSlice(\"prompt$ \");\n    s.nextSlice(\"\\x1b]133;A;redraw=1\\x07\");\n    try testing.expect(t.flags.shell_redraws_prompt == .true);\n}"
+}

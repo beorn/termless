@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Style HTML formatting all palette colors with palette set",
+  "sourceLine": 1090,
+  "zigBody": "test \"Style HTML formatting all palette colors with palette set\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{\n        .fg_color = .{ .palette = 1 },\n        .bg_color = .{ .palette = 2 },\n        .underline_color = .{ .palette = 3 },\n    };\n    var formatter = style.formatterHtml();\n    formatter.palette = &color.default;\n    try builder.writer.print(\"{f}\", .{formatter});\n    try testing.expectEqualStrings(\n        \"color: rgb(204, 102, 102);background-color: rgb(181, 189, 104);text-decoration-color: rgb(240, 198, 116);\",\n        builder.writer.buffered(),\n    );\n}"
+}

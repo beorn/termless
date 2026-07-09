@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "render.zig",
+  "testName": "cursor state out of viewport",
+  "sourceLine": 1706,
+  "zigBody": "test \"cursor state out of viewport\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 2,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n    s.nextSlice(\"A\\r\\nB\\r\\nC\\r\\nD\\r\\n\");\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n\n    // Initial update\n    try state.update(alloc, &t);\n    try testing.expectEqual(0, state.cursor.active.x);\n    try testing.expectEqual(1, state.cursor.active.y);\n    try testing.expectEqual(0, state.cursor.viewport.?.x);\n    try testing.expectEqual(1, state.cursor.viewport.?.y);\n\n    // Scroll the viewport\n    t.scrollViewport(.top);\n    try state.update(alloc, &t);\n\n    // Set a style on the cursor\n    try testing.expectEqual(0, state.cursor.active.x);\n    try testing.expectEqual(1, state.cursor.active.y);\n    try testing.expect(state.cursor.viewport == null);\n}"
+}

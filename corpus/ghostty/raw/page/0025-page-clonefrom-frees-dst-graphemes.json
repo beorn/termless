@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page cloneFrom frees dst graphemes",
+  "sourceLine": 3115,
+  "zigBody": "test \"Page cloneFrom frees dst graphemes\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n    for (0..page.capacity.rows) |y| {\n        const rac = page.getRowAndCell(1, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(y + 1) },\n        };\n    }\n\n    // Clone\n    var page2 = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page2.deinit();\n    for (0..page2.capacity.rows) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(y + 1) },\n        };\n        try page2.appendGrapheme(rac.row, rac.cell, 0x0A);\n    }\n\n    // Clone from page which has no graphemes.\n    try page2.cloneFrom(&page, 0, page.size.rows);\n\n    // Read it again\n    for (0..page2.capacity.rows) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, @intCast(y + 1)), rac.cell.content.codepoint);\n        try testing.expect(!rac.row.grapheme);\n        try testing.expect(!rac.cell.hasGrapheme());\n    }\n    try testing.expectEqual(@as(usize, 0), page2.graphemeCount());\n}"
+}

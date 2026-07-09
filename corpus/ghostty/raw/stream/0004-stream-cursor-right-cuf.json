@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream: cursor right (CUF)",
+  "sourceLine": 2765,
+  "zigBody": "test \"stream: cursor right (CUF)\" {\n    const H = struct {\n        amount: u16 = 0,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            switch (action) {\n                .cursor_right => self.amount = value.value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[C\");\n    try testing.expectEqual(@as(u16, 1), s.handler.amount);\n\n    s.nextSlice(\"\\x1B[5C\");\n    try testing.expectEqual(@as(u16, 5), s.handler.amount);\n\n    s.handler.amount = 0;\n    s.nextSlice(\"\\x1B[5;4C\");\n    try testing.expectEqual(@as(u16, 0), s.handler.amount);\n\n    s.handler.amount = 0;\n    s.nextSlice(\"\\x1b[?3C\");\n    try testing.expectEqual(@as(u16, 0), s.handler.amount);\n}"
+}

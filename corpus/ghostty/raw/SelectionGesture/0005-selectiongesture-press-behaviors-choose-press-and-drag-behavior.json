@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture press behaviors choose press and drag behavior",
+  "sourceLine": 1439,
+  "zigBody": "test \"SelectionGesture press behaviors choose press and drag behavior\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"alpha beta\\none two\\nthree four\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    var event = testPress(&t, 1, 0, time);\n    event.behaviors = &.{ .cell, .line, .word };\n    event.word_boundary_codepoints = &.{ ' ' };\n\n    _ = try gesture.press(&t, event);\n    try testing.expectEqual(.cell, gesture.left_click_behavior);\n\n    const double_click = (try gesture.press(&t, event)).?;\n    try testing.expectEqual(.line, gesture.left_click_behavior);\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 9, 0),\n        false,\n    ), double_click);\n\n    const line_drag = gesture.drag(&t, testDrag(&t, 2, 2, 20, 50)).?;\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 9, 2),\n        false,\n    ), line_drag);\n}"
+}

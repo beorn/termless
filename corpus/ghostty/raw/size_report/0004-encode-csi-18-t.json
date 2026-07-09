@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "size_report.zig",
+  "testName": "encode csi 18 t",
+  "sourceLine": 116,
+  "zigBody": "test \"encode csi 18 t\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try encode(&writer, .csi_18_t, testSize());\n\n    try std.testing.expectEqualStrings(\"\\x1b[8;24;80t\", writer.buffered());\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "generate256Color: cube corners match base colors",
+  "sourceLine": 1110,
+  "zigBody": "test \"generate256Color: cube corners match base colors\" {\n    const testing = std.testing;\n\n    const bg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const fg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const palette = generate256Color(default, .initEmpty(), bg, fg, false);\n\n    // Index 16 is cube (0,0,0) which should equal bg.\n    try testing.expectEqual(bg, palette[16]);\n\n    // Index 231 is cube (5,5,5) which should equal fg.\n    try testing.expectEqual(fg, palette[231]);\n}"
+}

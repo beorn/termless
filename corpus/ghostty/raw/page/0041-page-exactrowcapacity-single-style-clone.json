@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page exactRowCapacity single style clone",
+  "sourceLine": 3810,
+  "zigBody": "test \"Page exactRowCapacity single style clone\" {\n    // Regression test: verify a single style can be cloned with exact capacity.\n    // This tests that capacityForCount properly accounts for ID 0 being reserved.\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 2,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Add exactly one style to row 0\n    const style_id = try page.styles.add(page.memory, .{ .flags = .{ .bold = true } });\n    {\n        const rac = page.getRowAndCell(0, 0);\n        rac.row.styled = true;\n        rac.cell.style_id = style_id;\n    }\n\n    // exactRowCapacity for just row 0 should give capacity for 1 style\n    const cap = page.exactRowCapacity(0, 1);\n    try testing.expectEqual(StyleSet.capacityForCount(1), cap.styles);\n\n    // Create a new page with exact capacity and clone\n    var cloned = try Page.init(cap);\n    defer cloned.deinit();\n\n    const src_row = &page.rows.ptr(page.memory)[0];\n    const dst_row = &cloned.rows.ptr(cloned.memory)[0];\n\n    // This must not fail with StyleSetOutOfMemory\n    try cloned.cloneRowFrom(&page, dst_row, src_row);\n\n    // Verify the style was cloned correctly\n    const cloned_cell = &cloned.rows.ptr(cloned.memory)[0].cells.ptr(cloned.memory)[0];\n    try testing.expect(cloned_cell.style_id != stylepkg.default_id);\n}"
+}

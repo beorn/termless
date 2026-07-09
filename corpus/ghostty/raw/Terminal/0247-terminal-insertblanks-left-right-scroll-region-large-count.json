@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: insertBlanks left/right scroll region large count",
+  "sourceLine": 10645,
+  "zigBody": "test \"Terminal: insertBlanks left/right scroll region large count\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.origin, true);\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(3, 5);\n    t.setCursorPos(1, 1);\n    t.clearDirty();\n    t.insertBlanks(140);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"  X\", str);\n    }\n}"
+}

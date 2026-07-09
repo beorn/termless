@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: direct fg colon no colorspace and extra param",
+  "sourceLine": 965,
+  "zigBody": "test \"sgr: direct fg colon no colorspace and extra param\" {\n    var p: Parser = .{\n        .params = &[_]u16{ 38, 2, 1, 2, 3, 1 },\n        .params_sep = sep: {\n            var list = SepList.initEmpty();\n            for (0..4) |idx| list.set(idx);\n            break :sep list;\n        },\n    };\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .direct_color_fg);\n        try testing.expectEqual(@as(u8, 1), v.direct_color_fg.r);\n        try testing.expectEqual(@as(u8, 2), v.direct_color_fg.g);\n        try testing.expectEqual(@as(u8, 3), v.direct_color_fg.b);\n    }\n\n    try testing.expect(p.next().? == .bold);\n    try testing.expect(p.next() == null);\n}"
+}

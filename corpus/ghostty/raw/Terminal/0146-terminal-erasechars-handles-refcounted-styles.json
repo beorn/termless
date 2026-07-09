@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseChars handles refcounted styles",
+  "sourceLine": 8083,
+  "zigBody": "test \"Terminal: eraseChars handles refcounted styles\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .bold = {} });\n    try t.print('A');\n    try t.print('B');\n    try t.setAttribute(.{ .unset = {} });\n    try t.print('C');\n\n    // verify we have styles in our style map\n    const page = &t.screens.active.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 1), page.styles.count());\n\n    t.setCursorPos(1, 1);\n    t.eraseChars(2);\n\n    // verify we have no styles in our style map\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n}"
+}

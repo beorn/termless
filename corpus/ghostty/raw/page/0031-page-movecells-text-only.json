@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page moveCells text-only",
+  "sourceLine": 3448,
+  "zigBody": "test \"Page moveCells text-only\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Write\n    for (0..page.capacity.cols) |x| {\n        const rac = page.getRowAndCell(x, 0);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(x + 1) },\n        };\n    }\n\n    const src = page.getRow(0);\n    const dst = page.getRow(1);\n    page.moveCells(src, 0, dst, 0, page.capacity.cols);\n\n    // New rows should have text\n    for (0..page.capacity.cols) |x| {\n        const rac = page.getRowAndCell(x, 1);\n        try testing.expectEqual(\n            @as(u21, @intCast(x + 1)),\n            rac.cell.content.codepoint,\n        );\n    }\n\n    // Old row should be blank\n    for (0..page.capacity.cols) |x| {\n        const rac = page.getRowAndCell(x, 0);\n        try testing.expectEqual(\n            @as(u21, 0),\n            rac.cell.content.codepoint,\n        );\n    }\n}"
+}

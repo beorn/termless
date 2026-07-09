@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: DECCOLM without DEC mode 40",
+  "sourceLine": 13806,
+  "zigBody": "test \"Terminal: DECCOLM without DEC mode 40\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.@\"132_column\", true);\n    try t.deccolm(alloc, .@\"132_cols\");\n    try testing.expectEqual(@as(usize, 5), t.cols);\n    try testing.expectEqual(@as(usize, 5), t.rows);\n    try testing.expect(!t.modes.get(.@\"132_column\"));\n}"
+}

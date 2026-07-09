@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "formatter.zig",
+  "testName": "TerminalFormatter html with palette",
+  "sourceLine": 5260,
+  "zigBody": "test \"TerminalFormatter html with palette\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Modify some palette colors\n    s.nextSlice(\"\\x1b]4;0;rgb:12/34/56\\x1b\\\\\");\n    s.nextSlice(\"\\x1b]4;1;rgb:ab/cd/ef\\x1b\\\\\");\n    s.nextSlice(\"\\x1b]4;255;rgb:ff/00/ff\\x1b\\\\\");\n    s.nextSlice(\"test\");\n\n    var formatter: TerminalFormatter = .init(&t, .{ .emit = .html });\n    formatter.extra.palette = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // Verify palette CSS variables are emitted\n    try testing.expect(std.mem.indexOf(u8, output, \"<style>:root{\") != null);\n    try testing.expect(std.mem.indexOf(u8, output, \"--vt-palette-0: #123456;\") != null);\n    try testing.expect(std.mem.indexOf(u8, output, \"--vt-palette-1: #abcdef;\") != null);\n    try testing.expect(std.mem.indexOf(u8, output, \"--vt-palette-255: #ff00ff;\") != null);\n    try testing.expect(std.mem.indexOf(u8, output, \"}</style>\") != null);\n    try testing.expect(std.mem.indexOf(u8, output, \"test\") != null);\n}"
+}

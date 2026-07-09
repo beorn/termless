@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "sgr.zig",
+  "testName": "sgr: inverse",
+  "sourceLine": 726,
+  "zigBody": "test \"sgr: inverse\" {\n    {\n        const v = testParse(&[_]u16{7});\n        try testing.expect(v == .inverse);\n    }\n\n    {\n        const v = testParse(&[_]u16{27});\n        try testing.expect(v == .reset_inverse);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "color.zig",
+  "testName": "RGB: encode",
+  "sourceLine": 934,
+  "zigBody": "test \"RGB: encode\" {\n    const rgb: RGB = .{ .r = 0x01, .g = 0x23, .b = 0xff };\n\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try rgb.encodeRgb8(&writer);\n    try std.testing.expectEqualStrings(\"rgb:01/23/ff\", writer.buffered());\n\n    writer = .fixed(&buf);\n    try rgb.encodeRgb16(&writer);\n    try std.testing.expectEqualStrings(\"rgb:0101/2323/ffff\", writer.buffered());\n}"
+}

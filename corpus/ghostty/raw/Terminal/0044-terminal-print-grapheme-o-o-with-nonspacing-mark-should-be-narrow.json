@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print grapheme ò (o with nonspacing mark) should be narrow",
+  "sourceLine": 5028,
+  "zigBody": "test \"Terminal: print grapheme ò (o with nonspacing mark) should be narrow\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    try t.print('o');\n    try t.print(0x0300); // combining grave accent\n\n    // We should have 1 cell taken up.\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.x);\n\n    // Assert various properties about our screen to verify\n    // we have all expected cells.\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'o'), cell.content.codepoint);\n        try testing.expect(cell.hasGrapheme());\n        try testing.expectEqualSlices(u21, &.{0x0300}, list_cell.node.data.lookupGrapheme(cell).?);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
+}

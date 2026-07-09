@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "apc.zig",
+  "testName": "identify with no input",
+  "sourceLine": 350,
+  "zigBody": "test \"identify with no input\" {\n    const testing = std.testing;\n\n    var h: Handler = .{};\n    h.start();\n    try testing.expect(h.end() == null);\n}"
+}

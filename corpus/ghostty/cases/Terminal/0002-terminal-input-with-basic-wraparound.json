@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/Terminal.zig",
+  "name": "Terminal: input with basic wraparound",
+  "cols": 5,
+  "rows": 40,
+  "input": "helloworldabc12",
+  "expectedScreen": "hello\nworld\nabc12",
+  "sourceLine": 3766,
+  "license": "MIT"
+}

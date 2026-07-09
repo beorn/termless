@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: selectionString multi-page",
+  "sourceLine": 9714,
+  "zigBody": "test \"Screen: selectionString multi-page\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 2048 });\n    defer s.deinit();\n\n    const first_page_size = s.pages.pages.first.?.data.capacity.rows;\n\n    // Lazy way to seek to the first page boundary.\n    s.pages.pages.first.?.data.pauseIntegrityChecks(true);\n    for (0..first_page_size - 1) |_| {\n        try s.testWriteString(\"\\n\");\n    }\n    s.pages.pages.first.?.data.pauseIntegrityChecks(false);\n\n    try s.testWriteString(\"123456789\\n!@#$%^&*(\\n123456789\");\n\n    {\n        const sel = Selection.init(\n            s.pages.pin(.{ .active = .{ .x = 0, .y = 0 } }).?,\n            s.pages.pin(.{ .active = .{ .x = 2, .y = 2 } }).?,\n            false,\n        );\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = true,\n        });\n        defer alloc.free(contents);\n        const expected = \"123456789\\n!@#$%^&*(\\n123\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
+}

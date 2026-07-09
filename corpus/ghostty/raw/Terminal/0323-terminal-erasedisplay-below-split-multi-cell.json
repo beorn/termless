@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: eraseDisplay below split multi-cell",
+  "sourceLine": 12612,
+  "zigBody": "test \"Terminal: eraseDisplay below split multi-cell\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"AB橋C\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DE橋F\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GH橋I\");\n    t.setCursorPos(2, 4);\n    t.eraseDisplay(.below, false);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AB橋C\\nDE\", str);\n    }\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Capacity maxCols with 1 row exactly",
+  "sourceLine": 2639,
+  "zigBody": "test \"Capacity maxCols with 1 row exactly\" {\n    const cap = std_capacity;\n    const max = cap.maxCols().?;\n    const adjusted = try cap.adjust(.{ .cols = max });\n    try testing.expectEqual(@as(size.CellCountInt, 1), adjusted.rows);\n}"
+}

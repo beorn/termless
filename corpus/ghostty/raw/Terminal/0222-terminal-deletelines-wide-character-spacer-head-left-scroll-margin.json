@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: deleteLines wide character spacer head left scroll margin",
+  "sourceLine": 10008,
+  "zigBody": "test \"Terminal: deleteLines wide character spacer head left scroll margin\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 3 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    // +-----+\n    // |AAAAA| < Wrapped\n    // |BBBB*| < Wrapped     (continued)\n    // |WWCCC| < Non-wrapped (continued)\n    // +-----+\n    // where * represents a spacer head cell\n    // and WW is the wide character.\n    try t.printString(\"AAAAABBBB\\u{1F600}CCC\");\n\n    t.scrolling_region.left = 2;\n\n    // Delete the top line\n    //    ###  <- scrolling region\n    // +-----+\n    // |AABB | < Wrapped\n    // |BBCCC| < Wrapped     (continued)\n    // |WW   | < Non-wrapped (continued)\n    // +-----+\n    // This should convert the spacer head to\n    // a regular empty cell, but due to the\n    // left scrolling margin, wrap state should\n    // remain.\n    t.setCursorPos(1, 3);\n    t.deleteLines(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        const unwrapped_str = try t.plainStringUnwrapped(testing.allocator);\n        defer testing.allocator.free(unwrapped_str);\n        try testing.expectEqualStrings(\"AABB\\nBBCCC\\n\\u{1F600}\", str);\n        try testing.expectEqualStrings(\"AABB BBCCC\\u{1F600}\", unwrapped_str);\n    }\n}"
+}

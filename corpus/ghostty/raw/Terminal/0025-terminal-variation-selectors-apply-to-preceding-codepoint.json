@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: variation selectors apply to preceding codepoint",
+  "sourceLine": 4333,
+  "zigBody": "test \"Terminal: variation selectors apply to preceding codepoint\" {\n    var t = try init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    // Pirate flag: black flag + ZWJ + skull and crossbones + VS16.\n    try t.print(0x1F3F4);\n    try t.print(0x200D);\n    try t.print(0x2620);\n    try t.print(0xFE0F);\n\n    const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n    const cell = list_cell.cell;\n    try testing.expectEqual(@as(u21, 0x1F3F4), cell.content.codepoint);\n    try testing.expect(cell.hasGrapheme());\n    try testing.expectEqualSlices(u21, &.{ 0x200D, 0x2620, 0xFE0F }, list_cell.node.data.lookupGrapheme(cell).?);\n}"
+}

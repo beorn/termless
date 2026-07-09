@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "OSC 104 reset all palette colors",
+  "sourceLine": 1133,
+  "zigBody": "test \"OSC 104 reset all palette colors\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set multiple colors\n    s.nextSlice(\"\\x1b]4;0;rgb:ff/00/00\\x1b\\\\\");\n    s.nextSlice(\"\\x1b]4;1;rgb:00/ff/00\\x1b\\\\\");\n    s.nextSlice(\"\\x1b]4;2;rgb:00/00/ff\\x1b\\\\\");\n    try testing.expect(t.colors.palette.mask.isSet(0));\n    try testing.expect(t.colors.palette.mask.isSet(1));\n    try testing.expect(t.colors.palette.mask.isSet(2));\n\n    // Reset all palette colors\n    s.nextSlice(\"\\x1b]104\\x1b\\\\\");\n    try testing.expectEqual(t.colors.palette.original[0], t.colors.palette.current[0]);\n    try testing.expectEqual(t.colors.palette.original[1], t.colors.palette.current[1]);\n    try testing.expectEqual(t.colors.palette.original[2], t.colors.palette.current[2]);\n    try testing.expect(!t.colors.palette.mask.isSet(0));\n    try testing.expect(!t.colors.palette.mask.isSet(1));\n    try testing.expect(!t.colors.palette.mask.isSet(2));\n}"
+}

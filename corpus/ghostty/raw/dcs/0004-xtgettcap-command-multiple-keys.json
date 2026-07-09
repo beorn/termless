@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "dcs.zig",
+  "testName": "XTGETTCAP command multiple keys",
+  "sourceLine": 340,
+  "zigBody": "test \"XTGETTCAP command multiple keys\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    defer h.deinit();\n    try testing.expect(h.hook(alloc, .{ .intermediates = \"+\", .final = 'q' }) == null);\n    for (\"536D756C78;536D756C78\") |byte| _ = h.put(byte);\n    var cmd = h.unhook().?;\n    defer cmd.deinit();\n    try testing.expect(cmd == .xtgettcap);\n    try testing.expectEqualStrings(\"536D756C78\", cmd.xtgettcap.next().?);\n    try testing.expectEqualStrings(\"536D756C78\", cmd.xtgettcap.next().?);\n    try testing.expect(cmd.xtgettcap.next() == null);\n}"
+}

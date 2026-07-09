@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Tabstops.zig",
+  "testName": "Tabstops: dynamic allocations",
+  "sourceLine": 207,
+  "zigBody": "test \"Tabstops: dynamic allocations\" {\n    var t: Tabstops = .{};\n    defer t.deinit(testing.allocator);\n\n    // Grow the capacity by 2.\n    const cap = t.capacity();\n    try t.resize(testing.allocator, cap * 2);\n\n    // Set something that was out of range of the first\n    t.set(cap + 5);\n    try testing.expect(t.get(cap + 5));\n    try testing.expect(!t.get(cap + 4));\n\n    // Prealloc still works\n    try testing.expect(!t.get(5));\n}"
+}

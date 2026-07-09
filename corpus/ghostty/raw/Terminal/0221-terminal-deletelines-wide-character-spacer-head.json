@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: deleteLines wide character spacer head",
+  "sourceLine": 9972,
+  "zigBody": "test \"Terminal: deleteLines wide character spacer head\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 3 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    // +-----+\n    // |AAAAA| < Wrapped\n    // |BBBB*| < Wrapped     (continued)\n    // |WWCCC| < Non-wrapped (continued)\n    // +-----+\n    // where * represents a spacer head cell\n    // and WW is the wide character.\n    try t.printString(\"AAAAABBBB\\u{1F600}CCC\");\n\n    // Delete the top line\n    // +-----+\n    // |BBBB | < Non-wrapped\n    // |WWCCC| < Non-wrapped\n    // |     | < Non-wrapped\n    // +-----+\n    // This should convert the spacer head to\n    // a regular empty cell, and un-set wrap.\n    t.setCursorPos(1, 1);\n    t.deleteLines(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        const unwrapped_str = try t.plainStringUnwrapped(testing.allocator);\n        defer testing.allocator.free(unwrapped_str);\n        try testing.expectEqualStrings(\"BBBB\\n\\u{1F600}CCC\", str);\n        try testing.expectEqualStrings(\"BBBB\\n\\u{1F600}CCC\", unwrapped_str);\n    }\n}"
+}

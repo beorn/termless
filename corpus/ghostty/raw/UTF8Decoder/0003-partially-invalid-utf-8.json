@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "UTF8Decoder.zig",
+  "testName": "Partially invalid utf-8",
+  "sourceLine": 124,
+  "zigBody": "test \"Partially invalid utf-8\" {\n    var d: UTF8Decoder = .{};\n    var out: [5]u21 = undefined;\n    var i: usize = 0;\n    // Illegally terminated sequence, valid sequence, illegal surrogate pair.\n    for (\"\\xF0\\x9F😄\\xED\\xA0\\x80\") |byte| {\n        var consumed = false;\n        while (!consumed) {\n            const res = d.next(byte);\n            consumed = res[1];\n            if (res[0]) |codepoint| {\n                out[i] = codepoint;\n                i += 1;\n            }\n        }\n    }\n\n    try testing.expect(std.mem.eql(u21, &out, &[_]u21{ 0xFFFD, 0x1F604, 0xFFFD, 0xFFFD, 0xFFFD }));\n}"
+}

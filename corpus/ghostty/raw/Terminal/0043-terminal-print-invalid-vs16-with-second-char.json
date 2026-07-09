@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: print invalid VS16 with second char",
+  "sourceLine": 4993,
+  "zigBody": "test \"Terminal: print invalid VS16 with second char\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Enable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    // https://github.com/mitchellh/ghostty/issues/1482\n    try t.print('x');\n    try t.print(0xFE0F);\n    try t.print('y');\n\n    // We should have 2 cells taken up, from two separate narrow characters.\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.x);\n\n    // Assert various properties about our screen to verify\n    // we have all expected cells.\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'x'), cell.content.codepoint);\n        try testing.expect(!cell.hasGrapheme());\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 1, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'y'), cell.content.codepoint);\n        try testing.expect(!cell.hasGrapheme());\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
+}

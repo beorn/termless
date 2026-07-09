@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture output behavior selects and drags semantic output",
+  "sourceLine": 1471,
+  "zigBody": "test \"SelectionGesture output behavior selects and drags semantic output\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 10, .rows = 6 });\n    defer t.deinit(testing.allocator);\n\n    const screen = t.screens.active;\n    screen.cursorSetSemanticContent(.output);\n    try screen.testWriteString(\"out1\\n\");\n    screen.cursorSetSemanticContent(.{ .prompt = .initial });\n    try screen.testWriteString(\"$ \");\n    screen.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try screen.testWriteString(\"cmd\\n\");\n    screen.cursorSetSemanticContent(.output);\n    try screen.testWriteString(\"out2\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    var event = testPress(&t, 1, 0, try std.time.Instant.now());\n    event.behaviors = &.{ .output, .word, .line };\n\n    const press_selection = (try gesture.press(&t, event)).?;\n    try testing.expectEqual(.output, gesture.left_click_behavior);\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 3, 0),\n        false,\n    ), press_selection);\n\n    const output_drag = gesture.drag(&t, testDrag(&t, 1, 2, 10, 50)).?;\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 3, 2),\n        false,\n    ), output_drag);\n}"
+}

@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "page.zig",
+  "testName": "Page exactRowCapacity empty rows",
+  "sourceLine": 3706,
+  "zigBody": "test \"Page exactRowCapacity empty rows\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n        .hyperlink_bytes = 32 * @sizeOf(hyperlink.Set.Item),\n        .string_bytes = 512,\n    });\n    defer page.deinit();\n\n    // Empty page: all capacity fields should be 0 (except cols/rows)\n    const cap = page.exactRowCapacity(0, 5);\n    try testing.expectEqual(10, cap.cols);\n    try testing.expectEqual(5, cap.rows);\n    try testing.expectEqual(0, cap.styles);\n    try testing.expectEqual(0, cap.grapheme_bytes);\n    try testing.expectEqual(0, cap.hyperlink_bytes);\n    try testing.expectEqual(0, cap.string_bytes);\n}"
+}

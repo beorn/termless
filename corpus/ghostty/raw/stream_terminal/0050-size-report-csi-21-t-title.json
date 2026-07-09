@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream_terminal.zig",
+  "testName": "size report csi_21_t title",
+  "sourceLine": 1941,
+  "zigBody": "test \"size report csi_21_t title\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Set a title first\n    s.nextSlice(\"\\x1b]2;My Title\\x1b\\\\\");\n\n    // CSI 21 t - report title (no size effect needed)\n    s.nextSlice(\"\\x1b[21t\");\n    defer testing.allocator.free(S.written.?);\n    try testing.expectEqualStrings(\"\\x1b]lMy Title\\x1b\\\\\", S.written.?);\n}"
+}

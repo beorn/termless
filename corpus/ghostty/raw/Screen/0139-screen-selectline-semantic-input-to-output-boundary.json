@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen: selectLine semantic input to output boundary",
+  "sourceLine": 8517,
+  "zigBody": "test \"Screen: selectLine semantic input to output boundary\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Row 0: user input\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"ls -la\\n\");\n    // Row 1: command output\n    s.cursorSetSemanticContent(.output);\n    try s.testWriteString(\"file.txt\");\n\n    // Selecting from input should only select input\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 2,\n            .y = 0,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"ls -la\", contents);\n    }\n\n    // Selecting from output should only select output\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 2,\n            .y = 1,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"file.txt\", contents);\n    }\n}"
+}

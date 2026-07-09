@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "ScreenSet.zig",
+  "testName": "ScreenSet generations",
+  "sourceLine": 125,
+  "zigBody": "test \"ScreenSet generations\" {\n    const alloc = testing.allocator;\n    var set: ScreenSet = try .init(alloc, .default);\n    defer set.deinit(alloc);\n\n    try testing.expectEqual(@as(usize, 0), set.generation(.primary));\n    try testing.expectEqual(@as(usize, 0), set.generation(.alternate));\n\n    // A no-op removal doesn't change the generation.\n    set.remove(alloc, .alternate);\n    try testing.expectEqual(@as(usize, 0), set.generation(.alternate));\n\n    // Initializing a screen doesn't change the generation.\n    _ = try set.getInit(alloc, .alternate, .default);\n    try testing.expectEqual(@as(usize, 0), set.generation(.alternate));\n\n    const alternate_generation = set.generation(.alternate);\n    set.remove(alloc, .alternate);\n    try testing.expectEqual(alternate_generation +% 1, set.generation(.alternate));\n\n    // Reinitializing keeps the generation from the last removal, so stale\n    // handles can distinguish the new screen from the destroyed screen.\n    _ = try set.getInit(alloc, .alternate, .default);\n    try testing.expectEqual(alternate_generation +% 1, set.generation(.alternate));\n    try testing.expectEqual(@as(usize, 0), set.generation(.primary));\n}"
+}

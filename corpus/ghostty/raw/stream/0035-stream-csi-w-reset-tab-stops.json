@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "stream.zig",
+  "testName": "stream CSI ? W reset tab stops",
+  "sourceLine": 3682,
+  "zigBody": "test \"stream CSI ? W reset tab stops\" {\n    const H = struct {\n        action: ?Action.Key = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = value;\n            self.action = action;\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[?2W\");\n    try testing.expect(s.handler.action == null);\n\n    s.nextSlice(\"\\x1b[?5W\");\n    try testing.expectEqual(Action.Key.tab_reset, s.handler.action.?);\n\n    // Invalid and ignored by the handler\n    s.handler.action = null;\n    s.nextSlice(\"\\x1b[?1;2;3W\");\n    try testing.expect(s.handler.action == null);\n}"
+}

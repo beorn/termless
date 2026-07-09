@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Tabstops.zig",
+  "testName": "Tabstops: resize alloc failure preserves state",
+  "sourceLine": 255,
+  "zigBody": "test \"Tabstops: resize alloc failure preserves state\" {\n    // This test verifies that if resize() fails during allocation,\n    // the original cols value is preserved (not corrupted).\n    var t: Tabstops = try init(testing.allocator, 80, 8);\n    defer t.deinit(testing.allocator);\n\n    const original_cols = t.cols;\n\n    // Trigger allocation failure when resizing beyond prealloc\n    resize_tw.errorAlways(.dynamic_alloc, error.OutOfMemory);\n    const result = t.resize(testing.allocator, prealloc_columns * 2);\n    try testing.expectError(error.OutOfMemory, result);\n    try resize_tw.end(.reset);\n\n    // cols should be unchanged after failed resize\n    try testing.expectEqual(original_cols, t.cols);\n}"
+}

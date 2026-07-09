@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Screen.zig",
+  "testName": "Screen cursorCopy x/y",
+  "sourceLine": 3621,
+  "zigBody": "test \"Screen cursorCopy x/y\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 10, .rows = 10, .max_scrollback = 0 });\n    defer s.deinit();\n    s.cursorAbsolute(2, 3);\n    try testing.expect(s.cursor.x == 2);\n    try testing.expect(s.cursor.y == 3);\n\n    var s2 = try Screen.init(alloc, .{ .cols = 10, .rows = 10, .max_scrollback = 0 });\n    defer s2.deinit();\n    try s2.cursorCopy(s.cursor, .{});\n    try testing.expect(s2.cursor.x == 2);\n    try testing.expect(s2.cursor.y == 3);\n    try s2.testWriteString(\"Hello\");\n\n    {\n        const str = try s2.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"\\n\\n\\n  Hello\", str);\n    }\n}"
+}

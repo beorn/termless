@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "SelectionGesture.zig",
+  "testName": "SelectionGesture removed screen resets without untracking stale pin",
+  "sourceLine": 1991,
+  "zigBody": "test \"SelectionGesture removed screen resets without untracking stale pin\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    _ = try t.screens.getInit(testing.allocator, .alternate, .{\n        .cols = t.cols,\n        .rows = t.rows,\n    });\n    t.screens.switchTo(.alternate);\n    _ = try gesture.press(&t, testPress(&t, 1, 1, try std.time.Instant.now()));\n\n    t.screens.switchTo(.primary);\n    t.screens.remove(testing.allocator, .alternate);\n    _ = try gesture.press(&t, testPress(&t, 1, 1, try std.time.Instant.now()));\n\n    try testing.expectEqual(@as(u3, 1), gesture.left_click_count);\n    try testing.expectEqual(.primary, gesture.left_click_screen);\n}"
+}

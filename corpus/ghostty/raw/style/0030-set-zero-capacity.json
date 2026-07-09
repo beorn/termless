@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "style.zig",
+  "testName": "Set zero capacity",
+  "sourceLine": 969,
+  "zigBody": "test \"Set zero capacity\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // A zero-capacity set is a valid special case (see Layout.init).\n    // It occurs in practice for pages with exact capacities where no\n    // cell is styled (see Page.exactRowCapacity).\n    const layout: Set.Layout = .init(0);\n    try testing.expectEqual(0, layout.total_size);\n\n    // We allocate a nonzero buffer filled with 0xFF to simulate the\n    // set being embedded in a larger structure (e.g. a Page) where\n    // other data follows it. Lookups must not probe the zero-size\n    // table: table[0] would read this adjacent memory and treat it\n    // as an item ID, leading to far out-of-bounds item reads.\n    const buf = try alloc.alignedAlloc(u8, Set.base_align, 64);\n    defer alloc.free(buf);\n    @memset(buf, 0xFF);\n\n    var set = Set.init(.init(buf), layout, .{});\n\n    const style: Style = .{ .flags = .{ .bold = true } };\n    try testing.expectEqual(null, set.lookup(buf, style));\n    try testing.expectError(error.OutOfMemory, set.add(buf, style));\n    try testing.expectEqual(0, set.count());\n\n    // The adjacent memory must be untouched.\n    for (buf) |b| try testing.expectEqual(0xFF, b);\n}"
+}

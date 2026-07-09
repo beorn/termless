@@ -1,0 +1,7 @@
+{
+  "suite": "ghostty",
+  "file": "Terminal.zig",
+  "testName": "Terminal: deleteChars split wide character from wide",
+  "sourceLine": 11257,
+  "zigBody": "test \"Terminal: deleteChars split wide character from wide\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 6, .rows = 10 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"橋123\");\n    t.setCursorPos(1, 1);\n    t.deleteChars(1);\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 1, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, '1'), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
+}

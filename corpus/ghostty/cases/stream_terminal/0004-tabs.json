@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "tabs",
+  "cols": 80,
+  "rows": 10,
+  "input": "A\tB",
+  "expectedScreen": "A       B",
+  "sourceLine": 884,
+  "license": "MIT"
+}
