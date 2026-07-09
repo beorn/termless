@@ -64,6 +64,15 @@ export interface XtermGuestChild {
   kill?(signal?: string | number): unknown
   close?(): unknown
   exited?: Promise<number | { code?: number; reason?: string }>
+  /**
+   * Ordered stream-resize channel (20992): resize events delivered at their
+   * exact position in the output stream (a remote session journals resizes
+   * between output chunks). When present, these are the guest's fold
+   * AUTHORITY — the host resize path only forwards requests to the child and
+   * the emulator resizes when the event comes back in-stream, so bursts
+   * always fold at the width they were produced for.
+   */
+  onStreamResize?(listener: (size: { cols: number; rows: number }) => void): () => void
 }
 
 /** Legacy Viewport adapter child shape. */
@@ -462,6 +471,22 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   const onStdoutData = (chunk: XtermDataChunk): void => {
     feedAnsi(typeof chunk === "string" ? chunk : chunk instanceof Buffer ? chunk : new Uint8Array(chunk))
   }
+  // Stream-resize authority (20992): apply the journaled resize at its stream
+  // position. Registered BEFORE the stdout subscription so a child replaying
+  // buffered items on first subscribe notifies both channels in order.
+  const applyStreamResize = (size: { cols: number; rows: number }): void => {
+    if (!term || disposed) return
+    if (size.cols === cols && size.rows === rows) return
+    term.resize(size.cols, size.rows)
+    cols = size.cols
+    rows = size.rows
+    cancelScheduledOutput()
+    buffer = snapshotBuffer(term, palettePassthrough)
+    notifySize()
+    notifyOutput()
+  }
+  const streamResizeAuthority = typeof opts.child?.onStreamResize === "function"
+  const unsubscribeStreamResize = opts.child?.onStreamResize?.(applyStreamResize)
   opts.child?.stdout?.on("data", onStdoutData)
   if (opts.onTitle) {
     disposables.push(term.onTitleChange(opts.onTitle))
@@ -498,6 +523,10 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   function resize(nextCols: number, nextRows: number): void {
     if (!term || disposed) return
     opts.child?.resize?.(nextCols, nextRows)
+    // With a stream-resize channel the local rect is only the REQUEST source:
+    // the emulator resizes when the child's journaled resize event arrives
+    // in-stream, so pending bursts keep folding at their produced width.
+    if (streamResizeAuthority) return
     term.resize(nextCols, nextRows)
     cols = nextCols
     rows = nextRows
@@ -626,6 +655,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
       disposed = true
       cancelScheduledOutput()
       opts.child?.stdout?.off?.("data", onStdoutData)
+      unsubscribeStreamResize?.()
       for (const disposable of disposables) {
         try {
           disposable.dispose()
