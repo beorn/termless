@@ -51,6 +51,16 @@ Expectation vocabulary (any combination):
 
 Converters that need a new expectation kind extend THIS section first (with a runner-side validator) — per-suite ad-hoc fields are the drift this contract forbids.
 
+Mode names in `expectedModes` are engine-agnostic DEC/xterm vocabulary (`DECAWM`, `DECTCEM`, `ALTSCREEN`, `BRACKETED_PASTE`, `DECCKM`, `DECNKM`); `runner.ts`'s `MODE_MAP` owns the one mapping to backend mode names, and an unmapped name is a load-time error — extend the map and this list together.
+
+## Runner + gap ledger
+
+`runner.ts` executes cases against any `TerminalBackend` (strict load-time validation, every expectation kind, `steps` phases) and returns structured `CaseMismatch` records — state-level evidence consumable by Hab restore tests and the terminfo.dev matrix, not just a pass/fail bit. `tests/corpus-conformance.test.ts` (in the package's `tests/`) drives every case against the pure backends (vterm, xterm, ghostty, vt100).
+
+Engine gaps are DATA, not red tests: `known-gaps.json` maps `<backend>::<suite>::<case name>` to a reason. The ledger ratchets both ways — an un-ledgered mismatch fails (regression or new case), and a ledgered case that starts passing also fails until the entry is removed. A ledger entry is a queue item: it either graduates to an implementation bead (engine gap) or documents a deliberate non-target (era-scoped engines like vt100).
+
+`expectedScreen` comparison uses ghostty `plainString()` semantics (viewport text, trailing whitespace/rows trimmed) because the first corpus's expectations were mined against it; a future suite whose dumps differ extends the runner with an explicit comparison mode rather than loosening this one.
+
 ## Growth triggers (decided now so nobody re-litigates later)
 
 - Split a suite's converters out of `extract.ts` into `converters/` when the third converter lands.
