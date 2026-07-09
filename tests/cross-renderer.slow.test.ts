@@ -21,11 +21,19 @@ beforeAll(() => {
   expect.extend(termlessMatchers as Parameters<typeof expect.extend>[0])
 })
 
+type CrossRendererAssertion = {
+  toMatchAcrossRenderers: (options?: unknown) => Promise<void>
+}
+
+function asCrossRendererAssertion(term: unknown): CrossRendererAssertion {
+  return expect(term) as unknown as CrossRendererAssertion
+}
+
 describe("toMatchAcrossRenderers", () => {
   test("plain text — canvas and SVG agree on cell-grid dimensions", async () => {
     const term = createTerminal({ backend: createVt100Backend(), cols: 40, rows: 6 })
     term.feed("Hello, world!\nLine two.\n")
-    await (expect(term) as { toMatchAcrossRenderers: (options?: { saveTo: string; dimensionTolerance?: number }) => Promise<void> }).toMatchAcrossRenderers({
+    await asCrossRendererAssertion(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/plain-text",
       dimensionTolerance: 0.01,
     })
@@ -39,7 +47,7 @@ describe("toMatchAcrossRenderers", () => {
         "\x1b[31mred\x1b[0m \x1b[32mgreen\x1b[0m \x1b[34mblue\x1b[0m\n" +
         "\x1b[38;2;255;128;64mtruecolor\x1b[0m\n",
     )
-    await (expect(term) as { toMatchAcrossRenderers: (options?: { saveTo: string; dimensionTolerance?: number }) => Promise<void> }).toMatchAcrossRenderers({
+    await asCrossRendererAssertion(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/ansi-styles",
       dimensionTolerance: 0.01,
     })
@@ -49,7 +57,7 @@ describe("toMatchAcrossRenderers", () => {
   test("box-drawing characters — canvas and SVG agree", async () => {
     const term = createTerminal({ backend: createVt100Backend(), cols: 30, rows: 8 })
     term.feed("┌─────────┐\n│  cell   │\n│  align  │\n└─────────┘\n")
-    await (expect(term) as { toMatchAcrossRenderers: (options?: { saveTo: string; dimensionTolerance?: number }) => Promise<void> }).toMatchAcrossRenderers({
+    await asCrossRendererAssertion(term).toMatchAcrossRenderers({
       saveTo: "/tmp/cross-renderer-test/box-drawing",
       dimensionTolerance: 0.01,
     })
@@ -65,7 +73,7 @@ describe("toMatchAcrossRenderers", () => {
       term.feed("\x1b[H\x1b[2J\x1b[1mhello\x1b[0m\n")
       const FONT = "/Users/beorn/Library/Fonts/FiraMonoNerdFontMono-Regular.otf"
       const fontPath = existsSync(FONT) ? FONT : undefined
-      await (expect(term) as { toMatchAcrossRenderers: (options?: { saveTo: string; dimensionTolerance?: number }) => Promise<void> }).toMatchAcrossRenderers({
+      await asCrossRendererAssertion(term).toMatchAcrossRenderers({
         command,
         saveTo: "/tmp/cross-renderer-test/peekaboo-three-way",
         includePeekaboo: true,
