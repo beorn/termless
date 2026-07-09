@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: ansi set mode (SM) and reset mode (RM) with unknown value",
-  "sourceLine": 2855,
-  "zigBody": "test \"stream: ansi set mode (SM) and reset mode (RM) with unknown value\" {\n    const H = struct {\n        mode: ?modes.Mode = null,\n\n        pub fn setMode(self: *@This(), mode: modes.Mode, v: bool) !void {\n            self.mode = null;\n            if (v) self.mode = mode;\n        }\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            _ = self;\n            _ = value;\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[6h\");\n    try testing.expect(s.handler.mode == null);\n\n    s.nextSlice(\"\\x1B[6l\");\n    try testing.expect(s.handler.mode == null);\n}"
-}

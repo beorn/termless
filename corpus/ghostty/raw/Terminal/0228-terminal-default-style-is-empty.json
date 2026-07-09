@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: default style is empty",
-  "sourceLine": 10219,
-  "zigBody": "test \"Terminal: default style is empty\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.print('A');\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'A'), cell.content.codepoint);\n        try testing.expectEqual(@as(style.Id, 0), cell.style_id);\n    }\n}"
-}

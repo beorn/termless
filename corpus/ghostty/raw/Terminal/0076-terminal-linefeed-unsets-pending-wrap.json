@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: linefeed unsets pending wrap",
-  "sourceLine": 6026,
-  "zigBody": "test \"Terminal: linefeed unsets pending wrap\" {\n    var t = try init(testing.allocator, .{ .cols = 5, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Basic grid writing\n    for (\"hello\") |c| try t.print(c);\n    try testing.expect(t.screens.active.cursor.pending_wrap == true);\n    t.clearDirty();\n    try t.linefeed();\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 1 } }));\n    try testing.expect(t.screens.active.cursor.pending_wrap == false);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: promptClickMove line left basic",
-  "sourceLine": 10662,
-  "zigBody": "test \"Screen: promptClickMove line left basic\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 20, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Enable line click mode\n    s.semantic_prompt.click = .{ .cl = .line };\n\n    // Write a prompt and input\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"hello\");\n\n    // Cursor is at column 7 (after 'o'), move it to column 6 (the 'o')\n    s.cursorAbsolute(6, 0);\n\n    // Click on 'h' (column 2), should require 4 left movements (o->l->l->e->h)\n    const click_pin = s.pages.pin(.{ .active = .{ .x = 2, .y = 0 } }).?;\n    const result = s.promptClickMove(click_pin);\n\n    try testing.expectEqual(@as(usize, 4), result.left);\n    try testing.expectEqual(@as(usize, 0), result.right);\n}"
-}

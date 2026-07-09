@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize less cols with scrollback keeps cursor row",
-  "sourceLine": 7475,
-  "zigBody": "test \"Screen: resize less cols with scrollback keeps cursor row\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n    const str = \"1A\\n2B\\n3C\\n4D\\n5E\";\n    try s.testWriteString(str);\n\n    // Lets do a scroll and clear operation\n    try s.scrollClear();\n\n    // Move our cursor to the beginning\n    s.cursorAbsolute(0, 0);\n\n    try s.resize(.{ .cols = 3, .rows = 3 });\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    // Cursor should be on the last line\n    try testing.expectEqual(@as(size.CellCountInt, 0), s.cursor.x);\n    try testing.expectEqual(@as(size.CellCountInt, 0), s.cursor.y);\n}"
-}

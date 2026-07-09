@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "OSC 4 set and reset palette",
-  "sourceLine": 1110,
-  "zigBody": "test \"OSC 4 set and reset palette\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Save default color\n    const default_color_0 = t.colors.palette.original[0];\n\n    // Set color 0 to red\n    s.nextSlice(\"\\x1b]4;0;rgb:ff/00/00\\x1b\\\\\");\n    try testing.expectEqual(@as(u8, 0xff), t.colors.palette.current[0].r);\n    try testing.expectEqual(@as(u8, 0x00), t.colors.palette.current[0].g);\n    try testing.expectEqual(@as(u8, 0x00), t.colors.palette.current[0].b);\n    try testing.expect(t.colors.palette.mask.isSet(0));\n\n    // Reset color 0\n    s.nextSlice(\"\\x1b]104;0\\x1b\\\\\");\n    try testing.expectEqual(default_color_0, t.colors.palette.current[0]);\n    try testing.expect(!t.colors.palette.mask.isSet(0));\n}"
-}

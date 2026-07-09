@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "device attributes: readonly ignores",
-  "sourceLine": 2318,
-  "zigBody": "test \"device attributes: readonly ignores\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // All DA queries should be silently ignored without effects\n    s.nextSlice(\"\\x1B[c\");\n    s.nextSlice(\"\\x1B[>c\");\n    s.nextSlice(\"\\x1B[=c\");\n\n    // Terminal should still be functional\n    s.nextSlice(\"Test\");\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Test\", str);\n}"
-}

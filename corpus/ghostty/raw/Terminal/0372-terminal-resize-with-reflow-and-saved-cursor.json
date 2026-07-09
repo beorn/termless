@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: resize with reflow and saved cursor",
-  "sourceLine": 13725,
-  "zigBody": "test \"Terminal: resize with reflow and saved cursor\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 3 });\n    defer t.deinit(alloc);\n    try t.printString(\"1A2B\");\n    t.setCursorPos(2, 2);\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = t.screens.active.cursor.x,\n            .y = t.screens.active.cursor.y,\n        } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u32, 'B'), cell.content.codepoint);\n    }\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"1A\\n2B\", str);\n    }\n\n    t.saveCursor();\n    try t.resize(alloc, 5, 3);\n    t.restoreCursor();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"1A2B\", str);\n    }\n\n    // Verify our cursor is still in the same place\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = t.screens.active.cursor.x,\n            .y = t.screens.active.cursor.y,\n        } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u32, 'B'), cell.content.codepoint);\n    }\n}"
-}

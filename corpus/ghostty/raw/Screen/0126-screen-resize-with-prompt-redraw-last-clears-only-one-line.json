@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize with prompt_redraw last clears only one line",
-  "sourceLine": 7972,
-  "zigBody": "test \"Screen: resize with prompt_redraw last clears only one line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 4, .max_scrollback = 5 });\n    defer s.deinit();\n\n    // zig fmt: off\n    try s.testWriteString(\"ABCDE\\n\");\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"hello\\n\");\n    try s.testWriteString(\"world\");\n    // zig fmt: on\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"ABCDE\\n> hello\\nworld\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    // Cursor is at end of \"world\" line with semantic_content = .input\n    try s.resize(.{\n        .cols = 20,\n        .rows = 4,\n        .prompt_redraw = .last,\n    });\n\n    // With .last, only the current line where cursor is should be cleared\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"ABCDE\\n> hello\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
-}

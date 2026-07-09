@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: soft wrap with semantic prompt",
-  "sourceLine": 5558,
-  "zigBody": "test \"Terminal: soft wrap with semantic prompt\" {\n    var t = try init(testing.allocator, .{ .cols = 3, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Mark our prompt.\n    try t.semanticPrompt(.init(.prompt_start));\n    // Should not make anything dirty on its own.\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n\n    // Write and wrap\n    for (\"hello\") |c| try t.print(c);\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        try testing.expectEqual(.prompt, list_cell.row.semantic_prompt);\n    }\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 1 } }).?;\n        try testing.expectEqual(.prompt_continuation, list_cell.row.semantic_prompt);\n    }\n}"
-}

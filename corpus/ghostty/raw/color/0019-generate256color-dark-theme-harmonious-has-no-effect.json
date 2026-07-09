@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "generate256Color: dark theme harmonious has no effect",
-  "sourceLine": 1193,
-  "zigBody": "test \"generate256Color: dark theme harmonious has no effect\" {\n    const testing = std.testing;\n\n    // For a dark theme (fg lighter than bg), harmonious should not change\n    // the output because the inversion is only relevant for light themes.\n    const bg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const fg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const normal = generate256Color(default, .initEmpty(), bg, fg, false);\n    const harmonious = generate256Color(default, .initEmpty(), bg, fg, true);\n\n    for (16..256) |i| {\n        try testing.expectEqual(normal[i], harmonious[i]);\n    }\n}"
-}

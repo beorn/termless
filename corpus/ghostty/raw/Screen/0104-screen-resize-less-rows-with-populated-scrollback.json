@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize less rows with populated scrollback",
-  "sourceLine": 7169,
-  "zigBody": "test \"Screen: resize less rows with populated scrollback\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n    const str = \"1ABCD\\n2EFGH\\n3IJKL\\n4ABCD\\n5EFGH\";\n    try s.testWriteString(str);\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"3IJKL\\n4ABCD\\n5EFGH\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    // Resize\n    try s.resize(.{ .cols = 5, .rows = 1 });\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"5EFGH\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
-}

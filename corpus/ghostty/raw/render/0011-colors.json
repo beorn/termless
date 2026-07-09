@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "colors",
-  "sourceLine": 1789,
-  "zigBody": "test \"colors\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 5,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n\n    // Default colors\n    try state.update(alloc, &t);\n\n    // Change cursor color\n    s.nextSlice(\"\\x1b]12;#FF0000\\x07\");\n    try state.update(alloc, &t);\n\n    const c = state.colors.cursor.?;\n    try testing.expectEqual(0xFF, c.r);\n    try testing.expectEqual(0, c.g);\n    try testing.expectEqual(0, c.b);\n\n    // Change palette color 0 to White\n    s.nextSlice(\"\\x1b]4;0;#FFFFFF\\x07\");\n    try state.update(alloc, &t);\n    const p0 = state.colors.palette[0];\n    try testing.expectEqual(0xFF, p0.r);\n    try testing.expectEqual(0xFF, p0.g);\n    try testing.expectEqual(0xFF, p0.b);\n}"
-}

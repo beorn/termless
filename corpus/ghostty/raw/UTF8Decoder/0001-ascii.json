@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "UTF8Decoder.zig",
-  "testName": "ASCII",
-  "sourceLine": 87,
-  "zigBody": "test \"ASCII\" {\n    var d: UTF8Decoder = .{};\n    var out: [13]u8 = undefined;\n    for (\"Hello, World!\", 0..) |byte, i| {\n        const res = d.next(byte);\n        try testing.expect(res[1]);\n        if (res[0]) |codepoint| {\n            out[i] = @intCast(codepoint);\n        }\n    }\n\n    try testing.expectEqualStrings(&out, \"Hello, World!\");\n}"
-}

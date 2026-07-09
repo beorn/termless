@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: pop kitty keyboard with no params defaults to 1",
-  "sourceLine": 2905,
-  "zigBody": "test \"stream: pop kitty keyboard with no params defaults to 1\" {\n    const H = struct {\n        const Self = @This();\n        n: u16 = 0,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            switch (action) {\n                .kitty_keyboard_pop => self.n = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    for (\"\\x1B[<u\") |c| s.next(c);\n    try testing.expectEqual(@as(u16, 1), s.handler.n);\n}"
-}

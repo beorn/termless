@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "style.zig",
-  "testName": "Set capacities",
-  "sourceLine": 964,
-  "zigBody": "test \"Set capacities\" {\n    // We want to support at least this many styles without overflowing.\n    _ = Set.Layout.init(16384);\n}"
-}

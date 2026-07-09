@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "csi: sgr with up to our max parameters",
-  "sourceLine": 980,
-  "zigBody": "test \"csi: sgr with up to our max parameters\" {\n    for (1..MAX_PARAMS + 1) |max| {\n        var p = init();\n        _ = p.next(0x1B);\n        _ = p.next('[');\n\n        for (0..max - 1) |_| {\n            _ = p.next('1');\n            _ = p.next(';');\n        }\n        _ = p.next('2');\n\n        {\n            const a = p.next('H');\n            try testing.expect(p.state == .ground);\n            try testing.expect(a[0] == null);\n            try testing.expect(a[1].? == .csi_dispatch);\n            try testing.expect(a[2] == null);\n\n            const csi = a[1].?.csi_dispatch;\n            try testing.expectEqual(@as(usize, max), csi.params.len);\n            try testing.expectEqual(@as(u16, 2), csi.params[max - 1]);\n        }\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: eraseDisplay protected complete",
-  "sourceLine": 12911,
-  "zigBody": "test \"Terminal: eraseDisplay protected complete\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    try t.print('A');\n    t.carriageReturn();\n    try t.linefeed();\n    for (\"123456789\") |c| try t.print(c);\n    t.setCursorPos(t.screens.active.cursor.y + 1, 6);\n    t.setProtectedMode(.dec);\n    try t.print('X');\n    t.setCursorPos(t.screens.active.cursor.y + 1, 4);\n\n    t.clearDirty();\n    t.eraseDisplay(.complete, true);\n    for (0..t.rows) |y| try testing.expect(t.isDirty(.{ .active = .{\n        .x = 0,\n        .y = @intCast(y),\n    } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\n     X\", str);\n    }\n}"
-}

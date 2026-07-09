@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "modes.zig",
-  "testName": "Report.encode DEC mode reset",
-  "sourceLine": 364,
-  "zigBody": "test \"Report.encode DEC mode reset\" {\n    var buf: [Report.max_size]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    const report: Report = .{ .tag = .{ .value = 1, .ansi = false }, .state = .reset };\n    try report.encode(&writer);\n    try testing.expectEqualStrings(\"\\x1B[?1;2$y\", writer.buffered());\n}"
-}

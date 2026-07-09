@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "DynamicPalette: set",
-  "sourceLine": 956,
-  "zigBody": "test \"DynamicPalette: set\" {\n    const testing = std.testing;\n\n    var p: DynamicPalette = .init(default);\n    const new_color = RGB{ .r = 255, .g = 0, .b = 0 };\n\n    p.set(0, new_color);\n    try testing.expectEqual(new_color, p.current[0]);\n    try testing.expect(p.mask.isSet(0));\n    try testing.expectEqual(@as(usize, 1), p.mask.count());\n\n    try testing.expectEqual(default[0], p.original[0]);\n}"
-}

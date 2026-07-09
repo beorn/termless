@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: unsupported with multiple colon",
-  "sourceLine": 588,
-  "zigBody": "test \"sgr: unsupported with multiple colon\" {\n    var p: Parser = .{\n        .params = &[_]u16{ 0, 4, 2, 1 },\n        .params_sep = sep: {\n            var list = SepList.initEmpty();\n            list.set(0);\n            list.set(1);\n            break :sep list;\n        },\n    };\n    try testing.expect(p.next().? == .unknown);\n    try testing.expect(p.next().? == .bold);\n    try testing.expect(p.next() == null);\n}"
-}

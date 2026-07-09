@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: eraseChars wide char wrap boundary conditions",
-  "sourceLine": 8211,
-  "zigBody": "test \"Terminal: eraseChars wide char wrap boundary conditions\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 3, .cols = 8 });\n    defer t.deinit(alloc);\n\n    try t.printString(\".......😀abcde😀......\");\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\".......\\n😀abcde\\n😀......\", str);\n\n        const unwrapped = try t.plainStringUnwrapped(alloc);\n        defer testing.allocator.free(unwrapped);\n        try testing.expectEqualStrings(\".......😀abcde😀......\", unwrapped);\n    }\n\n    t.setCursorPos(2, 2);\n    t.eraseChars(3);\n    t.screens.active.cursor.page_pin.node.data.assertIntegrity();\n\n    {\n        const str = try t.plainString(alloc);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\".......\\n    cde\\n😀......\", str);\n\n        const unwrapped = try t.plainStringUnwrapped(alloc);\n        defer testing.allocator.free(unwrapped);\n        try testing.expectEqualStrings(\".......     cde\\n😀......\", unwrapped);\n    }\n}"
-}

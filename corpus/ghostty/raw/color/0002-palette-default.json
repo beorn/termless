@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "palette: default",
-  "sourceLine": 873,
-  "zigBody": "test \"palette: default\" {\n    const testing = std.testing;\n\n    // Safety check\n    var i: u8 = 0;\n    while (i < 16) : (i += 1) {\n        try testing.expectEqual(Name.default(@as(Name, @enumFromInt(i))), default[i]);\n    }\n}"
-}

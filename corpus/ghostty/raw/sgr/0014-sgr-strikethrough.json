@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: strikethrough",
-  "sourceLine": 738,
-  "zigBody": "test \"sgr: strikethrough\" {\n    {\n        const v = testParse(&[_]u16{9});\n        try testing.expect(v == .strikethrough);\n    }\n\n    {\n        const v = testParse(&[_]u16{29});\n        try testing.expect(v == .reset_strikethrough);\n    }\n}"
-}

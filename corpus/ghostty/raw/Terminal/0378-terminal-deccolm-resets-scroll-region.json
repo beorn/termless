@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: DECCOLM resets scroll region",
-  "sourceLine": 13868,
-  "zigBody": "test \"Terminal: DECCOLM resets scroll region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setTopAndBottomMargin(2, 3);\n    t.setLeftAndRightMargin(3, 5);\n\n    t.modes.set(.enable_mode_3, true);\n    try t.deccolm(alloc, .@\"80_cols\");\n\n    try testing.expect(t.modes.get(.enable_left_and_right_margin));\n    try testing.expectEqual(@as(usize, 0), t.scrolling_region.top);\n    try testing.expectEqual(@as(usize, 4), t.scrolling_region.bottom);\n    try testing.expectEqual(@as(usize, 0), t.scrolling_region.left);\n    try testing.expectEqual(@as(usize, 79), t.scrolling_region.right);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "generate256Color: base16 preserved",
-  "sourceLine": 1097,
-  "zigBody": "test \"generate256Color: base16 preserved\" {\n    const testing = std.testing;\n\n    const bg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const fg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const palette = generate256Color(default, .initEmpty(), bg, fg, false);\n\n    // The first 16 colors (base16) must remain unchanged.\n    for (0..16) |i| {\n        try testing.expectEqual(default[i], palette[i]);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "SelectionGesture.zig",
-  "testName": "SelectionGesture autoscroll tick scrolls and continues drag",
-  "sourceLine": 1633,
-  "zigBody": "test \"SelectionGesture autoscroll tick scrolls and continues drag\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    var press_event = testPress(&t, 1, 1, try std.time.Instant.now());\n    press_event.xpos = 10;\n    _ = try gesture.press(&t, press_event);\n\n    _ = gesture.drag(&t, testDrag(&t, 3, 1, 39, 100));\n    try testing.expectEqual(.down, gesture.left_drag_autoscroll);\n\n    const sel = gesture.autoscrollTick(&t, testAutoscrollTick(.{ .x = 3, .y = 2 }, 39, 100)).?;\n    try testing.expectEqual(.down, gesture.left_drag_autoscroll);\n    try testing.expectEqual(true, gesture.left_click_dragged);\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 1, 1),\n        testPin(&t, 3, 2),\n        false,\n    ), sel);\n}"
-}

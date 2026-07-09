@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: scrollUp with max_scrollback zero and left/right margin",
-  "sourceLine": 7581,
-  "zigBody": "test \"Terminal: scrollUp with max_scrollback zero and left/right margin\" {\n    // When max_scrollback is 0 with left/right margins, uses deleteLines path\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 10, .max_scrollback = 0 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"AAAAABBBBB\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"CCCCCDDDDD\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"EEEEEFFFFF\");\n\n    // Set left/right margins (columns 2-6, 1-indexed = indices 1-5)\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(2, 6);\n\n    try t.scrollUp(1);\n\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        // cols 1-5 scroll, col 0 and cols 6+ preserved\n        try testing.expectEqualStrings(\"ACCCCDBBBB\\nCEEEEFDDDD\\nE     FFFF\", str);\n    }\n}"
-}

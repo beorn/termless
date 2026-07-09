@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: insert mode with space",
-  "sourceLine": 10904,
-  "zigBody": "test \"Terminal: insert mode with space\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 2 });\n    defer t.deinit(alloc);\n\n    for (\"hello\") |c| try t.print(c);\n    t.setCursorPos(1, 2);\n    t.modes.set(.insert, true);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"hXello\", str);\n    }\n}"
-}

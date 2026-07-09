@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "device_attributes.zig",
-  "testName": "primary no features",
-  "sourceLine": 198,
-  "zigBody": "test \"primary no features\" {\n    var buf: [64]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try (Primary{\n        .conformance_level = .vt100,\n        .features = &.{},\n    }).encode(&writer);\n    try testing.expectEqualStrings(\"\\x1b[?1c\", writer.buffered());\n}"
-}

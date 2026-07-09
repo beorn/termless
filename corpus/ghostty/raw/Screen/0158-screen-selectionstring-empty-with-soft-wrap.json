@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: selectionString empty with soft wrap",
-  "sourceLine": 9538,
-  "zigBody": "test \"Screen: selectionString empty with soft wrap\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 2, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Let me describe the situation that caused this because this\n    // test is not obvious. By writing an emoji below, we introduce\n    // one cell with the emoji and one cell as a \"wide char spacer\".\n    // We then soft wrap the line by writing spaces.\n    //\n    // By selecting only the tail, we'd select nothing and we had\n    // a logic error that would cause a crash.\n    try s.testWriteString(\"👨\");\n    try s.testWriteString(\"      \");\n\n    {\n        const sel = Selection.init(\n            s.pages.pin(.{ .screen = .{ .x = 1, .y = 0 } }).?,\n            s.pages.pin(.{ .screen = .{ .x = 2, .y = 0 } }).?,\n            false,\n        );\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = true,\n        });\n        defer alloc.free(contents);\n        const expected = \"👨\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
-}

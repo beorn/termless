@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: SCOSC",
-  "sourceLine": 3311,
-  "zigBody": "test \"stream: SCOSC\" {\n    const H = struct {\n        const Self = @This();\n        called: bool = false,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: Stream(Self).Action.Tag,\n            value: Stream(Self).Action.Value(action),\n        ) void {\n            _ = value;\n            switch (action) {\n                .left_and_right_margin => @panic(\"bad\"),\n                .left_and_right_margin_ambiguous => self.called = true,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    for (\"\\x1B[s\") |c| s.next(c);\n    try testing.expect(s.handler.called);\n}"
-}

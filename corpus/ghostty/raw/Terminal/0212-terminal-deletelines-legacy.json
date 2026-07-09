@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteLines (legacy)",
-  "sourceLine": 9672,
-  "zigBody": "test \"Terminal: deleteLines (legacy)\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    try t.print('A');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('B');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('C');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('D');\n\n    t.cursorUp(2);\n    t.deleteLines(1);\n\n    try t.print('E');\n    t.carriageReturn();\n    try t.linefeed();\n\n    // We should be\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.y);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"A\\nE\\nD\", str);\n    }\n}"
-}

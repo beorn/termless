@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "grapheme",
-  "sourceLine": 1617,
-  "zigBody": "test \"grapheme\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 3,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n    s.nextSlice(\"A\");\n    s.nextSlice(\"👨‍\"); // this has a ZWJ\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n\n    // Verify we have the right number of rows\n    const row_data = state.row_data.slice();\n    try testing.expectEqual(3, row_data.len);\n\n    // All rows should have cols cells\n    const cells = row_data.items(.cells);\n    try testing.expectEqual(10, cells[0].len);\n    try testing.expectEqual(10, cells[1].len);\n    try testing.expectEqual(10, cells[2].len);\n\n    // Row zero should contain our text\n    {\n        const cell = cells[0].get(0);\n        try testing.expectEqual('A', cell.raw.codepoint());\n    }\n    {\n        const cell = cells[0].get(1);\n        try testing.expectEqual(0x1F468, cell.raw.codepoint());\n        try testing.expectEqual(.wide, cell.raw.wide);\n        try testing.expectEqualSlices(u21, &.{0x200D}, cell.grapheme);\n    }\n    {\n        const cell = cells[0].get(2);\n        try testing.expectEqual(0, cell.raw.codepoint());\n        try testing.expectEqual(.spacer_tail, cell.raw.wide);\n    }\n}"
-}

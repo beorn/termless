@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "kitty color protocol query responses",
-  "sourceLine": 1369,
-  "zigBody": "test \"kitty color protocol query responses\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var last_response: ?[:0]const u8 = null;\n\n        fn reset() void {\n            if (last_response) |old| testing.allocator.free(old);\n            last_response = null;\n        }\n\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            reset();\n            last_response = testing.allocator.dupeZ(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.last_response = null;\n    defer S.reset();\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    s.nextSlice(\"\\x1b]21;background=?\\x1b\\\\\");\n    try testing.expectEqualStrings(\n        \"\\x1b]21;background=\\x1b\\\\\",\n        S.last_response.?,\n    );\n\n    s.nextSlice(\"\\x1b]21;foreground=rgb:12/34/56;2=rgb:aa/bb/cc\\x1b\\\\\");\n    s.nextSlice(\"\\x1b]21;foreground=?;background=?;2=?\\x1b\\\\\");\n    try testing.expectEqualStrings(\n        \"\\x1b]21;foreground=rgb:12/34/56;background=;2=rgb:aa/bb/cc\\x1b\\\\\",\n        S.last_response.?,\n    );\n}"
-}

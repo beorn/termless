@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "OSC 11 set and reset background color",
-  "sourceLine": 1180,
-  "zigBody": "test \"OSC 11 set and reset background color\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set background to green\n    s.nextSlice(\"\\x1b]11;rgb:00/ff/00\\x1b\\\\\");\n    const bg = t.colors.background.get().?;\n    try testing.expectEqual(@as(u8, 0x00), bg.r);\n    try testing.expectEqual(@as(u8, 0xff), bg.g);\n    try testing.expectEqual(@as(u8, 0x00), bg.b);\n\n    // Reset background\n    s.nextSlice(\"\\x1b]111\\x1b\\\\\");\n    try testing.expect(t.colors.background.get() == null);\n}"
-}

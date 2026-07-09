@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: insertBlanks pushes hyperlink off end completely",
-  "sourceLine": 10803,
-  "zigBody": "test \"Terminal: insertBlanks pushes hyperlink off end completely\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 2 });\n    defer t.deinit(alloc);\n\n    try t.screens.active.startHyperlink(\"http://example.com\", null);\n    try t.printString(\"ABC\");\n    t.setCursorPos(1, 1);\n    t.insertBlanks(3);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\", str);\n    }\n\n    for (0..3) |x| {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{\n            .x = @intCast(x),\n            .y = 0,\n        } }).?;\n        const row = list_cell.row;\n        try testing.expect(!row.hyperlink);\n        const cell = list_cell.cell;\n        try testing.expect(!cell.hyperlink);\n        const id = list_cell.node.data.lookupHyperlink(cell);\n        try testing.expect(id == null);\n    }\n}"
-}

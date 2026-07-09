@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: DECCOLM resets pending wrap",
-  "sourceLine": 13829,
-  "zigBody": "test \"Terminal: DECCOLM resets pending wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    try testing.expect(t.screens.active.cursor.pending_wrap);\n\n    t.modes.set(.enable_mode_3, true);\n    try t.deccolm(alloc, .@\"80_cols\");\n    try testing.expectEqual(@as(usize, 80), t.cols);\n    try testing.expectEqual(@as(usize, 5), t.rows);\n    try testing.expect(!t.screens.active.cursor.pending_wrap);\n}"
-}

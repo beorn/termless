@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "style.zig",
-  "testName": "Style VT formatting palette with palette set emits rgb",
-  "sourceLine": 876,
-  "zigBody": "test \"Style VT formatting palette with palette set emits rgb\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .fg_color = .{ .palette = 1 } };\n    var formatter = style.formatterVt();\n    formatter.palette = &color.default;\n    try builder.writer.print(\"{f}\", .{formatter});\n    try testing.expectEqualStrings(\"\\x1b[0m\\x1b[38;2;204;102;102m\", builder.writer.buffered());\n}"
-}

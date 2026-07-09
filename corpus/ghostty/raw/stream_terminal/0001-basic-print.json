@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "basic print",
-  "sourceLine": 829,
-  "zigBody": "test \"basic print\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    s.nextSlice(\"Hello\");\n    try testing.expectEqual(@as(usize, 5), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Hello\", str);\n}"
-}

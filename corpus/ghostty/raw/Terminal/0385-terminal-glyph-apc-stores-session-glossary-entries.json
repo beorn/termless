@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: glyph APC stores session glossary entries",
-  "sourceLine": 14149,
-  "zigBody": "test \"Terminal: glyph APC stores session glossary entries\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(alloc);\n\n    var register_parser = glyph.CommandParser.init(alloc, 1024 * 1024);\n    defer register_parser.deinit();\n    for (\"r;cp=e0a0;AAAAAAAAAAAAAA==\") |byte| try register_parser.feed(byte);\n    var register_req = try register_parser.complete(alloc);\n    defer register_req.deinit(alloc);\n\n    try testing.expectEqual(glyph.Response{\n        .register = .{ .cp = 0xE0A0 },\n    }, t.glyphProtocol(alloc, &register_req).?);\n    try testing.expect(t.glyph_glossary.contains(0xE0A0));\n    try testing.expect(t.flags.dirty.glyph_glossary);\n\n    var query_parser = glyph.CommandParser.init(alloc, 1024 * 1024);\n    defer query_parser.deinit();\n    for (\"q;cp=e0a0\") |byte| try query_parser.feed(byte);\n    var query_req = try query_parser.complete(alloc);\n    defer query_req.deinit(alloc);\n\n    try testing.expectEqual(glyph.Response{ .query = .{\n        .cp = 0xE0A0,\n        .status = .{ .glossary = true },\n    } }, t.glyphProtocol(alloc, &query_req).?);\n\n    t.fullReset();\n    try testing.expect(!t.glyph_glossary.contains(0xE0A0));\n}"
-}

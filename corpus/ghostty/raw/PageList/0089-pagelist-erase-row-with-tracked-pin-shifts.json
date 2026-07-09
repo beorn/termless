@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList erase row with tracked pin shifts",
-  "sourceLine": 9656,
-  "zigBody": "test \"PageList erase row with tracked pin shifts\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // Put a tracked pin in the history\n    const p = try s.trackPin(s.pin(.{ .active = .{ .y = 4, .x = 2 } }).?);\n    defer s.untrackPin(p);\n\n    // Erase only a few rows in our active\n    s.eraseActive(3);\n    try testing.expectEqual(s.rows, s.total_rows);\n\n    // Our pin should move to the first page\n    try testing.expectEqual(s.pages.first.?, p.node);\n    try testing.expectEqual(@as(usize, 0), p.y);\n    try testing.expectEqual(@as(usize, 2), p.x);\n}"
-}

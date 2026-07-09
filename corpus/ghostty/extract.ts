@@ -577,6 +577,27 @@ function writeJsonValidated(path: string, obj: unknown): void {
   }
 }
 
+/** JSONL: one compact JSON object per line; every line round-trip validated. */
+function writeJsonlValidated(path: string, objs: unknown[]): void {
+  const text = objs.map((o) => JSON.stringify(o)).join("\n") + "\n";
+  writeFileSync(path, text, "utf8");
+  filesWritten++;
+  bytesWritten += Buffer.byteLength(text, "utf8");
+
+  const lines = readFileSync(path, "utf8").split("\n").filter((l) => l.length > 0);
+  if (lines.length !== objs.length) {
+    validationFailures.push(`${path}: expected ${objs.length} lines, read back ${lines.length}`);
+    return;
+  }
+  for (const [i, line] of lines.entries()) {
+    try {
+      JSON.parse(line);
+    } catch (e) {
+      validationFailures.push(`${path}:${i + 1}: ${(e as Error).message}`);
+    }
+  }
+}
+
 function dirSizeBytes(dir: string): number {
   if (!existsSync(dir)) return 0;
   let total = 0;
@@ -621,24 +642,27 @@ function main(): void {
     const source = readFileSync(srcPath, "utf8");
     const blocks = extractTestBlocks(source, fileName);
 
-    const stemDir = fileName.replace(/\.zig$/, "");
-    const rawOutDir = join(rawDir, stemDir);
-    const casesOutDir = join(casesDir, stemDir);
-    mkdirSync(rawOutDir, { recursive: true });
+    const stem = fileName.replace(/\.zig$/, "");
+    const casesOutDir = join(casesDir, stem);
+    mkdirSync(rawDir, { recursive: true });
 
     const reasons = new Map<string, number>();
     const categories = new Map<string, number>();
     let convertedCount = 0;
+    // raw/ is one JSONL per SOURCE FILE, not one JSON per test block: 28
+    // reviewable files instead of ~1300 inodes, and an upstream refresh
+    // diffs as changed lines instead of a thousand-file churn. Converters
+    // iterate blocks; nothing addresses a raw block by filename.
+    const rawLines: unknown[] = [];
 
     blocks.forEach((block, idx) => {
-      const index = String(idx + 1).padStart(4, "0");
-      const slug = slugify(block.testName);
-      writeJsonValidated(join(rawOutDir, `${index}-${slug}.json`), block);
+      rawLines.push(block);
 
       const result = tryConvert(block);
       if ("case" in result) {
+        const index = String(idx + 1).padStart(4, "0");
         mkdirSync(casesOutDir, { recursive: true });
-        writeJsonValidated(join(casesOutDir, `${index}-${slug}.json`), result.case);
+        writeJsonValidated(join(casesOutDir, `${index}-${slugify(block.testName)}.json`), result.case);
         convertedCount++;
       } else {
         reasons.set(result.reason, (reasons.get(result.reason) ?? 0) + 1);
@@ -646,6 +670,7 @@ function main(): void {
         categories.set(cat, (categories.get(cat) ?? 0) + 1);
       }
     });
+    writeJsonlValidated(join(rawDir, `${stem}.jsonl`), rawLines);
 
     perFileStats.push({
       file: fileName,

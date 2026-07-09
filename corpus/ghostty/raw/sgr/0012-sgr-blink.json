@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: blink",
-  "sourceLine": 709,
-  "zigBody": "test \"sgr: blink\" {\n    {\n        const v = testParse(&[_]u16{5});\n        try testing.expect(v == .blink);\n    }\n\n    {\n        const v = testParse(&[_]u16{6});\n        try testing.expect(v == .blink);\n    }\n\n    {\n        const v = testParse(&[_]u16{25});\n        try testing.expect(v == .reset_blink);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page cloneFrom partial",
-  "sourceLine": 2971,
-  "zigBody": "test \"Page cloneFrom partial\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Write\n    for (0..page.capacity.rows) |y| {\n        const rac = page.getRowAndCell(1, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(y) },\n        };\n    }\n\n    // Clone\n    var page2 = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page2.deinit();\n    try page2.cloneFrom(&page, 0, 5);\n\n    // Read it again\n    for (0..5) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, @intCast(y)), rac.cell.content.codepoint);\n    }\n    for (5..page2.size.rows) |y| {\n        const rac = page2.getRowAndCell(1, y);\n        try testing.expectEqual(@as(u21, 0), rac.cell.content.codepoint);\n    }\n}"
-}

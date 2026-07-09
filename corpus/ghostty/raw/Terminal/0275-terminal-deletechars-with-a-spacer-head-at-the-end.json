@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteChars with a spacer head at the end",
-  "sourceLine": 11303,
-  "zigBody": "test \"Terminal: deleteChars with a spacer head at the end\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 10 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"0123橋123\");\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 4, .y = 0 } }).?;\n        const row = list_cell.row;\n        const cell = list_cell.cell;\n        try testing.expectEqual(Cell.Wide.spacer_head, cell.wide);\n        try testing.expect(row.wrap);\n    }\n\n    t.setCursorPos(1, 1);\n    t.deleteChars(1);\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 3, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n}"
-}

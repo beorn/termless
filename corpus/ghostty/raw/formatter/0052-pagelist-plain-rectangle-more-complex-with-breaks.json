@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "formatter.zig",
-  "testName": "PageList plain rectangle more complex with breaks",
-  "sourceLine": 4160,
-  "zigBody": "test \"PageList plain rectangle more complex with breaks\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 30,\n        .rows = 8,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    s.nextSlice(\"Lorem ipsum dolor\\r\\n\");\n    s.nextSlice(\"sit amet, consectetur\\r\\n\");\n    s.nextSlice(\"adipiscing elit, sed do\\r\\n\");\n    s.nextSlice(\"eiusmod tempor incididunt\\r\\n\");\n    s.nextSlice(\"ut labore et dolore\\r\\n\");\n    s.nextSlice(\"\\r\\n\");\n    s.nextSlice(\"magna aliqua. Ut enim\\r\\n\");\n    s.nextSlice(\"ad minim veniam, quis\");\n\n    const pages = &t.screens.active.pages;\n\n    var formatter: PageListFormatter = .init(pages, .plain);\n    formatter.top_left = pages.pin(.{ .screen = .{ .x = 11, .y = 2 } }).?;\n    formatter.bottom_right = pages.pin(.{ .screen = .{ .x = 26, .y = 7 } }).?;\n    formatter.rectangle = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    const expected =\n        \\\\elit, sed do\n        \\\\por incididunt\n        \\\\t dolore\n        \\\\\n        \\\\a. Ut enim\n        \\\\niam, quis\n    ;\n    try testing.expectEqualStrings(expected, output);\n}"
-}

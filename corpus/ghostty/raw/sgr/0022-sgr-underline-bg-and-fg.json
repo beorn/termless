@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: underline, bg, and fg",
-  "sourceLine": 830,
-  "zigBody": "test \"sgr: underline, bg, and fg\" {\n    var p: Parser = .{\n        .params = &[_]u16{ 4, 38, 2, 255, 247, 219, 48, 2, 242, 93, 147, 4 },\n    };\n    {\n        const v = p.next().?;\n        try testing.expect(v == .underline);\n        try testing.expectEqual(Attribute.Underline.single, v.underline);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .direct_color_fg);\n        try testing.expectEqual(@as(u8, 255), v.direct_color_fg.r);\n        try testing.expectEqual(@as(u8, 247), v.direct_color_fg.g);\n        try testing.expectEqual(@as(u8, 219), v.direct_color_fg.b);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .direct_color_bg);\n        try testing.expectEqual(@as(u8, 242), v.direct_color_bg.r);\n        try testing.expectEqual(@as(u8, 93), v.direct_color_bg.g);\n        try testing.expectEqual(@as(u8, 147), v.direct_color_bg.b);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .underline);\n        try testing.expectEqual(Attribute.Underline.single, v.underline);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList scroll to row without scrollback",
-  "sourceLine": 6805,
-  "zigBody": "test \"PageList scroll to row without scrollback\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    s.scroll(.{ .row = 5 });\n\n    try testing.expect(s.viewport == .active);\n\n    {\n        const pt = s.getCell(.{ .viewport = .{} }).?.screenPoint();\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 0,\n        } }, pt);\n    }\n\n    try testing.expectEqual(Scrollbar{\n        .total = s.total_rows,\n        .offset = s.total_rows - s.rows,\n        .len = s.rows,\n    }, s.scrollbar());\n}"
-}

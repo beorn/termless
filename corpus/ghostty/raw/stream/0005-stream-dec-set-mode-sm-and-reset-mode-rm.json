@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: dec set mode (SM) and reset mode (RM)",
-  "sourceLine": 2797,
-  "zigBody": "test \"stream: dec set mode (SM) and reset mode (RM)\" {\n    const H = struct {\n        mode: modes.Mode = @as(modes.Mode, @enumFromInt(1)),\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            switch (action) {\n                .set_mode => self.mode = value.mode,\n                .reset_mode => self.mode = @as(modes.Mode, @enumFromInt(1)),\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[?6h\");\n    try testing.expectEqual(@as(modes.Mode, .origin), s.handler.mode);\n\n    s.nextSlice(\"\\x1B[?6l\");\n    try testing.expectEqual(@as(modes.Mode, @enumFromInt(1)), s.handler.mode);\n\n    s.handler.mode = @as(modes.Mode, @enumFromInt(1));\n    s.nextSlice(\"\\x1B[6 h\");\n    try testing.expectEqual(@as(modes.Mode, @enumFromInt(1)), s.handler.mode);\n}"
-}

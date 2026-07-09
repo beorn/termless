@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: kakoune input",
-  "sourceLine": 988,
-  "zigBody": "test \"sgr: kakoune input\" {\n    // This used to crash\n    var p: Parser = .{\n        .params = &[_]u16{ 0, 4, 3, 38, 2, 175, 175, 215, 58, 2, 0, 190, 80, 70 },\n        .params_sep = sep: {\n            var list = SepList.initEmpty();\n            list.set(1);\n            list.set(8);\n            list.set(9);\n            list.set(10);\n            list.set(11);\n            list.set(12);\n            break :sep list;\n        },\n    };\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .unset);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .underline);\n        try testing.expectEqual(Attribute.Underline.curly, v.underline);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .direct_color_fg);\n        try testing.expectEqual(@as(u8, 175), v.direct_color_fg.r);\n        try testing.expectEqual(@as(u8, 175), v.direct_color_fg.g);\n        try testing.expectEqual(@as(u8, 215), v.direct_color_fg.b);\n    }\n    {\n        const v = p.next().?;\n        try testing.expect(v == .underline_color);\n        try testing.expectEqual(@as(u8, 190), v.underline_color.r);\n        try testing.expectEqual(@as(u8, 80), v.underline_color.g);\n        try testing.expectEqual(@as(u8, 70), v.underline_color.b);\n    }\n\n    //try testing.expect(p.next() == null);\n}"
-}

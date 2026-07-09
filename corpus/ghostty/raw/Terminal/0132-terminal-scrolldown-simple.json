@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: scrollDown simple",
-  "sourceLine": 7609,
-  "zigBody": "test \"Terminal: scrollDown simple\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DEF\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GHI\");\n    t.setCursorPos(2, 2);\n\n    const cursor = t.screens.active.cursor;\n    t.clearDirty();\n    t.scrollDown(1);\n    try testing.expectEqual(cursor.x, t.screens.active.cursor.x);\n    try testing.expectEqual(cursor.y, t.screens.active.cursor.y);\n\n    for (0..5) |y| try testing.expect(t.isDirty(.{ .active = .{\n        .x = 0,\n        .y = @intCast(y),\n    } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nABC\\nDEF\\nGHI\", str);\n    }\n}"
-}

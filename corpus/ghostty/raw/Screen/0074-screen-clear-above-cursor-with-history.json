@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: clear above cursor with history",
-  "sourceLine": 6168,
-  "zigBody": "test \"Screen: clear above cursor with history\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 3 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\\n\");\n    try s.testWriteString(\"4ABCD\\n5EFGH\\n6IJKL\");\n    s.clearRows(\n        .{ .active = .{ .y = 0 } },\n        .{ .active = .{ .y = s.cursor.y - 1 } },\n        false,\n    );\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\\n\\n6IJKL\", contents);\n    }\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"1ABCD\\n2EFGH\\n3IJKL\\n\\n\\n6IJKL\", contents);\n    }\n\n    try testing.expectEqual(@as(usize, 5), s.cursor.x);\n    try testing.expectEqual(@as(usize, 2), s.cursor.y);\n}"
-}

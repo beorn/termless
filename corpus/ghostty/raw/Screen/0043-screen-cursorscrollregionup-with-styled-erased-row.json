@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: cursorScrollRegionUp with styled erased row",
-  "sourceLine": 4961,
-  "zigBody": "test \"Screen: cursorScrollRegionUp with styled erased row\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Write a styled row at the top so the erased row has managed\n    // memory that must be released.\n    try s.setAttribute(.{ .bold = {} });\n    try s.testWriteString(\"1ABCD\");\n    try s.setAttribute(.{ .unset = {} });\n    try s.testWriteString(\"\\n2EFGH\\n3IJKL\");\n\n    s.cursorAbsolute(0, 2);\n    try s.cursorScrollRegionUp(2);\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"2EFGH\\n3IJKL\", contents);\n    }\n\n    // The style should be gone from the page since the only user\n    // was the erased row.\n    const page = &s.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n}"
-}

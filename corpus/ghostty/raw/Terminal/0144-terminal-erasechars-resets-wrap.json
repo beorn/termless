@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: eraseChars resets wrap",
-  "sourceLine": 8014,
-  "zigBody": "test \"Terminal: eraseChars resets wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    for (\"ABCDE123\") |c| try t.print(c);\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{ .x = 0, .y = 0 } }).?;\n        const row = list_cell.row;\n        try testing.expect(row.wrap);\n    }\n\n    t.setCursorPos(1, 1);\n    t.eraseChars(1);\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{ .x = 0, .y = 0 } }).?;\n        const row = list_cell.row;\n        try testing.expect(!row.wrap);\n    }\n\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"XBCDE\\n123\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: decaln preserves color",
-  "sourceLine": 10358,
-  "zigBody": "test \"Terminal: decaln preserves color\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    try t.setAttribute(.{ .direct_color_bg = .{ .r = 0xFF, .g = 0, .b = 0 } });\n    t.modes.set(.origin, true);\n    t.setTopAndBottomMargin(2, 3);\n    try t.decaln();\n    t.scrollDown(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nEEE\\nEEE\", str);\n    }\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{ .x = 0, .y = 0 } }).?;\n        try testing.expect(list_cell.cell.content_tag == .bg_color_rgb);\n        try testing.expectEqual(Cell.RGB{\n            .r = 0xFF,\n            .g = 0,\n            .b = 0,\n        }, list_cell.cell.content.color_rgb);\n    }\n}"
-}

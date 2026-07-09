@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page capacity adjust cols too high",
-  "sourceLine": 2604,
-  "zigBody": "test \"Page capacity adjust cols too high\" {\n    const original = std_capacity;\n    try testing.expectError(\n        error.OutOfMemory,\n        original.adjust(.{ .cols = std.math.maxInt(size.CellCountInt) }),\n    );\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: Parser",
-  "sourceLine": 541,
-  "zigBody": "test \"sgr: Parser\" {\n    try testing.expect(testParse(&[_]u16{}) == .unset);\n    try testing.expect(testParse(&[_]u16{0}) == .unset);\n\n    {\n        const v = testParse(&[_]u16{ 38, 2, 40, 44, 52 });\n        try testing.expect(v == .direct_color_fg);\n        try testing.expectEqual(@as(u8, 40), v.direct_color_fg.r);\n        try testing.expectEqual(@as(u8, 44), v.direct_color_fg.g);\n        try testing.expectEqual(@as(u8, 52), v.direct_color_fg.b);\n    }\n\n    try testing.expect(testParse(&[_]u16{ 38, 2, 44, 52 }) == .unknown);\n\n    {\n        const v = testParse(&[_]u16{ 48, 2, 40, 44, 52 });\n        try testing.expect(v == .direct_color_bg);\n        try testing.expectEqual(@as(u8, 40), v.direct_color_bg.r);\n        try testing.expectEqual(@as(u8, 44), v.direct_color_bg.g);\n        try testing.expectEqual(@as(u8, 52), v.direct_color_bg.b);\n    }\n\n    try testing.expect(testParse(&[_]u16{ 48, 2, 44, 52 }) == .unknown);\n}"
-}

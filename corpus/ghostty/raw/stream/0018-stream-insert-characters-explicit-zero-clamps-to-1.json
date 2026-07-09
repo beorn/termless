@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: insert characters explicit zero clamps to 1",
-  "sourceLine": 3289,
-  "zigBody": "test \"stream: insert characters explicit zero clamps to 1\" {\n    const H = struct {\n        const Self = @This();\n        value: ?usize = null,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            switch (action) {\n                .insert_blanks => self.value = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    for (\"\\x1B[0@\") |c| s.next(c);\n    try testing.expectEqual(@as(usize, 1), s.handler.value.?);\n}"
-}

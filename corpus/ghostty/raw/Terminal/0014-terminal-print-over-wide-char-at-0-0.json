@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: print over wide char at 0,0",
-  "sourceLine": 3985,
-  "zigBody": "test \"Terminal: print over wide char at 0,0\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    try t.print(0x1F600); // Smiley face\n    t.setCursorPos(0, 0);\n    try t.print('A');\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.x);\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'A'), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 1, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 0), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 1 } }));\n}"
-}

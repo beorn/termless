@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "selectionString map allocation failure cleanup",
-  "sourceLine": 10376,
-  "zigBody": "test \"selectionString map allocation failure cleanup\" {\n    // This test verifies that if toOwnedSlice fails when building\n    // the StringMap, we don't leak the already-allocated map.string.\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var s = try Screen.init(alloc, .{ .cols = 10, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    try s.testWriteString(\"hello\");\n\n    // Get a selection\n    const sel = Selection.init(\n        s.pages.pin(.{ .active = .{ .x = 0, .y = 0 } }).?,\n        s.pages.pin(.{ .active = .{ .x = 4, .y = 0 } }).?,\n        false,\n    );\n\n    // Trigger allocation failure on toOwnedSlice\n    var map: StringMap = undefined;\n    selectionString_tw.errorAlways(.copy_map, error.OutOfMemory);\n    const result = s.selectionString(alloc, .{\n        .sel = sel,\n        .map = &map,\n    });\n    try testing.expectError(error.OutOfMemory, result);\n    try selectionString_tw.end(.reset);\n\n    // If this test passes without memory leaks (when run with testing.allocator),\n    // it means the errdefer properly cleaned up map.string when toOwnedSlice failed.\n}"
-}

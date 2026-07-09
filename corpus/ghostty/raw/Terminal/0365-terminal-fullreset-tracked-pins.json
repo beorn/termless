@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: fullReset tracked pins",
-  "sourceLine": 13599,
-  "zigBody": "test \"Terminal: fullReset tracked pins\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // Create a tracked pin\n    const p = try t.screens.active.pages.trackPin(t.screens.active.cursor.page_pin.*);\n    t.fullReset();\n    try testing.expect(t.screens.active.pages.pinIsValid(p.*));\n}"
-}

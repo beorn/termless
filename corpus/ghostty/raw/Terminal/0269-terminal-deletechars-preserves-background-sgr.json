@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteChars preserves background sgr",
-  "sourceLine": 11166,
-  "zigBody": "test \"Terminal: deleteChars preserves background sgr\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(alloc);\n\n    for (\"ABC123\") |c| try t.print(c);\n    t.setCursorPos(1, 3);\n    try t.setAttribute(.{ .direct_color_bg = .{\n        .r = 0xFF,\n        .g = 0,\n        .b = 0,\n    } });\n    t.deleteChars(2);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AB23\", str);\n    }\n    for (t.cols - 2..t.cols) |x| {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = @intCast(x),\n            .y = 0,\n        } }).?;\n        try testing.expect(list_cell.cell.content_tag == .bg_color_rgb);\n        try testing.expectEqual(Cell.RGB{\n            .r = 0xFF,\n            .g = 0,\n            .b = 0,\n        }, list_cell.cell.content.color_rgb);\n    }\n}"
-}

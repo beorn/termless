@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: resize with left and right margin set",
-  "sourceLine": 13626,
-  "zigBody": "test \"Terminal: resize with left and right margin set\" {\n    const alloc = testing.allocator;\n    const cols = 70;\n    const rows = 23;\n    var t = try init(alloc, .{ .cols = cols, .rows = rows });\n    defer t.deinit(alloc);\n\n    t.modes.set(.enable_left_and_right_margin, true);\n    try t.print('0');\n    t.modes.set(.enable_mode_3, true);\n    try t.resize(alloc, cols, rows);\n    t.setLeftAndRightMargin(2, 0);\n    try t.printRepeat(1850);\n    _ = t.modes.restore(.enable_mode_3);\n    try t.resize(alloc, cols, rows);\n}"
-}

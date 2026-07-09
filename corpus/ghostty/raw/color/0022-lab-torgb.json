@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "LAB.toRgb",
-  "sourceLine": 1260,
-  "zigBody": "test \"LAB.toRgb\" {\n    const testing = std.testing;\n\n    // Round-trip: RGB -> LAB -> RGB should recover the original values.\n    const cases = [_]RGB{\n        .{ .r = 255, .g = 255, .b = 255 },\n        .{ .r = 0, .g = 0, .b = 0 },\n        .{ .r = 255, .g = 0, .b = 0 },\n        .{ .r = 0, .g = 128, .b = 0 },\n        .{ .r = 0, .g = 0, .b = 255 },\n        .{ .r = 128, .g = 128, .b = 128 },\n        .{ .r = 64, .g = 224, .b = 208 },\n    };\n\n    for (cases) |expected| {\n        const lab = LAB.fromRgb(expected);\n        const actual = lab.toRgb();\n        try testing.expectEqual(expected.r, actual.r);\n        try testing.expectEqual(expected.g, actual.g);\n        try testing.expectEqual(expected.b, actual.b);\n    }\n}"
-}

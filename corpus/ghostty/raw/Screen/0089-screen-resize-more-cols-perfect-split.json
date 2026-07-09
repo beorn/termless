@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize more cols perfect split",
-  "sourceLine": 6571,
-  "zigBody": "test \"Screen: resize more cols perfect split\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"1ABCD2EFGH3IJKL\";\n    try s.testWriteString(str);\n    try s.resize(.{ .cols = 10, .rows = 3 });\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"1ABCD2EFGH\\n3IJKL\", contents);\n    }\n}"
-}

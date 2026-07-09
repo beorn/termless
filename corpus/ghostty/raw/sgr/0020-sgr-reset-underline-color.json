@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: reset underline color",
-  "sourceLine": 819,
-  "zigBody": "test \"sgr: reset underline color\" {\n    var p: Parser = .{ .params = &[_]u16{59} };\n    try testing.expect(p.next().? == .reset_underline_color);\n}"
-}

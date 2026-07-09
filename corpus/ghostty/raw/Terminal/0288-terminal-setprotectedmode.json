@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: setProtectedMode",
-  "sourceLine": 11690,
-  "zigBody": "test \"Terminal: setProtectedMode\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try testing.expect(!t.screens.active.cursor.protected);\n    t.setProtectedMode(.off);\n    try testing.expect(!t.screens.active.cursor.protected);\n    t.setProtectedMode(.iso);\n    try testing.expect(t.screens.active.cursor.protected);\n    t.setProtectedMode(.dec);\n    try testing.expect(t.screens.active.cursor.protected);\n    t.setProtectedMode(.off);\n    try testing.expect(!t.screens.active.cursor.protected);\n}"
-}

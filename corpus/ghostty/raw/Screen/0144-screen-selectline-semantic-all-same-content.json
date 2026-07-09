@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: selectLine semantic all same content",
-  "sourceLine": 8787,
-  "zigBody": "test \"Screen: selectLine semantic all same content\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // All prompt content that soft-wraps\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"prompt text\");\n\n    // Verify soft-wrap\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"promp\\nt tex\\nt\", contents);\n    }\n\n    // Should select all prompt content across soft-wraps\n    {\n        var sel = s.selectLine(.{ .pin = s.pages.pin(.{ .active = .{\n            .x = 2,\n            .y = 1,\n        } }).? }).?;\n        defer sel.deinit(&s);\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"prompt text\", contents);\n    }\n}"
-}

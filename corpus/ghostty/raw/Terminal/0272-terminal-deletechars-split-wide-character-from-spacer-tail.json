@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteChars split wide character from spacer tail",
-  "sourceLine": 11241,
-  "zigBody": "test \"Terminal: deleteChars split wide character from spacer tail\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 6, .rows = 10 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"A橋123\");\n    t.setCursorPos(1, 3);\n    t.deleteChars(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"A 123\", str);\n    }\n}"
-}

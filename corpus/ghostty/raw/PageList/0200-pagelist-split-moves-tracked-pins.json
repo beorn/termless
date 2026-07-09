@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList split moves tracked pins",
-  "sourceLine": 14695,
-  "zigBody": "test \"PageList split moves tracked pins\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 10, 10, 0);\n    defer s.deinit();\n\n    // Track a pin at row 7\n    const tracked = try s.trackPin(.{ .node = s.pages.first.?, .y = 7, .x = 3 });\n    defer s.untrackPin(tracked);\n\n    // Split at row 5\n    const split_pin: Pin = .{ .node = s.pages.first.?, .y = 5, .x = 0 };\n    try s.split(split_pin);\n\n    // The tracked pin should now be in the second page\n    try testing.expect(tracked.node == s.pages.first.?.next.?);\n    // y should be adjusted: was 7, split at 5, so new y = 7 - 5 = 2\n    try testing.expectEqual(@as(usize, 2), tracked.y);\n    // x should remain unchanged\n    try testing.expectEqual(@as(usize, 3), tracked.x);\n}"
-}

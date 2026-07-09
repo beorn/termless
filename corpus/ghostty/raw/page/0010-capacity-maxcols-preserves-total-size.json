@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Capacity maxCols preserves total size",
-  "sourceLine": 2630,
-  "zigBody": "test \"Capacity maxCols preserves total size\" {\n    const cap = std_capacity;\n    const original_size = Page.layout(cap).total_size;\n    const max = cap.maxCols().?;\n    const adjusted = try cap.adjust(.{ .cols = max });\n    const adjusted_size = Page.layout(adjusted).total_size;\n    try testing.expectEqual(original_size, adjusted_size);\n}"
-}

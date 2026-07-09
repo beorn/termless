@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "linkCells",
-  "sourceLine": 1897,
-  "zigBody": "test \"linkCells\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 5,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n\n    // Create a hyperlink\n    s.nextSlice(\"\\x1b]8;;http://example.com\\x1b\\\\LINK\\x1b]8;;\\x1b\\\\\");\n    try state.update(alloc, &t);\n\n    // Query link at 0,0\n    var cells = try state.linkCells(alloc, .{ .x = 0, .y = 0 });\n    defer cells.deinit(alloc);\n\n    try testing.expectEqual(4, cells.count());\n    try testing.expect(cells.contains(.{ .x = 0, .y = 0 }));\n    try testing.expect(cells.contains(.{ .x = 1, .y = 0 }));\n    try testing.expect(cells.contains(.{ .x = 2, .y = 0 }));\n    try testing.expect(cells.contains(.{ .x = 3, .y = 0 }));\n\n    // Query no link\n    var cells2 = try state.linkCells(alloc, .{ .x = 4, .y = 0 });\n    defer cells2.deinit(alloc);\n    try testing.expectEqual(0, cells2.count());\n}"
-}

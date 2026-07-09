@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList increaseCapacity preserves dirty flag",
-  "sourceLine": 7921,
-  "zigBody": "test \"PageList increaseCapacity preserves dirty flag\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 2, 4, 0);\n    defer s.deinit();\n\n    // Set page dirty flag and mark some rows as dirty\n    const page = &s.pages.first.?.data;\n    page.dirty = true;\n\n    const rows = page.rows.ptr(page.memory);\n    rows[0].dirty = true;\n    rows[1].dirty = false;\n    rows[2].dirty = true;\n    rows[3].dirty = false;\n\n    // Increase capacity\n    const new_node = try s.increaseCapacity(s.pages.first.?, .styles);\n\n    // The page dirty flag should be preserved\n    try testing.expect(new_node.data.dirty);\n\n    // Row dirty flags should be preserved\n    const new_rows = new_node.data.rows.ptr(new_node.data.memory);\n    try testing.expect(new_rows[0].dirty);\n    try testing.expect(!new_rows[1].dirty);\n    try testing.expect(new_rows[2].dirty);\n    try testing.expect(!new_rows[3].dirty);\n}"
-}

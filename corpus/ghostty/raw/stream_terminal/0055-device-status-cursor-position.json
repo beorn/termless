@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "device status: cursor position",
-  "sourceLine": 2070,
-  "zigBody": "test \"device status: cursor position\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (written) |old| testing.allocator.free(old);\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.written = null;\n    defer if (S.written) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Default position is 0,0 — reported as 1,1\n    s.nextSlice(\"\\x1B[6n\");\n    try testing.expectEqualStrings(\"\\x1B[1;1R\", S.written.?);\n\n    // Move cursor to row 5, col 10\n    s.nextSlice(\"\\x1B[5;10H\");\n    s.nextSlice(\"\\x1B[6n\");\n    try testing.expectEqualStrings(\"\\x1B[5;10R\", S.written.?);\n}"
-}

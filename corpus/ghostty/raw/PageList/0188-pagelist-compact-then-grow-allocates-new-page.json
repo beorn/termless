@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList compact then grow allocates new page",
-  "sourceLine": 14285,
-  "zigBody": "test \"PageList compact then grow allocates new page\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // Compact the only page. It now has no spare row capacity.\n    const node = (try s.compact(s.pages.first.?)).?;\n    try testing.expectEqual(node.data.size.rows, node.data.capacity.rows);\n\n    // Growing must allocate a fresh standard page from the pool,\n    // exercising that a compacted page remains a valid live page.\n    _ = try s.grow();\n    try testing.expect(s.pages.first != s.pages.last);\n    try testing.expectEqual(.pool, s.pages.last.?.owned);\n    try testing.expectEqual(@as(usize, 25), s.totalRows());\n}"
-}

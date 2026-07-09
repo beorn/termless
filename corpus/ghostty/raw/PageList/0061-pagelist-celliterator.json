@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList cellIterator",
-  "sourceLine": 8134,
-  "zigBody": "test \"PageList cellIterator\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 2, 2, 0);\n    defer s.deinit();\n    try testing.expect(s.pages.first == s.pages.last);\n    const page = &s.pages.first.?.data;\n    for (0..s.rows) |y| {\n        for (0..s.cols) |x| {\n            const rac = page.getRowAndCell(x, y);\n            rac.cell.* = .{\n                .content_tag = .codepoint,\n                .content = .{ .codepoint = @intCast(x) },\n            };\n        }\n    }\n\n    var it = s.cellIterator(.right_down, .{ .screen = .{} }, null);\n    {\n        const p = it.next().?;\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 0,\n        } }, s.pointFromPin(.screen, p).?);\n    }\n    {\n        const p = it.next().?;\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 1,\n            .y = 0,\n        } }, s.pointFromPin(.screen, p).?);\n    }\n    {\n        const p = it.next().?;\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 1,\n        } }, s.pointFromPin(.screen, p).?);\n    }\n    {\n        const p = it.next().?;\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 1,\n            .y = 1,\n        } }, s.pointFromPin(.screen, p).?);\n    }\n    try testing.expect(it.next() == null);\n}"
-}

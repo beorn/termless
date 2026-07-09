@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "csi: ESC [ 1 ; 4 H",
-  "sourceLine": 478,
-  "zigBody": "test \"csi: ESC [ 1 ; 4 H\" {\n    var p = init();\n    _ = p.next(0x1B);\n    _ = p.next(0x5B);\n    _ = p.next(0x31); // 1\n    _ = p.next(0x3B); // ;\n    _ = p.next(0x34); // 4\n\n    {\n        const a = p.next(0x48); // H\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.csi_dispatch;\n        try testing.expect(d.final == 'H');\n        try testing.expect(d.params.len == 2);\n        try testing.expectEqual(@as(u16, 1), d.params[0]);\n        try testing.expectEqual(@as(u16, 4), d.params[1]);\n    }\n}"
-}

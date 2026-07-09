@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList erase a one-row active",
-  "sourceLine": 9795,
-  "zigBody": "test \"PageList erase a one-row active\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 10, 1, null);\n    defer s.deinit();\n    try testing.expectEqual(@as(usize, 1), s.totalPages());\n\n    // Write our letter\n    const page = &s.pages.first.?.data;\n    for (0..s.rows) |y| {\n        const rac = page.getRowAndCell(0, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = 'A' },\n        };\n    }\n\n    s.eraseActive(0);\n    try testing.expectEqual(s.rows, s.total_rows);\n\n    // The row should be empty\n    {\n        const get = s.getCell(.{ .active = .{ .x = 0, .y = 0 } }).?;\n        try testing.expectEqual(@as(u21, 0), get.cell.content.codepoint);\n    }\n}"
-}

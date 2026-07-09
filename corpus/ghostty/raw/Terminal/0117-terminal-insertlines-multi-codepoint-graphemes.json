@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: insertLines multi-codepoint graphemes",
-  "sourceLine": 7045,
-  "zigBody": "test \"Terminal: insertLines multi-codepoint graphemes\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    // Disable grapheme clustering\n    t.modes.set(.grapheme_cluster, true);\n\n    try t.printString(\"ABC\");\n    t.carriageReturn();\n    try t.linefeed();\n\n    // This is: 👨‍👩‍👧 (which may or may not render correctly)\n    try t.print(0x1F468);\n    try t.print(0x200D);\n    try t.print(0x1F469);\n    try t.print(0x200D);\n    try t.print(0x1F467);\n\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GHI\");\n    t.setCursorPos(2, 2);\n    t.insertLines(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABC\\n\\n👨‍👩‍👧\\nGHI\", str);\n    }\n}"
-}

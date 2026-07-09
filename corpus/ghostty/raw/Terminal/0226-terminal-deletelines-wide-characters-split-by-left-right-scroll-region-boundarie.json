@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteLines wide characters split by left/right scroll region boundaries",
-  "sourceLine": 10174,
-  "zigBody": "test \"Terminal: deleteLines wide characters split by left/right scroll region boundaries\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 2 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    // +-----+\n    // |AAAAA|\n    // |WWBWW|\n    // +-----+\n    // where WW represents a wide character\n    try t.printString(\"AAAAA\\n\\u{1F600}B\\u{1F600}\");\n\n    t.scrolling_region.right = 3;\n    t.scrolling_region.left = 1;\n\n    // Delete the top line\n    //   ###   <- scrolling region\n    // +-----+\n    // |A B A|\n    // |     |\n    // +-----+\n    // The two wide chars, because they're\n    // split by the edge of the scrolling\n    // region, get removed.\n    t.setCursorPos(1, 2);\n    t.deleteLines(1);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"A B A\", str);\n    }\n}"
-}

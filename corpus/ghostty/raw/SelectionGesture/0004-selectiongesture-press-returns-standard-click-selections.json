@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "SelectionGesture.zig",
-  "testName": "SelectionGesture press returns standard click selections",
-  "sourceLine": 1412,
-  "zigBody": "test \"SelectionGesture press returns standard click selections\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(testing.allocator);\n    try t.printString(\"alpha beta\\none two\");\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    var event = testPress(&t, 1, 0, time);\n    event.word_boundary_codepoints = &.{ ' ' };\n\n    try testing.expectEqual(null, try gesture.press(&t, event));\n\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 4, 0),\n        false,\n    ), (try gesture.press(&t, event)).?);\n\n    try testing.expectEqualDeep(Selection.init(\n        testPin(&t, 0, 0),\n        testPin(&t, 9, 0),\n        false,\n    ), (try gesture.press(&t, event)).?);\n}"
-}

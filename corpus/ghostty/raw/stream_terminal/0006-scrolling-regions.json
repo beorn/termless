@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "scrolling regions",
-  "sourceLine": 914,
-  "zigBody": "test \"scrolling regions\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set scrolling region from line 5 to 20\n    s.nextSlice(\"\\x1B[5;20r\");\n    try testing.expectEqual(@as(usize, 4), t.scrolling_region.top);\n    try testing.expectEqual(@as(usize, 19), t.scrolling_region.bottom);\n    try testing.expectEqual(@as(usize, 0), t.scrolling_region.left);\n    try testing.expectEqual(@as(usize, 79), t.scrolling_region.right);\n}"
-}

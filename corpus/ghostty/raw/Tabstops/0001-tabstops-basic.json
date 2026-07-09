@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Tabstops.zig",
-  "testName": "Tabstops: basic",
-  "sourceLine": 181,
-  "zigBody": "test \"Tabstops: basic\" {\n    var t: Tabstops = .{};\n    defer t.deinit(testing.allocator);\n    try testing.expectEqual(@as(usize, 0), entry(4));\n    try testing.expectEqual(@as(usize, 1), entry(8));\n    try testing.expectEqual(@as(usize, 0), index(0));\n    try testing.expectEqual(@as(usize, 1), index(1));\n    try testing.expectEqual(@as(usize, 1), index(9));\n\n    try testing.expectEqual(@as(Unit, 0b00001000), masks[3]);\n    try testing.expectEqual(@as(Unit, 0b00010000), masks[4]);\n\n    try testing.expect(!t.get(4));\n    t.set(4);\n    try testing.expect(t.get(4));\n    try testing.expect(!t.get(3));\n\n    t.reset(0);\n    try testing.expect(!t.get(4));\n\n    t.set(4);\n    try testing.expect(t.get(4));\n    t.unset(4);\n    try testing.expect(!t.get(4));\n}"
-}

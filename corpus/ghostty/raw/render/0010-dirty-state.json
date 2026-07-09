@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "dirty state",
-  "sourceLine": 1740,
-  "zigBody": "test \"dirty state\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 5,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n\n    // First update should trigger redraw due to resize\n    try state.update(alloc, &t);\n    try testing.expectEqual(.full, state.dirty);\n\n    // Reset dirty flag and dirty rows\n    state.dirty = .false;\n    {\n        const row_data = state.row_data.slice();\n        const dirty = row_data.items(.dirty);\n        @memset(dirty, false);\n    }\n\n    // Second update with no changes - no dirty rows\n    try state.update(alloc, &t);\n    try testing.expectEqual(.false, state.dirty);\n    {\n        const row_data = state.row_data.slice();\n        const dirty = row_data.items(.dirty);\n        for (dirty) |d| try testing.expect(!d);\n    }\n\n    // Write to first line\n    s.nextSlice(\"A\");\n    try state.update(alloc, &t);\n    try testing.expectEqual(.partial, state.dirty);\n    {\n        const row_data = state.row_data.slice();\n        const dirty = row_data.items(.dirty);\n        try testing.expect(dirty[0]); // First row dirty\n        try testing.expect(!dirty[1]); // Second row clean\n    }\n}"
-}

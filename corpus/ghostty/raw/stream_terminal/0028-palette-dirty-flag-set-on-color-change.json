@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "palette dirty flag set on color change",
-  "sourceLine": 1409,
-  "zigBody": "test \"palette dirty flag set on color change\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Clear dirty flag\n    t.flags.dirty.palette = false;\n\n    // Setting palette color should set dirty flag\n    s.nextSlice(\"\\x1b]4;0;rgb:ff/00/00\\x1b\\\\\");\n    try testing.expect(t.flags.dirty.palette);\n\n    // Clear and test reset\n    t.flags.dirty.palette = false;\n    s.nextSlice(\"\\x1b]104;0\\x1b\\\\\");\n    try testing.expect(t.flags.dirty.palette);\n\n    // Clear and test kitty protocol\n    t.flags.dirty.palette = false;\n    s.nextSlice(\"\\x1b]21;1=rgb:00/ff/00\\x1b\\\\\");\n    try testing.expect(t.flags.dirty.palette);\n}"
-}

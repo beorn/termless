@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen read and write no scrollback large",
-  "sourceLine": 3600,
-  "zigBody": "test \"Screen read and write no scrollback large\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 80, .rows = 2, .max_scrollback = 0 });\n    defer s.deinit();\n\n    for (0..1_000) |i| {\n        var buf: [128]u8 = undefined;\n        const str = try std.fmt.bufPrint(&buf, \"{}\\n\", .{i});\n        try s.testWriteString(str);\n    }\n    try s.testWriteString(\"1000\");\n\n    {\n        const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"999\\n1000\", str);\n    }\n}"
-}

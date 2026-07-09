@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "device_status.zig",
-  "testName": "encode color scheme report dark",
-  "sourceLine": 102,
-  "zigBody": "test \"encode color scheme report dark\" {\n    try std.testing.expectEqual(@as(usize, 9), max_color_scheme_report_encode_size);\n\n    var buf: [max_color_scheme_report_encode_size]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    try encodeColorSchemeReport(&writer, .dark);\n    try std.testing.expectEqualStrings(\"\\x1B[?997;1n\", writer.buffered());\n}"
-}

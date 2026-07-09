@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: setTopAndBottomMargin simple",
-  "sourceLine": 6398,
-  "zigBody": "test \"Terminal: setTopAndBottomMargin simple\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"ABC\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DEF\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"GHI\");\n    t.setTopAndBottomMargin(0, 0);\n\n    t.clearDirty();\n    t.scrollDown(1);\n\n    // Mark the rows we moved as dirty.\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 2 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 3 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\nABC\\nDEF\\nGHI\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: zero-width character attaches to pending wrap cell",
-  "sourceLine": 3872,
-  "zigBody": "test \"Terminal: zero-width character attaches to pending wrap cell\" {\n    var t = try init(testing.allocator, .{ .cols = 2, .rows = 2 });\n    defer t.deinit(testing.allocator);\n\n    // Disable grapheme clustering to exercise the fallback path.\n    t.modes.set(.grapheme_cluster, false);\n\n    try t.print('x');\n    try t.print('å');\n    try t.print(0x0332); // Combining low line.\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"xå̲\", str);\n}"
-}

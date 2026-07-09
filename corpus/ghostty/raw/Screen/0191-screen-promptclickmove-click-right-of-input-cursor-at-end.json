@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: promptClickMove click right of input cursor at end",
-  "sourceLine": 10821,
-  "zigBody": "test \"Screen: promptClickMove click right of input cursor at end\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 20, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Enable line click mode\n    s.semantic_prompt.click = .{ .cl = .line };\n\n    // Write a prompt and input\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"hello\");\n\n    // Cursor is already at column 7 (one past 'o') after writing\n    // Click beyond the input (column 15) - no movement needed since\n    // cursor is already at the end position\n    const click_pin = s.pages.pin(.{ .active = .{ .x = 15, .y = 0 } }).?;\n    const result = s.promptClickMove(click_pin);\n\n    try testing.expectEqual(@as(usize, 0), result.right);\n    try testing.expectEqual(@as(usize, 0), result.left);\n}"
-}

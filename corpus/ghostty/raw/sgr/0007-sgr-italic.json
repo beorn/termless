@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: italic",
-  "sourceLine": 615,
-  "zigBody": "test \"sgr: italic\" {\n    {\n        const v = testParse(&[_]u16{3});\n        try testing.expect(v == .italic);\n    }\n\n    {\n        const v = testParse(&[_]u16{23});\n        try testing.expect(v == .reset_italic);\n    }\n}"
-}

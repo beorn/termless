@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: direct fg colon with too many colons",
-  "sourceLine": 928,
-  "zigBody": "test \"sgr: direct fg colon with too many colons\" {\n    var p: Parser = .{\n        .params = &[_]u16{ 38, 2, 0, 1, 2, 3, 4, 1 },\n        .params_sep = sep: {\n            var list = SepList.initEmpty();\n            for (0..6) |idx| list.set(idx);\n            break :sep list;\n        },\n    };\n\n    try testing.expect(p.next().? == .unknown);\n    try testing.expect(p.next().? == .bold);\n    try testing.expect(p.next() == null);\n}"
-}

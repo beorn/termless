@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: index in input mode does not mark new row as prompt",
-  "sourceLine": 13146,
-  "zigBody": "test \"Terminal: index in input mode does not mark new row as prompt\" {\n    // Input mode should NOT trigger prompt continuation on newline\n    // (only prompt mode does, not input mode)\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Start a prompt then switch to input\n    try t.semanticPrompt(.init(.prompt_start));\n    for (\"$ \") |c| try t.print(c);\n    try t.semanticPrompt(.init(.end_prompt_start_input));\n    for (\"echo \\\\\") |c| try t.print(c);\n\n    // Linefeed while in input mode\n    t.carriageReturn();\n    try t.linefeed();\n\n    // The new row should be marked as prompt continuation\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 1,\n        } }).?;\n        try testing.expectEqual(.prompt_continuation, list_cell.row.semantic_prompt);\n    }\n\n    // Our cursor should still be in input\n    try testing.expectEqual(.input, t.screens.active.cursor.semantic_content);\n}"
-}

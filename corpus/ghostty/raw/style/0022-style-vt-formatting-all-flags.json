@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "style.zig",
-  "testName": "Style VT formatting all flags",
-  "sourceLine": 797,
-  "zigBody": "test \"Style VT formatting all flags\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .flags = .{\n        .bold = true,\n        .faint = true,\n        .italic = true,\n        .blink = true,\n        .inverse = true,\n        .invisible = true,\n        .strikethrough = true,\n        .overline = true,\n        .underline = .curly,\n    } };\n    try builder.writer.print(\"{f}\", .{style.formatterVt()});\n    try testing.expectEqualStrings(\n        \"\\x1b[0m\\x1b[1m\\x1b[2m\\x1b[3m\\x1b[5m\\x1b[7m\\x1b[8m\\x1b[9m\\x1b[53m\\x1b[4:3m\",\n        builder.writer.buffered(),\n    );\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList split tracked pin before split point unchanged",
-  "sourceLine": 14718,
-  "zigBody": "test \"PageList split tracked pin before split point unchanged\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 10, 10, 0);\n    defer s.deinit();\n\n    const original_node = s.pages.first.?;\n\n    // Track a pin at row 2 (before the split point)\n    const tracked = try s.trackPin(.{ .node = original_node, .y = 2, .x = 5 });\n    defer s.untrackPin(tracked);\n\n    // Split at row 5\n    const split_pin: Pin = .{ .node = original_node, .y = 5, .x = 0 };\n    try s.split(split_pin);\n\n    // The tracked pin should remain in the original page\n    try testing.expect(tracked.node == s.pages.first.?);\n    // y and x should be unchanged\n    try testing.expectEqual(@as(usize, 2), tracked.y);\n    try testing.expectEqual(@as(usize, 5), tracked.x);\n}"
-}

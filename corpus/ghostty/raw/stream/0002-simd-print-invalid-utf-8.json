@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "simd: print invalid utf-8",
-  "sourceLine": 2717,
-  "zigBody": "test \"simd: print invalid utf-8\" {\n    const H = struct {\n        c: ?u21 = 0,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            switch (action) {\n                .print => self.c = value.cp,\n                .print_slice => self.c = @intCast(value.cps[value.cps.len - 1]),\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(&.{0xFF});\n    try testing.expectEqual(@as(u21, 0xFFFD), s.handler.c.?);\n}"
-}

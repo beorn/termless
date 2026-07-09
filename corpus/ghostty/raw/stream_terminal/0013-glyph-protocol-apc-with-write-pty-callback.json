@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "glyph protocol APC with write_pty callback",
-  "sourceLine": 1061,
-  "zigBody": "test \"glyph protocol APC with write_pty callback\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var last_response: ?[:0]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (last_response) |old| testing.allocator.free(old);\n            last_response = testing.allocator.dupeZ(u8, data) catch @panic(\"OOM\");\n        }\n    };\n    S.last_response = null;\n    defer if (S.last_response) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    s.nextSlice(\"\\x1B_25a1;s\\x1B\\\\\");\n    try testing.expectEqualStrings(\"\\x1B_25a1;s;fmt=glyf\\x1B\\\\\", S.last_response.?);\n\n    s.nextSlice(\"\\x1B_25a1;r;cp=e0a0;AAAAAAAAAAAAAA==\\x1B\\\\\");\n    try testing.expectEqualStrings(\"\\x1B_25a1;r;cp=e0a0;status=0\\x1B\\\\\", S.last_response.?);\n    try testing.expect(t.glyph_glossary.contains(0xE0A0));\n}"
-}

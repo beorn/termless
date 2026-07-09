@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page verifyIntegrity zero cols",
-  "sourceLine": 3688,
-  "zigBody": "test \"Page verifyIntegrity zero cols\" {\n    // Too slow, and not really necessary because the integrity tests are\n    // only run in debug builds and unit tests verify they work well enough.\n    if (std.valgrind.runningOnValgrind() > 0) return error.SkipZigTest;\n\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n    page.size.cols = 0;\n    try testing.expectError(\n        Page.IntegrityError.ZeroColCount,\n        page.verifyIntegrity(testing.allocator),\n    );\n}"
-}

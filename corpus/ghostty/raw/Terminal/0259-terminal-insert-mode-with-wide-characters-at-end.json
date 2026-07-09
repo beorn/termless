@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: insert mode with wide characters at end",
-  "sourceLine": 10971,
-  "zigBody": "test \"Terminal: insert mode with wide characters at end\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 2 });\n    defer t.deinit(alloc);\n\n    for (\"well\") |c| try t.print(c);\n    t.modes.set(.insert, true);\n    try t.print('😀'); // 0x1F600\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"well\\n😀\", str);\n    }\n}"
-}

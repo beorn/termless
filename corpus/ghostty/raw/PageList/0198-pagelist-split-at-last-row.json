@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList split at last row",
-  "sourceLine": 14642,
-  "zigBody": "test \"PageList split at last row\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 10, 10, 0);\n    defer s.deinit();\n\n    const page = &s.pages.first.?.data;\n\n    // Write content to all rows\n    for (0..page.size.rows) |y| {\n        const rac = page.getRowAndCell(0, y);\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(y) },\n        };\n    }\n\n    // Split at last row (row 9)\n    const split_pin: Pin = .{ .node = s.pages.first.?, .y = 9, .x = 0 };\n    try s.split(split_pin);\n\n    // Verify two pages exist\n    try testing.expect(s.pages.first != null);\n    try testing.expect(s.pages.first.?.next != null);\n\n    const first_page = &s.pages.first.?.data;\n    const second_page = &s.pages.first.?.next.?.data;\n\n    // First page should have 9 rows\n    try testing.expectEqual(@as(usize, 9), first_page.size.rows);\n    // Second page should have 1 row\n    try testing.expectEqual(@as(usize, 1), second_page.size.rows);\n\n    // Verify content in second page (original row 9, now at y=0)\n    const rac = second_page.getRowAndCell(0, 0);\n    try testing.expectEqual(@as(u21, 9), rac.cell.content.codepoint);\n}"
-}

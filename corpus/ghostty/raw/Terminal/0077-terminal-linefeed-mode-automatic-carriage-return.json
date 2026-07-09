@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: linefeed mode automatic carriage return",
-  "sourceLine": 6040,
-  "zigBody": "test \"Terminal: linefeed mode automatic carriage return\" {\n    var t = try init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    // Basic grid writing\n    t.modes.set(.linefeed, true);\n    try t.printString(\"123456\");\n    try t.linefeed();\n    try t.print('X');\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"123456\\nX\", str);\n    }\n}"
-}

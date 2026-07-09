@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "device status: color scheme light",
-  "sourceLine": 2161,
-  "zigBody": "test \"device status: color scheme light\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (written) |old| testing.allocator.free(old);\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n        fn colorScheme(_: *Handler) ?device_status.ColorScheme {\n            return .light;\n        }\n    };\n    S.written = null;\n    defer if (S.written) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.color_scheme = &S.colorScheme;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // CSI ? 996 n — color scheme query\n    s.nextSlice(\"\\x1B[?996n\");\n    try testing.expectEqualStrings(\"\\x1B[?997;2n\", S.written.?);\n}"
-}

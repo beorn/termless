@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList resize reflow less cols no reflow preserves semantic prompt",
-  "sourceLine": 12611,
-  "zigBody": "test \"PageList resize reflow less cols no reflow preserves semantic prompt\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 4, 4, 0);\n    defer s.deinit();\n    {\n        try testing.expect(s.pages.first == s.pages.last);\n        const page = &s.pages.first.?.data;\n        {\n            const rac = page.getRowAndCell(0, 1);\n            rac.row.semantic_prompt = .prompt;\n        }\n        for (0..s.cols) |x| {\n            const rac = page.getRowAndCell(x, 1);\n            rac.cell.* = .{\n                .content_tag = .codepoint,\n                .content = .{ .codepoint = @intCast(x) },\n            };\n        }\n    }\n\n    // Resize\n    try s.resize(.{ .cols = 2, .reflow = true });\n    try testing.expectEqual(@as(usize, 2), s.cols);\n    try testing.expectEqual(@as(usize, 4), s.totalRows());\n\n    {\n        try testing.expect(s.pages.first == s.pages.last);\n        {\n            const p = s.pin(.{ .active = .{ .y = 1 } }).?;\n            const rac = p.rowAndCell();\n            try testing.expect(rac.row.wrap);\n            try testing.expect(rac.row.semantic_prompt == .prompt);\n        }\n        {\n            const p = s.pin(.{ .active = .{ .y = 2 } }).?;\n            const rac = p.rowAndCell();\n            try testing.expect(rac.row.semantic_prompt == .prompt);\n        }\n    }\n}"
-}

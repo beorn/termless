@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteChars more than half",
-  "sourceLine": 11043,
-  "zigBody": "test \"Terminal: deleteChars more than half\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    t.setCursorPos(1, 2);\n\n    t.clearDirty();\n    t.deleteChars(3);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AE\", str);\n    }\n}"
-}

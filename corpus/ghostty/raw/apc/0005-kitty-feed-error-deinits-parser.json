@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "kitty feed error deinits parser",
-  "sourceLine": 279,
-  "zigBody": "test \"kitty feed error deinits parser\" {\n    if (comptime !build_options.kitty_graphics) return error.SkipZigTest;\n\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // Feed a valid kitty command start to allocate parser state, then\n    // trigger an error during feed via an integer overflow. The testing\n    // allocator will detect leaks if deinit is not called.\n    var h: Handler = .{};\n    defer h.deinit();\n    h.start();\n    for (\"Ga=p,i=10000000000;\") |c| h.feed(alloc, c);\n    try testing.expect(h.state == .ignore);\n}"
-}

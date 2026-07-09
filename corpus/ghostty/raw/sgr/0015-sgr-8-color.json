@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: 8 color",
-  "sourceLine": 750,
-  "zigBody": "test \"sgr: 8 color\" {\n    var p: Parser = .{ .params = &[_]u16{ 31, 43, 90, 103 } };\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .@\"8_fg\");\n        try testing.expect(v.@\"8_fg\" == .red);\n    }\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .@\"8_bg\");\n        try testing.expect(v.@\"8_bg\" == .yellow);\n    }\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .@\"8_bright_fg\");\n        try testing.expect(v.@\"8_bright_fg\" == .bright_black);\n    }\n\n    {\n        const v = p.next().?;\n        try testing.expect(v == .@\"8_bright_bg\");\n        try testing.expect(v.@\"8_bright_bg\" == .bright_yellow);\n    }\n}"
-}

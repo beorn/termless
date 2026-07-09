@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: cursorScrollRegionUp moves selection",
-  "sourceLine": 4816,
-  "zigBody": "test \"Screen: cursorScrollRegionUp moves selection\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\\n4MNOP\\n5QRST\");\n\n    // Select the second row.\n    try s.select(Selection.init(\n        s.pages.pin(.{ .active = .{ .x = 0, .y = 1 } }).?,\n        s.pages.pin(.{ .active = .{ .x = s.pages.cols - 1, .y = 1 } }).?,\n        false,\n    ));\n\n    s.cursorAbsolute(0, 2);\n    try s.cursorScrollRegionUp(2);\n\n    // Our selection should've moved up with its row.\n    {\n        const sel = s.selection.?;\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 0,\n            .y = 0,\n        } }, s.pages.pointFromPin(.active, sel.start()).?);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = s.pages.cols - 1,\n            .y = 0,\n        } }, s.pages.pointFromPin(.active, sel.end()).?);\n    }\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"2EFGH\\n3IJKL\\n\\n4MNOP\\n5QRST\", contents);\n    }\n}"
-}

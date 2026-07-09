@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: input with no control characters",
-  "sourceLine": 3746,
-  "zigBody": "test \"Terminal: input with no control characters\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 40, .rows = 40 });\n    defer t.deinit(alloc);\n\n    // Basic grid writing\n    for (\"hello\") |c| try t.print(c);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 5), t.screens.active.cursor.x);\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"hello\", str);\n    }\n\n    // The first row should be dirty\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 5, .y = 0 } }));\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 5, .y = 1 } }));\n}"
-}

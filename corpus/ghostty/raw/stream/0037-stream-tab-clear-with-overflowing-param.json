@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: tab clear with overflowing param",
-  "sourceLine": 3738,
-  "zigBody": "test \"stream: tab clear with overflowing param\" {\n    // Regression test for a fuzz crash: CSI with a parameter value that\n    // saturates to 65535 (u16 max) causes @enumFromInt to panic when\n    // converting to TabClear (enum(u8)).\n    const H = struct {\n        called: bool = false,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Action.Tag,\n            value: Action.Value(action),\n        ) void {\n            _ = value;\n            switch (action) {\n                .tab_clear_current, .tab_clear_all => self.called = true,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    // This is the exact input from the fuzz crash (minus the mode byte):\n    // CSI with a huge numeric param that saturates to 65535, followed by 'g'.\n    s.nextSlice(\"\\x1b[388888888888888888888888888888888888g\\x1b[0m\");\n}"
-}

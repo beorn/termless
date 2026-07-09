@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "identify buffer overflow",
-  "sourceLine": 340,
-  "zigBody": "test \"identify buffer overflow\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    h.start();\n    for (\"abcde;payload\") |c| h.feed(alloc, c);\n    try testing.expect(h.end() == null);\n}"
-}

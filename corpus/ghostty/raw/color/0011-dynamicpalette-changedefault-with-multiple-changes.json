@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "DynamicPalette: changeDefault with multiple changes",
-  "sourceLine": 1037,
-  "zigBody": "test \"DynamicPalette: changeDefault with multiple changes\" {\n    const testing = std.testing;\n\n    var p: DynamicPalette = .init(default);\n    const red = RGB{ .r = 255, .g = 0, .b = 0 };\n    const green = RGB{ .r = 0, .g = 255, .b = 0 };\n    const blue = RGB{ .r = 0, .g = 0, .b = 255 };\n\n    p.set(1, red);\n    p.set(2, green);\n    p.set(3, blue);\n\n    var new_palette = default;\n    new_palette[0] = RGB{ .r = 50, .g = 50, .b = 50 };\n    new_palette[1] = RGB{ .r = 60, .g = 60, .b = 60 };\n\n    p.changeDefault(new_palette);\n\n    try testing.expectEqual(new_palette[0], p.current[0]);\n    try testing.expectEqual(red, p.current[1]);\n    try testing.expectEqual(green, p.current[2]);\n    try testing.expectEqual(blue, p.current[3]);\n    try testing.expectEqual(@as(usize, 3), p.mask.count());\n}"
-}

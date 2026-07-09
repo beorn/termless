@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: bold style",
-  "sourceLine": 10234,
-  "zigBody": "test \"Terminal: bold style\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .bold = {} });\n    try t.print('A');\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'A'), cell.content.codepoint);\n        try testing.expect(cell.style_id != 0);\n        const page = &t.screens.active.cursor.page_pin.node.data;\n        try testing.expect(page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 1);\n    }\n}"
-}

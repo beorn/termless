@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "cursor save and restore",
-  "sourceLine": 972,
-  "zigBody": "test \"cursor save and restore\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Move cursor to 10,15\n    s.nextSlice(\"\\x1B[10;15H\");\n    try testing.expectEqual(@as(usize, 14), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 9), t.screens.active.cursor.y);\n\n    // Save cursor\n    s.nextSlice(\"\\x1B7\");\n\n    // Move cursor elsewhere\n    s.nextSlice(\"\\x1B[1;1H\");\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n\n    // Restore cursor\n    s.nextSlice(\"\\x1B8\");\n    try testing.expectEqual(@as(usize, 14), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 9), t.screens.active.cursor.y);\n}"
-}

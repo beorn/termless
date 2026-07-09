@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: selectionString, rectangle, w/EOL",
-  "sourceLine": 9640,
-  "zigBody": "test \"Screen: selectionString, rectangle, w/EOL\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 30, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n    const str =\n        \\\\Lorem ipsum dolor\n        \\\\sit amet, consectetur\n        \\\\adipiscing elit, sed do\n        \\\\eiusmod tempor incididunt\n        \\\\ut labore et dolore\n    ;\n    const sel = Selection.init(\n        s.pages.pin(.{ .screen = .{ .x = 12, .y = 0 } }).?,\n        s.pages.pin(.{ .screen = .{ .x = 26, .y = 4 } }).?,\n        true,\n    );\n    const expected =\n        \\\\dolor\n        \\\\nsectetur\n        \\\\lit, sed do\n        \\\\or incididunt\n        \\\\ dolore\n    ;\n    try s.testWriteString(str);\n\n    const contents = try s.selectionString(alloc, .{\n        .sel = sel,\n        .trim = true,\n    });\n    defer alloc.free(contents);\n    try testing.expectEqualStrings(expected, contents);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize (no reflow) more rows with soft wrapping",
-  "sourceLine": 6402,
-  "zigBody": "test \"Screen: resize (no reflow) more rows with soft wrapping\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 2, .rows = 3, .max_scrollback = 3 });\n    defer s.deinit();\n    const str = \"1A2B\\n3C4E\\n5F6G\";\n    try s.testWriteString(str);\n\n    // Every second row should be wrapped\n    for (0..6) |y| {\n        const list_cell = s.pages.getCell(.{ .screen = .{\n            .x = 0,\n            .y = @intCast(y),\n        } }).?;\n        const row = list_cell.row;\n        const wrapped = (y % 2 == 0);\n        try testing.expectEqual(wrapped, row.wrap);\n    }\n\n    // Resize\n    try s.resize(.{ .cols = 2, .rows = 10, .reflow = false });\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        const expected = \"1A\\n2B\\n3C\\n4E\\n5F\\n6G\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    // Every second row should be wrapped\n    for (0..6) |y| {\n        const list_cell = s.pages.getCell(.{ .screen = .{\n            .x = 0,\n            .y = @intCast(y),\n        } }).?;\n        const row = list_cell.row;\n        const wrapped = (y % 2 == 0);\n        try testing.expectEqual(wrapped, row.wrap);\n    }\n}"
-}

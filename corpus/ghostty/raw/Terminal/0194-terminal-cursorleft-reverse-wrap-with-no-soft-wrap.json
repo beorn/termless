@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: cursorLeft reverse wrap with no soft wrap",
-  "sourceLine": 9282,
-  "zigBody": "test \"Terminal: cursorLeft reverse wrap with no soft wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.wraparound, true);\n    t.modes.set(.reverse_wrap, true);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('1');\n    t.cursorLeft(2);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABCDE\\nX\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: saveCursor protected pen",
-  "sourceLine": 11605,
-  "zigBody": "test \"Terminal: saveCursor protected pen\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    t.setProtectedMode(.iso);\n    try testing.expect(t.screens.active.cursor.protected);\n    t.setCursorPos(1, 10);\n    t.saveCursor();\n    t.setProtectedMode(.off);\n    try testing.expect(!t.screens.active.cursor.protected);\n    t.restoreCursor();\n    try testing.expect(t.screens.active.cursor.protected);\n}"
-}

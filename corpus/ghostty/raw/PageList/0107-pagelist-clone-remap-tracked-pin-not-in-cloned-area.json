@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList clone remap tracked pin not in cloned area",
-  "sourceLine": 10151,
-  "zigBody": "test \"PageList clone remap tracked pin not in cloned area\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n    try testing.expectEqual(@as(usize, s.rows), s.totalRows());\n\n    // Put a tracked pin in the screen\n    const p = try s.trackPin(s.pin(.{ .active = .{ .x = 0, .y = 3 } }).?);\n    defer s.untrackPin(p);\n\n    var pin_remap = Clone.TrackedPinsRemap.init(alloc);\n    defer pin_remap.deinit();\n    var s2 = try s.clone(alloc, .{\n        .top = .{ .active = .{ .y = 5 } },\n        .tracked_pins = &pin_remap,\n    });\n    defer s2.deinit();\n\n    // We should be able to find our tracked pin\n    try testing.expect(pin_remap.get(p) == null);\n}"
-}

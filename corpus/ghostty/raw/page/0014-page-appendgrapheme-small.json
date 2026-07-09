@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page appendGrapheme small",
-  "sourceLine": 2678,
-  "zigBody": "test \"Page appendGrapheme small\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    const rac = page.getRowAndCell(0, 0);\n    rac.cell.* = .init(0x09);\n\n    // One\n    try page.appendGrapheme(rac.row, rac.cell, 0x0A);\n    try testing.expect(rac.row.grapheme);\n    try testing.expect(rac.cell.hasGrapheme());\n    try testing.expectEqualSlices(u21, &.{0x0A}, page.lookupGrapheme(rac.cell).?);\n\n    // Two\n    try page.appendGrapheme(rac.row, rac.cell, 0x0B);\n    try testing.expect(rac.row.grapheme);\n    try testing.expect(rac.cell.hasGrapheme());\n    try testing.expectEqualSlices(u21, &.{ 0x0A, 0x0B }, page.lookupGrapheme(rac.cell).?);\n\n    // Clear it\n    page.clearGrapheme(rac.cell);\n    page.updateRowGraphemeFlag(rac.row);\n    try testing.expect(!rac.row.grapheme);\n    try testing.expect(!rac.cell.hasGrapheme());\n}"
-}

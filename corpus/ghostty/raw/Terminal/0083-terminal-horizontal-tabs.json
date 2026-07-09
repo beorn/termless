@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: horizontal tabs",
-  "sourceLine": 6115,
-  "zigBody": "test \"Terminal: horizontal tabs\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // HT\n    try t.print('1');\n    t.horizontalTab();\n    try testing.expectEqual(@as(usize, 8), t.screens.active.cursor.x);\n\n    // HT\n    t.horizontalTab();\n    try testing.expectEqual(@as(usize, 16), t.screens.active.cursor.x);\n\n    // HT at the end\n    t.horizontalTab();\n    try testing.expectEqual(@as(usize, 19), t.screens.active.cursor.x);\n    t.horizontalTab();\n    try testing.expectEqual(@as(usize, 19), t.screens.active.cursor.x);\n}"
-}

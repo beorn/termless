@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "generate256Color: grayscale ramp monotonic luminance",
-  "sourceLine": 1155,
-  "zigBody": "test \"generate256Color: grayscale ramp monotonic luminance\" {\n    const testing = std.testing;\n\n    const bg = RGB{ .r = 0, .g = 0, .b = 0 };\n    const fg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const palette = generate256Color(default, .initEmpty(), bg, fg, false);\n\n    // The grayscale ramp (232–255) should have monotonically increasing\n    // luminance from near-black to near-white.\n    var prev_lum: f64 = 0.0;\n    for (232..256) |i| {\n        const lum = palette[i].luminance();\n        try testing.expect(lum >= prev_lum);\n        prev_lum = lum;\n    }\n}"
-}

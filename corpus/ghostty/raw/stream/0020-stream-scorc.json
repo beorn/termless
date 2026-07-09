@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: SCORC",
-  "sourceLine": 3335,
-  "zigBody": "test \"stream: SCORC\" {\n    const H = struct {\n        const Self = @This();\n        called: bool = false,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            _ = value;\n            switch (action) {\n                .restore_cursor => self.called = true,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    for (\"\\x1B[u\") |c| s.next(c);\n    try testing.expect(s.handler.called);\n}"
-}

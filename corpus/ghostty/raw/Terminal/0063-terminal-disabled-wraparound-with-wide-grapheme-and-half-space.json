@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: disabled wraparound with wide grapheme and half space",
-  "sourceLine": 5642,
-  "zigBody": "test \"Terminal: disabled wraparound with wide grapheme and half space\" {\n    var t = try init(testing.allocator, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(testing.allocator);\n\n    t.modes.set(.grapheme_cluster, true);\n    t.modes.set(.wraparound, false);\n\n    // This puts our cursor at the end and there is NO SPACE for a\n    // wide character.\n    try t.printString(\"AAAA\");\n    try t.print(0x2764); // Heart\n    t.clearDirty();\n    try t.print(0xFE0F); // VS16 to make wide\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 4), t.screens.active.cursor.x);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AAAA❤\", str);\n    }\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 4, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, '❤'), cell.content.codepoint);\n        try testing.expectEqual(Cell.Wide.narrow, cell.wide);\n    }\n\n    // Should not be dirty since we didn't modify anything\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
-}

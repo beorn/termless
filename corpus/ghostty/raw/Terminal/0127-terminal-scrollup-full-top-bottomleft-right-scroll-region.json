@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: scrollUp full top/bottomleft/right scroll region",
-  "sourceLine": 7443,
-  "zigBody": "test \"Terminal: scrollUp full top/bottomleft/right scroll region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"top\");\n    t.setCursorPos(5, 1);\n    try t.printString(\"ABCDE\");\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setTopAndBottomMargin(2, 5);\n    t.setLeftAndRightMargin(2, 4);\n\n    t.clearDirty();\n    try t.scrollUp(4);\n\n    // This is dirty because the cursor moves from this row\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    for (1..5) |y| try testing.expect(t.isDirty(.{ .active = .{\n        .x = 0,\n        .y = @intCast(y),\n    } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"top\\n\\n\\n\\nA   E\", str);\n    }\n}"
-}

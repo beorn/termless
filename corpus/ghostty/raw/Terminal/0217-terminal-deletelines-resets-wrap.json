@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteLines resets wrap",
-  "sourceLine": 9846,
-  "zigBody": "test \"Terminal: deleteLines resets wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 3, .cols = 3 });\n    defer t.deinit(alloc);\n\n    try t.print('1');\n    t.carriageReturn();\n    try t.linefeed();\n    for (\"ABCDEF\") |c| try t.print(c);\n\n    t.setTopAndBottomMargin(1, 2);\n    t.setCursorPos(1, 1);\n    t.deleteLines(1);\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"XBC\\n\\nDEF\", str);\n    }\n\n    for (0..t.rows) |y| {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = @intCast(y),\n        } }).?;\n        const row = list_cell.row;\n        try testing.expect(!row.wrap);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page.layout can take a maxed capacity",
-  "sourceLine": 2520,
-  "zigBody": "test \"Page.layout can take a maxed capacity\" {\n    // Our intention is for a maxed-out capacity to always fit\n    // within a page layout without triggering runtime safety on any\n    // overflow. This simplifies some of our handling downstream of the\n    // call (relevant to: https://github.com/ghostty-org/ghostty/issues/10258)\n    var cap: Capacity = undefined;\n    inline for (@typeInfo(Capacity).@\"struct\".fields) |field| {\n        @field(cap, field.name) = std.math.maxInt(field.type);\n    }\n\n    // Note that a max capacity will exceed our max_page_size so we\n    // can't init a page with it, but it should layout.\n    _ = Page.layout(cap);\n}"
-}

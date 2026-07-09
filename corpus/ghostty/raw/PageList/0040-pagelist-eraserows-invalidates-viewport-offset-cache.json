@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList eraseRows invalidates viewport offset cache",
-  "sourceLine": 7378,
-  "zigBody": "test \"PageList eraseRows invalidates viewport offset cache\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, null);\n    defer s.deinit();\n\n    // Grow so we take up several pages worth of history\n    const page = &s.pages.last.?.data;\n    {\n        var cur_page = s.pages.last.?;\n        for (0..page.capacity.rows * 3) |_| {\n            if (try s.grow()) |new_page| cur_page = new_page;\n        }\n    }\n\n    // Scroll back to create a pinned viewport somewhere in the middle\n    // of the scrollback\n    const pin_y = page.capacity.rows;\n    s.scroll(.{ .pin = s.pin(.{ .screen = .{ .y = pin_y } }).? });\n    try testing.expect(s.viewport == .pin);\n    try testing.expectEqual(Scrollbar{\n        .total = s.total_rows,\n        .offset = pin_y,\n        .len = s.rows,\n    }, s.scrollbar());\n\n    // Erase some history rows BEFORE the viewport pin.\n    // This removes rows from before our pin, which changes its absolute\n    // offset from the top, but the cache is not invalidated.\n    const rows_to_erase = page.capacity.rows / 2;\n    s.eraseHistory(.{ .history = .{ .y = rows_to_erase - 1 } });\n\n    try testing.expectEqual(Scrollbar{\n        .total = s.total_rows,\n        .offset = pin_y - rows_to_erase,\n        .len = s.rows,\n    }, s.scrollbar());\n}"
-}

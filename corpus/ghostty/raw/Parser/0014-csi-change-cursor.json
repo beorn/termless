@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "csi: change cursor",
-  "sourceLine": 818,
-  "zigBody": "test \"csi: change cursor\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"[3 \") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    {\n        const a = p.next('q');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .csi_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.csi_dispatch;\n        try testing.expect(d.final == 'q');\n        try testing.expectEqual(@as(usize, 1), d.intermediates.len);\n        try testing.expectEqual(@as(usize, 1), d.params.len);\n        try testing.expectEqual(@as(u16, ' '), d.intermediates[0]);\n        try testing.expectEqual(@as(u16, 3), d.params[0]);\n    }\n}"
-}

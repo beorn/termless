@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: promptClickMove click right of input on lower line",
-  "sourceLine": 10847,
-  "zigBody": "test \"Screen: promptClickMove click right of input on lower line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 20, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n\n    // Enable line click mode\n    s.semantic_prompt.click = .{ .cl = .line };\n\n    // Write a prompt and input\n    s.cursorSetSemanticContent(.{ .prompt = .initial });\n    try s.testWriteString(\"> \");\n    s.cursorSetSemanticContent(.{ .input = .clear_explicit });\n    try s.testWriteString(\"hello\");\n\n    // Move cursor to start of input (column 2, the 'h')\n    s.cursorAbsolute(2, 0);\n\n    // Click on a lower line (row 1) - should move to end of input\n    // This is outside the prompt area so should clamp to end\n    const click_pin = s.pages.pin(.{ .active = .{ .x = 5, .y = 1 } }).?;\n    const result = s.promptClickMove(click_pin);\n\n    // From 'h', we need to pass e, l, l, o (4 cells) + 1 past end = 5\n    try testing.expectEqual(@as(usize, 5), result.right);\n    try testing.expectEqual(@as(usize, 0), result.left);\n}"
-}

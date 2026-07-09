@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "dcs: too many params",
-  "sourceLine": 1076,
-  "zigBody": "test \"dcs: too many params\" {\n    // Regression test for a crash found by fuzzing (afl). When a DCS\n    // sequence has more than MAX_PARAMS parameters and param_acc_idx > 0,\n    // entering dcs_passthrough wrote to params[params_idx] without a\n    // bounds check, causing an out-of-bounds access.\n    var p = init();\n    _ = p.next(0x1B); // ESC\n    _ = p.next('P'); // DCS entry\n\n    // Feed a digit then MAX_PARAMS semicolons to fill all param slots.\n    _ = p.next('6');\n    for (0..MAX_PARAMS) |_| {\n        _ = p.next(';');\n    }\n    // Feed another digit so param_acc_idx > 0 while params_idx == MAX_PARAMS.\n    _ = p.next('7');\n\n    // A final byte triggers entry to dcs_passthrough. The DCS should\n    // be dropped entirely, consistent with how CSI handles overflow.\n    const a = p.next('p');\n    try testing.expect(a[0] == null);\n    try testing.expect(a[1] == null);\n    try testing.expect(a[2] == null);\n}"
-}

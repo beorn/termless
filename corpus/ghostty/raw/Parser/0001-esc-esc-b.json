@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "esc: ESC ( B",
-  "sourceLine": 441,
-  "zigBody": "test \"esc: ESC ( B\" {\n    var p = init();\n    _ = p.next(0x1B);\n    _ = p.next('(');\n\n    {\n        const a = p.next('B');\n        try testing.expect(p.state == .ground);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1].? == .esc_dispatch);\n        try testing.expect(a[2] == null);\n\n        const d = a[1].?.esc_dispatch;\n        try testing.expect(d.final == 'B');\n        try testing.expect(d.intermediates.len == 1);\n        try testing.expect(d.intermediates[0] == '(');\n    }\n}"
-}

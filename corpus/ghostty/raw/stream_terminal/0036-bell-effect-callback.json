@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "bell effect callback",
-  "sourceLine": 1553,
-  "zigBody": "test \"bell effect callback\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    // Test bell with null callback (default readonly effects) doesn't crash\n    {\n        var s: Stream = .initAlloc(testing.allocator, .init(&t));\n        defer s.deinit();\n\n        s.nextSlice(\"\\x07\");\n\n        // Terminal should still be functional after bell\n        s.nextSlice(\"AfterBell\");\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"AfterBell\", str);\n    }\n\n    t.fullReset();\n\n    // Test bell with a callback\n    {\n        const S = struct {\n            var bell_count: usize = 0;\n            fn bell(_: *Handler) void {\n                bell_count += 1;\n            }\n        };\n        S.bell_count = 0;\n\n        var handler: Handler = .init(&t);\n        handler.effects.bell = &S.bell;\n\n        var s: Stream = .initAlloc(testing.allocator, handler);\n        defer s.deinit();\n\n        s.nextSlice(\"\\x07\");\n        try testing.expectEqual(@as(usize, 1), S.bell_count);\n\n        s.nextSlice(\"\\x07\\x07\");\n        try testing.expectEqual(@as(usize, 3), S.bell_count);\n    }\n}"
-}

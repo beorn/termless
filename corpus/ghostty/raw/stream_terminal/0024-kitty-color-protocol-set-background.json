@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "kitty color protocol set background",
-  "sourceLine": 1323,
-  "zigBody": "test \"kitty color protocol set background\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set background using kitty protocol\n    s.nextSlice(\"\\x1b]21;background=rgb:78/9a/bc\\x1b\\\\\");\n    const bg = t.colors.background.get().?;\n    try testing.expectEqual(@as(u8, 0x78), bg.r);\n    try testing.expectEqual(@as(u8, 0x9a), bg.g);\n    try testing.expectEqual(@as(u8, 0xbc), bg.b);\n}"
-}

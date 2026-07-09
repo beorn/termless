@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: printSlice differential fuzz vs print",
-  "sourceLine": 12480,
-  "zigBody": "test \"Terminal: printSlice differential fuzz vs print\" {\n    const alloc = testing.allocator;\n\n    // Multiple seeds and terminal sizes for coverage, including a\n    // tiny terminal to stress wrap/scroll edge cases.\n    var prng = std.Random.DefaultPrng.init(0xC0FFEE);\n    const rand = prng.random();\n    try testPrintSliceDifferential(alloc, rand, 500, 80, 24);\n    try testPrintSliceDifferential(alloc, rand, 500, 10, 4);\n    try testPrintSliceDifferential(alloc, rand, 500, 5, 2);\n    try testPrintSliceDifferential(alloc, rand, 200, 2, 2);\n}"
-}

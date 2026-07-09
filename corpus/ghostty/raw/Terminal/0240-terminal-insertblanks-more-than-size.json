@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: insertBlanks more than size",
-  "sourceLine": 10489,
-  "zigBody": "test \"Terminal: insertBlanks more than size\" {\n    // NOTE: this is not verified with conformance tests, so these\n    // tests might actually be verifying wrong behavior.\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 2 });\n    defer t.deinit(alloc);\n\n    try t.print('A');\n    try t.print('B');\n    try t.print('C');\n    t.setCursorPos(1, 1);\n\n    t.clearDirty();\n    t.insertBlanks(5);\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\", str);\n    }\n}"
-}

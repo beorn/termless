@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "valid glyph command",
-  "sourceLine": 379,
-  "zigBody": "test \"valid glyph command\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    h.start();\n    for (\"25a1;q;cp=E0A0\") |c| h.feed(alloc, c);\n\n    var cmd = h.end().?;\n    defer cmd.deinit(alloc);\n    try testing.expect(cmd == .glyph);\n    try testing.expect(cmd.glyph == .query);\n}"
-}

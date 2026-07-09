@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page verifyIntegrity styles good",
-  "sourceLine": 3592,
-  "zigBody": "test \"Page verifyIntegrity styles good\" {\n    // Too slow, and not really necessary because the integrity tests are\n    // only run in debug builds and unit tests verify they work well enough.\n    if (std.valgrind.runningOnValgrind() > 0) return error.SkipZigTest;\n\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Upsert a style we'll use\n    const id = try page.styles.add(page.memory, .{ .flags = .{\n        .bold = true,\n    } });\n\n    // Write\n    for (0..page.size.cols) |x| {\n        const rac = page.getRowAndCell(x, 0);\n        rac.row.styled = true;\n        rac.cell.* = .{\n            .content_tag = .codepoint,\n            .content = .{ .codepoint = @intCast(x + 1) },\n            .style_id = id,\n        };\n        page.styles.use(page.memory, id);\n    }\n\n    // The original style add would have incremented the\n    // ref count too, so release it to balance that out.\n    page.styles.release(page.memory, id);\n\n    try page.verifyIntegrity(testing.allocator);\n}"
-}

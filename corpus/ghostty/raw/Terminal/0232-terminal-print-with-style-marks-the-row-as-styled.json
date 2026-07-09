@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: print with style marks the row as styled",
-  "sourceLine": 10297,
-  "zigBody": "test \"Terminal: print with style marks the row as styled\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .bold = {} });\n    try t.print('A');\n    try t.setAttribute(.{ .unset = {} });\n    try t.print('B');\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        try testing.expect(list_cell.row.styled);\n    }\n}"
-}

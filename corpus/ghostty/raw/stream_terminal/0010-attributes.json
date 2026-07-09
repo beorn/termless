@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "attributes",
-  "sourceLine": 998,
-  "zigBody": "test \"attributes\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Set bold and write text\n    s.nextSlice(\"\\x1B[1mBold\\x1B[0m\");\n\n    // Verify we can write attributes - just check the string was written\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"Bold\", str);\n}"
-}

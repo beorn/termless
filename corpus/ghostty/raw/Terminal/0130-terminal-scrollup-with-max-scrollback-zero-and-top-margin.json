@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: scrollUp with max_scrollback zero and top margin",
-  "sourceLine": 7551,
-  "zigBody": "test \"Terminal: scrollUp with max_scrollback zero and top margin\" {\n    // When max_scrollback is 0 and top margin is set, should use deleteLines path\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5, .max_scrollback = 0 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"AAAAA\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"BBBBB\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"CCCCC\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"DDDDD\");\n\n    // Set top margin (not at row 0)\n    t.setTopAndBottomMargin(2, 5);\n\n    try t.scrollUp(1);\n\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        // First row preserved, rest scrolled\n        try testing.expectEqualStrings(\"AAAAA\\nCCCCC\\nDDDDD\", str);\n    }\n}"
-}

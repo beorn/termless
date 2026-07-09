@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "semantic prompt end of input, then start output",
-  "sourceLine": 1471,
-  "zigBody": "test \"semantic prompt end of input, then start output\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Write some text and then send OSC 133;A (fresh_line_new_prompt)\n    s.nextSlice(\"Hello\");\n    s.nextSlice(\"\\x1b]133;A\\x07\");\n    s.nextSlice(\"prompt$ \");\n    s.nextSlice(\"\\x1b]133;B\\x07\");\n    try testing.expectEqual(.input, t.screens.active.cursor.semantic_content);\n    s.nextSlice(\"\\x1b]133;C\\x07\");\n    try testing.expectEqual(.output, t.screens.active.cursor.semantic_content);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "SelectionGesture.zig",
-  "testName": "SelectionGesture repeat clamps at triple click",
-  "sourceLine": 1894,
-  "zigBody": "test \"SelectionGesture repeat clamps at triple click\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    for (0..4) |_| _ = try gesture.press(&t, testPress(&t, 1, 1, time));\n\n    try testing.expectEqual(@as(u3, 3), gesture.left_click_count);\n}"
-}

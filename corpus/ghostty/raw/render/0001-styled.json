@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "styled",
-  "sourceLine": 1192,
-  "zigBody": "test \"styled\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    // This fills the screen up\n    try t.decaln();\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n}"
-}

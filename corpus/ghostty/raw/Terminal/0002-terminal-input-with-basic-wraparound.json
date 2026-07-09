@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: input with basic wraparound",
-  "sourceLine": 3766,
-  "zigBody": "test \"Terminal: input with basic wraparound\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 40 });\n    defer t.deinit(alloc);\n\n    // Basic grid writing\n    for (\"helloworldabc12\") |c| try t.print(c);\n    try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 4), t.screens.active.cursor.x);\n    try testing.expect(t.screens.active.cursor.pending_wrap);\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"hello\\nworld\\nabc12\", str);\n    }\n}"
-}

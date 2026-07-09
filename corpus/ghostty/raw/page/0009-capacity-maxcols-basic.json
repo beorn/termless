@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Capacity maxCols basic",
-  "sourceLine": 2612,
-  "zigBody": "test \"Capacity maxCols basic\" {\n    const cap = std_capacity;\n    const max = cap.maxCols().?;\n\n    // maxCols should be >= current cols (since current capacity is valid)\n    try testing.expect(max >= cap.cols);\n\n    // Adjusting to maxCols should succeed with at least 1 row\n    const adjusted = try cap.adjust(.{ .cols = max });\n    try testing.expect(adjusted.rows >= 1);\n\n    // Adjusting to maxCols + 1 should fail\n    try testing.expectError(\n        error.OutOfMemory,\n        cap.adjust(.{ .cols = max + 1 }),\n    );\n}"
-}

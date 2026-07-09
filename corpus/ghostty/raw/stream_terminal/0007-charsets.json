@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "charsets",
-  "sourceLine": 929,
-  "zigBody": "test \"charsets\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    // Configure G0 as DEC special graphics\n    s.nextSlice(\"\\x1B(0\");\n    s.nextSlice(\"`\"); // Should print diamond character\n\n    const str = try t.plainString(testing.allocator);\n    defer testing.allocator.free(str);\n    try testing.expectEqualStrings(\"◆\", str);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "SelectionGesture.zig",
-  "testName": "SelectionGesture press records initial click",
-  "sourceLine": 1395,
-  "zigBody": "test \"SelectionGesture press records initial click\" {\n    var t = try Terminal.init(testing.allocator, .{ .cols = 5, .rows = 5 });\n    defer t.deinit(testing.allocator);\n\n    var gesture: SelectionGesture = .init;\n    defer gesture.deinit(&t);\n\n    const time = try std.time.Instant.now();\n    _ = try gesture.press(&t, testPress(&t, 1, 2, time));\n\n    try testing.expectEqual(@as(u3, 1), gesture.left_click_count);\n    try testing.expectEqual(time, gesture.left_click_time.?);\n    try testing.expectEqual(@as(f64, 1), gesture.left_click_xpos);\n    try testing.expectEqual(@as(f64, 2), gesture.left_click_ypos);\n    try testing.expectEqual(false, gesture.left_click_dragged);\n}"
-}

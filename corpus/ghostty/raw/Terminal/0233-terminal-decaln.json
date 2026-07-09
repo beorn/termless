@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: DECALN",
-  "sourceLine": 10313,
-  "zigBody": "test \"Terminal: DECALN\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 2, .rows = 2 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    try t.print('A');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('B');\n    try t.decaln();\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n\n    for (0..t.rows) |y| try testing.expect(t.isDirty(.{ .active = .{\n        .x = 0,\n        .y = @intCast(y),\n    } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"EE\\nEE\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: horizontal tab back with cursor before left margin",
-  "sourceLine": 6234,
-  "zigBody": "test \"Terminal: horizontal tab back with cursor before left margin\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 20, .rows = 5 });\n    defer t.deinit(alloc);\n\n    t.modes.set(.origin, true);\n    t.saveCursor();\n    t.modes.set(.enable_left_and_right_margin, true);\n    t.setLeftAndRightMargin(5, 0);\n    t.restoreCursor();\n    t.horizontalTabBack();\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"X\", str);\n    }\n}"
-}

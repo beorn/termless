@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: deleteLines with scroll region, large count",
-  "sourceLine": 9750,
-  "zigBody": "test \"Terminal: deleteLines with scroll region, large count\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(alloc);\n\n    // Initial value\n    try t.print('A');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('B');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('C');\n    t.carriageReturn();\n    try t.linefeed();\n    try t.print('D');\n\n    t.setTopAndBottomMargin(1, 3);\n    t.setCursorPos(1, 1);\n\n    t.clearDirty();\n    t.deleteLines(5);\n\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 2 } }));\n    try testing.expect(!t.isDirty(.{ .active = .{ .x = 0, .y = 3 } }));\n\n    try t.print('E');\n    t.carriageReturn();\n    try t.linefeed();\n\n    // We should be\n    // try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    // try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.y);\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"E\\n\\n\\nD\", str);\n    }\n}"
-}

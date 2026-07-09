@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page exactRowCapacity styles max single row",
-  "sourceLine": 3847,
-  "zigBody": "test \"Page exactRowCapacity styles max single row\" {\n    var page = try Page.init(.{\n        .cols = std.math.maxInt(size.CellCountInt),\n        .rows = 1,\n        .styles = std.math.maxInt(size.StyleCountInt),\n    });\n    defer page.deinit();\n\n    // Style our first row\n    const row = &page.rows.ptr(page.memory)[0];\n    row.styled = true;\n\n    // Fill cells with styles until we get OOM, but limit to a reasonable count\n    // to avoid overflow when computing capacityForCount near maxInt\n    const cells = row.cells.ptr(page.memory)[0..page.size.cols];\n    var count: usize = 0;\n    const max_count: usize = 1000; // Limit to avoid overflow in capacity calculation\n    for (cells, 0..) |*cell, i| {\n        if (count >= max_count) break;\n        const style_id = page.styles.add(page.memory, .{\n            .fg_color = .{ .rgb = .{\n                .r = @intCast(i & 0xFF),\n                .g = @intCast((i >> 8) & 0xFF),\n                .b = 0,\n            } },\n        }) catch break;\n        cell.style_id = style_id;\n        count += 1;\n    }\n\n    // Verify we added a meaningful number of styles\n    try testing.expect(count > 0);\n\n    // Capacity should be at least count (adjusted for load factor)\n    const cap = page.exactRowCapacity(0, 1);\n    try testing.expectEqual(StyleSet.capacityForCount(count), cap.styles);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "page.zig",
-  "testName": "Page clone styles",
-  "sourceLine": 2832,
-  "zigBody": "test \"Page clone styles\" {\n    var page = try Page.init(.{\n        .cols = 10,\n        .rows = 10,\n        .styles = 8,\n    });\n    defer page.deinit();\n\n    // Write with some styles\n    {\n        const id = try page.styles.add(page.memory, .{ .flags = .{\n            .bold = true,\n        } });\n\n        for (0..page.size.cols) |x| {\n            const rac = page.getRowAndCell(x, 0);\n            rac.row.styled = true;\n            rac.cell.* = .{\n                .content_tag = .codepoint,\n                .content = .{ .codepoint = @intCast(x + 1) },\n                .style_id = id,\n            };\n            page.styles.use(page.memory, id);\n        }\n    }\n\n    // Clone it\n    var page2 = try page.clone();\n    defer page2.deinit();\n    {\n        const id: u16 = style: {\n            const rac = page2.getRowAndCell(0, 0);\n            break :style rac.cell.style_id;\n        };\n\n        for (0..page.size.cols) |x| {\n            const rac = page.getRowAndCell(x, 0);\n            try testing.expect(rac.row.styled);\n            try testing.expectEqual(id, rac.cell.style_id);\n        }\n\n        const style = page.styles.get(\n            page.memory,\n            id,\n        );\n        try testing.expect((Style{ .flags = .{\n            .bold = true,\n        } }).eql(style.*));\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: zero-width character at start",
-  "sourceLine": 3856,
-  "zigBody": "test \"Terminal: zero-width character at start\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    // This used to crash the terminal. This is not allowed so we should\n    // just ignore it.\n    try t.print(0x200D);\n\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.y);\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n\n    // Should not be dirty since we changed nothing.\n    try testing.expect(!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } }));\n}"
-}

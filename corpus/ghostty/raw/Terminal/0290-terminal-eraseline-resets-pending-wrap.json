@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: eraseLine resets pending wrap",
-  "sourceLine": 11724,
-  "zigBody": "test \"Terminal: eraseLine resets pending wrap\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    for (\"ABCDE\") |c| try t.print(c);\n    try testing.expect(t.screens.active.cursor.pending_wrap);\n    t.eraseLine(.right, false);\n    try testing.expect(!t.screens.active.cursor.pending_wrap);\n    try t.print('B');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"ABCDB\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: DECSCA",
-  "sourceLine": 2927,
-  "zigBody": "test \"stream: DECSCA\" {\n    const H = struct {\n        const Self = @This();\n        v: ?ansi.ProtectedMode = null,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: Stream(Self).Action.Tag,\n            value: Stream(Self).Action.Value(action),\n        ) void {\n            _ = value;\n            switch (action) {\n                .protected_mode_off => self.v = .off,\n                .protected_mode_iso => self.v = .iso,\n                .protected_mode_dec => self.v = .dec,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    {\n        for (\"\\x1B[\\\"q\") |c| s.next(c);\n        try testing.expectEqual(ansi.ProtectedMode.off, s.handler.v.?);\n    }\n    {\n        for (\"\\x1B[0\\\"q\") |c| s.next(c);\n        try testing.expectEqual(ansi.ProtectedMode.off, s.handler.v.?);\n    }\n    {\n        for (\"\\x1B[2\\\"q\") |c| s.next(c);\n        try testing.expectEqual(ansi.ProtectedMode.off, s.handler.v.?);\n    }\n    {\n        for (\"\\x1B[1\\\"q\") |c| s.next(c);\n        try testing.expectEqual(ansi.ProtectedMode.dec, s.handler.v.?);\n    }\n}"
-}

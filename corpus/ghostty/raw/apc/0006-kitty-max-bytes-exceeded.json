@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "kitty max bytes exceeded",
-  "sourceLine": 295,
-  "zigBody": "test \"kitty max bytes exceeded\" {\n    if (comptime !build_options.kitty_graphics) return error.SkipZigTest;\n\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{ .max_bytes = .init(.{ .kitty = 4 }) };\n    defer h.deinit();\n    h.start();\n    // 'G' identifies kitty, 'a=t;' moves to data state, then feed exceeds max_bytes.\n    for (\"Ga=t;\") |c| h.feed(alloc, c);\n    try testing.expect(h.state != .ignore);\n    for (\"abcd\") |c| h.feed(alloc, c);\n    try testing.expect(h.state != .ignore);\n    // The 5th data byte exceeds the 4-byte limit.\n    h.feed(alloc, 'e');\n    try testing.expect(h.state == .ignore);\n}"
-}

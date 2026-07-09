@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "Kitty command with overflow i32",
-  "sourceLine": 267,
-  "zigBody": "test \"Kitty command with overflow i32\" {\n    if (comptime !build_options.kitty_graphics) return error.SkipZigTest;\n\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    h.start();\n    for (\"Ga=p,i=1,z=-9999999999\") |c| h.feed(alloc, c);\n    try testing.expect(h.end() == null);\n}"
-}

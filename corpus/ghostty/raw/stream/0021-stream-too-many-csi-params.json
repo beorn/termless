@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: too many csi params",
-  "sourceLine": 3358,
-  "zigBody": "test \"stream: too many csi params\" {\n    const H = struct {\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = self;\n            _ = value;\n            switch (action) {\n                .cursor_right => unreachable,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1C\");\n}"
-}

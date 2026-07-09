@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "size report csi_16_t with effect",
-  "sourceLine": 1862,
-  "zigBody": "test \"size report csi_16_t with effect\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n        fn getSize(_: *Handler) ?size_report.Size {\n            return .{ .rows = 24, .columns = 80, .cell_width = 9, .cell_height = 18 };\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.size = &S.getSize;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // CSI 16 t - report cell size in pixels\n    s.nextSlice(\"\\x1b[16t\");\n    defer testing.allocator.free(S.written.?);\n    try testing.expectEqualStrings(\"\\x1b[6;18;9t\", S.written.?);\n}"
-}

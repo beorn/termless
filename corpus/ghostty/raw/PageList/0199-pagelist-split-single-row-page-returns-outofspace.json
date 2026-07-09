@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList split single row page returns OutOfSpace",
-  "sourceLine": 14681,
-  "zigBody": "test \"PageList split single row page returns OutOfSpace\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // Initialize with 1 row\n    var s = try init(alloc, 10, 1, 0);\n    defer s.deinit();\n\n    const split_pin: Pin = .{ .node = s.pages.first.?, .y = 0, .x = 0 };\n    const result = s.split(split_pin);\n\n    try testing.expectError(error.OutOfSpace, result);\n}"
-}

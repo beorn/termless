@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: scroll and clear partial screen",
-  "sourceLine": 5068,
-  "zigBody": "test \"Screen: scroll and clear partial screen\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 5 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\\n2EFGH\");\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"1ABCD\\n2EFGH\", contents);\n    }\n\n    try s.scrollClear();\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\", contents);\n    }\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"1ABCD\\n2EFGH\", contents);\n    }\n}"
-}

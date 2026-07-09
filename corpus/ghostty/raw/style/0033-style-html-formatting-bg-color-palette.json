@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "style.zig",
-  "testName": "Style HTML formatting bg color palette",
-  "sourceLine": 1021,
-  "zigBody": "test \"Style HTML formatting bg color palette\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .bg_color = .{ .palette = 7 } };\n    try builder.writer.print(\"{f}\", .{style.formatterHtml()});\n    try testing.expectEqualStrings(\"background-color: var(--vt-palette-7);\", builder.writer.buffered());\n}"
-}

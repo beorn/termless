@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: fullReset default modes",
-  "sourceLine": 13587,
-  "zigBody": "test \"Terminal: fullReset default modes\" {\n    var t = try init(testing.allocator, .{\n        .cols = 10,\n        .rows = 10,\n        .default_modes = .{ .grapheme_cluster = true },\n    });\n    defer t.deinit(testing.allocator);\n    try testing.expect(t.modes.get(.grapheme_cluster));\n    t.fullReset();\n    try testing.expect(t.modes.get(.grapheme_cluster));\n}"
-}

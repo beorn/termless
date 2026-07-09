@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream CSI W tab set",
-  "sourceLine": 3650,
-  "zigBody": "test \"stream CSI W tab set\" {\n    const H = struct {\n        action: ?Action.Key = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = value;\n            self.action = action;\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[W\");\n    try testing.expectEqual(Action.Key.tab_set, s.handler.action.?);\n\n    s.handler.action = null;\n    s.nextSlice(\"\\x1b[0W\");\n    try testing.expectEqual(Action.Key.tab_set, s.handler.action.?);\n\n    s.handler.action = null;\n    s.nextSlice(\"\\x1b[>W\");\n    try testing.expect(s.handler.action == null);\n\n    s.handler.action = null;\n    s.nextSlice(\"\\x1b[99W\");\n    try testing.expect(s.handler.action == null);\n}"
-}

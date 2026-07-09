@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize less cols reflows cursor after empty cells",
-  "sourceLine": 7718,
-  "zigBody": "test \"Screen: resize less cols reflows cursor after empty cells\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var s = try Screen.init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n\n    try s.testWriteString(\"abc\");\n    s.cursorRight(6);\n\n    try testing.expectEqual(@as(usize, 0), s.cursor.y);\n    try testing.expectEqual(@as(usize, 9), s.cursor.x);\n\n    try s.resize(.{ .cols = 5, .rows = 3 });\n\n    try testing.expectEqual(@as(usize, 1), s.cursor.y);\n    try testing.expectEqual(@as(usize, 4), s.cursor.x);\n}"
-}

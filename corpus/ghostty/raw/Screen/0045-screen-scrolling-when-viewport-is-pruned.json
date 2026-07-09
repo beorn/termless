@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: scrolling when viewport is pruned",
-  "sourceLine": 5015,
-  "zigBody": "test \"Screen: scrolling when viewport is pruned\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 215, .rows = 3, .max_scrollback = 1 });\n    defer s.deinit();\n\n    // Write some to create scrollback and move back into our scrollback.\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\\n\");\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\");\n    s.scroll(.{ .delta_row = -2 });\n\n    // Our viewport is now somewhere pinned. Create so much scrollback\n    // that we prune it.\n    try s.testWriteString(\"\\n\");\n    for (0..1000) |_| try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\\n\");\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\");\n\n    {\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 0,\n        } }, s.pages.pointFromPin(.screen, s.pages.getTopLeft(.viewport)));\n    }\n}"
-}

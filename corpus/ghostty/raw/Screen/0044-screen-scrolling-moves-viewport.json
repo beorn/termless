@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: scrolling moves viewport",
-  "sourceLine": 4990,
-  "zigBody": "test \"Screen: scrolling moves viewport\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 3, .max_scrollback = 1 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\\n\");\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\");\n    s.scroll(.{ .delta_row = -2 });\n\n    {\n        // Test our contents rotated\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"2EFGH\\n3IJKL\\n1ABCD\", contents);\n    }\n\n    {\n        try testing.expectEqual(point.Point{ .screen = .{\n            .x = 0,\n            .y = 1,\n        } }, s.pages.pointFromPin(.screen, s.pages.getTopLeft(.viewport)));\n    }\n}"
-}

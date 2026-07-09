@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: clone contains selection end cutoff reversed",
-  "sourceLine": 5843,
-  "zigBody": "test \"Screen: clone contains selection end cutoff reversed\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 1 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\\n2EFGH\\n3IJKL\");\n\n    // Select a single line\n    try s.select(Selection.init(\n        s.pages.pin(.{ .active = .{ .x = 2, .y = 2 } }).?,\n        s.pages.pin(.{ .active = .{ .x = 0, .y = 1 } }).?,\n        false,\n    ));\n\n    // Clone\n    var s2 = try s.clone(\n        alloc,\n        .{ .active = .{ .y = 0 } },\n        .{ .active = .{ .y = 1 } },\n    );\n    defer s2.deinit();\n\n    // Our selection should remain valid\n    {\n        const sel = s2.selection.?;\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = 0,\n            .y = 1,\n        } }, s2.pages.pointFromPin(.active, sel.start()).?);\n        try testing.expectEqual(point.Point{ .active = .{\n            .x = s2.pages.cols - 1,\n            .y = 2,\n        } }, s2.pages.pointFromPin(.active, sel.end()).?);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: DECSCUSR without space",
-  "sourceLine": 3174,
-  "zigBody": "test \"stream: DECSCUSR without space\" {\n    const H = struct {\n        style: ?ansi.CursorStyle = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: Stream(@This()).Action.Tag,\n            value: Stream(@This()).Action.Value(action),\n        ) void {\n            switch (action) {\n                .cursor_style => self.style = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    s.nextSlice(\"\\x1B[q\");\n    try testing.expect(s.handler.style == null);\n\n    s.nextSlice(\"\\x1B[1q\");\n    try testing.expect(s.handler.style == null);\n}"
-}

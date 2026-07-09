@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "sgr.zig",
-  "testName": "sgr: bold",
-  "sourceLine": 603,
-  "zigBody": "test \"sgr: bold\" {\n    {\n        const v = testParse(&[_]u16{1});\n        try testing.expect(v == .bold);\n    }\n\n    {\n        const v = testParse(&[_]u16{22});\n        try testing.expect(v == .reset_bold);\n    }\n}"
-}

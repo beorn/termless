@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList resize more rows and cols doesn't fit in single std page",
-  "sourceLine": 11123,
-  "zigBody": "test \"PageList resize more rows and cols doesn't fit in single std page\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 10, 10, 0);\n    defer s.deinit();\n\n    // Resize to a size that requires more than one page to fit our rows.\n    const new_cols = 600;\n    const new_rows = 600;\n    const cap = try std_capacity.adjust(.{ .cols = new_cols });\n    try testing.expect(cap.rows < new_rows);\n\n    try s.resize(.{ .cols = new_cols, .rows = new_rows, .reflow = true });\n    try testing.expectEqual(@as(usize, new_cols), s.cols);\n    try testing.expectEqual(@as(usize, new_rows), s.rows);\n    try testing.expectEqual(@as(usize, new_rows), s.totalRows());\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: scrolling with a single-row screen no scrollback",
-  "sourceLine": 4455,
-  "zigBody": "test \"Screen: scrolling with a single-row screen no scrollback\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 10, .rows = 1, .max_scrollback = 0 });\n    defer s.deinit();\n    try s.testWriteString(\"1ABCD\");\n\n    // Scroll down, should still be bottom\n    try s.cursorDownScroll();\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\", contents);\n    }\n\n    // Screen should be dirty\n    try testing.expect(s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n}"
-}

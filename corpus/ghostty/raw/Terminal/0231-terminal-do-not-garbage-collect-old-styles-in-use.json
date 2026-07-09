@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: do not garbage collect old styles in use",
-  "sourceLine": 10275,
-  "zigBody": "test \"Terminal: do not garbage collect old styles in use\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.setAttribute(.{ .bold = {} });\n    try t.print('A');\n    try t.setAttribute(.{ .unset = {} });\n    try t.print('B');\n\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .screen = .{ .x = 1, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(@as(u21, 'B'), cell.content.codepoint);\n        try testing.expect(cell.style_id == 0);\n    }\n\n    // verify we have no styles in our style map\n    const page = &t.screens.active.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 1), page.styles.count());\n}"
-}

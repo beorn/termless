@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: saveCursor doesn't modify hyperlink state",
-  "sourceLine": 11620,
-  "zigBody": "test \"Terminal: saveCursor doesn't modify hyperlink state\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 3, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try t.screens.active.startHyperlink(\"http://example.com\", null);\n    const id = t.screens.active.cursor.hyperlink_id;\n    t.saveCursor();\n    try testing.expectEqual(id, t.screens.active.cursor.hyperlink_id);\n    t.restoreCursor();\n    try testing.expectEqual(id, t.screens.active.cursor.hyperlink_id);\n}"
-}

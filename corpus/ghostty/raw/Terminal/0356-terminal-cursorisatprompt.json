@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: cursorIsAtPrompt",
-  "sourceLine": 13448,
-  "zigBody": "test \"Terminal: cursorIsAtPrompt\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 3 });\n    defer t.deinit(alloc);\n\n    try testing.expect(!t.cursorIsAtPrompt());\n    try t.semanticPrompt(.init(.prompt_start));\n    try testing.expect(t.cursorIsAtPrompt());\n    for (\"$ \") |c| try t.print(c);\n\n    // Input is also a prompt\n    try t.semanticPrompt(.init(.end_prompt_start_input));\n    try testing.expect(t.cursorIsAtPrompt());\n    for (\"ls\") |c| try t.print(c);\n\n    // But once we say we're starting output, we're not a prompt\n    // (cursor is not at x=0, so the Fish heuristic doesn't trigger)\n    try t.semanticPrompt(.init(.end_input_start_output));\n    // Still a prompt because this line has a prompt\n    try testing.expect(t.cursorIsAtPrompt());\n    try t.linefeed();\n    try testing.expect(!t.cursorIsAtPrompt());\n\n    // Until we know we're at a prompt again\n    try t.linefeed();\n    try t.semanticPrompt(.init(.prompt_start));\n    try testing.expect(t.cursorIsAtPrompt());\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "enquiry with empty response",
-  "sourceLine": 2018,
-  "zigBody": "test \"enquiry with empty response\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n        fn enquiry(_: *Handler) []const u8 {\n            return \"\";\n        }\n    };\n    S.written = null;\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.enquiry = &S.enquiry;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    // Empty enquiry response should not write anything\n    s.nextSlice(\"\\x05\");\n    try testing.expect(S.written == null);\n}"
-}

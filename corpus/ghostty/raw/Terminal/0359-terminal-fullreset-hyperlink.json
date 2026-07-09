@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: fullReset hyperlink",
-  "sourceLine": 13515,
-  "zigBody": "test \"Terminal: fullReset hyperlink\" {\n    var t = try init(testing.allocator, .{ .cols = 80, .rows = 80 });\n    defer t.deinit(testing.allocator);\n\n    try t.screens.active.startHyperlink(\"http://example.com\", null);\n    t.fullReset();\n    try testing.expectEqual(0, t.screens.active.cursor.hyperlink_id);\n}"
-}

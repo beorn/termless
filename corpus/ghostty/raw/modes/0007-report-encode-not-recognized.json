@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "modes.zig",
-  "testName": "Report.encode not recognized",
-  "sourceLine": 380,
-  "zigBody": "test \"Report.encode not recognized\" {\n    var buf: [Report.max_size]u8 = undefined;\n    var writer: std.Io.Writer = .fixed(&buf);\n    const report: Report = .{ .tag = .{ .value = 9999, .ansi = false }, .state = .not_recognized };\n    try report.encode(&writer);\n    try testing.expectEqualStrings(\"\\x1B[?9999;0$y\", writer.buffered());\n}"
-}

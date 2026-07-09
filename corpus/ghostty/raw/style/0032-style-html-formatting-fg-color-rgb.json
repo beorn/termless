@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "style.zig",
-  "testName": "Style HTML formatting fg color rgb",
-  "sourceLine": 1010,
-  "zigBody": "test \"Style HTML formatting fg color rgb\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var style: Style = .{ .fg_color = .{ .rgb = .{ .r = 255, .g = 128, .b = 64 } } };\n    try builder.writer.print(\"{f}\", .{style.formatterHtml()});\n    try testing.expectEqualStrings(\"color: rgb(255, 128, 64);\", builder.writer.buffered());\n}"
-}

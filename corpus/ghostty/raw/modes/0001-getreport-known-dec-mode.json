@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "modes.zig",
-  "testName": "getReport known DEC mode",
-  "sourceLine": 330,
-  "zigBody": "test \"getReport known DEC mode\" {\n    var state: ModeState = .{};\n    const report = state.getReport(.{ .value = 1 });\n    try testing.expectEqual(Report.State.reset, report.state);\n    try testing.expectEqual(false, report.tag.ansi);\n    try testing.expectEqual(@as(u15, 1), report.tag.value);\n\n    state.set(.cursor_keys, true);\n    const report2 = state.getReport(.{ .value = 1 });\n    try testing.expectEqual(Report.State.set, report2.state);\n}"
-}

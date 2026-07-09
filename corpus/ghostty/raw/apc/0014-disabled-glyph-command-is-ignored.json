@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "apc.zig",
-  "testName": "disabled glyph command is ignored",
-  "sourceLine": 393,
-  "zigBody": "test \"disabled glyph command is ignored\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    h.enable(.glyph, false);\n    h.start();\n    for (\"25a1;q;cp=e0a0\") |c| h.feed(alloc, c);\n    try testing.expect(h.end() == null);\n}"
-}

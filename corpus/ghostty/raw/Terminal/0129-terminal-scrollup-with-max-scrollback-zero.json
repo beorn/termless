@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: scrollUp with max_scrollback zero",
-  "sourceLine": 7519,
-  "zigBody": "test \"Terminal: scrollUp with max_scrollback zero\" {\n    // When max_scrollback is 0, scrollUp should still work but not retain history\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5, .max_scrollback = 0 });\n    defer t.deinit(alloc);\n\n    try t.printString(\"AAAAA\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"BBBBB\");\n    t.carriageReturn();\n    try t.linefeed();\n    try t.printString(\"CCCCC\");\n\n    try t.scrollUp(1);\n\n    // Active screen should show scrolled content\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"BBBBB\\nCCCCC\", str);\n    }\n\n    // Scroll to top - should be same as active since no scrollback\n    t.screens.active.scroll(.{ .top = {} });\n    {\n        const str = try t.plainString(alloc);\n        defer alloc.free(str);\n        try testing.expectEqualStrings(\"BBBBB\\nCCCCC\", str);\n    }\n}"
-}

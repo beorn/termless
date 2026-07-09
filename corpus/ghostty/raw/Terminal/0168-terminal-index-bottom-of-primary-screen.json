@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: index bottom of primary screen",
-  "sourceLine": 8600,
-  "zigBody": "test \"Terminal: index bottom of primary screen\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    t.setCursorPos(5, 1);\n    try t.print('A');\n    t.clearDirty();\n    try t.index();\n    try t.print('X');\n\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 3 } }));\n    try testing.expect(t.isDirty(.{ .active = .{ .x = 0, .y = 4 } }));\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"\\n\\n\\nA\\n X\", str);\n    }\n}"
-}

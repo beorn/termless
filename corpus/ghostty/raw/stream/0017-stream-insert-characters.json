@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: insert characters",
-  "sourceLine": 3262,
-  "zigBody": "test \"stream: insert characters\" {\n    const H = struct {\n        const Self = @This();\n        called: bool = false,\n\n        pub fn vt(\n            self: *Self,\n            comptime action: anytype,\n            value: anytype,\n        ) void {\n            _ = value;\n            switch (action) {\n                .insert_blanks => self.called = true,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n    for (\"\\x1B[42@\") |c| s.next(c);\n    try testing.expect(s.handler.called);\n\n    s.handler.called = false;\n    for (\"\\x1B[?42@\") |c| s.next(c);\n    try testing.expect(!s.handler.called);\n}"
-}

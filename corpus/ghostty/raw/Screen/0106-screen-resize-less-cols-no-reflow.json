@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize less cols no reflow",
-  "sourceLine": 7240,
-  "zigBody": "test \"Screen: resize less cols no reflow\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 3, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"1AB\\n2EF\\n3IJ\";\n    try s.testWriteString(str);\n\n    s.cursorAbsolute(0, 0);\n    const cursor = s.cursor;\n    try s.resize(.{ .cols = 3, .rows = 3 });\n\n    // Cursor should not move\n    try testing.expectEqual(cursor.x, s.cursor.x);\n    try testing.expectEqual(cursor.y, s.cursor.y);\n\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .viewport = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n}"
-}

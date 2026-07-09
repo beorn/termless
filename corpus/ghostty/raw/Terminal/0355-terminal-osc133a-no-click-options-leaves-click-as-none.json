@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: OSC133A no click options leaves click as none",
-  "sourceLine": 13434,
-  "zigBody": "test \"Terminal: OSC133A no click options leaves click as none\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // OSC 133;A with no click-related options\n    try t.semanticPrompt(.{\n        .action = .fresh_line_new_prompt,\n        .options_unvalidated = \"aid=123\",\n    });\n\n    try testing.expectEqual(.none, t.screens.active.semantic_prompt.click);\n}"
-}

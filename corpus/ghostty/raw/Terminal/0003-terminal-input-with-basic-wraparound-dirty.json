@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: input with basic wraparound dirty",
-  "sourceLine": 3783,
-  "zigBody": "test \"Terminal: input with basic wraparound dirty\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 5, .rows = 40 });\n    defer t.deinit(alloc);\n\n    for (\"hello\") |c| try t.print(c);\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 4, .y = 0 } }));\n    t.clearDirty();\n    try t.print('w');\n\n    // Old row is dirty because cursor moved from there\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 4, .y = 0 } }));\n    try testing.expect(t.isDirty(.{ .screen = .{ .x = 0, .y = 1 } }));\n}"
-}

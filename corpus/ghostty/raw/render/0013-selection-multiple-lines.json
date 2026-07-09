@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "selection multiple lines",
-  "sourceLine": 1861,
-  "zigBody": "test \"selection multiple lines\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t: Terminal = try .init(alloc, .{\n        .cols = 10,\n        .rows = 3,\n    });\n    defer t.deinit(alloc);\n\n    const screen: *Screen = t.screens.active;\n    try screen.select(.init(\n        screen.pages.pin(.{ .active = .{ .x = 0, .y = 1 } }).?,\n        screen.pages.pin(.{ .active = .{ .x = 2, .y = 2 } }).?,\n        false,\n    ));\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n\n    const row_data = state.row_data.slice();\n    const sels = row_data.items(.selection);\n    try testing.expectEqual(null, sels[0]);\n    try testing.expectEqualSlices(\n        size.CellCountInt,\n        &.{ 0, screen.pages.cols - 1 },\n        &sels[1].?,\n    );\n    try testing.expectEqualSlices(\n        size.CellCountInt,\n        &.{ 0, 2 },\n        &sels[2].?,\n    );\n}"
-}

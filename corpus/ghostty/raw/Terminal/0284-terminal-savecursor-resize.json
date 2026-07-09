@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: saveCursor resize",
-  "sourceLine": 11587,
-  "zigBody": "test \"Terminal: saveCursor resize\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    t.setCursorPos(1, 10);\n    t.saveCursor();\n    try t.resize(alloc, 5, 5);\n    t.restoreCursor();\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"    X\", str);\n    }\n}"
-}

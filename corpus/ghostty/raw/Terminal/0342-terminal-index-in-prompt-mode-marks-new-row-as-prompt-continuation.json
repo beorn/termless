@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: index in prompt mode marks new row as prompt continuation",
-  "sourceLine": 13108,
-  "zigBody": "test \"Terminal: index in prompt mode marks new row as prompt continuation\" {\n    // This tests the Fish shell workaround: when in prompt mode and we get\n    // a newline, assume the new row is a prompt continuation (since Fish\n    // doesn't emit OSC133 k=s markers for continuation lines).\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .cols = 10, .rows = 5 });\n    defer t.deinit(alloc);\n\n    // Start a prompt\n    try t.semanticPrompt(.init(.prompt_start));\n    for (\"hello\") |c| try t.print(c);\n\n    // Verify first row is marked as prompt\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 0,\n        } }).?;\n        try testing.expectEqual(.prompt, list_cell.row.semantic_prompt);\n    }\n\n    // Now do a linefeed while still in prompt mode\n    t.carriageReturn();\n    try t.linefeed();\n\n    // The new row should automatically be marked as prompt continuation\n    {\n        const list_cell = t.screens.active.pages.getCell(.{ .active = .{\n            .x = 0,\n            .y = 1,\n        } }).?;\n        try testing.expectEqual(.prompt_continuation, list_cell.row.semantic_prompt);\n    }\n\n    // The cursor semantic content should still be prompt\n    try testing.expectEqual(.prompt, t.screens.active.cursor.semantic_content);\n}"
-}

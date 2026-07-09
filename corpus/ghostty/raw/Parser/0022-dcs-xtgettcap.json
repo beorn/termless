@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Parser.zig",
-  "testName": "dcs: XTGETTCAP",
-  "sourceLine": 1029,
-  "zigBody": "test \"dcs: XTGETTCAP\" {\n    var p = init();\n    _ = p.next(0x1B);\n    for (\"P+\") |c| {\n        const a = p.next(c);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2] == null);\n    }\n\n    {\n        const a = p.next('q');\n        try testing.expect(p.state == .dcs_passthrough);\n        try testing.expect(a[0] == null);\n        try testing.expect(a[1] == null);\n        try testing.expect(a[2].? == .dcs_hook);\n\n        const hook = a[2].?.dcs_hook;\n        try testing.expectEqualSlices(u8, &[_]u8{'+'}, hook.intermediates);\n        try testing.expectEqualSlices(u16, &[_]u16{}, hook.params);\n        try testing.expectEqual('q', hook.final);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: index bottom of alt screen top region",
-  "sourceLine": 9045,
-  "zigBody": "test \"Terminal: index bottom of alt screen top region\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.switchScreenMode(.@\"1049\", true);\n    try t.printString(\"1\\n2\\n3\\n4\\n5\");\n\n    // Region at the top of the screen, excluding the last row. On the\n    // alt screen this must NOT create scrollback.\n    t.setTopAndBottomMargin(1, 4);\n    t.setCursorPos(4, 1);\n    try t.index();\n    try t.print('X');\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\n4\\nX\\n5\", str);\n    }\n    {\n        const str = try t.screens.active.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"2\\n3\\n4\\nX\\n5\", str);\n    }\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Terminal.zig",
-  "testName": "Terminal: reverseIndex top/bottom margins",
-  "sourceLine": 8377,
-  "zigBody": "test \"Terminal: reverseIndex top/bottom margins\" {\n    const alloc = testing.allocator;\n    var t = try init(alloc, .{ .rows = 5, .cols = 5 });\n    defer t.deinit(alloc);\n\n    try t.print('A');\n    t.setCursorPos(2, 1);\n    try t.print('B');\n    t.setCursorPos(3, 1);\n    try t.print('C');\n    t.setTopAndBottomMargin(2, 3);\n    t.setCursorPos(2, 1);\n    t.reverseIndex();\n\n    {\n        const str = try t.plainString(testing.allocator);\n        defer testing.allocator.free(str);\n        try testing.expectEqualStrings(\"A\\n\\nB\", str);\n    }\n}"
-}

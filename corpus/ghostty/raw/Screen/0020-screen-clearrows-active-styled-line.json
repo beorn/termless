@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen clearRows active styled line",
-  "sourceLine": 4042,
-  "zigBody": "test \"Screen clearRows active styled line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 80, .rows = 24, .max_scrollback = 1000 });\n    defer s.deinit();\n\n    try s.setAttribute(.{ .bold = {} });\n    try s.testWriteString(\"hello world\");\n    try s.setAttribute(.{ .unset = {} });\n\n    // We should have one style\n    const page = &s.cursor.page_pin.node.data;\n    try testing.expectEqual(@as(usize, 1), page.styles.count());\n\n    s.clearRows(.{ .active = .{} }, null, false);\n\n    // We should have none because active cleared it\n    try testing.expectEqual(@as(usize, 0), page.styles.count());\n\n    const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n    defer alloc.free(str);\n    try testing.expectEqualStrings(\"\", str);\n}"
-}

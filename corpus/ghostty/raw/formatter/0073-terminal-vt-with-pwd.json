@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "formatter.zig",
-  "testName": "Terminal vt with pwd",
-  "sourceLine": 5117,
-  "zigBody": "test \"Terminal vt with pwd\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var builder: std.Io.Writer.Allocating = .init(alloc);\n    defer builder.deinit();\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Set pwd using OSC 7\n    s.nextSlice(\"\\x1b]7;file://host/home/user\\x1b\\\\hello\");\n\n    var formatter: TerminalFormatter = .init(&t, .vt);\n    formatter.extra.pwd = true;\n\n    try formatter.format(&builder.writer);\n    const output = builder.writer.buffered();\n\n    // Create a second terminal and apply the output\n    var t2 = try Terminal.init(alloc, .{\n        .cols = 80,\n        .rows = 24,\n    });\n    defer t2.deinit(alloc);\n\n    var s2 = t2.vtStream();\n    defer s2.deinit();\n\n    s2.nextSlice(output);\n\n    // Verify pwd matches\n    try testing.expectEqualStrings(t.pwd.items, t2.pwd.items);\n}"
-}

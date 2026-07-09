@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "semantic prompt fresh line",
-  "sourceLine": 1434,
-  "zigBody": "test \"semantic prompt fresh line\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 10, .rows = 10 });\n    defer t.deinit(testing.allocator);\n\n    var s: Stream = .initAlloc(testing.allocator, .init(&t));\n    defer s.deinit();\n\n    s.nextSlice(\"Hello\");\n    s.nextSlice(\"\\x1b]133;L\\x07\");\n    try testing.expectEqual(@as(usize, 0), t.screens.active.cursor.x);\n    try testing.expectEqual(@as(usize, 1), t.screens.active.cursor.y);\n}"
-}

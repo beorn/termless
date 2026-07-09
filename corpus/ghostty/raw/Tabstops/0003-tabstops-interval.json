@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Tabstops.zig",
-  "testName": "Tabstops: interval",
-  "sourceLine": 224,
-  "zigBody": "test \"Tabstops: interval\" {\n    var t: Tabstops = try init(testing.allocator, 80, 4);\n    defer t.deinit(testing.allocator);\n    try testing.expect(!t.get(0));\n    try testing.expect(t.get(4));\n    try testing.expect(!t.get(5));\n    try testing.expect(t.get(8));\n}"
-}

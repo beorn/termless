@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList compact after increaseCapacity",
-  "sourceLine": 14541,
-  "zigBody": "test \"PageList compact after increaseCapacity\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, 0);\n    defer s.deinit();\n\n    var node = s.pages.first.?;\n\n    // Grow the page capacity. The content is unchanged, so compaction\n    // should always shrink it back down to an exact-size heap page.\n    node = try s.increaseCapacity(node, .grapheme_bytes);\n    const grown_len = node.data.memory.len;\n\n    const new_node = (try s.compact(node)).?;\n    try testing.expectEqual(.heap, new_node.owned);\n    try testing.expect(new_node.data.memory.len < grown_len);\n    try testing.expect(new_node.data.memory.len < std_size);\n}"
-}

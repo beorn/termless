@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "bg color cells",
-  "sourceLine": 1575,
-  "zigBody": "test \"bg color cells\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = 10,\n        .rows = 3,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    // Write a styled cell (so the row has managed memory) then erase\n    // the rest of the line with a palette background pending. The\n    // erase produces bg_color content cells rather than styled cells.\n    s.nextSlice(\"\\x1b[1mA\\x1b[48;5;1m\\x1b[K\");\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n\n    const row_data = state.row_data.slice();\n    const cells = row_data.items(.cells);\n    {\n        const cell = cells[0].get(0);\n        try testing.expectEqual('A', cell.raw.codepoint());\n        try testing.expect(cell.style.flags.bold);\n    }\n    for (1..10) |x| {\n        const cell = cells[0].get(x);\n        try testing.expectEqual(\n            page.Cell.ContentTag.bg_color_palette,\n            cell.raw.content_tag,\n        );\n        try testing.expectEqual(\n            Style.Color{ .palette = 1 },\n            cell.style.bg_color,\n        );\n    }\n}"
-}

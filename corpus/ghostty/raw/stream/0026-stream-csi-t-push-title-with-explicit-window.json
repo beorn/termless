@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream.zig",
-  "testName": "stream: CSI t push title with explicit window",
-  "sourceLine": 3473,
-  "zigBody": "test \"stream: CSI t push title with explicit window\" {\n    const H = struct {\n        index: ?u16 = null,\n\n        pub fn vt(\n            self: *@This(),\n            comptime action: streampkg.Action.Tag,\n            value: streampkg.Action.Value(action),\n        ) void {\n            switch (action) {\n                .title_push => self.index = value,\n                else => {},\n            }\n        }\n    };\n\n    var s: Stream(H) = .init(.{});\n\n    s.nextSlice(\"\\x1b[22;2t\");\n    try testing.expectEqual(@as(u16, 0), s.handler.index.?);\n}"
-}

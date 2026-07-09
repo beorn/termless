@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList decommitPoolItem zeroes the dirty region",
-  "sourceLine": 14447,
-  "zigBody": "test \"PageList decommitPoolItem zeroes the dirty region\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    // Note: in test builds decommitPoolItem always takes the memset\n    // path; the madvise-based paths rely on kernel zero-fill semantics\n    // that unit tests cannot exercise (see decommitPoolItem).\n    const buf = try alloc.alignedAlloc(\n        u8,\n        .fromByteUnits(std.heap.page_size_min),\n        std_size,\n    );\n    defer alloc.free(buf);\n    const item: *align(std.heap.page_size_min) [std_size]u8 = @ptrCast(buf.ptr);\n\n    // Fully dirty item.\n    @memset(item, 0xAA);\n    decommitPoolItem(item, std_size);\n    try testing.expect(std.mem.allEqual(u8, item, 0));\n\n    // Partially dirty item: an item that hosted a page smaller than\n    // the item is only dirty up to the page length; the rest is zero\n    // by invariant and must remain zero.\n    @memset(item[0..1024], 0xAA);\n    decommitPoolItem(item, 1024);\n    try testing.expect(std.mem.allEqual(u8, item, 0));\n}"
-}

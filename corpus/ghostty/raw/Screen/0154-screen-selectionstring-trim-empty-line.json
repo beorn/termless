@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: selectionString trim empty line",
-  "sourceLine": 9395,
-  "zigBody": "test \"Screen: selectionString trim empty line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 5, .rows = 5, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"1AB  \\n\\n2EFGH\\n3IJKL\";\n    try s.testWriteString(str);\n\n    const sel = Selection.init(\n        s.pages.pin(.{ .screen = .{ .x = 0, .y = 0 } }).?,\n        s.pages.pin(.{ .screen = .{ .x = 2, .y = 2 } }).?,\n        false,\n    );\n\n    {\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = true,\n        });\n        defer alloc.free(contents);\n        const expected = \"1AB\\n\\n2EF\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n\n    // No trim\n    {\n        const contents = try s.selectionString(alloc, .{\n            .sel = sel,\n            .trim = false,\n        });\n        defer alloc.free(contents);\n        const expected = \"1AB  \\n\\n2EF\";\n        try testing.expectEqualStrings(expected, contents);\n    }\n}"
-}

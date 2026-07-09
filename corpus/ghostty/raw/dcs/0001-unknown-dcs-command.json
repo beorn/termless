@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "dcs.zig",
-  "testName": "unknown DCS command",
-  "sourceLine": 298,
-  "zigBody": "test \"unknown DCS command\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var h: Handler = .{};\n    defer h.deinit();\n    try testing.expect(h.hook(alloc, .{ .final = 'A' }) == null);\n    try testing.expect(h.state == .ignore);\n    try testing.expect(h.unhook() == null);\n    try testing.expect(h.state == .inactive);\n}"
-}

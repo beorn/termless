@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen: resize less cols to eliminate wide char with row space",
-  "sourceLine": 7668,
-  "zigBody": "test \"Screen: resize less cols to eliminate wide char with row space\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, .{ .cols = 2, .rows = 2, .max_scrollback = 0 });\n    defer s.deinit();\n    const str = \"😀\";\n    try s.testWriteString(str);\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(str, contents);\n    }\n    {\n        const list_cell = s.pages.getCell(.{ .screen = .{ .x = 0, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(Cell.Wide.wide, cell.wide);\n        try testing.expectEqual(@as(u21, '😀'), cell.content.codepoint);\n    }\n    {\n        const list_cell = s.pages.getCell(.{ .screen = .{ .x = 1, .y = 0 } }).?;\n        const cell = list_cell.cell;\n        try testing.expectEqual(Cell.Wide.spacer_tail, cell.wide);\n    }\n\n    try s.resize(.{ .cols = 1, .rows = 2 });\n    {\n        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n        defer alloc.free(contents);\n        try testing.expectEqualStrings(\"\", contents);\n    }\n}"
-}

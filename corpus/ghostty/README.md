@@ -17,9 +17,9 @@ without a Zig toolchain.
 
 ```
 extract.ts        # standalone bun script: raw extraction + mechanical conversion
-fetch.ts          # standalone bun script: fetches source-files.ts's list from upstream
+fetch.ts          # standalone bun script: fetches source-files.ts's list at the pinned commit
 source-files.ts    # single source of truth for which src/terminal/*.zig files are in scope
-raw/<Stem>/*.json  # every test block, unconverted (1287 files)
+raw/<Stem>.jsonl   # every test block, unconverted — one JSON object per line (28 files, 1287 blocks)
 cases/<Stem>/*.json # the mechanically-convertible subset, as executable cases (14 files)
 COVERAGE.md         # per-file totals, conversion-rejection reasons, category breakdown
 ```
@@ -29,25 +29,29 @@ COVERAGE.md         # per-file totals, conversion-rejection reasons, category br
 ## Re-running / regenerating
 
 ```bash
-bun fetch.ts [outDir]              # default outDir: ./src (not checked in)
+bun fetch.ts [outDir] [ref]        # default outDir: ./src (not checked in); default ref: the pinned provenance commit
 bun extract.ts <outDir> [corpusOutDir]  # default corpusOutDir: this directory
 ```
 
-`fetch.ts` pulls the exact file list in `source-files.ts` from upstream `main`
-into `outDir`. `extract.ts` then reads `.zig` files from that directory (only
-the files named in `source-files.ts` — anything else present is ignored) and
-(re)writes `raw/`, `cases/`, and `COVERAGE.md`. Both scripts are standalone
+`fetch.ts` pulls the exact file list in `source-files.ts` from upstream at the
+PINNED provenance commit (see `PINNED_REF` in fetch.ts + the Provenance section
+above) into `outDir`. `extract.ts` then reads `.zig` files from that directory
+(only the files named in `source-files.ts` — anything else present is ignored)
+and (re)writes `raw/`, `cases/`, and `COVERAGE.md`. Both scripts are standalone
 (`node:fs`/`node:path`/`node:url` only — no imports from the rest of this
 repo), so they work the same whether run from a monorepo checkout or a
 standalone clone of this package.
 
-Upstream `main` moves — re-running today will not byte-for-byte match what's
-checked in here (ghostty adds/edits tests continuously). That's expected;
-treat a re-run as a refresh, not a correctness check on the existing corpus.
+Because the ref is pinned, `fetch.ts && extract.ts` with no arguments is a
+byte-identical REPRODUCTION of the checked-in corpus — a correctness check on
+the pipeline. To REFRESH against newer upstream, pass an explicit ref (e.g.
+`bun fetch.ts ./src main`), then update `PINNED_REF` and the Provenance
+section in the same commit as the regenerated corpus.
 
 ## `raw/` schema
 
-One record per top-level `test "NAME" { ... }` block, extracted with a
+One `<Stem>.jsonl` file per upstream source file; within it, one compact JSON
+record per line, one line per top-level `test "NAME" { ... }` block, extracted with a
 brace-balanced, string/comment-aware scanner (handles Zig's `//` line
 comments and `\\`-prefixed multiline string literals) — not a naive regex, so
 nested braces inside the test body can't truncate extraction early. Every

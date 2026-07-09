@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "render.zig",
-  "testName": "linkCells with scrollback spanning pages",
-  "sourceLine": 1963,
-  "zigBody": "test \"linkCells with scrollback spanning pages\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    const viewport_rows: size.CellCountInt = 10;\n    const tail_rows: size.CellCountInt = 5;\n\n    var t = try Terminal.init(alloc, .{\n        .cols = page.std_capacity.cols,\n        .rows = viewport_rows,\n        .max_scrollback = 10_000,\n    });\n    defer t.deinit(alloc);\n\n    var s = t.vtStream();\n    defer s.deinit();\n\n    const pages = &t.screens.active.pages;\n    const first_page_cap = pages.pages.first.?.data.capacity.rows;\n\n    // Fill first page\n    for (0..first_page_cap - 1) |_| s.nextSlice(\"\\r\\n\");\n\n    // Create second page with hyperlink\n    s.nextSlice(\"\\r\\n\");\n    s.nextSlice(\"\\x1b]8;;http://example.com\\x1b\\\\LINK\\x1b]8;;\\x1b\\\\\");\n    for (0..(tail_rows - 1)) |_| s.nextSlice(\"\\r\\n\");\n\n    var state: RenderState = .empty;\n    defer state.deinit(alloc);\n    try state.update(alloc, &t);\n\n    const expected_viewport_y: usize = viewport_rows - tail_rows;\n    // BUG: This crashes without the fix\n    var cells = try state.linkCells(alloc, .{\n        .x = 0,\n        .y = expected_viewport_y,\n    });\n    defer cells.deinit(alloc);\n    try testing.expectEqual(@as(usize, 4), cells.count());\n}"
-}

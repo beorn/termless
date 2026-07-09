@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "PageList.zig",
-  "testName": "PageList resize less rows and cols cursor at bottom",
-  "sourceLine": 11019,
-  "zigBody": "test \"PageList resize less rows and cols cursor at bottom\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try init(alloc, 80, 24, 0);\n    defer s.deinit();\n\n    const cursor_pin = try s.trackPin(s.pin(.{ .active = .{\n        .x = 0,\n        .y = s.rows - 1,\n    } }).?);\n    defer s.untrackPin(cursor_pin);\n\n    // Shrink both axes such that the original cursor.y is strictly past the\n    // new row count, so resizeWithoutReflow leaves self.rows < c.y + 1.\n    try s.resize(.{\n        .cols = 79,\n        .rows = 20,\n        .reflow = true,\n        .cursor = .{ .x = 0, .y = 23, .pin = cursor_pin },\n    });\n    try testing.expectEqual(@as(usize, 79), s.cols);\n    try testing.expectEqual(@as(usize, 20), s.rows);\n\n    // remaining_rows saturates to 0, so the cursor lands on the new bottom row.\n    try testing.expectEqual(point.Point{ .active = .{\n        .x = 0,\n        .y = s.rows - 1,\n    } }, s.pointFromPin(.active, cursor_pin.*).?);\n}"
-}

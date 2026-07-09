@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "color.zig",
-  "testName": "generate256Color: light theme harmonious grayscale ramp",
-  "sourceLine": 1231,
-  "zigBody": "test \"generate256Color: light theme harmonious grayscale ramp\" {\n    const testing = std.testing;\n\n    const bg = RGB{ .r = 255, .g = 255, .b = 255 };\n    const fg = RGB{ .r = 0, .g = 0, .b = 0 };\n\n    // harmonious=false swaps bg/fg, so the ramp runs black→white (increasing).\n    {\n        const palette = generate256Color(default, .initEmpty(), bg, fg, false);\n        var prev_lum: f64 = 0.0;\n        for (232..256) |i| {\n            const lum = palette[i].luminance();\n            try testing.expect(lum >= prev_lum);\n            prev_lum = lum;\n        }\n    }\n\n    // harmonious=true keeps original order, so the ramp runs white→black (decreasing).\n    {\n        const palette = generate256Color(default, .initEmpty(), bg, fg, true);\n        var prev_lum: f64 = 1.0;\n        for (232..256) |i| {\n            const lum = palette[i].luminance();\n            try testing.expect(lum <= prev_lum);\n            prev_lum = lum;\n        }\n    }\n}"
-}

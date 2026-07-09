@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "stream_terminal.zig",
-  "testName": "device attributes: primary DA",
-  "sourceLine": 2234,
-  "zigBody": "test \"device attributes: primary DA\" {\n    var t: Terminal = try .init(testing.allocator, .{ .cols = 80, .rows = 24 });\n    defer t.deinit(testing.allocator);\n\n    const S = struct {\n        var written: ?[]const u8 = null;\n        fn writePty(_: *Handler, data: [:0]const u8) void {\n            if (written) |old| testing.allocator.free(old);\n            written = testing.allocator.dupe(u8, data) catch @panic(\"OOM\");\n        }\n        fn da(_: *Handler) device_attributes.Attributes {\n            return .{};\n        }\n    };\n    S.written = null;\n    defer if (S.written) |old| testing.allocator.free(old);\n\n    var handler: Handler = .init(&t);\n    handler.effects.write_pty = &S.writePty;\n    handler.effects.device_attributes = &S.da;\n\n    var s: Stream = .initAlloc(testing.allocator, handler);\n    defer s.deinit();\n\n    s.nextSlice(\"\\x1B[c\");\n    try testing.expectEqualStrings(\"\\x1b[?62;22c\", S.written.?);\n}"
-}

@@ -1,7 +1,0 @@
-{
-  "suite": "ghostty",
-  "file": "Screen.zig",
-  "testName": "Screen clearRows active multi line",
-  "sourceLine": 4026,
-  "zigBody": "test \"Screen clearRows active multi line\" {\n    const testing = std.testing;\n    const alloc = testing.allocator;\n\n    var s = try Screen.init(alloc, .{ .cols = 80, .rows = 24, .max_scrollback = 1000 });\n    defer s.deinit();\n\n    try s.testWriteString(\"hello\\nworld\");\n    s.clearRows(.{ .active = .{} }, null, false);\n    try testing.expect(s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } }));\n    try testing.expect(s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } }));\n    const str = try s.dumpStringAlloc(alloc, .{ .screen = .{} });\n    defer alloc.free(str);\n    try testing.expectEqualStrings(\"\", str);\n}"
-}
