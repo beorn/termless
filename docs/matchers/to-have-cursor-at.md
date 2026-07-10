@@ -50,7 +50,7 @@ expect(term).not.toHaveCursorAt(0, 0)
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 

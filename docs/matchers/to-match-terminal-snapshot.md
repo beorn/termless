@@ -45,7 +45,7 @@ The snapshot includes a header with terminal dimensions and cursor state, follow
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 

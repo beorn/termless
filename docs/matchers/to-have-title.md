@@ -37,7 +37,7 @@ expect(term).not.toHaveTitle("untitled")
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 

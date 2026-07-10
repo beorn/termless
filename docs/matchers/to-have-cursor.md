@@ -59,7 +59,7 @@ Expected terminal to have cursor {"x":5,"y":10,"visible":true}
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 

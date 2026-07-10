@@ -5,7 +5,7 @@ description: Generate SVG and PNG screenshots from terminal state via native can
 
 # Screenshots
 
-Termless generates screenshots from terminal state. SVG is built in with zero dependencies. PNG output flows through `Terminal.screenshot()` — an auto-picker that prefers the native canvas pipeline (`@napi-rs/canvas` + ghostty-web WASM, via `@termless/ghostty`) and falls back to `@resvg/resvg-js` on hosts where the native canvas isn't available. There's no Chromium dependency anywhere in the pipeline.
+Termless generates screenshots from terminal state. SVG is built in with zero dependencies. PNG output flows through `TestTerminal.screenshot()` — an auto-picker that prefers the native canvas pipeline (`@napi-rs/canvas` + ghostty-web WASM, via `@termless/ghostty`) and falls back to `@resvg/resvg-js` on hosts where the native canvas isn't available. There's no Chromium dependency anywhere in the pipeline.
 
 For one-off command-output images, use `termless record -o <image> -- <cmd>`. For reproducible docs, demos, and regression fixtures, write a `.tape` and render it with `termless play`. Both paths render from parsed terminal state, so ANSI styling, cursor state, and screen geometry stay inspectable before they become an image.
 
@@ -187,7 +187,7 @@ Use the auto-picker for routine work. Use `screenshotCanvasPng()` when you speci
 
 ## Standalone Functions
 
-You can also use the screenshot functions directly on any `TerminalReadable`:
+You can also use the screenshot functions directly on any `Terminal`:
 
 ```typescript
 import { screenshotSvg, screenshotPng } from "@termless/core"

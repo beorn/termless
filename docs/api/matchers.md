@@ -18,7 +18,7 @@ expect.extend(terminalMatchers)
 
 Matchers are composable: use region selectors to pick **where**, then assert **what**. All support `.not` negation.
 
-## Text Matchers (on RegionView / RowView)
+## Text Matchers (on Region / Row)
 
 ### `toContainText(text: string)`
 
@@ -47,9 +47,9 @@ Assert region lines match expected array. Trailing whitespace is trimmed per lin
 expect(term.screen).toMatchLines(["Line 1", "Line 2", "", "Line 4"])
 ```
 
-## Cell Style Matchers (on CellView)
+## Cell Style Matchers (on Cell)
 
-### `toHaveFg(color: string | RGB)`
+### `toHaveFg(color: string | Color)`
 
 Assert foreground color. Accepts `"#rrggbb"` string or `{ r, g, b }` object.
 
@@ -58,7 +58,7 @@ expect(term.cell(0, 0)).toHaveFg("#ff0000")
 expect(term.cell(0, 0)).toHaveFg({ r: 255, g: 0, b: 0 })
 ```
 
-### `toHaveBg(color: string | RGB)`
+### `toHaveBg(color: string | Color)`
 
 Assert background color.
 
@@ -126,7 +126,7 @@ Assert cell is a double-width character (CJK, emoji).
 expect(term.cell(0, 0)).toBeWide() // First cell of a wide char
 ```
 
-## Cursor Matchers (on TerminalReadable)
+## Cursor Matchers (on Terminal)
 
 ### `toHaveCursorAt(x: number, y: number)`
 
@@ -163,7 +163,7 @@ expect(term).toHaveCursorStyle("beam")
 expect(term).toHaveCursorStyle("underline")
 ```
 
-## Terminal Mode Matcher (on TerminalReadable)
+## Terminal Mode Matcher (on Terminal)
 
 ### `toBeInMode(mode: TerminalMode)`
 
@@ -179,7 +179,7 @@ expect(term).not.toBeInMode("insertMode")
 
 Available modes: `altScreen`, `cursorVisible`, `bracketedPaste`, `applicationCursor`, `applicationKeypad`, `autoWrap`, `mouseTracking`, `focusTracking`, `originMode`, `insertMode`, `reverseVideo`.
 
-## Title Matcher (on TerminalReadable)
+## Title Matcher (on Terminal)
 
 ### `toHaveTitle(title: string)`
 
@@ -189,7 +189,7 @@ Assert terminal title (set via OSC 2 escape sequence).
 expect(term).toHaveTitle("vim - file.txt")
 ```
 
-## Scrollback Matchers (on TerminalReadable)
+## Scrollback Matchers (on Terminal)
 
 ### `toHaveScrollbackLines(n: number)`
 
@@ -207,7 +207,7 @@ Assert viewport is at the bottom (no scroll offset).
 expect(term).toBeAtBottomOfScrollback()
 ```
 
-## Snapshot Matcher (on TerminalReadable)
+## Snapshot Matcher (on Terminal)
 
 ### `toMatchTerminalSnapshot(options?)`
 
@@ -236,8 +236,8 @@ test("renders correctly", () => {
 
 ### `terminalSnapshot(terminal, name?)`
 
-Wraps a `TerminalReadable` for the snapshot serializer.
+Wraps a `Terminal` for the snapshot serializer.
 
 ```typescript
-function terminalSnapshot(terminal: TerminalReadable, name?: string): TerminalSnapshotMarker
+function terminalSnapshot(terminal: Terminal, name?: string): TerminalSnapshotMarker
 ```

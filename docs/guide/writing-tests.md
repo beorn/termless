@@ -65,7 +65,7 @@ expect(term).toHaveCursorAt(5, 0) // terminal matcher
 
 ## Assertions: Matchers Reference
 
-### Text Matchers (on RegionView / RowView)
+### Text Matchers (on Region / Row)
 
 ```typescript
 // Contains text anywhere in the region
@@ -78,7 +78,7 @@ expect(term.row(0)).toHaveText("Title")
 expect(term.screen).toMatchLines(["Line 1", "Line 2", "Line 3"])
 ```
 
-### Cell Style Matchers (on CellView)
+### Cell Style Matchers (on Cell)
 
 ```typescript
 // Colors — accepts "#rrggbb" string or { r, g, b } object
@@ -250,13 +250,13 @@ test("find specific text", () => {
   const term = createTestTerminal()
   term.feed("Line 0\r\nLine 1\r\nTarget here")
 
-  const pos = term.find("Target")
+  const pos = term.findText("Target")
   expect(pos).not.toBeNull()
   expect(pos!.row).toBe(2)
   expect(pos!.col).toBe(0)
 
   // Regex search for multiple matches
-  const matches = term.findAll(/Line \d/g)
+  const matches = term.findAllText(/Line \d/g)
   expect(matches).toHaveLength(2)
 })
 ```
@@ -282,7 +282,7 @@ test("read text from different regions", () => {
   const bufferText = term.buffer.getText()
 
   // Raw output has protocol bytes before terminal parsing
-  const outputText = term.out.getText()
+  const outputText = term.output.getText()
 
   // Single row
   const rowText = term.row(0).getText()
@@ -323,7 +323,7 @@ await expect(term.row(0)).toContainText("Title", { timeout: 5000 })
 await expect(term).toBeInMode("altScreen", { timeout: 5000 })
 
 // Wait for raw protocol output that may not render as screen text
-await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
+await expect(term.output).toContainOutput("\x1b_G", { timeout: 5000 })
 ```
 
 Without `{ timeout }`, matchers run synchronously -- they pass or fail immediately without polling. Use the synchronous form for in-memory tests where the terminal state is already set:
@@ -349,7 +349,7 @@ expect(term.cell(0, 0)).toBeBold() // sync, no polling
 
 ## Raw Protocol Output
 
-Most assertions should use rendered terminal state: `term.screen`, `term.buffer`, `term.row(n)`, `term.cell(r, c)`, cursor, mode, and title matchers. Use `term.out` only when the behavior is the literal output stream itself.
+Most assertions should use rendered terminal state: `term.screen`, `term.buffer`, `term.row(n)`, `term.cell(r, c)`, cursor, mode, and title matchers. Use `term.output` only when the behavior is the literal output stream itself.
 
 That matters for protocols such as Kitty graphics, OSC 52 clipboard writes, OSC titles, terminal queries, or CSI mode changes. These bytes may be consumed by the emulator and never appear in screen text.
 
@@ -359,11 +359,11 @@ test("emits a Kitty graphics packet", async () => {
 
   app.renderImage()
 
-  await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
-  expect(term.out.getText()).toContain("a=p")
+  await expect(term.output).toContainOutput("\x1b_G", { timeout: 5000 })
+  expect(term.output.getText()).toContain("a=p")
 
-  term.out.clear()
+  term.output.clear()
   app.unmount()
-  await expect(term.out).toContainOutput("a=d,d=i", { timeout: 5000 })
+  await expect(term.output).toContainOutput("a=d,d=i", { timeout: 5000 })
 })
 ```

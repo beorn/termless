@@ -180,7 +180,7 @@ const backends: [string, BackendFactory][] = [
 
 ### TerminalBackend Interface (16 methods + 2 properties)
 
-All backends implement `TerminalBackend` (defined in `src/types.ts`). The interface extends `TerminalReadable` and adds lifecycle, data flow, key encoding, scrollback, and capability methods.
+All backends implement `TerminalBackend` (defined in `src/types.ts`). The interface extends `Terminal` and adds lifecycle, data flow, key encoding, scrollback, and capability methods.
 
 #### Lifecycle (3 methods)
 
@@ -200,19 +200,19 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 | `resize` | `(cols: number, rows: number) => void` | Resize the terminal. Content should be preserved.                                                                                                                                                                                                                  |
 | `reset`  | `() => void`                           | Reset to initial state (equivalent to RIS `\x1bc`). Clear screen, reset modes, clear title. Also reset any closure state (like `title`) that the backend tracks outside the native terminal instance.                                                              |
 
-#### Reading (9 methods from TerminalReadable)
+#### Reading (9 methods from Terminal)
 
 | Method          | Signature                                        | Description                                                                                                                                                                                                                                                            |
 | --------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `getText`       | `() => string`                                   | Full buffer text (scrollback + screen), lines joined with `\n`. Trailing whitespace per line should be trimmed.                                                                                                                                                        |
 | `getTextRange`  | `(startRow, startCol, endRow, endCol) => string` | Text from a rectangular region.                                                                                                                                                                                                                                        |
 | `getCell`       | `(row: number, col: number) => Cell`             | Single cell at screen position. Return empty cell for out-of-bounds.                                                                                                                                                                                                   |
-| `getLine`       | `(row: number) => Cell[]`                        | All cells in a screen row (length = cols).                                                                                                                                                                                                                             |
-| `getLines`      | `() => Cell[][]`                                 | All screen rows (length = rows).                                                                                                                                                                                                                                       |
-| `getCursor`     | `() => CursorState`                              | Cursor position (`x`, `y`), `visible`, and `style`.                                                                                                                                                                                                                    |
+| `getRow`        | `(row: number) => Cell[]`                        | All cells in a screen row (length = cols).                                                                                                                                                                                                                             |
+| `getRows`       | `() => Cell[][]`                                 | All screen rows (length = rows).                                                                                                                                                                                                                                       |
+| `getCursor`     | `() => Cursor`                                   | Cursor position (`col`, `row`), `visible`, and `style`.                                                                                                                                                                                                                |
 | `getMode`       | `(mode: TerminalMode) => boolean`                | Query a terminal mode. Must support all 11 modes in the `TerminalMode` union.                                                                                                                                                                                          |
 | `getTitle`      | `() => string`                                   | Current OSC 2 title. Your backend must capture OSC 2 title changes. Common approaches: (1) callback from native terminal (xterm.js `onTitleChange`), (2) built-in getter on native object (alacritty/wezterm `getTitle()`), (3) manual tracking in the parser (vt100). |
-| `getScrollback` | `() => ScrollbackState`                          | Scrollback state: `viewportOffset`, `totalLines`, `screenLines`.                                                                                                                                                                                                       |
+| `getScrollback` | `() => ScrollbackState`                          | Scrollback state: `viewportTop`, `totalRows`, `screenRows`.                                                                                                                                                                                                            |
 
 #### Key Encoding (1 method)
 
@@ -234,13 +234,13 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 
 ### Cell Format
 
-The `Cell` type returned by `getCell`/`getLine`/`getLines`:
+The `Cell` type returned by `getCell`/`getRow`/`getRows`:
 
 ```typescript
 interface Cell {
   text: string // Character(s) at this position ("" for empty)
-  fg: RGB | null // Foreground color (null = terminal default)
-  bg: RGB | null // Background color (null = terminal default)
+  fg: Color | null // Foreground color (null = terminal default)
+  bg: Color | null // Background color (null = terminal default)
   bold: boolean
   faint: boolean
   italic: boolean
@@ -291,8 +291,8 @@ export function create<Name>Backend(opts?: Partial<TerminalOptions>): TerminalBa
     getText,
     getTextRange,
     getCell,
-    getLine,
-    getLines,
+    getRow,
+    getRows,
     getCursor,
     getMode,
     getTitle,
@@ -380,7 +380,7 @@ If your terminal supports Kitty keyboard protocol or other extended encoding, im
 
 #### Color handling
 
-Map the native library's color representation to Termless `RGB | null`:
+Map the native library's color representation to Termless `Color | null`:
 
 - **Default colors → `null`**: The terminal's default fg/bg must map to `null`, not to an RGB value. Cross-backend matchers depend on this.
 - **True color (24-bit)**: Extract R, G, B from the native format.

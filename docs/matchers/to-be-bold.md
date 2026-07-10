@@ -42,7 +42,7 @@ expect(term.cell(0, 5)).not.toBeBold()
 
 ## Notes
 
-- Works on `CellView` objects returned by `term.cell(row, col)`
+- Works on `Cell` objects returned by `term.cell(row, col)`
 - Bold is typically rendered as increased font weight or brighter colors
 
 ## See Also

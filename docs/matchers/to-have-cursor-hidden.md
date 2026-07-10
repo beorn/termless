@@ -45,7 +45,7 @@ expect(term).not.toHaveCursorHidden()
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 

@@ -24,8 +24,8 @@ expect(cell).toHaveAttrs(attrs: CellAttrs)
 | `attrs.inverse`       | `boolean`                   | Inverse/reverse video                 |
 | `attrs.wide`          | `boolean`                   | Double-width character                |
 | `attrs.underline`     | `boolean \| UnderlineStyle` | `true` = any style, or specific style |
-| `attrs.fg`            | `string \| RGB`             | Foreground color (hex or RGB object)  |
-| `attrs.bg`            | `string \| RGB`             | Background color (hex or RGB object)  |
+| `attrs.fg`            | `string \| Color`           | Foreground color (hex or Color object) |
+| `attrs.bg`            | `string \| Color`           | Background color (hex or Color object) |
 
 All fields are optional. Only specified fields are checked.
 

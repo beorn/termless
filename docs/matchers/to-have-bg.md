@@ -14,19 +14,19 @@ expect(term.cell(0, 0)).toHaveAttrs({ bg: "#282a36" })
 
 :::
 
-Assert that a cell has a specific background color. Accepts hex strings or RGB objects.
+Assert that a cell has a specific background color. Accepts hex strings or Color objects.
 
 ## Signature
 
 ```typescript
-expect(cell).toHaveBg(color: string | RGB)
+expect(cell).toHaveBg(color: string | Color)
 ```
 
 ## Parameters
 
-| Parameter | Type            | Description                                    |
-| --------- | --------------- | ---------------------------------------------- |
-| `color`   | `string \| RGB` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
+| Parameter | Type              | Description                                    |
+| --------- | ----------------- | ---------------------------------------------- |
+| `color`   | `string \| Color` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
 
 ## Usage
 
@@ -34,7 +34,7 @@ expect(cell).toHaveBg(color: string | RGB)
 // Hex string
 expect(term.cell(0, 0)).toHaveBg("#282a36")
 
-// RGB object
+// Color object
 expect(term.cell(0, 0)).toHaveBg({ r: 40, g: 42, b: 54 })
 
 // Negation
@@ -51,8 +51,8 @@ expect(term.cell(0, 0)).not.toHaveBg("#ffffff")
 
 ## Notes
 
-- Colors are resolved to RGB values by the backend
-- Palette colors (0-255) are resolved to their RGB equivalents
+- Colors are resolved to Color values by the backend
+- Palette colors (0-255) are resolved to their Color equivalents
 - Default background color depends on the backend's theme
 
 ## See Also

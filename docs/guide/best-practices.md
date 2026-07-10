@@ -63,7 +63,7 @@ await expect(term.screen).toContainText("prompt>")
 For protocol bytes that are consumed by the terminal emulator and do not render as screen text, use the raw output view:
 
 ```typescript
-await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 }) // Kitty graphics APC
+await expect(term.output).toContainOutput("\x1b_G", { timeout: 5000 }) // Kitty graphics APC
 ```
 
 ### Use `waitForStable()` after keypresses
@@ -97,10 +97,10 @@ await term.dblclick(10, 5, { shift: true })
 
 ### Click on found text
 
-Use `find()` to locate text, then click relative to it:
+Use `findText()` to locate text, then click relative to it:
 
 ```typescript
-const pos = term.find("Submit")
+const pos = term.findText("Submit")
 if (pos) {
   term.click(pos.col, pos.row)
 }

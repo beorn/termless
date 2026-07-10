@@ -14,7 +14,7 @@ import type { TerminalBackend, TerminalOptions, TerminalCapabilities } from "@te
 All backends must implement this interface. Users typically don't interact with backends directly -- `createTerminal()` wraps them.
 
 ```typescript
-interface TerminalBackend extends TerminalReadable {
+interface TerminalBackend extends Terminal {
   readonly name: string
 
   // Lifecycle
@@ -129,14 +129,14 @@ export function createMyBackend(): TerminalBackend {
     getCell(row, col) {
       /* return Cell */
     },
-    getLine(row) {
+    getRow(row) {
       /* return Cell[] */
     },
-    getLines() {
+    getRows() {
       /* return Cell[][] */
     },
     getCursor() {
-      /* return CursorState */
+      /* return Cursor */
     },
     getMode(mode) {
       /* return boolean */
@@ -186,9 +186,9 @@ interface MouseEncodingExtension {
 
 // Color palette manipulation
 interface ColorPaletteExtension {
-  setColorPalette(entries: Partial<Record<number, RGB>>): void
-  setDefaultFg(color: RGB): void
-  setDefaultBg(color: RGB): void
+  setColorPalette(entries: Partial<Record<number, Color>>): void
+  setDefaultFg(color: Color): void
+  setDefaultBg(color: Color): void
 }
 
 // Dirty row tracking (for incremental rendering)

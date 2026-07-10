@@ -14,19 +14,19 @@ expect(term.cell(0, 0)).toHaveAttrs({ fg: "#ff0000" })
 
 :::
 
-Assert that a cell has a specific foreground color. Accepts hex strings or RGB objects.
+Assert that a cell has a specific foreground color. Accepts hex strings or Color objects.
 
 ## Signature
 
 ```typescript
-expect(cell).toHaveFg(color: string | RGB)
+expect(cell).toHaveFg(color: string | Color)
 ```
 
 ## Parameters
 
-| Parameter | Type            | Description                                    |
-| --------- | --------------- | ---------------------------------------------- |
-| `color`   | `string \| RGB` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
+| Parameter | Type              | Description                                    |
+| --------- | ----------------- | ---------------------------------------------- |
+| `color`   | `string \| Color` | Expected color as `"#rrggbb"` or `{ r, g, b }` |
 
 ## Usage
 
@@ -34,7 +34,7 @@ expect(cell).toHaveFg(color: string | RGB)
 // Hex string
 expect(term.cell(0, 0)).toHaveFg("#ff0000")
 
-// RGB object
+// Color object
 expect(term.cell(0, 0)).toHaveFg({ r: 255, g: 0, b: 0 })
 
 // Negation
@@ -51,8 +51,8 @@ expect(term.cell(0, 0)).not.toHaveFg("#000000")
 
 ## Notes
 
-- Colors are resolved to RGB values by the backend
-- Palette colors (0-255) are resolved to their RGB equivalents
+- Colors are resolved to Color values by the backend
+- Palette colors (0-255) are resolved to their Color equivalents
 - Default foreground color depends on the backend's theme
 
 ## See Also

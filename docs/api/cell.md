@@ -1,12 +1,12 @@
 ---
 title: Cell, Cursor & Colors API
-description: API reference for Cell, CursorState, CursorStyle, RGB, UnderlineStyle, and other terminal cell types in Termless.
+description: API reference for Cell, Cursor, CursorStyle, Color, UnderlineStyle, and other terminal cell types in Termless.
 ---
 
 # API: Cell, Cursor, Colors
 
 ```typescript
-import type { Cell, CursorState, CursorStyle, RGB, UnderlineStyle, TerminalMode, ScrollbackState } from "@termless/core"
+import type { Cell, Cursor, CursorStyle, Color, UnderlineStyle, TerminalMode, ScrollbackState } from "@termless/core"
 ```
 
 ## Cell
@@ -16,8 +16,8 @@ Represents a single terminal cell with text content and style attributes.
 ```typescript
 interface Cell {
   text: string // Character(s) in this cell
-  fg: RGB | null // Foreground color (null = default)
-  bg: RGB | null // Background color (null = default)
+  fg: Color | null // Foreground color (null = default)
+  bg: Color | null // Background color (null = default)
   bold: boolean
   faint: boolean // Dim/half-bright
   italic: boolean
@@ -28,13 +28,13 @@ interface Cell {
 }
 ```
 
-## RGB
+## Color
 
 ```typescript
-type RGB = { r: number; g: number; b: number }
+type Color = { r: number; g: number; b: number; index?: number }
 ```
 
-Values are 0-255 per channel.
+Values are 0-255 per channel. `index` is the ANSI/256-color palette index, when known.
 
 ## UnderlineStyle
 
@@ -42,12 +42,12 @@ Values are 0-255 per channel.
 type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed"
 ```
 
-## CursorState
+## Cursor
 
 ```typescript
-interface CursorState {
-  x: number // Column (0-based)
-  y: number // Row (0-based)
+interface Cursor {
+  col: number // Column (0-based)
+  row: number // Row (0-based)
   visible: boolean
   style: CursorStyle
 }
@@ -80,9 +80,9 @@ type TerminalMode =
 
 ```typescript
 interface ScrollbackState {
-  viewportOffset: number // Lines scrolled up from bottom (0 = at bottom)
-  totalLines: number // Total lines in buffer (screen + scrollback)
-  screenLines: number // Visible screen height
+  viewportTop: number // Lines scrolled up from bottom (0 = at bottom)
+  totalRows: number // Total rows in buffer (screen + scrollback)
+  screenRows: number // Visible screen height
 }
 ```
 

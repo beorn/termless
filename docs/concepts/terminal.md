@@ -1,11 +1,11 @@
 ---
-title: Terminal
-description: A Terminal is a live session — a Backend plus an optional PTY, a buffer, and a readable, queryable API.
+title: TestTerminal
+description: A TestTerminal is a live session — a Backend plus an optional PTY, a buffer, and a readable, queryable API.
 ---
 
-# Terminal
+# TestTerminal
 
-A **Terminal** is a _live_ terminal session. It wraps a [Backend](./backend) and
+A **TestTerminal** is a _live_ terminal session. It wraps a [Backend](./backend) and
 adds everything you need to run a real program and inspect what it draws:
 
 - an optional **PTY** — spawn a process and connect it to the emulator;
@@ -14,10 +14,10 @@ adds everything you need to run a real program and inspect what it draws:
 - **input** — press keys, type text, click and drag;
 - **region selectors** + **matchers** — the testing surface.
 
-A Terminal is the live counterpart of a [Recording](./recording): a Terminal is
+A TestTerminal is the live counterpart of a [Recording](./recording): a TestTerminal is
 a session happening _now_; a Recording is a session captured _over time_.
 
-## Creating a Terminal
+## Creating a TestTerminal
 
 ```typescript
 import { createTerminal } from "@termless/core"
@@ -29,18 +29,18 @@ await term.spawn(["bash", "-lc", "ls -la"])
 
 ## The readable surface
 
-A Terminal exposes its buffer as queryable values, never as a flat string:
+A TestTerminal exposes its buffer as queryable values, never as a flat string:
 
 - **`Buffer`** / **`Cell`** — the grid and a single cell (text, fg, bg, style flags).
-- **`RegionView`** — a lazy view over part of the screen that recomputes on access.
-- **`RowView`** — a single row with cell-level access.
+- **`Region`** — a lazy view over part of the screen that recomputes on access.
+- **`Row`** — a single row with cell-level access.
 
-These are _value types within_ a Terminal — not separate domain objects. You
+These are _value types within_ a TestTerminal — not separate domain objects. You
 read them; you don't construct a session out of them.
 
 ## Region selectors + matchers
 
-Termless's headline testing API is a **query-and-assert** pair over a Terminal:
+Termless's headline testing API is a **query-and-assert** pair over a TestTerminal:
 pick **where** with a region selector, assert **what** with a matcher.
 
 ```typescript
@@ -51,7 +51,7 @@ expect(term).toHaveCursorAt(14, 2)
 
 Region selectors — `term.screen`, `term.scrollback`, `term.buffer`,
 `term.viewport`, `term.row(n)`, `term.cell(r, c)`, `term.range(...)` — are an
-_API over_ a Terminal, not a noun of their own.
+_API over_ a TestTerminal, not a noun of their own.
 
 See the [Terminal API](../api/terminal) for the full method list, the
 [Writing Tests guide](../guide/writing-tests) for the testing workflow, and the

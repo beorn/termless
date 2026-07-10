@@ -12,7 +12,7 @@ import type { TerminalStateDigest, TerminalStateDiff } from "@termless/core"
 
 A **state digest** is a plain, serializable snapshot of everything that defines a terminal's observable state: geometry, cursor, title, modes, and the visible grid as text lines plus a per-row style signature. It answers one question — *are these two terminals in the same state?* — with one vocabulary, for any [backend](/concepts/backend) and for a live terminal versus a rehydrated one.
 
-It reads through the shared [`TerminalReadable`](/api/terminal) contract, so the same equivalence check works across every emulator instead of each test suite hand-rolling its own comparison.
+It reads through the shared [`Terminal`](/api/terminal) contract, so the same equivalence check works across every emulator instead of each test suite hand-rolling its own comparison.
 
 ## What a digest is
 
@@ -114,4 +114,4 @@ expect(diff.rows![0].a.style).not.toBe(diff.rows![0].b.style)
 
 ## Relation to `diffBuffers`
 
-`diffBuffers` compares two live terminals **cell-by-cell** (grid only) and reports which cells moved. The state digest is broader — it also captures cursor, modes, title, and geometry — and it is **serializable**, but it is row-granular for the grid. They compose over the same `TerminalReadable` contract; reach for `diffBuffers` when you want the exact changed cells, and for `terminalStateDigest` when you want a serializable "same whole-terminal state?" assertion or snapshot.
+`diffBuffers` compares two live terminals **cell-by-cell** (grid only) and reports which cells moved. The state digest is broader — it also captures cursor, modes, title, and geometry — and it is **serializable**, but it is row-granular for the grid. They compose over the same `Terminal` contract; reach for `diffBuffers` when you want the exact changed cells, and for `terminalStateDigest` when you want a serializable "same whole-terminal state?" assertion or snapshot.

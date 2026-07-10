@@ -20,7 +20,7 @@ Assert multiple properties at once with partial matching. These are the recommen
 
 ## Text Matchers
 
-Work on `RegionView` (screen, scrollback, row, range).
+Work on `Region` (screen, scrollback, row, range).
 
 - [toContainText](/matchers/to-contain-text) - Assert region contains text substring
 - [toHaveText](/matchers/to-have-text) - Assert exact text match (after trimming)
@@ -28,13 +28,13 @@ Work on `RegionView` (screen, scrollback, row, range).
 
 ## Raw Output Matchers
 
-Work on `OutputView` via `term.out` for protocol bytes before terminal parsing.
+Work on `RawOutput` via `term.output` for protocol bytes before terminal parsing.
 
 - [toContainOutput](/matchers/to-contain-output) - Assert raw output contains text or protocol bytes
 
 ## Style Matchers <Badge type="info" text="prefer toHaveAttrs" />
 
-Work on `CellView` via `term.cell(row, col)`. Prefer [toHaveAttrs](/matchers/to-have-attrs) for new code.
+Work on `Cell` via `term.cell(row, col)`. Prefer [toHaveAttrs](/matchers/to-have-attrs) for new code.
 
 - [toBeBold](/matchers/to-be-bold) - Assert bold styling
 - [toBeItalic](/matchers/to-be-italic) - Assert italic styling
@@ -48,7 +48,7 @@ Work on `CellView` via `term.cell(row, col)`. Prefer [toHaveAttrs](/matchers/to-
 
 ## Cursor Matchers <Badge type="info" text="prefer toHaveCursor" />
 
-Work on `TerminalReadable` (the terminal itself). Prefer [toHaveCursor](/matchers/to-have-cursor) for new code.
+Work on `Terminal` (the terminal itself). Prefer [toHaveCursor](/matchers/to-have-cursor) for new code.
 
 - [toHaveCursorAt](/matchers/to-have-cursor-at) - Assert cursor position
 - [toHaveCursorStyle](/matchers/to-have-cursor-style) - Assert cursor shape
@@ -57,7 +57,7 @@ Work on `TerminalReadable` (the terminal itself). Prefer [toHaveCursor](/matcher
 
 ## Terminal State Matchers
 
-Work on `TerminalReadable` (the terminal itself).
+Work on `Terminal` (the terminal itself).
 
 - [toBeInMode](/matchers/to-be-in-mode) - Assert terminal mode is enabled
 - [toHaveTitle](/matchers/to-have-title) - Assert terminal title
@@ -67,7 +67,7 @@ Work on `TerminalReadable` (the terminal itself).
 
 ## Snapshot Matchers
 
-Work on `TerminalReadable` (the terminal itself).
+Work on `Terminal` (the terminal itself).
 
 - [toMatchTerminalSnapshot](/matchers/to-match-terminal-snapshot) - Match against Vitest snapshot
 - [toMatchSvgSnapshot](/matchers/to-match-svg-snapshot) - Match SVG screenshot against snapshot

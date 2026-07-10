@@ -44,7 +44,7 @@ Two separate buffers, not regions within one:
 | screen     | Bottom rows × cols       | Entire alt buffer |
 | scrollback | Lines above screen       | Empty             |
 | buffer     | scrollback + screen      | = screen          |
-| viewport   | Window at viewportOffset | = screen          |
+| viewport   | Window at viewportTop     | = screen          |
 
 ## Cross-Reference: Terminology by Terminal
 
@@ -56,7 +56,7 @@ Two separate buffers, not regions within one:
 | History above    | **scrollback**                | scrollback buffer                      | scrollback / history buffer        | scrollback                |
 | Everything       | **buffer**                    | absolute buffer (absolute coordinates) | text (`@text` = screen+scrollback) | buffer (`buffer.active`)  |
 | Alt screen       | **altScreen** mode            | alternate screen buffer                | secondary screen (`@alternate`)    | alternate (`buffer.type`) |
-| Scroll position  | **viewport** / viewportOffset | viewportY (0=bottom)                   | scrolled_by                        | viewportY (0=bottom)      |
+| Scroll position  | **viewport** / viewportTop | viewportY (0=bottom)                   | scrolled_by                        | viewportY (0=bottom)      |
 | Single character | **cell**                      | GhosttyCell                            | CPUCell / GPUCell                  | IBufferCell               |
 | Character row    | **row**                       | row                                    | line (LineBuf)                     | line (IBufferLine)        |
 
@@ -115,5 +115,27 @@ Silvery keeps `(x, y)` because it's a React-like UI framework where CSS conventi
 
 A cell holds one character with attributes:
 
-- text, fg (RGB), bg (RGB)
+- text, fg (Color), bg (Color)
 - bold, faint, italic, underline, strikethrough, inverse, wide
+
+## Migration: §9 naming (2026-07)
+
+Every old name below still works as a deprecated alias; prefer the new spelling.
+
+| Old (deprecated) | New | Notes |
+| --- | --- | --- |
+| `TerminalReadable` | `Terminal` | The read contract |
+| `Terminal` (harness) | `TestTerminal` | Extends `Terminal` |
+| `RegionView` / `RowView` | `Region` / `Row` | |
+| `CellView` | `Cell` | Accessors return `Cell`; position comes from the query |
+| `CursorState` `{x,y}` | `Cursor` `{col,row}` | |
+| `RGB` | `Color` `{r,g,b,index?}` | |
+| `OutputView` / `term.out` | `RawOutput` / `term.output` | |
+| `TextPosition` | `TextMatch` `{text,row,col,cells}` | |
+| `getLine` / `getLines(): Cell[][]` | `getRow` / `getRows` | row = cells (text lines keep `getLines`) |
+| `viewportOffset` / `totalLines` / `screenLines` | `viewportTop` / `totalRows` / `screenRows` | |
+| `find` / `findAll` | `findText` / `findAllText` | return `TextMatch` |
+| `MouseOptions.button: 0\|1\|2` | `"left"\|"middle"\|"right"` | numbers still accepted |
+| `UnderlineStyle: false` | `"none"` | `false` still accepted |
+
+Kept unchanged: `waitFor`; `Region.getText()`/`getLines(): string[]`; the `buffer`/`screen`/`viewport`/`scrollback` regions; `Recording` `commands`/`io`.

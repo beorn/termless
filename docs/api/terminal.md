@@ -1,17 +1,17 @@
 ---
 title: Terminal API
-description: API reference for createTerminal -- options, PTY spawning, region selectors, screenshots, and the full Terminal interface.
+description: API reference for createTerminal -- options, PTY spawning, region selectors, screenshots, and the full TestTerminal interface.
 ---
 
 # Terminal API
 
 ## `createTerminal(options)`
 
-Creates a Terminal instance wrapping a backend with optional PTY support.
+Creates a TestTerminal instance wrapping a backend with optional PTY support.
 
 ```typescript
 import { createTerminal } from "@termless/core"
-import type { Terminal, TerminalCreateOptions } from "@termless/core"
+import type { TestTerminal, TerminalCreateOptions } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 const term = createTerminal({
@@ -40,10 +40,10 @@ interface TerminalCreateOptions {
 | `rows`            | `number`          | `24`       | Terminal height in rows                              |
 | `scrollbackLimit` | `number`          | --         | Maximum scrollback lines (backend-dependent)         |
 
-## Terminal Interface
+## TestTerminal Interface
 
 ```typescript
-interface Terminal extends TerminalReadable {
+interface TestTerminal extends Terminal {
   // Properties
   readonly cols: number
   readonly rows: number
@@ -52,17 +52,17 @@ interface Terminal extends TerminalReadable {
   readonly exitInfo: string | null // e.g. "exit=0"
 
   // Region selectors (WHERE) -- getter properties
-  readonly screen: RegionView // visible rows x cols area
-  readonly scrollback: RegionView // history above screen
-  readonly buffer: RegionView // everything (scrollback + screen)
-  readonly viewport: RegionView // current scroll position view
+  readonly screen: Region // visible rows x cols area
+  readonly scrollback: Region // history above screen
+  readonly buffer: Region // everything (scrollback + screen)
+  readonly viewport: Region // current scroll position view
 
   // Region selectors (WHERE) -- methods
-  row(n: number): RowView // screen row (negative from bottom)
-  cell(row: number, col: number): CellView // single cell
-  range(r1: number, c1: number, r2: number, c2: number): RegionView // rectangular region
-  firstRow(): RowView // convenience: first screen row
-  lastRow(): RowView // convenience: last screen row
+  row(n: number): Row // screen row (negative from bottom)
+  cell(row: number, col: number): Cell // single cell
+  range(r1: number, c1: number, r2: number, c2: number): Region // rectangular region
+  firstRow(): Row // convenience: first screen row
+  lastRow(): Row // convenience: last screen row
 
   // Data feed (no PTY)
   feed(data: Uint8Array | string): void
@@ -86,8 +86,8 @@ interface Terminal extends TerminalReadable {
   waitForStable(stableMs?: number, timeout?: number): Promise<void>
 
   // Search
-  find(text: string): TextPosition | null
-  findAll(pattern: RegExp): TextPosition[]
+  findText(text: string): TextMatch | null
+  findAllText(pattern: RegExp): TextMatch[]
 
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string
@@ -123,47 +123,47 @@ All region selector properties (`screen`, `scrollback`, `buffer`, `viewport`) an
 ### Properties (no parentheses)
 
 ```typescript
-term.screen // RegionView -- the rows x cols visible area
-term.scrollback // RegionView -- history above screen (empty in alt screen)
-term.buffer // RegionView -- everything (scrollback + screen)
-term.viewport // RegionView -- current scroll position view
+term.screen // Region -- the rows x cols visible area
+term.scrollback // Region -- history above screen (empty in alt screen)
+term.buffer // Region -- everything (scrollback + screen)
+term.viewport // Region -- current scroll position view
 ```
 
 ### Methods
 
 ```typescript
-term.row(0) // RowView -- first screen row
-term.row(-1) // RowView -- last screen row (negative from bottom)
-term.cell(0, 0) // CellView -- single cell at row 0, col 0
-term.range(0, 0, 5, 40) // RegionView -- rectangular region
-term.firstRow() // RowView -- convenience for first screen row
-term.lastRow() // RowView -- convenience for last screen row
+term.row(0) // Row -- first screen row
+term.row(-1) // Row -- last screen row (negative from bottom)
+term.cell(0, 0) // Cell -- single cell at row 0, col 0
+term.range(0, 0, 5, 40) // Region -- rectangular region
+term.firstRow() // Row -- convenience for first screen row
+term.lastRow() // Row -- convenience for last screen row
 ```
 
 ### View Types
 
 ```typescript
-// RegionView -- text access for a region
-interface RegionView {
+// Region -- text access for a region
+interface Region {
   getText(): string
   getLines(): string[]
   containsText(text: string): boolean
 }
 
-// RowView -- a row with positional context (extends RegionView)
-interface RowView extends RegionView {
+// Row -- a row with positional context (extends Region)
+interface Row extends Region {
   readonly row: number
   readonly cells: Cell[]
-  cellAt(col: number): CellView
+  cellAt(col: number): Cell
 }
 
-// CellView -- a single cell with positional context and style
-interface CellView {
+// Cell -- a single cell with positional context and style
+interface Cell {
   readonly text: string
   readonly row: number
   readonly col: number
-  readonly fg: RGB | null
-  readonly bg: RGB | null
+  readonly fg: Color | null
+  readonly bg: Color | null
   readonly bold: boolean
   readonly faint: boolean
   readonly italic: boolean
@@ -308,35 +308,35 @@ await term.waitForStable(100, 3000) // Stable for 100ms, timeout 3000ms
 
 ## Search
 
-### `find(text)`
+### `findText(text)`
 
-Find the first occurrence of text in the terminal buffer. Returns position or null.
+Find the first occurrence of text in the terminal buffer. Returns a match or null.
 
 ```typescript
-const pos = term.find("Error")
+const pos = term.findText("Error")
 if (pos) {
   console.log(`Found at row ${pos.row}, col ${pos.col}`)
 }
 ```
 
-Returns: `{ row: number, col: number, text: string } | null`
+Returns: `{ text: string, row: number, col: number, cells: Cell[] } | null`
 
-### `findAll(pattern)`
+### `findAllText(pattern)`
 
 Find all regex matches in the terminal buffer.
 
 ```typescript
-const matches = term.findAll(/\d+\.\d+/g) // Find all decimal numbers
+const matches = term.findAllText(/\d+\.\d+/g) // Find all decimal numbers
 for (const m of matches) {
   console.log(`${m.text} at (${m.row}, ${m.col})`)
 }
 ```
 
-Returns: `TextPosition[]` -- array of `{ row, col, text }`.
+Returns: `TextMatch[]` -- array of `{ text, row, col, cells }`.
 
 ## Reading State
 
-These methods are part of the `TerminalReadable` interface and work with @termless/test matchers.
+These methods are part of the `Terminal` interface and work with @termless/test matchers.
 
 ### `getText()`
 
@@ -353,8 +353,8 @@ Get a single cell with all attributes. Returns a `Cell` object:
 ```typescript
 const cell = term.getCell(0, 0)
 cell.text // string -- character
-cell.fg // RGB | null -- foreground color
-cell.bg // RGB | null -- background color
+cell.fg // Color | null -- foreground color
+cell.bg // Color | null -- background color
 cell.bold // boolean
 cell.faint // boolean
 cell.italic // boolean
@@ -364,17 +364,17 @@ cell.inverse // boolean
 cell.wide // boolean -- double-width character
 ```
 
-### `getLine(row)`
+### `getRow(row)`
 
 Get all cells in a row as `Cell[]`.
 
-### `getLines()`
+### `getRows()`
 
 Get the entire terminal grid as `Cell[][]`.
 
 ### `getCursor()`
 
-Get cursor state: `{ x: number, y: number, visible: boolean, style: "block" | "underline" | "beam" }`.
+Get cursor state: `{ col: number, row: number, visible: boolean, style: "block" | "underline" | "beam" }`.
 
 ### `getMode(mode)`
 
@@ -386,33 +386,34 @@ Get the terminal title (set via OSC 2 escape sequence).
 
 ### `getScrollback()`
 
-Get scrollback state: `{ viewportOffset: number, totalLines: number, screenLines: number }`.
+Get scrollback state: `{ viewportTop: number, totalRows: number, screenRows: number }`.
 
-## TerminalReadable Interface
+## Terminal Interface
 
 The read-only subset that terminal matchers accept:
 
 ```typescript
-interface TerminalReadable {
+interface Terminal {
   getText(): string
   getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string
   getCell(row: number, col: number): Cell
-  getLine(row: number): Cell[]
-  getLines(): Cell[][]
-  getCursor(): CursorState
+  getRow(row: number): Cell[]
+  getRows(): Cell[][]
+  getCursor(): Cursor
   getMode(mode: TerminalMode): boolean
   getTitle(): string
   getScrollback(): ScrollbackState
 }
 ```
 
-## TextPosition
+## TextMatch
 
 ```typescript
-interface TextPosition {
+interface TextMatch {
+  text: string
   row: number
   col: number
-  text: string
+  cells: Cell[]
 }
 ```
 

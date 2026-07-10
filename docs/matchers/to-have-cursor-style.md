@@ -51,7 +51,7 @@ await expect(term).toHaveCursorStyle("beam", { timeout: 5000 })
 
 | Target                    | Supported |
 | ------------------------- | --------- |
-| `term` (TerminalReadable) | Yes       |
+| `term` (Terminal)         | Yes       |
 | `term.screen`             | No        |
 | `term.cell(r, c)`         | No        |
 
