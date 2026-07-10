@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/formatter.zig",
+  "name": "Page plain trailing blank lines",
+  "cols": 80,
+  "rows": 24,
+  "input": "hello\r\nworld\r\n\r\n",
+  "expectedScreen": "hello\nworld",
+  "sourceLine": 2074,
+  "license": "MIT"
+}

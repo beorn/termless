@@ -48,4 +48,4 @@ export const SOURCE_FILES = [
   "UTF8Decoder.zig",
   "StringMap.zig",
   "x11_color.zig",
-] as const;
+] as const

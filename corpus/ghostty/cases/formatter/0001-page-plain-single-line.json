@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/formatter.zig",
+  "name": "Page plain single line",
+  "cols": 80,
+  "rows": 24,
+  "input": "hello, world",
+  "expectedScreen": "hello, world",
+  "sourceLine": 1591,
+  "license": "MIT"
+}

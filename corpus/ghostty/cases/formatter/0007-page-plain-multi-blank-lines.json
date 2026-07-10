@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/formatter.zig",
+  "name": "Page plain multi blank lines",
+  "cols": 80,
+  "rows": 24,
+  "input": "hello\r\n\r\n\r\nworld",
+  "expectedScreen": "hello\n\n\nworld",
+  "sourceLine": 2021,
+  "license": "MIT"
+}

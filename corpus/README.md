@@ -68,6 +68,6 @@ Engine gaps are DATA, not red tests: `known-gaps.json` maps `<backend>::<suite>:
 
 ## Suites
 
-| Suite | Upstream | License | raw/? | Strategy |
-| --- | --- | --- | --- | --- |
-| `ghostty/` | github.com/ghostty-org/ghostty | MIT | yes | vendor-and-convert |
+| Suite      | Upstream                       | License | raw/? | Strategy           |
+| ---------- | ------------------------------ | ------- | ----- | ------------------ |
+| `ghostty/` | github.com/ghostty-org/ghostty | MIT     | yes   | vendor-and-convert |

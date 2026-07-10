@@ -1,0 +1,28 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "modes",
+  "cols": 80,
+  "rows": 24,
+  "steps": [
+    {
+      "input": "",
+      "expectedModes": {
+        "DECAWM": true
+      }
+    },
+    {
+      "input": "\u001b[?7l",
+      "expectedModes": {
+        "DECAWM": false
+      }
+    },
+    {
+      "input": "\u001b[?7h",
+      "expectedModes": {
+        "DECAWM": true
+      }
+    }
+  ],
+  "sourceLine": 899,
+  "license": "MIT"
+}

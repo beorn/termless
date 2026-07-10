@@ -348,6 +348,9 @@ export function createGhosttyBackend(
   const CSI_18t_RE = /\x1b\[18t/g
 
   function feed(data: Uint8Array): void {
+    // ghostty-web's write() RangeErrors on a zero-length buffer; zero bytes
+    // is a semantic no-op for every other backend, so keep parity here.
+    if (data.length === 0) return
     const t = ensureTerm()
     const text = new TextDecoder().decode(data)
 

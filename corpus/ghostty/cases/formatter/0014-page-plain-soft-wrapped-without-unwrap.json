@@ -1,0 +1,10 @@
+{
+  "suite": "ghostty/formatter.zig",
+  "name": "Page plain soft-wrapped without unwrap",
+  "cols": 10,
+  "rows": 24,
+  "input": "hello world test",
+  "expectedScreen": "hello worl\nd test",
+  "sourceLine": 2381,
+  "license": "MIT"
+}

@@ -267,7 +267,10 @@ function evaluateExpectations(
   const top = viewportTop(backend)
   if (exp.expectedScreen !== undefined) {
     const actual = viewportPlainString(backend, kase.rows)
-    const expected = exp.expectedScreen.replace(/\s+$/gm, "").replace(/\n+$/, "")
+    // Per-row trailing-blank trim must not use /\s+$/m: \s matches \n, so a
+    // run of interior blank lines collapses to nothing and the case can never
+    // assert vertical whitespace.
+    const expected = exp.expectedScreen.replace(/[^\S\n]+$/gm, "").replace(/\n+$/, "")
     if (actual !== expected) out.push({ ...base, kind: "screen", expected, actual })
   }
   if (exp.expectedCursor !== undefined) {

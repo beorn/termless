@@ -1,0 +1,11 @@
+{
+  "suite": "ghostty/stream_terminal.zig",
+  "name": "window_title effect not called without callback",
+  "cols": 80,
+  "rows": 24,
+  "input": "\u001b]2;Hello World\u001b\\Test",
+  "expectedScreen": "Test",
+  "expectedTitle": "Hello World",
+  "sourceLine": 1685,
+  "license": "MIT"
+}

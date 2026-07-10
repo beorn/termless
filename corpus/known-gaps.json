@@ -3,5 +3,6 @@
   "xterm::ghostty/Terminal.zig::Terminal: input that forces scroll": "xterm folds wrap+scroll at exact width differently than ghostty (got 'ab/cd/ef', upstream expects scrolled single column; the ghostty backend PASSES this case). Investigate converter vs engine semantics before blaming either.",
   "vt100::ghostty/stream_terminal.zig::charsets": "VT100-era engine: ESC ( 0 charset designator unsupported (leaks '0', no special-graphics translation). Era gap — @termless/vt100 is deliberately VT220-era; not a fix target.",
   "vt100::ghostty/stream_terminal.zig::alt screen": "VT100-era engine: DECSET 1049 alternate screen unsupported. Era gap — not a fix target.",
-  "vt100::ghostty/stream_terminal.zig::DECALN screen alignment": "VT100-era engine: ESC # 8 DECALN unsupported (renders '8'). Era gap — not a fix target."
+  "vt100::ghostty/stream_terminal.zig::DECALN screen alignment": "VT100-era engine: ESC # 8 DECALN unsupported (renders '8'). Era gap — not a fix target.",
+  "ghostty::ghostty/stream_terminal.zig::window_title effect not called without callback": "ghostty-web's headless GhosttyTerminal exposes no title surface (no getTitle/onTitleChange; only the DOM-oriented Terminal wrapper has onTitleChange), so the backend's title tracking is init/reset-only. Upstream ghostty-web API gap — not fixable in the backend adapter."
 }

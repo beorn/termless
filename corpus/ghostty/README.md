@@ -20,7 +20,7 @@ extract.ts        # standalone bun script: raw extraction + mechanical conversio
 fetch.ts          # standalone bun script: fetches source-files.ts's list at the pinned commit
 source-files.ts    # single source of truth for which src/terminal/*.zig files are in scope
 raw/<Stem>.jsonl   # every test block, unconverted — one JSON object per line (28 files, 1287 blocks)
-cases/<Stem>/*.json # the mechanically-convertible subset, as executable cases (14 files)
+cases/<Stem>/*.json # the mechanically-convertible subset, as executable cases (24 files)
 COVERAGE.md         # per-file totals, conversion-rejection reasons, category breakdown
 ```
 
@@ -62,11 +62,11 @@ under-extracting.
 
 ```ts
 {
-  suite: string;      // always "ghostty"
-  file: string;        // source filename, e.g. "Terminal.zig"
-  testName: string;     // the test's declared name, Zig escapes decoded
-  sourceLine: number;    // 1-based line number of `test "..."` in the source file
-  zigBody: string;        // the complete original Zig source text of the block, VERBATIM (escapes NOT decoded)
+  suite: string // always "ghostty"
+  file: string // source filename, e.g. "Terminal.zig"
+  testName: string // the test's declared name, Zig escapes decoded
+  sourceLine: number // 1-based line number of `test "..."` in the source file
+  zigBody: string // the complete original Zig source text of the block, VERBATIM (escapes NOT decoded)
 }
 ```
 
@@ -81,28 +81,35 @@ the four-character literal `\`, `x`, `1`, `B`.
 
 ```ts
 {
-  suite: string;        // "ghostty/<file>", e.g. "ghostty/Terminal.zig" or "ghostty/stream_terminal.zig"
-  name: string;          // decoded test name
-  cols: number;
-  rows: number;
-  input: string;          // decoded bytes to feed the emulator, in source order
-  expectedScreen: string;  // decoded expected plainString() screen dump
-  sourceLine: number;
-  license: "MIT";
+  suite: string // "ghostty/<file>", e.g. "ghostty/Terminal.zig" or "ghostty/stream_terminal.zig"
+  name: string // decoded test name
+  cols: number
+  rows: number
+  input?: string // decoded bytes to feed the emulator, in source order (single-phase cases)
+  steps?: { input: string; expectedScreen?: string; expectedModes?: Record<string, boolean>; expectedTitle?: string }[] // multi-phase feed/assert cases (e.g. mode toggling), mutually exclusive with input/expectedX below
+  expectedScreen?: string // decoded expected plain-text screen dump (plainString() or, for formatter.zig, PageFormatter's equivalent-verified `.plain` output)
+  expectedModes?: Record<string, boolean> // engine-agnostic DEC/xterm mode vocabulary (see corpus/README.md)
+  expectedTitle?: string // decoded expected window title
+  sourceLine: number
+  license: "MIT"
 }
 ```
 
+Exactly one of `input` or `steps` is present per case; at least one
+`expected*` field is present per case (or per `steps` phase).
+
 `raw/<Stem>/0007-foo.json` and `cases/<Stem>/0007-foo.json` (when the latter
-exists) describe the *same* test — same zero-padded source-order index, same
+exists) describe the _same_ test — same zero-padded source-order index, same
 slugified name — so a converted case can always be traced back to its full
 original Zig source via the matching `raw/` record.
 
-Two converters currently populate `cases/`:
+Three converters currently populate `cases/`:
 
 - **`Terminal.zig`** — `Terminal.init(alloc, .{ .cols = N, .rows = M })`, input fed only via `print`/`printString` (literal strings/chars only — no variables, no computed codepoints), asserted via `expectEqualStrings(literal, capturedPlainString)`.
-- **`stream_terminal.zig`** — same `Terminal.init` shape, wrapped in a `Stream` (`.initAlloc(alloc, .init(&t))`), input fed only via `s.nextSlice("literal bytes")` — including real escape sequences like `\x1B[1;1H` — asserted the same way. This is the better conformance-corpus shape: the Zig string literal *is* the wire format, so there's no method-name-to-VT-sequence translation to get wrong.
+- **`stream_terminal.zig`** — same `Terminal.init` shape, wrapped in a `Stream` (`.initAlloc(alloc, .init(&t))`), input fed only via `s.nextSlice("literal bytes")` — including real escape sequences like `\x1B[1;1H` — asserted the same way. This is the better conformance-corpus shape: the Zig string literal _is_ the wire format, so there's no method-name-to-VT-sequence translation to get wrong. Two narrow accessor-read-then-compare extensions also convert here: `expectEqualStrings(literal, t.getTitle().?)` → `expectedTitle`, and `testing.expect((!)t.modes.get(.NAME))` → a multi-phase `steps` case of `expectedModes` (mode state has no single dump to assert against, so it converts to feed/assert/feed/assert phases instead of a flat case; unrecognized zig mode names are rejected, not guessed — see `ZIG_MODE_TO_SCHEMA` in `extract.ts`).
+- **`formatter.zig`** — the same `Terminal.init` + `t.vtStream()` + `s.nextSlice("literal bytes")` input shape, but asserted via `PageFormatter`'s full-viewport `.plain` emit (bare `.init(page, .plain)` only — no rectangle/unwrap/trim/html/vt config) instead of `t.plainString()`. Verified byte-for-byte equivalent trim semantics (row join, trailing-whitespace-per-row trim, trailing-blank-row drop) against raw samples before this converter was written — any other `PageFormatter` config diverges from that semantics (e.g. `.unwrap = true` collapses a soft-wrap row split a real viewport read would show) and is rejected, not converted.
 
-Both converters whitelist which `t.`/`s.` method calls are allowed inside a
+All three converters whitelist which `t.`/`s.` method calls are allowed inside a
 convertible test (reads like `isDirty()`/`clearDirty()` are fine; anything
 that mutates terminal state outside the whitelisted input path disqualifies
 the test) and reject direct field assignment, multiple terminal/stream
@@ -111,7 +118,7 @@ full breakdown of why each non-converted test was rejected.
 
 ## Coverage
 
-1287 raw test blocks across 28 files, 14 auto-converted. Full per-file
+1287 raw test blocks across 28 files, 24 auto-converted. Full per-file
 breakdown, rejection reasons, and a heuristic category breakdown of the
 non-converted remainder (the signal for what to convert next) are in
 [COVERAGE.md](./COVERAGE.md).
@@ -120,7 +127,7 @@ non-converted remainder (the signal for what to convert next) are in
 
 To add a converter for another file/shape:
 
-1. Add a `tryConvertXTest(raw: RawTestBlock): ConvertResult` function in `extract.ts` following the existing two as a template (reuse `parseColsRows` and `findExpectedScreen` — don't duplicate the bind/assert-pairing logic).
+1. Add a `tryConvertXTest(raw: RawTestBlock): ConvertResult` function in `extract.ts` following the existing converters as a template (reuse `parseColsRows` and `findExpectedScreen` — don't duplicate the bind/assert-pairing logic; `findExpectedScreen` takes an optional `bindRe` when the dump isn't bound via `t.plainString()`, e.g. formatter.zig's `builder.writer.buffered()`).
 2. Register it in the `CONVERTERS` map keyed by filename.
 3. Re-run `bun extract.ts <src> .` and check `COVERAGE.md`'s totals moved.
 
