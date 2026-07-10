@@ -32,7 +32,22 @@ export interface DecorationFrameLayer {
 
 export type FrameLayer = CellsFrameLayer | SvgFrameLayer | ChromeFrameLayer | DecorationFrameLayer
 
-/** A single frame in a terminal animation. */
+/**
+ * A single frame in a terminal animation.
+ *
+ * AnimationFrame is a render-only *projection*, not a peer of {@link Recording}:
+ * it exists solely as encoder input (animated SVG, GIF, APNG, frame layers) and
+ * is never a source of truth. Produce it one of two ways:
+ *
+ * - **From a Recording** (canonical): `recordingToAnimationFrames()` in
+ *   `from-recording.ts` projects a Recording's frames into AnimationFrame[].
+ * - **Live sampling** (replay paths without a frames projection): asciicast and
+ *   tape playback synthesize frames by sampling the terminal in wall-clock time
+ *   during execution, because those inputs carry only an event stream.
+ *
+ * Never persist AnimationFrame[] or feed it back into replay/comparison — go
+ * through Recording for anything durable.
+ */
 export interface AnimationFrame {
   /** SVG string of this frame (from screenshotSvg). */
   svg: string
