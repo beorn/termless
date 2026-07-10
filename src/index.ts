@@ -55,14 +55,14 @@ export type { CanvasTheme } from "@termless/ghostty"
 export { createFrameTracer } from "./recording/frame-trace.ts"
 export type { TraceFrame, FrameTraceOptions, FrameTraceSummary, FrameTracer } from "./recording/frame-trace.ts"
 // Recording-domain adapter (Phase 2): frame-trace → Recording frames projection.
-export { traceToRecording, fingerprintFromCanvas } from "./recording/frame-trace-recording.ts"
+export { traceToRecording, recordingToTraceFrames, fingerprintFromCanvas } from "./recording/frame-trace-recording.ts"
 export type { TraceToRecordingInput, TraceCanvasOptions } from "./recording/frame-trace-recording.ts"
 // Visual-trace disk I/O (Phase 4): own the frame-trace directory layout so
 // consumers (km's `toMatchVisualTrace`) read/write through these APIs instead
 // of parsing the on-disk shape directly.
 export { loadVisualTrace } from "./recording/load-visual-trace.ts"
 export type { LoadVisualTraceOptions } from "./recording/load-visual-trace.ts"
-export { writeVisualTrace } from "./recording/write-visual-trace.ts"
+export { writeVisualTrace, writeVisualTraceFromRecording } from "./recording/write-visual-trace.ts"
 export type { WriteVisualTraceOptions } from "./recording/write-visual-trace.ts"
 // Native `.rec` recording format (Phase 5): the canonical full-fidelity
 // on-disk form — a single-file ZIP container, superset of the frame-trace
@@ -118,6 +118,7 @@ export type {
   IoEvent,
   IoDirection,
   Frame,
+  RenderArtifacts,
   Micros,
   RendererFingerprint,
   RecordingProvenance,

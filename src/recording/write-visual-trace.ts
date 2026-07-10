@@ -30,7 +30,9 @@
 
 import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { recordingToTraceFrames } from "./frame-trace-recording.ts"
 import type { TraceFrame } from "./frame-trace.ts"
+import type { Recording } from "./recording.ts"
 
 /** Options for {@link writeVisualTrace}. */
 export interface WriteVisualTraceOptions {
@@ -82,4 +84,33 @@ export function writeVisualTrace(dir: string, frames: TraceFrame[], options: Wri
   // non-empty (matches the tracer's append-with-newline output).
   const body = frames.map((f) => JSON.stringify(f)).join("\n") + (frames.length > 0 ? "\n" : "")
   writeFileSync(join(dir, "index.jsonl"), body)
+}
+
+/**
+ * Write a visual trace directory from the canonical {@link Recording} noun.
+ *
+ * The recomposed counterpart of {@link writeVisualTrace}: rather than taking
+ * raw on-disk `TraceFrame[]`, it takes the `Recording` whose `frames`
+ * projection *is* the trace and serializes it through the shared
+ * {@link recordingToTraceFrames} codec. For a Recording whose frames carry
+ * {@link "./recording.ts" | RenderArtifacts} (any trace loaded via
+ * `loadVisualTrace`), the emitted `index.jsonl` is **byte-identical** to what
+ * the legacy raw-`TraceFrame[]` path would write — the recomposition's
+ * lossless guarantee, proven in `tests/trace-recomposition.test.ts`.
+ *
+ * This is what lets the visual-trace format be expressed entirely over the
+ * canonical Recording noun: the frame tracer produces a `Recording`, and the
+ * on-disk `TraceFrame` row is merely its serialization.
+ *
+ * @param dir Destination frame-trace directory. Wiped and recreated, exactly
+ *   as {@link writeVisualTrace}.
+ * @param recording The recording whose `frames` projection is written.
+ * @param options See {@link WriteVisualTraceOptions}.
+ */
+export function writeVisualTraceFromRecording(
+  dir: string,
+  recording: Recording,
+  options: WriteVisualTraceOptions = {},
+): void {
+  writeVisualTrace(dir, recordingToTraceFrames(recording), options)
 }

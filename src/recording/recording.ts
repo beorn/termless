@@ -169,6 +169,39 @@ export interface IoEvent {
 // =============================================================================
 
 /**
+ * Render-capture artifacts attached to a {@link Frame} of a *visual trace*.
+ *
+ * A visual trace (the frame tracer's on-disk `index.jsonl` row, {@link
+ * "./frame-trace.ts" | TraceFrame}) carries two facts the projection cannot
+ * derive from the timeline alone: the **wall-clock capture instant** and the
+ * **render cost** of the frame's PNG. The Recording model's `at` is a
+ * *normalized* µs-from-start position — a different fact from the absolute
+ * capture clock — so these live in a small artifacts bag rather than being
+ * folded into `at`.
+ *
+ * Carrying them here is what makes the `frames` projection the **lossless
+ * carrier** of a visual trace (ruling: *TraceFrame = Recording-frame + render
+ * artifacts*): a trace round-trips `TraceFrame[] → Recording → TraceFrame[]`
+ * byte-for-byte through the symmetric codec pair in `frame-trace-recording.ts`.
+ *
+ * Present only on frames that came from a render trace; **absent** on frames
+ * derived from an `io` track (which have no capture clock or render cost).
+ */
+export interface RenderArtifacts {
+  /**
+   * The wall-clock capture instant — ms since the Unix epoch. This is the
+   * on-disk trace's absolute `ts`; `iso` and inter-frame `duration` derive
+   * from it. Distinct from {@link Frame.at}, which is µs from recording start.
+   */
+  wallClockMs: number
+  /**
+   * Milliseconds the PNG render for this frame took. `0` for a visual
+   * duplicate or a metadata-only capture (no PNG was rendered).
+   */
+  renderMs: number
+}
+
+/**
  * A single rendered visual state on the `frames` projection.
  *
  * `frames` is a **projection**, not a co-equal source track: it is a
@@ -228,6 +261,13 @@ export interface Frame {
       incremental: boolean
     }
   }
+  /**
+   * Render-capture artifacts — {@link RenderArtifacts}. Present when this frame
+   * came from a *visual trace* (the frame tracer); absent on frames derived
+   * from an `io` track. Carrying them keeps the projection a lossless carrier
+   * of a visual trace — see {@link RenderArtifacts}.
+   */
+  artifacts?: RenderArtifacts
 }
 
 // =============================================================================

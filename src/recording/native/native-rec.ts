@@ -41,7 +41,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import type { TraceFrame } from "../frame-trace.ts"
-import { traceToRecording } from "../frame-trace-recording.ts"
+import { recordingToTraceFrames, traceToRecording } from "../frame-trace-recording.ts"
 import {
   type Command,
   type IoEvent,
@@ -175,50 +175,10 @@ function parseJsonl<T>(text: string): T[] {
 // The `.rec` `frames/` sub-tree is byte-compatible with the frame-trace
 // directory layout: `index.jsonl` rows are the on-disk `TraceFrame` shape, not
 // the in-memory model `Frame` shape. Writing converts model frames to
-// `TraceFrame` rows; reading projects `TraceFrame` rows back via the shared
-// `traceToRecording` adapter — the exact same path `loadVisualTrace` uses.
-
-/**
- * Convert a model {@link Recording}'s frames projection back to the on-disk
- * `TraceFrame[]` shape so it can be written into `frames/index.jsonl`.
- *
- * The model dropped the frame-trace-only fields (`iso`, `render_ms`); they are
- * reconstructed deterministically. `ts` is rebuilt from the model's integer-µs
- * `at` (`ts = at / 1000`) so that re-projecting the written frames through
- * {@link traceToRecording} yields a frames projection equal to the original —
- * `traceToRecording` rebases `at = (ts − firstTs) × 1000`, and `firstTs` is 0.
- */
-function recordingFramesToTraceFrames(recording: Recording): TraceFrame[] {
-  const frames = recording.frames ?? []
-  const result: TraceFrame[] = []
-  let prevTs: number | null = null
-  for (const f of frames) {
-    // `at` is integer µs from recording start; the frame-trace `ts` is a
-    // ms epoch. With epoch 0 the round-trip is exact: at → ts → at.
-    const ts = Math.round(f.at / 1000)
-    const trace: TraceFrame = {
-      seq: f.seq,
-      ts,
-      iso: new Date(ts).toISOString(),
-      hash: f.contentHash,
-      duplicate_of: f.duplicateOf,
-      bytes_in_since_last: f.bytesInSinceLast,
-      ansi_input_preview: f.ansiPreview,
-      buffer: {
-        cols: f.buffer.cols,
-        rows: f.buffer.rows,
-        cursor: { row: f.buffer.cursor.row, col: f.buffer.cursor.col },
-      },
-      duration_since_prev_ms: prevTs === null ? 0 : ts - prevTs,
-      render_ms: 0,
-      png: f.png,
-    }
-    if (f.signal !== undefined) trace.silvery = { type: "RENDER_DISPATCHED", ...f.signal }
-    result.push(trace)
-    prevTs = ts
-  }
-  return result
-}
+// `TraceFrame` rows via the shared `recordingToTraceFrames` codec; reading
+// projects `TraceFrame` rows back via its inverse `traceToRecording` — the
+// exact same pair `loadVisualTrace` uses. For a trace whose frames carry
+// render artifacts, the `frames/` sub-tree round-trips byte-for-byte.
 
 // =============================================================================
 // In-memory bundle — the `name → bytes` map a `.rec` container holds
@@ -237,7 +197,7 @@ function serializeRecording(recording: Recording, pngSourceDir?: string): Map<st
   const encoder = new TextEncoder()
   const files = new Map<string, Uint8Array>()
 
-  const traceFrames = recording.frames !== undefined ? recordingFramesToTraceFrames(recording) : []
+  const traceFrames = recording.frames !== undefined ? recordingToTraceFrames(recording) : []
   const fingerprint = recording.frames?.[0]?.fingerprint
 
   const manifest: RecManifest = {

@@ -48,6 +48,40 @@ When more than one track is present:
 All tracks share **one monotonic clock in integer microseconds**. Float
 timestamps (as `.cast` uses) drift, so termless normalizes them on import.
 
+## Visual traces are a Recording projection
+
+A **visual trace** — the frame tracer's on-disk directory (`index.jsonl` +
+`NNNNN.png`, one `TraceFrame` row per line) — is not a parallel format sitting
+_beside_ a Recording. It **is** a Recording whose `frames` projection is
+populated. `TraceFrame`, the on-disk row, is the _serialization_ of one frame
+plus its **render artifacts**: the wall-clock capture instant and the
+per-frame render cost (`render_ms`). Those two facts are the only things a
+rendered frame carries that the timeline cannot derive, so the projection
+carries them in a small `artifacts` bag on each `Frame` — and with them, the
+`frames` projection is the **lossless carrier** of a visual trace.
+
+```
+TraceFrame (on-disk row)  ⇄  Frame (projection entry) + RenderArtifacts
+```
+
+The conversion is one symmetric codec pair — `traceToRecording` (rows →
+Recording) and `recordingToTraceFrames` (Recording → rows). Every consumer that
+needs the on-disk shape routes through that one pair: the `.rec` writer, the
+`writeVisualTraceFromRecording` disk writer, and the browser viewer. There is
+no second Frame → row projection. Because the artifacts survive the round trip,
+`recordingToTraceFrames(traceToRecording(rows))` reproduces `rows`
+byte-for-byte, so a trace can be written straight from the canonical Recording
+noun and the bytes are identical to what the raw-`TraceFrame[]` path would
+write. (The one exception: a frame annotated with a silvery render-join event
+keeps only the dependency-free subset of that event on the projection's
+`signal` field, so a silvery-annotated trace is not byte-lossless on that one
+field. Traces recorded without a silvery sidecar — the default — round-trip
+exactly.)
+
+The naming follows the program's rule that **visual/recording things are
+frames** (not "messages", which are wire things): `Frame`, `TraceFrame`,
+`RenderArtifacts`.
+
 ## The verbs
 
 Everything you do with a Recording is one of the [four verbs](./overview):
