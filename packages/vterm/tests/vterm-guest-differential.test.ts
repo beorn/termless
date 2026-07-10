@@ -25,6 +25,15 @@
  *   D5  Fancy underline styles (curly/double/dotted/dashed) — vterm reports
  *       `underlineStyle`; the xterm adapter collapses them to plain underline.
  *       vterm is the faithful one; plain single underline agrees.
+ *   D6  Narrowing reflow with scrollback:0 — vterm rewraps the overflow
+ *       downward (content preserved on later rows); xterm truncates the row
+ *       and drops the overflow when there is no scrollback to spill into.
+ *       vterm is the content-preserving one. This is the reflow-policy
+ *       remainder of the deferred-wrap-boundary investigation after two
+ *       vterm.js fixes: cursor follows its logical line through reflow
+ *       (2f3d81ba6c, in pin 53dc4b2440) and same-geometry resize is a no-op
+ *       preserving pending wrap (7d3b69cfc2). Widening and same-size resize
+ *       now agree engine-for-engine at the boundary.
  */
 
 import { xtermGuest, type XtermGuestHandle } from "@termless/xtermjs"
