@@ -366,6 +366,8 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     const native = loadGhosttyNative()
     const nc = native.getCursor(ensureHandle())
     return {
+      col: nc.x,
+      row: nc.y,
       x: nc.x,
       y: nc.y,
       visible: nc.visible,
@@ -387,6 +389,9 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     const native = loadGhosttyNative()
     const ns = native.getScrollback(ensureHandle())
     return {
+      viewportTop: ns.viewport_offset,
+      totalRows: ns.total_lines,
+      screenRows: ns.screen_lines,
       viewportOffset: ns.viewport_offset,
       totalLines: ns.total_lines,
       screenLines: ns.screen_lines,
@@ -433,6 +438,8 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

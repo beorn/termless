@@ -63,6 +63,8 @@ function createMockTerminal(
   }
 
   const cursorState: CursorState = {
+    col: cursor.x ?? 0,
+    row: cursor.y ?? 0,
     x: cursor.x ?? 0,
     y: cursor.y ?? 0,
     visible: cursor.visible ?? true,
@@ -74,11 +76,20 @@ function createMockTerminal(
     getTextRange: () => "",
     getCell: (row, col) => grid[row]?.[col] ?? { ...DEFAULT_CELL },
     getLine: (row) => grid[row] ?? [],
+    getRow: (row) => grid[row] ?? [],
     getLines: () => grid,
+    getRows: () => grid,
     getCursor: () => cursorState,
     getMode: (mode: TerminalMode) => modes[mode] ?? false,
     getTitle: () => options.title ?? "",
-    getScrollback: () => ({ viewportOffset: 0, totalLines: grid.length, screenLines: grid.length }),
+    getScrollback: () => ({
+      viewportTop: 0,
+      totalRows: grid.length,
+      screenRows: grid.length,
+      viewportOffset: 0,
+      totalLines: grid.length,
+      screenLines: grid.length,
+    }),
   }
 }
 

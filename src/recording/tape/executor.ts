@@ -25,7 +25,7 @@
 
 import type { TapeFile, TapeCommand } from "./parser.ts"
 import { parseDuration } from "./parser.ts"
-import type { Terminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../../terminal/types.ts"
+import type { TestTerminal, TerminalBackend, SvgScreenshotOptions, WindowBar } from "../../terminal/types.ts"
 import { createTerminal } from "../../terminal/terminal.ts"
 import { screenshotPng } from "../../render/png.ts"
 import { createFrameTracer } from "../frame-trace.ts"
@@ -54,7 +54,7 @@ export interface TapeExecutorOptions {
   /** Called when a Screenshot command is executed. */
   onScreenshot?: (png: Uint8Array, path?: string) => void
   /** Called after each command is executed, with the command and terminal. */
-  onAfterCommand?: (cmd: TapeCommand, terminal: Terminal) => void
+  onAfterCommand?: (cmd: TapeCommand, terminal: TestTerminal) => void
   /**
    * Visual Eyes Phase 3: directory for frame-trace output. Overrides
    * `Set Frames` in the tape. When neither this nor `Set Frames` is set,
@@ -78,7 +78,7 @@ export interface TapeResult {
   /** Number of screenshots taken. */
   screenshotCount: number
   /** The terminal instance (still open for inspection). */
-  terminal: Terminal
+  terminal: TestTerminal
   /**
    * Frame-trace summary if `framesDir` (option or `Set Frames`) was set.
    * `null` otherwise.
@@ -264,7 +264,7 @@ interface ExecuteContext {
   onShow: () => void
 }
 
-async function executeCommand(cmd: TapeCommand, terminal: Terminal, ctx: ExecuteContext): Promise<void> {
+async function executeCommand(cmd: TapeCommand, terminal: TestTerminal, ctx: ExecuteContext): Promise<void> {
   switch (cmd.type) {
     case "output":
       // Output path is metadata — handled by the CLI layer

@@ -1,17 +1,23 @@
 export type {
   Cell,
   CellView,
+  Color,
+  Cursor,
   CursorState,
   CursorStyle,
   EmulatorWarning,
   KeyDescriptor,
+  MouseButton,
   MouseEvent,
   MouseModifiers,
   MouseOptions,
   OutputView,
   PngScreenshotOptions,
+  RawOutput,
+  Region,
   RegionView,
   RGB,
+  Row,
   RowView,
   ScreenshotOptions,
   ScrollbackState,
@@ -25,6 +31,8 @@ export type {
   TerminalMode,
   TerminalOptions,
   TerminalReadable,
+  TestTerminal,
+  TextMatch,
   TextPosition,
   UnderlineStyle,
   WarningExtension,
@@ -82,7 +90,7 @@ export { captureCrossRenderer, pngDimensions, dHash, hashDistance } from "./comp
 export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } from "./compare.ts"
 export { parseKey, keyToAnsi } from "./terminal/key-mapping.ts"
 export { encodeKeyToAnsi } from "./terminal/key-encoding.ts"
-export { createCellView, createRegionView, createRowView } from "./terminal/views.ts"
+export { createCellView, createRegion, createRegionView, createRow, createRowView } from "./terminal/views.ts"
 export { termlessMatchers } from "./jest-matchers.ts"
 export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"
 

@@ -416,6 +416,8 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function getCursor(): CursorState {
     const s = ensureSnapshot()
     return {
+      col: s.cursor.x,
+      row: s.cursor.y,
       x: s.cursor.x,
       y: s.cursor.y,
       visible: s.cursor.visible,
@@ -436,6 +438,9 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function getScrollback(): ScrollbackState {
     const s = ensureSnapshot()
     return {
+      viewportTop: s.scrollback.viewportOffset,
+      totalRows: s.scrollback.totalLines,
+      screenRows: s.scrollback.screenLines,
       viewportOffset: s.scrollback.viewportOffset,
       totalLines: s.scrollback.totalLines,
       screenLines: s.scrollback.screenLines,
@@ -484,6 +489,8 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

@@ -615,6 +615,8 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

@@ -42,6 +42,8 @@ function createMockReadable(lines: string[], opts?: MockOptions): TerminalReadab
   const cursorDefaults: CursorState = {
     x: 0,
     y: 0,
+    col: 0,
+    row: 0,
     visible: false,
     style: "block" as CursorStyle,
   }
@@ -80,6 +82,8 @@ function createMockReadable(lines: string[], opts?: MockOptions): TerminalReadab
     },
     getLine: (row): Cell[] => (row < cellLines.length ? cellLines[row]! : []),
     getLines: () => cellLines,
+    getRow: (row): Cell[] => (row < cellLines.length ? cellLines[row]! : []),
+    getRows: () => cellLines,
     getCursor: () => cursor,
     getMode: (_mode: TerminalMode) => false,
     getTitle: () => "",
@@ -87,6 +91,9 @@ function createMockReadable(lines: string[], opts?: MockOptions): TerminalReadab
       viewportOffset: 0,
       totalLines: lines.length,
       screenLines: lines.length,
+      viewportTop: 0,
+      totalRows: lines.length,
+      screenRows: lines.length,
     }),
   }
 }

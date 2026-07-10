@@ -56,10 +56,19 @@ function createMockTerminal(options: MockOptions = {}): TerminalReadable {
     getCell: (row, col) => grid[row]?.[col] ?? { ...DEFAULT_CELL },
     getLine: (row) => grid[row] ?? [],
     getLines: () => grid,
-    getCursor: (): CursorState => ({ x: 0, y: 0, visible: true, style: "block" }),
+    getRow: (row) => grid[row] ?? [],
+    getRows: () => grid,
+    getCursor: (): CursorState => ({ x: 0, y: 0, col: 0, row: 0, visible: true, style: "block" }),
     getMode: (_mode: TerminalMode) => false,
     getTitle: () => "",
-    getScrollback: (): ScrollbackState => ({ viewportOffset: 0, totalLines: grid.length, screenLines: grid.length }),
+    getScrollback: (): ScrollbackState => ({
+      viewportOffset: 0,
+      totalLines: grid.length,
+      screenLines: grid.length,
+      viewportTop: 0,
+      totalRows: grid.length,
+      screenRows: grid.length,
+    }),
   }
 }
 

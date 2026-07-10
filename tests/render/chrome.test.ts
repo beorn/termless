@@ -26,7 +26,7 @@ function cell(char = " "): Cell {
 }
 
 function mockTerm(lines: string[]): TerminalReadable {
-  const cursor: CursorState = { x: 0, y: 0, visible: false, style: "block" as CursorStyle }
+  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
   const cellLines = lines.map((l) => [...l].map((c) => cell(c)))
   return {
     getText: () => lines.join("\n"),
@@ -34,10 +34,19 @@ function mockTerm(lines: string[]): TerminalReadable {
     getCell: () => cell(),
     getLine: (r) => cellLines[r] ?? [],
     getLines: () => cellLines,
+    getRow: (r) => cellLines[r] ?? [],
+    getRows: () => cellLines,
     getCursor: () => cursor,
     getMode: () => false,
     getTitle: () => "",
-    getScrollback: () => ({ viewportOffset: 0, totalLines: lines.length, screenLines: lines.length }),
+    getScrollback: () => ({
+      viewportOffset: 0,
+      totalLines: lines.length,
+      screenLines: lines.length,
+      viewportTop: 0,
+      totalRows: lines.length,
+      screenRows: lines.length,
+    }),
   }
 }
 

@@ -464,6 +464,8 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function getCursor(): CursorState {
     const t = ensureTerm()
     return {
+      col: t.buffer.active.cursorX,
+      row: t.buffer.active.cursorY,
       x: t.buffer.active.cursorX,
       y: t.buffer.active.cursorY,
       visible: true, // DECTCEM not available in headless mode
@@ -508,6 +510,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     const t = ensureTerm()
     const buf = t.buffer.active
     return {
+      viewportTop: buf.viewportY,
+      totalRows: buf.length,
+      screenRows: t.rows,
       viewportOffset: buf.viewportY,
       totalLines: buf.length,
       screenLines: t.rows,
@@ -544,6 +549,8 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

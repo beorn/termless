@@ -116,8 +116,16 @@ function createMockBackend(): TerminalBackend {
       return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ ...DEFAULT_CELL })))
     },
 
+    getRow(row: number): Cell[] {
+      return Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))
+    },
+
+    getRows(): Cell[][] {
+      return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ ...DEFAULT_CELL })))
+    },
+
     getCursor(): CursorState {
-      return { x: 0, y: 0, visible: true, style: "block" }
+      return { col: 0, row: 0, x: 0, y: 0, visible: true, style: "block" }
     },
 
     getMode(_mode: TerminalMode): boolean {
@@ -129,7 +137,14 @@ function createMockBackend(): TerminalBackend {
     },
 
     getScrollback(): ScrollbackState {
-      return { viewportOffset: 0, totalLines: rows, screenLines: rows }
+      return {
+        viewportTop: 0,
+        totalRows: rows,
+        screenRows: rows,
+        viewportOffset: 0,
+        totalLines: rows,
+        screenLines: rows,
+      }
     },
   }
 }

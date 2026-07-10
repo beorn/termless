@@ -33,7 +33,7 @@ import { writeViewer } from "../view/viewer.ts"
 import { traceToRecording } from "./frame-trace-recording.ts"
 import { writeRecording } from "./native/native-rec.ts"
 import type { Recording } from "./recording.ts"
-import type { ScreenshotOptions, Terminal } from "../terminal/types.ts"
+import type { ScreenshotOptions, TestTerminal } from "../terminal/types.ts"
 
 export interface FrameTraceOptions {
   /** Output directory. Created if missing. */
@@ -51,7 +51,7 @@ export interface FrameTraceOptions {
    * produce the frame PNG bytes. Useful for tests that don't want to spin up
    * the native canvas renderer / WASM.
    */
-  renderFn?: (terminal: Terminal) => Promise<Uint8Array>
+  renderFn?: (terminal: TestTerminal) => Promise<Uint8Array>
   /**
    * Path to a render-event sidecar JSONL written by silvery's render-trace
    * (`SILVERY_TRACE_FRAMES` — Phase 4 of the Visual Eyes epic). When set,
@@ -196,14 +196,14 @@ function hashBytes(bytes: Uint8Array | string): string {
   return `fnv1a:${h.toString(16)}`
 }
 
-function bufferFingerprint(terminal: Terminal): {
+function bufferFingerprint(terminal: TestTerminal): {
   hash: string
   cols: number
   rows: number
   cursorRow: number
   cursorCol: number
 } {
-  const lines = terminal.getLines()
+  const lines = terminal.getRows()
   // Hash visible text per row + cursor position. Lightweight enough to call
   // on every debounced tick; differentiates render passes that change attrs
   // too (cellsToAnsi-like serialization could be heavier but more precise).
@@ -230,15 +230,15 @@ function bufferFingerprint(terminal: Terminal): {
     try {
       return terminal.getCursor()
     } catch {
-      return { x: 0, y: 0, visible: true, style: "block" as const }
+      return { col: 0, row: 0, x: 0, y: 0, visible: true, style: "block" as const }
     }
   })()
   return {
     hash: hashBytes(lineStrs.join("\n")),
     cols: lines[0]?.length ?? 0,
     rows: lines.length,
-    cursorRow: cursor.y,
-    cursorCol: cursor.x,
+    cursorRow: cursor.row,
+    cursorCol: cursor.col,
   }
 }
 
@@ -345,7 +345,7 @@ function createSilveryEventJoin(file: string): SilveryEventJoin {
   }
 }
 
-export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions): FrameTracer {
+export function createFrameTracer(terminal: TestTerminal, options: FrameTraceOptions): FrameTracer {
   const debounceMs = options.debounceMs ?? 16
   const maxFrames = options.maxFrames ?? 10_000
   const dedupe = options.dedupe ?? true
@@ -356,9 +356,9 @@ export function createFrameTracer(terminal: Terminal, options: FrameTraceOptions
   // dependency. Tests inject `renderFn` to avoid the WASM cost entirely.
   const renderFn =
     options.renderFn ??
-    (async (t: Terminal): Promise<Uint8Array> => {
+    (async (t: TestTerminal): Promise<Uint8Array> => {
       const { renderTerminalPng } = (await import("@termless/ghostty")) as {
-        renderTerminalPng: (term: Terminal, opts?: unknown) => Promise<Uint8Array>
+        renderTerminalPng: (term: TestTerminal, opts?: unknown) => Promise<Uint8Array>
       }
       return renderTerminalPng(t, options.canvas)
     })

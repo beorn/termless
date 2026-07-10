@@ -240,7 +240,7 @@ export const termlessMatchers = {
   ): Promise<{ pass: boolean; message: () => string }> {
     assertTerminalReadable(received, "toMatchAcrossRenderers")
     const { captureCrossRenderer } = await import("./compare.ts")
-    const term = received as import("./terminal/types.ts").Terminal
+    const term = received as import("./terminal/types.ts").TestTerminal
     const result = await captureCrossRenderer(term, {
       ...options,
       cols: term.cols,

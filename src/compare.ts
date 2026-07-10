@@ -26,7 +26,7 @@
  *   GUI access + spawns a real window.
  */
 
-import type { Terminal, SvgScreenshotOptions } from "./terminal/types.ts"
+import type { TestTerminal, SvgScreenshotOptions } from "./terminal/types.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
 
 export interface CrossRendererOptions {
@@ -107,7 +107,7 @@ export function pngDimensions(png: Uint8Array): { width: number; height: number 
  * via `feed()` or `spawn()` before invoking this.
  */
 export async function captureCrossRenderer(
-  terminal: Terminal,
+  terminal: TestTerminal,
   options: CrossRendererOptions = {},
 ): Promise<CrossRendererResult> {
   const notes: string[] = []

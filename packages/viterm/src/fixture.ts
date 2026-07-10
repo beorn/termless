@@ -41,7 +41,7 @@
  */
 
 import { afterEach, describe } from "vitest"
-import type { Terminal, TerminalCreateOptions } from "../../../src/terminal/types.ts"
+import type { TestTerminal, TerminalCreateOptions } from "../../../src/terminal/types.ts"
 import { createTerminal } from "../../../src/index.ts"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
 import { backend, backends, isReady } from "../../../src/backend/backends.ts"
@@ -77,7 +77,7 @@ export type TerminalFixtureOptions = SyncTestTerminalOptions
 // ═══════════════════════════════════════════════════════
 
 // Track active fixtures for cleanup
-const activeFixtures: Terminal[] = []
+const activeFixtures: TestTerminal[] = []
 
 // Register cleanup hook — runs after each test to close all terminal fixtures
 afterEach(async () => {
@@ -94,7 +94,7 @@ afterEach(async () => {
 /**
  * Create a test terminal with automatic cleanup. Uses xterm.js by default.
  */
-export function createTestTerminal(options?: SyncTestTerminalOptions): Terminal {
+export function createTestTerminal(options?: SyncTestTerminalOptions): TestTerminal {
   const backend = options?.backend ?? createXtermBackend()
   const terminal = createTerminal({ ...options, backend })
   activeFixtures.push(terminal)
@@ -112,7 +112,7 @@ export function createTestTerminal(options?: SyncTestTerminalOptions): Terminal 
  * expect(term.screen).toContainText("Hello")
  * ```
  */
-export async function createTestTerminalByName(options: NamedTestTerminalOptions): Promise<Terminal> {
+export async function createTestTerminalByName(options: NamedTestTerminalOptions): Promise<TestTerminal> {
   const b = await backend(options.backendName)
   const terminal = createTerminal({ ...options, backend: b })
   activeFixtures.push(terminal)
@@ -131,7 +131,7 @@ export const createTerminalFixtureAsync = createTestTerminalByName
 
 export interface BackendCase {
   name: string
-  createTerminal(opts?: TestTerminalOptions): Promise<Terminal>
+  createTerminal(opts?: TestTerminalOptions): Promise<TestTerminal>
 }
 
 /**

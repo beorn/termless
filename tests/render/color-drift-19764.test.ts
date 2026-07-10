@@ -53,17 +53,26 @@ function defaultCell(char = " "): Cell {
 /** A one-row mock readable: chars "GRD" with the given fg colors. */
 function mockRow(fgs: Cell["fg"][], chars = "GRD"): TerminalReadable {
   const cells: Cell[] = [...chars].map((ch, i) => ({ ...defaultCell(ch), fg: fgs[i] ?? null }))
-  const cursor: CursorState = { x: 0, y: 0, visible: false, style: "block" as CursorStyle }
+  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
   return {
     getText: () => chars,
     getTextRange: () => chars,
     getCell: (r, c) => cells[c] ?? defaultCell(),
     getLine: (r) => (r === 0 ? cells : []),
     getLines: () => [cells],
+    getRow: (r) => (r === 0 ? cells : []),
+    getRows: () => [cells],
     getCursor: () => cursor,
     getMode: (_m: TerminalMode) => false,
     getTitle: () => "",
-    getScrollback: (): ScrollbackState => ({ viewportOffset: 0, totalLines: 1, screenLines: 1 }),
+    getScrollback: (): ScrollbackState => ({
+      viewportOffset: 0,
+      totalLines: 1,
+      screenLines: 1,
+      viewportTop: 0,
+      totalRows: 1,
+      screenRows: 1,
+    }),
   } as TerminalReadable
 }
 

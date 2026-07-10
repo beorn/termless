@@ -1,12 +1,12 @@
 /**
  * View factories for composable terminal regions.
  *
- * Views are lightweight wrappers that read from a TerminalReadable on demand.
+ * Views are lightweight wrappers that read from a {@link Terminal} on demand.
  * All row-based views are lazy — they recompute buffer offsets on every access
  * so auto-retry matchers see fresh data when polled across time.
  */
 
-import type { Cell, CellView, RegionView, RowView, TerminalReadable, UnderlineStyle } from "./types.ts"
+import type { Cell, CellView, Region, Row, Terminal } from "./types.ts"
 
 // ── Helpers ──
 
@@ -18,24 +18,21 @@ function cellsToText(cells: Cell[]): string {
     .trimEnd()
 }
 
-/** Get rows of text from a TerminalReadable for an absolute row range. */
-function getRowTexts(readable: TerminalReadable, startRow: number, endRow: number): string[] {
+/** Get rows of text from a Terminal for an absolute row range. */
+function getRowTexts(readable: Terminal, startRow: number, endRow: number): string[] {
   const lines: string[] = []
   for (let i = startRow; i < endRow; i++) {
-    lines.push(cellsToText(readable.getLine(i)))
+    lines.push(cellsToText(readable.getRow(i)))
   }
   return lines
 }
 
 /**
- * Create a lazy RegionView from a row-range resolver.
+ * Create a lazy {@link Region} from a row-range resolver.
  * The resolver is called on every getText()/getLines() access,
  * so the view always reflects current terminal state.
  */
-function createLazyRegionView(
-  readable: TerminalReadable,
-  resolveRange: () => [start: number, end: number],
-): RegionView {
+function createLazyRegion(readable: Terminal, resolveRange: () => [start: number, end: number]): Region {
   return {
     getText(): string {
       const [start, end] = resolveRange()
@@ -51,9 +48,14 @@ function createLazyRegionView(
   }
 }
 
-// ── CellView ──
+// ── Positioned cell ──
 
-/** Create a CellView from a Cell with positional context. */
+/**
+ * Create a positioned cell (a {@link Cell} plus its `row`/`col`).
+ *
+ * @deprecated The positioned-cell concept is folded into {@link Cell}; this
+ * remains so `cell()`/`cellAt()` can still carry position during the migration.
+ */
 export function createCellView(cell: Cell, row: number, col: number): CellView {
   return {
     char: cell.char,
@@ -76,26 +78,29 @@ export function createCellView(cell: Cell, row: number, col: number): CellView {
   }
 }
 
-// ── RegionView ──
+// ── Region ──
 
-/** Create a RegionView for a fixed absolute row range [startRow, endRow). */
-export function createRegionView(readable: TerminalReadable, startRow: number, endRow: number): RegionView {
-  return createLazyRegionView(readable, () => [startRow, endRow])
+/** Create a {@link Region} for a fixed absolute row range [startRow, endRow). */
+export function createRegion(readable: Terminal, startRow: number, endRow: number): Region {
+  return createLazyRegion(readable, () => [startRow, endRow])
 }
 
-// ── RowView ──
+/** @deprecated Renamed to {@link createRegion}. */
+export const createRegionView = createRegion
 
-/** Create a RowView for an absolute row position. screenRow is the display row number. */
-export function createRowView(readable: TerminalReadable, absRow: number, screenRow: number): RowView {
+// ── Row ──
+
+/** Create a {@link Row} for an absolute row position. screenRow is the display row number. */
+export function createRow(readable: Terminal, absRow: number, screenRow: number): Row {
   return {
     get row() {
       return screenRow
     },
     get cells() {
-      return readable.getLine(absRow)
+      return readable.getRow(absRow)
     },
     getText(): string {
-      return cellsToText(readable.getLine(absRow))
+      return cellsToText(readable.getRow(absRow))
     },
     getLines(): string[] {
       return [this.getText()]
@@ -103,11 +108,14 @@ export function createRowView(readable: TerminalReadable, absRow: number, screen
     containsText(text: string): boolean {
       return this.getText().includes(text)
     },
-    cellAt(col: number): CellView {
+    cellAt(col: number): Cell {
       return createCellView(readable.getCell(absRow, col), screenRow, col)
     },
   }
 }
+
+/** @deprecated Renamed to {@link createRow}. */
+export const createRowView = createRow
 
 // ── Specialized Region Views ──
 
@@ -115,23 +123,23 @@ export function createRowView(readable: TerminalReadable, absRow: number, screen
  * Screen view: the fixed rows × cols grid at the bottom of the buffer.
  * In alt mode, this is the entire alt buffer.
  */
-export function createScreenView(readable: TerminalReadable): RegionView {
-  return createLazyRegionView(readable, () => {
-    const { totalLines, screenLines } = readable.getScrollback()
-    const base = totalLines - screenLines
-    return [base, base + screenLines]
+export function createScreenView(readable: Terminal): Region {
+  return createLazyRegion(readable, () => {
+    const { totalRows, screenRows } = readable.getScrollback()
+    const base = totalRows - screenRows
+    return [base, base + screenRows]
   })
 }
 
 /**
- * Scrollback view: history lines above the screen.
+ * Scrollback view: history rows above the screen.
  * Empty in alt screen mode.
- * @param n - If provided, only the last N scrollback lines.
+ * @param n - If provided, only the last N scrollback rows.
  */
-export function createScrollbackView(readable: TerminalReadable, n?: number): RegionView {
-  return createLazyRegionView(readable, () => {
-    const { totalLines, screenLines } = readable.getScrollback()
-    const base = totalLines - screenLines
+export function createScrollbackView(readable: Terminal, n?: number): Region {
+  return createLazyRegion(readable, () => {
+    const { totalRows, screenRows } = readable.getScrollback()
+    const base = totalRows - screenRows
     if (base <= 0) return [0, 0]
     const start = n != null ? Math.max(0, base - n) : 0
     return [start, base]
@@ -142,7 +150,7 @@ export function createScrollbackView(readable: TerminalReadable, n?: number): Re
  * Buffer view: everything (scrollback + screen).
  * Uses readable.getText() directly — not row-based.
  */
-export function createBufferView(readable: TerminalReadable): RegionView {
+export function createBufferView(readable: Terminal): Region {
   return {
     getText(): string {
       return readable.getText()
@@ -158,13 +166,13 @@ export function createBufferView(readable: TerminalReadable): RegionView {
 
 /**
  * Viewport view: what's visible at the current scroll position.
- * At bottom (viewportOffset = totalLines - screenLines): same as screen.
- * Scrolled up: shows older scrollback lines.
+ * At bottom (viewportTop = totalRows - screenRows): same as screen.
+ * Scrolled up: shows older scrollback rows.
  */
-export function createViewportView(readable: TerminalReadable): RegionView {
-  return createLazyRegionView(readable, () => {
-    const { viewportOffset, screenLines } = readable.getScrollback()
-    return [viewportOffset, viewportOffset + screenLines]
+export function createViewportView(readable: Terminal): Region {
+  return createLazyRegion(readable, () => {
+    const { viewportTop, screenRows } = readable.getScrollback()
+    return [viewportTop, viewportTop + screenRows]
   })
 }
 
@@ -172,17 +180,11 @@ export function createViewportView(readable: TerminalReadable): RegionView {
  * Range view: a rectangular region of the screen.
  * Coordinates are screen-relative. Uses getTextRange() — not row-based.
  */
-export function createRangeView(
-  readable: TerminalReadable,
-  r1: number,
-  c1: number,
-  r2: number,
-  c2: number,
-): RegionView {
+export function createRangeView(readable: Terminal, r1: number, c1: number, r2: number, c2: number): Region {
   return {
     getText(): string {
-      const { totalLines, screenLines } = readable.getScrollback()
-      const base = totalLines - screenLines
+      const { totalRows, screenRows } = readable.getScrollback()
+      const base = totalRows - screenRows
       return readable.getTextRange(base + r1, c1, base + r2, c2)
     },
     getLines(): string[] {

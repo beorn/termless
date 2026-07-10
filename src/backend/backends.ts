@@ -15,7 +15,7 @@ import { dirname, join } from "node:path"
 import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
-import type { TerminalBackend, TerminalOptions, Terminal } from "../terminal/types.ts"
+import type { TerminalBackend, TerminalOptions, TestTerminal } from "../terminal/types.ts"
 import { createTerminal } from "../terminal/terminal.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -265,7 +265,7 @@ export function entry(name: string): BackendEntry | undefined {
 export async function createTerminalByName(
   name: string,
   opts?: { cols?: number; rows?: number; scrollbackLimit?: number; version?: string },
-): Promise<Terminal> {
+): Promise<TestTerminal> {
   const b = await backend(name, opts)
   return createTerminal({ backend: b, ...opts })
 }

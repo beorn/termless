@@ -10,7 +10,7 @@
  * source terminal has closed.
  */
 
-import type { Cell, CursorState, Terminal, TerminalReadable } from "./types.ts"
+import type { Cell, CursorState, TestTerminal, TerminalReadable } from "./types.ts"
 
 /** A frozen copy of a terminal's visible cell grid + cursor. */
 export interface TerminalSnapshot {
@@ -40,13 +40,13 @@ const BLANK_CELL: Cell = {
 }
 
 /** Deep-copy a terminal's current visible state into a {@link TerminalSnapshot}. */
-export function snapshotTerminal(term: Terminal): TerminalSnapshot {
-  const grid = term.getLines().map((row) => row.map((cell) => ({ ...cell })))
+export function snapshotTerminal(term: TestTerminal): TerminalSnapshot {
+  const grid = term.getRows().map((row) => row.map((cell) => ({ ...cell })))
   let cursor: CursorState
   try {
     cursor = term.getCursor()
   } catch {
-    cursor = { x: 0, y: 0, visible: false, style: null }
+    cursor = { col: 0, row: 0, x: 0, y: 0, visible: false, style: null }
   }
   let title = ""
   try {

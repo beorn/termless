@@ -5,7 +5,7 @@
  * a termless Terminal or TerminalBackend.
  */
 
-import type { Terminal, TerminalBackend } from "../../terminal/types.ts"
+import type { TestTerminal, TerminalBackend } from "../../terminal/types.ts"
 import type { AsciicastEvent, AsciicastEventType, AsciicastHeader, AsciicastRecording } from "./types.ts"
 
 /** Options for replaying an asciicast recording. */
@@ -59,7 +59,7 @@ export function parseAsciicast(content: string): AsciicastRecording {
 }
 
 /** Type guard: is target a Terminal (has feed that accepts string)? */
-function isTerminal(target: Terminal | TerminalBackend): target is Terminal {
+function isTerminal(target: TestTerminal | TerminalBackend): target is TestTerminal {
   // Terminal.feed accepts string | Uint8Array; TerminalBackend.feed accepts only Uint8Array.
   // We check for the `cols` property that Terminal has as a readonly number.
   return "cols" in target && "press" in target
@@ -79,7 +79,7 @@ function isTerminal(target: Terminal | TerminalBackend): target is Terminal {
  */
 export async function replayAsciicast(
   recording: AsciicastRecording,
-  terminal: Terminal | TerminalBackend,
+  terminal: TestTerminal | TerminalBackend,
   options?: ReplayOptions,
 ): Promise<void> {
   const speed = options?.speed ?? 1

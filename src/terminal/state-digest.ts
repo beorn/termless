@@ -163,8 +163,8 @@ export function terminalStateDigest(
   const trim = opts.trimTrailingBlanks ?? true
 
   const scrollback = term.getScrollback()
-  const screenLines = Math.max(0, scrollback.screenLines)
-  const allLines = term.getLines()
+  const screenLines = Math.max(0, scrollback.screenRows)
+  const allLines = term.getRows()
   const screen = screenLines > 0 ? allLines.slice(Math.max(0, allLines.length - screenLines)) : []
 
   const cols = screen.reduce((max, row) => Math.max(max, row.length), 0)
@@ -177,7 +177,7 @@ export function terminalStateDigest(
 
   return {
     size: { cols, rows: screenLines },
-    cursor: { row: cursor.y, col: cursor.x, visible: cursor.visible, style: cursor.style },
+    cursor: { row: cursor.row, col: cursor.col, visible: cursor.visible, style: cursor.style },
     title: term.getTitle(),
     modes,
     rows,

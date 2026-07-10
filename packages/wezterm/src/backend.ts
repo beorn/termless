@@ -303,6 +303,8 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     const t = ensureTerm()
     const cursor = t.getCursor()
     return {
+      col: cursor.x,
+      row: cursor.y,
       x: cursor.x,
       y: cursor.y,
       // TODO: cursor.visible is hardcoded to true in the native module (lib.rs).
@@ -325,6 +327,9 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     const t = ensureTerm()
     const sb = t.getScrollback()
     return {
+      viewportTop: sb.viewportOffset,
+      totalRows: sb.totalLines,
+      screenRows: sb.screenLines,
       viewportOffset: sb.viewportOffset,
       totalLines: sb.totalLines,
       screenLines: sb.screenLines,
@@ -370,6 +375,8 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

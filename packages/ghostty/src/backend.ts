@@ -539,6 +539,8 @@ export function createGhosttyBackend(
     t.update()
     const cursor = t.getCursor()
     return {
+      col: cursor.x,
+      row: cursor.y,
       x: cursor.x,
       y: cursor.y,
       visible: cursor.visible,
@@ -586,6 +588,9 @@ export function createGhosttyBackend(
     return {
       // Ghostty WASM doesn't expose viewport scroll position in headless mode,
       // so assume viewport is at the bottom (absolute top row = scrollbackLength).
+      viewportTop: scrollbackLength,
+      totalRows: scrollbackLength + rows,
+      screenRows: rows,
       viewportOffset: scrollbackLength,
       totalLines: scrollbackLength + rows,
       screenLines: rows,
@@ -649,6 +654,8 @@ export function createGhosttyBackend(
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

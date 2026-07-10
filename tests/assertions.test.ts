@@ -122,6 +122,8 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
   const cursorState: CursorState = {
     x: cursor.x ?? 0,
     y: cursor.y ?? 0,
+    col: cursor.x ?? 0,
+    row: cursor.y ?? 0,
     visible: cursor.visible ?? true,
     style: cursor.style ?? "block",
   }
@@ -130,6 +132,9 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     viewportOffset: scrollback.viewportOffset ?? 0,
     totalLines: scrollback.totalLines ?? lines.length,
     screenLines: scrollback.screenLines ?? lines.length,
+    viewportTop: scrollback.viewportOffset ?? 0,
+    totalRows: scrollback.totalLines ?? lines.length,
+    screenRows: scrollback.screenLines ?? lines.length,
   }
 
   return {
@@ -185,6 +190,12 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
       return grid[row] ?? []
     },
     getLines(): Cell[][] {
+      return grid
+    },
+    getRow(row: number): Cell[] {
+      return grid[row] ?? []
+    },
+    getRows(): Cell[][] {
       return grid
     },
     getCursor(): CursorState {

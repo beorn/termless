@@ -58,6 +58,8 @@ function createReadable(
   const cursorState: CursorState = {
     x: cursor.x ?? 0,
     y: cursor.y ?? 0,
+    col: cursor.x ?? 0,
+    row: cursor.y ?? 0,
     visible: cursor.visible ?? true,
     style: cursor.style ?? "block",
   }
@@ -68,10 +70,19 @@ function createReadable(
     getCell: (row, col) => grid[row]?.[col] ?? { ...DEFAULT_CELL },
     getLine: (row) => grid[row] ?? [],
     getLines: () => grid,
+    getRow: (row) => grid[row] ?? [],
+    getRows: () => grid,
     getCursor: () => cursorState,
     getMode: (mode: TerminalMode) => modes[mode] ?? false,
     getTitle: () => title,
-    getScrollback: (): ScrollbackState => ({ viewportOffset: 0, totalLines: grid.length, screenLines: grid.length }),
+    getScrollback: (): ScrollbackState => ({
+      viewportOffset: 0,
+      totalLines: grid.length,
+      screenLines: grid.length,
+      viewportTop: 0,
+      totalRows: grid.length,
+      screenRows: grid.length,
+    }),
   }
 }
 

@@ -13,7 +13,7 @@
  * and `truncation` events are surfaced in the result for assertions.
  */
 
-import type { Terminal, TerminalBackend } from "../terminal/types.ts"
+import type { TestTerminal, TerminalBackend } from "../terminal/types.ts"
 
 export interface JournalReplayEvent {
   kind: "output" | "input" | "resize" | "lifecycle" | "truncation"
@@ -45,7 +45,7 @@ export interface JournalReplayResult {
 }
 
 /** Replay journal events through a backend/terminal via its byte feed. */
-export function replayJournal(input: JournalReplayInput, target: Terminal | TerminalBackend): JournalReplayResult {
+export function replayJournal(input: JournalReplayInput, target: TestTerminal | TerminalBackend): JournalReplayResult {
   if (input.size !== undefined) target.resize(input.size.cols, input.size.rows)
   const result: JournalReplayResult = { applied: 0, truncations: [], lifecycle: [] }
   for (const event of input.events) {

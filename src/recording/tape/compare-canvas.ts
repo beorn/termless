@@ -30,7 +30,7 @@
  */
 
 import type { TapeFile } from "./parser.ts"
-import type { Cell, CursorState, Terminal, TerminalBackend, TerminalReadable } from "../../terminal/types.ts"
+import type { Cell, Cursor, TestTerminal, TerminalBackend, Terminal } from "../../terminal/types.ts"
 import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../../terminal/snapshot.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
@@ -131,7 +131,7 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
     // Capturing the real Cell[][] (not just text) preserves colour, wide
     // chars, and hyperlinks — so parser divergence in any of those surfaces.
     const snapshots: TerminalSnapshot[] = []
-    const capture = (term: Terminal) => {
+    const capture = (term: TestTerminal) => {
       snapshots.push(snapshotTerminal(term))
     }
 

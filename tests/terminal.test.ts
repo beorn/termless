@@ -12,6 +12,7 @@ import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import type {
   Cell,
+  CellView,
   CursorState,
   KeyDescriptor,
   ScrollbackState,
@@ -153,8 +154,16 @@ function createMockBackend(): TerminalBackend {
       return Array.from({ length: rows }, (_, row) => Array.from({ length: cols }, (_, col) => cellAt(row, col)))
     },
 
+    getRow(row: number): Cell[] {
+      return Array.from({ length: cols }, (_, col) => cellAt(row, col))
+    },
+
+    getRows(): Cell[][] {
+      return Array.from({ length: rows }, (_, row) => Array.from({ length: cols }, (_, col) => cellAt(row, col)))
+    },
+
     getCursor(): CursorState {
-      return { x: cursorX, y: cursorY, visible: true, style: "block" }
+      return { x: cursorX, y: cursorY, col: cursorX, row: cursorY, visible: true, style: "block" }
     },
 
     getMode(_mode: TerminalMode): boolean {
@@ -166,7 +175,14 @@ function createMockBackend(): TerminalBackend {
     },
 
     getScrollback(): ScrollbackState {
-      return { viewportOffset: 0, totalLines: rows, screenLines: rows }
+      return {
+        viewportOffset: 0,
+        totalLines: rows,
+        screenLines: rows,
+        viewportTop: 0,
+        totalRows: rows,
+        screenRows: rows,
+      }
     },
 
     encodeKey(key: KeyDescriptor): Uint8Array {
@@ -511,7 +527,7 @@ describe("createTerminal", () => {
 
     term.feed("Line one\nLine two\nLine three")
 
-    const result = term.find("two")
+    const result = term.findText("two")
     expect(result).not.toBeNull()
     expect(result!.row).toBe(1)
     expect(result!.col).toBeGreaterThanOrEqual(0)
@@ -526,7 +542,7 @@ describe("createTerminal", () => {
 
     term.feed("Hello")
 
-    expect(term.find("goodbye")).toBeNull()
+    expect(term.findText("goodbye")).toBeNull()
 
     term.close()
   })
@@ -537,9 +553,10 @@ describe("createTerminal", () => {
 
     term.feed("foo bar foo\nbaz foo qux")
 
-    const results = term.findAll(/foo/)
+    const results = term.findAllText(/foo/)
     expect(results.length).toBe(3)
-    expect(results[0]).toEqual({ row: 0, col: 0, text: "foo" })
+    expect(results[0]).toMatchObject({ row: 0, col: 0, text: "foo" })
+    expect(results[0]!.cells.map((c) => c.char).join("")).toBe("foo")
     expect(results[2]!.row).toBe(1)
 
     term.close()
@@ -551,7 +568,7 @@ describe("createTerminal", () => {
 
     term.feed("Hello world")
 
-    expect(term.findAll(/xyz/)).toEqual([])
+    expect(term.findAllText(/xyz/)).toEqual([])
 
     term.close()
   })
@@ -753,17 +770,19 @@ describe("region selectors", () => {
     term.close()
   })
 
-  test("cell returns a CellView", () => {
+  test("cell returns a positioned cell", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 5 })
     term.feed("XY")
 
-    const cell = term.cell(0, 0)
+    // `cell()` returns a Cell; during the migration window it still carries the
+    // deprecated CellView `row`/`col` positional context.
+    const cell = term.cell(0, 0) as CellView
     expect(cell.char).toBe("X")
     expect(cell.row).toBe(0)
     expect(cell.col).toBe(0)
 
-    const cell2 = term.cell(0, 1)
+    const cell2 = term.cell(0, 1) as CellView
     expect(cell2.char).toBe("Y")
     expect(cell2.col).toBe(1)
 

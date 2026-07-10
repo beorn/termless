@@ -12,13 +12,13 @@ export interface TerminalOptions {
 
 export interface Cell {
   char: string
-  fg: RGB | null
-  bg: RGB | null
+  fg: Color | null
+  bg: Color | null
   bold: boolean
   dim: boolean
   italic: boolean
   underline: UnderlineStyle
-  underlineColor: RGB | null
+  underlineColor: Color | null
   strikethrough: boolean
   inverse: boolean
   blink: boolean
@@ -28,20 +28,45 @@ export interface Cell {
   hyperlink: string | null
 }
 
-export type UnderlineStyle = false | "single" | "double" | "curly" | "dotted" | "dashed"
+/**
+ * Underline rendering style. `"none"` means no underline.
+ *
+ * `false` is the **deprecated** legacy spelling of `"none"`; it remains an
+ * accepted value at boundaries so existing backends keep compiling during the
+ * schema-major migration. New code should read/write `"none"`.
+ */
+export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed" | false
 
-export type RGB = { r: number; g: number; b: number }
+/**
+ * A terminal color. `r`/`g`/`b` are always present (0–255); `index` optionally
+ * preserves the origin palette slot (0–255) when the color came from an indexed
+ * palette entry. Painters read `r`/`g`/`b` unconditionally; only identity-aware
+ * code touches `index`.
+ */
+export type Color = { r: number; g: number; b: number; index?: number }
+
+/** @deprecated Renamed to {@link Color}. */
+export type RGB = Color
 
 // ── Cursor ──
 
-export interface CursorState {
-  x: number
-  y: number
+export interface Cursor {
+  /** Cursor column (0-based). */
+  col: number
+  /** Cursor row (0-based). */
+  row: number
   /** Whether the cursor is visible. `null` if the backend doesn't know. */
   visible: boolean | null
   /** Cursor shape. `null` if the backend doesn't know. */
   style: CursorStyle | null
+  /** @deprecated Renamed to {@link Cursor.col}. Kept required during the migration window. */
+  x: number
+  /** @deprecated Renamed to {@link Cursor.row}. Kept required during the migration window. */
+  y: number
 }
+
+/** @deprecated Renamed to {@link Cursor}; `x`/`y` renamed to `col`/`row`. */
+export type CursorState = Cursor
 
 export type CursorStyle = "block" | "underline" | "beam"
 
@@ -64,24 +89,30 @@ export type TerminalMode =
 
 export interface ScrollbackState {
   /**
-   * Absolute row index of the viewport's top line in the buffer.
-   * When at the bottom (no scrollback visible): `totalLines - screenLines`.
+   * Absolute row index of the row where the viewport region starts in the buffer.
+   * When at the bottom (no scrollback visible): `totalRows - screenRows`.
    * When scrolled to the very top: `0`.
    *
    * Used by region views as the start row for viewport rendering:
-   * `createRegionView(readable, viewportOffset, viewportOffset + screenLines)`.
+   * `createRegion(readable, viewportTop, viewportTop + screenRows)`.
    */
-  viewportOffset: number
+  viewportTop: number
   /**
-   * Total number of lines in the buffer (scrollback history + screen).
-   * Row 0 is the first line in scrollback; row `totalLines - 1` is the last screen line.
+   * Total number of rows in the buffer (scrollback history + screen).
+   * Row 0 is the first row in scrollback; row `totalRows - 1` is the last screen row.
    */
-  totalLines: number
+  totalRows: number
   /**
    * Number of visible screen rows (the terminal's row dimension).
-   * The screen occupies the last `screenLines` rows of the buffer
-   * (rows `totalLines - screenLines` through `totalLines - 1`).
+   * The screen occupies the last `screenRows` rows of the buffer
+   * (rows `totalRows - screenRows` through `totalRows - 1`).
    */
+  screenRows: number
+  /** @deprecated Renamed to {@link ScrollbackState.viewportTop}. Kept required during the migration window. */
+  viewportOffset: number
+  /** @deprecated Renamed to {@link ScrollbackState.totalRows}. Kept required during the migration window. */
+  totalLines: number
+  /** @deprecated Renamed to {@link ScrollbackState.screenRows}. Kept required during the migration window. */
   screenLines: number
 }
 
@@ -116,11 +147,14 @@ export interface TerminalCapabilities {
 // ═══════════════════════════════════════════════════════
 
 /** A region of the terminal that can produce text. Used with text matchers. */
-export interface RegionView {
+export interface Region {
   getText(): string
   getLines(): string[]
   containsText(text: string): boolean
 }
+
+/** @deprecated Renamed to {@link Region}. */
+export type RegionView = Region
 
 /**
  * Raw terminal output stream captured before emulator parsing.
@@ -128,53 +162,56 @@ export interface RegionView {
  * Use this for terminal protocol assertions (OSC/APC/CSI bytes such as
  * Kitty graphics packets) that may intentionally leave no visible cells.
  */
-export interface OutputView {
+export interface RawOutput {
   getText(): string
   getChunks(): readonly string[]
   containsOutput(text: string): boolean
   clear(): void
 }
 
-/** A single cell with positional context. Used with style matchers. */
-export interface CellView {
-  readonly char: string
+/** @deprecated Renamed to {@link RawOutput}. */
+export type OutputView = RawOutput
+
+/**
+ * A positioned cell — a {@link Cell} plus the `row`/`col` where it lives.
+ *
+ * @deprecated The `CellView` concept is folded into {@link Cell}: positioned
+ * accessors (`cell(row, col)`, `cellAt(col)`) return `Cell`, and where a caller
+ * needs the position it is supplied by the query (the accessor arguments, or a
+ * {@link TextMatch}). This alias remains for the migration window; the extra
+ * `row`/`col` are still populated by `cell()`/`cellAt()` for back-compat.
+ */
+export type CellView = Cell & {
   readonly row: number
   readonly col: number
-  readonly fg: RGB | null
-  readonly bg: RGB | null
-  readonly bold: boolean
-  readonly dim: boolean
-  readonly italic: boolean
-  readonly underline: UnderlineStyle
-  readonly underlineColor: RGB | null
-  readonly strikethrough: boolean
-  readonly inverse: boolean
-  readonly blink: boolean
-  readonly hidden: boolean
-  readonly wide: boolean
-  readonly continuation: boolean
-  readonly hyperlink: string | null
 }
 
-/** A row is a RegionView with positional context and cell access. */
-export interface RowView extends RegionView {
+/** A row is a {@link Region} with positional context and cell access. */
+export interface Row extends Region {
   readonly row: number
   readonly cells: Cell[]
-  cellAt(col: number): CellView
+  cellAt(col: number): Cell
 }
 
+/** @deprecated Renamed to {@link Row}. */
+export type RowView = Row
+
 // ═══════════════════════════════════════════════════════
-// TerminalReadable — shared protocol for backends
+// Terminal — shared read contract for backends (THE contract)
 // ═══════════════════════════════════════════════════════
 
 /**
- * Shared read protocol for terminal backends.
+ * Shared read contract for terminal backends — THE terminal contract. The
+ * engine implements it; consumer signatures read `fn(term: Terminal)`.
+ *
+ * **Row vs line**: a *row* is a line of cells (`getRow`/`getRows`); a *line* is
+ * a line of text ({@link Region.getText}/{@link Region.getLines}).
  *
  * **Coordinate system**: All row parameters use **absolute buffer rows**.
- * Row 0 is the first line in scrollback history. The screen occupies the
- * last `screenLines` rows (from `totalLines - screenLines` to `totalLines - 1`).
+ * Row 0 is the first row in scrollback history. The screen occupies the
+ * last `screenRows` rows (from `totalRows - screenRows` to `totalRows - 1`).
  */
-export interface TerminalReadable {
+export interface Terminal {
   /** Get all buffer text (scrollback + screen) as a newline-joined string. */
   getText(): string
   /**
@@ -186,14 +223,21 @@ export interface TerminalReadable {
   /** Get a single cell at an absolute buffer row and column. */
   getCell(row: number, col: number): Cell
   /** Get all cells in an absolute buffer row. */
+  getRow(row: number): Cell[]
+  /** Get every row as a cell array (entire buffer: scrollback + screen). */
+  getRows(): Cell[][]
+  /** @deprecated Renamed to {@link Terminal.getRow} (row = cells). Kept required during the migration window. */
   getLine(row: number): Cell[]
-  /** Get all lines as cell arrays (entire buffer: scrollback + screen). */
+  /** @deprecated Renamed to {@link Terminal.getRows} (row = cells). Kept required during the migration window. */
   getLines(): Cell[][]
-  getCursor(): CursorState
+  getCursor(): Cursor
   getMode(mode: TerminalMode): boolean
   getTitle(): string
   getScrollback(): ScrollbackState
 }
+
+/** @deprecated Renamed to {@link Terminal} (the read contract). */
+export type TerminalReadable = Terminal
 
 // ═══════════════════════════════════════════════════════
 // TerminalBackend — all backends MUST implement this
@@ -201,7 +245,7 @@ export interface TerminalReadable {
 
 /**
  * Options accepted by {@link TerminalBackend.screenshot} and
- * {@link Terminal.screenshot}.
+ * {@link TestTerminal.screenshot}.
  *
  * Mirrors `@termless/ghostty`'s `RenderOptions` shape — kept as a local minimal
  * type here so `@termless/core` does not import from `@termless/ghostty` (which
@@ -232,12 +276,12 @@ export interface ScreenshotOptions {
    * `browser` (headless Chromium via the optional `playwright` package —
    * absolute-max fidelity, opt-in only), or `auto` (canvas when its native
    * binding loads, else resvg). Default `auto`. A *force* override consulted
-   * by {@link Terminal.screenshot}. `browser` is never reached from `auto`.
+   * by {@link TestTerminal.screenshot}. `browser` is never reached from `auto`.
    */
   renderer?: "canvas" | "resvg" | "swash" | "browser" | "auto"
 }
 
-export interface TerminalBackend extends TerminalReadable {
+export interface TerminalBackend extends Terminal {
   readonly name: string
 
   // Lifecycle
@@ -303,11 +347,19 @@ export interface SpawnOptions {
   cwd?: string
 }
 
-export interface TextPosition {
+/**
+ * A text search match: the matched `text`, its `row`/`col` in the buffer, and
+ * the underlying `cells` so a match chains into style assertions.
+ */
+export interface TextMatch {
+  text: string
   row: number
   col: number
-  text: string
+  cells: Cell[]
 }
+
+/** @deprecated Renamed to {@link TextMatch}; queries now return a match object with `cells`. */
+export type TextPosition = TextMatch
 
 /** Modifier keys for mouse events. */
 export interface MouseModifiers {
@@ -316,28 +368,41 @@ export interface MouseModifiers {
   alt?: boolean
 }
 
+/** Named mouse button. */
+export type MouseButton = "left" | "middle" | "right"
+
 /** Options for mouse click/press/release events. */
 export interface MouseOptions extends MouseModifiers {
-  /** Mouse button: 0=left (default), 1=middle, 2=right. */
-  button?: 0 | 1 | 2
+  /**
+   * Mouse button — default `"left"`. The numeric spellings `0`/`1`/`2`
+   * (left/middle/right) are **deprecated** but still accepted and normalized.
+   */
+  button?: MouseButton | 0 | 1 | 2
 }
 
-export interface Terminal extends TerminalReadable {
+/**
+ * High-level test terminal — the harness. Wraps a {@link TerminalBackend} and
+ * an optional PTY, and adds region selectors, search, mouse input, waiting, and
+ * screenshots on top of the {@link Terminal} read contract.
+ */
+export interface TestTerminal extends Terminal {
   readonly cols: number
   readonly rows: number
   readonly backend: TerminalBackend
 
   // Region selectors (WHERE)
-  readonly screen: RegionView
-  readonly scrollback: RegionView
-  readonly buffer: RegionView
-  readonly viewport: RegionView
-  readonly out: OutputView
-  row(n: number): RowView
-  cell(row: number, col: number): CellView
-  range(r1: number, c1: number, r2: number, c2: number): RegionView
-  firstRow(): RowView
-  lastRow(): RowView
+  readonly screen: Region
+  readonly scrollback: Region
+  readonly buffer: Region
+  readonly viewport: Region
+  readonly output: RawOutput
+  /** @deprecated Renamed to {@link TestTerminal.output}. */
+  readonly out: RawOutput
+  row(n: number): Row
+  cell(row: number, col: number): Cell
+  range(r1: number, c1: number, r2: number, c2: number): Region
+  firstRow(): Row
+  lastRow(): Row
 
   // Direct data feed (no PTY)
   feed(data: Uint8Array | string): void
@@ -364,8 +429,12 @@ export interface Terminal extends TerminalReadable {
   waitForStable(stableMs?: number, timeout?: number): Promise<void>
 
   // Search
-  find(text: string): TextPosition | null
-  findAll(pattern: RegExp): TextPosition[]
+  findText(text: string): TextMatch | null
+  findAllText(pattern: RegExp): TextMatch[]
+  /** @deprecated Renamed to {@link TestTerminal.findText}. */
+  find(text: string): TextMatch | null
+  /** @deprecated Renamed to {@link TestTerminal.findAllText}. */
+  findAll(pattern: RegExp): TextMatch[]
 
   // Screenshot
   screenshotSvg(options?: SvgScreenshotOptions): string

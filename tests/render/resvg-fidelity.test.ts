@@ -108,9 +108,10 @@ function cell(char: string, overrides: Partial<Cell> = {}): Cell {
 
 /** Build a single-row TerminalReadable from a list of cells. */
 function readableFromCells(cells: Cell[]): TerminalReadable {
-  const cursor: CursorState = { x: 0, y: 0, visible: false, style: "block" }
+  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" }
   return {
     getLines: () => [cells],
+    getRows: () => [cells],
     getCursor: () => cursor,
   } as unknown as TerminalReadable
 }

@@ -302,6 +302,8 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     const t = ensureTerm()
     const cursor = t.getCursor()
     return {
+      col: cursor.x,
+      row: cursor.y,
       x: cursor.x,
       y: cursor.y,
       visible: cursor.visible,
@@ -321,6 +323,9 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     const t = ensureTerm()
     const sb = t.getScrollback()
     return {
+      viewportTop: sb.viewportOffset,
+      totalRows: sb.totalLines,
+      screenRows: sb.screenLines,
       viewportOffset: sb.viewportOffset,
       totalLines: sb.totalLines,
       screenLines: sb.screenLines,
@@ -365,6 +370,8 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

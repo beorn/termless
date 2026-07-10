@@ -66,7 +66,7 @@ export function snapshotVisualState(readable: TerminalReadable): string {
 
   // Cursor state
   const cursor = readable.getCursor()
-  parts.push(`C:${cursor.x},${cursor.y},${cursor.visible},${cursor.style}`)
+  parts.push(`C:${cursor.col},${cursor.row},${cursor.visible},${cursor.style}`)
 
   // Title
   parts.push(`T:${readable.getTitle()}`)
@@ -76,7 +76,7 @@ export function snapshotVisualState(readable: TerminalReadable): string {
   parts.push(`M:${modeFlags}`)
 
   // Cell grid — every cell's full visual state
-  const lines = readable.getLines()
+  const lines = readable.getRows()
   for (let row = 0; row < lines.length; row++) {
     const rowCells = lines[row]!
     const cellStrings: string[] = []

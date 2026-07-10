@@ -450,8 +450,8 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
 function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null {
   if (!cursor.visible) return null
 
-  const cx = cursor.x * opts.cellWidth
-  const cy = cursor.y * opts.cellHeight
+  const cx = cursor.col * opts.cellWidth
+  const cy = cursor.row * opts.cellHeight
 
   // Default to block if backend doesn't report cursor style
   const style = cursor.style ?? "block"
@@ -630,7 +630,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
     marginFill,
   } = opts
 
-  const lines = terminal.getLines()
+  const lines = terminal.getRows()
   const rows = lines.length
   const cols = rows > 0 ? Math.max(...lines.map((l) => l.length)) : 0
 

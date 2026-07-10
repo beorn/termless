@@ -305,6 +305,8 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     const t = ensureTerm()
     const nc = t.getCursor()
     return {
+      col: nc.x,
+      row: nc.y,
       x: nc.x,
       y: nc.y,
       visible: nc.visible,
@@ -323,6 +325,9 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
   function getScrollback(): ScrollbackState {
     const [viewportOffset, totalLines, screenLines] = ensureTerm().getScrollback()
     return {
+      viewportTop: viewportOffset!,
+      totalRows: totalLines!,
+      screenRows: screenLines!,
       viewportOffset: viewportOffset!,
       totalLines: totalLines!,
       screenLines: screenLines!,
@@ -368,6 +373,8 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,

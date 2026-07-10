@@ -138,8 +138,8 @@ function describeCellDiff(diff: CellDiff): string {
  * ```
  */
 export function diffBuffers(a: TerminalReadable, b: TerminalReadable): DiffResult {
-  const linesA = a.getLines()
-  const linesB = b.getLines()
+  const linesA = a.getRows()
+  const linesB = b.getRows()
   const maxRows = Math.max(linesA.length, linesB.length)
 
   const diffs: CellDiff[] = []

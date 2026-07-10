@@ -7,22 +7,21 @@
 
 import type {
   Cell,
-  CellView,
-  CursorState,
+  Cursor,
   PngScreenshotOptions,
-  RegionView,
-  RowView,
+  Region,
+  Row,
   ScreenshotOptions,
   ScrollbackState,
   SvgScreenshotOptions,
-  Terminal,
+  TestTerminal,
   TerminalBackend,
   TerminalCreateOptions,
   TerminalMode,
-  TextPosition,
+  TextMatch,
   MouseOptions,
   MouseModifiers,
-  OutputView,
+  RawOutput,
 } from "./types.ts"
 import { parseKey, keyToAnsi } from "./key-mapping.ts"
 import { spawnPty, type PtyHandle } from "./pty.ts"
@@ -32,7 +31,7 @@ import {
   createBufferView,
   createCellView,
   createRangeView,
-  createRowView,
+  createRow,
   createScreenView,
   createScrollbackView,
   createViewportView,
@@ -63,7 +62,7 @@ const encoder = new TextEncoder()
  * - Searching terminal text
  * - Taking SVG and PNG screenshots
  */
-export function createTerminal(options: TerminalCreateOptions): Terminal {
+export function createTerminal(options: TerminalCreateOptions): TestTerminal {
   const { backend, scrollbackLimit } = options
   let cols = options.cols ?? DEFAULT_COLS
   let rows = options.rows ?? DEFAULT_ROWS
@@ -83,7 +82,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
   const outputChunks: string[] = []
   let outputDecoder = new TextDecoder()
 
-  const out: OutputView = {
+  const out: RawOutput = {
     getText() {
       return outputChunks.join("")
     },
@@ -116,7 +115,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     }
   }
 
-  // ── TerminalReadable delegation ──
+  // ── Terminal read-contract delegation ──
 
   function getText(): string {
     return backend.getText()
@@ -130,16 +129,34 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return backend.getCell(row, col)
   }
 
+  function getRow(row: number): Cell[] {
+    return backend.getRow(row)
+  }
+
+  function getRows(): Cell[][] {
+    return backend.getRows()
+  }
+
+  /** @deprecated Renamed to {@link getRow}. */
   function getLine(row: number): Cell[] {
-    return backend.getLine(row)
+    return backend.getRow(row)
   }
 
+  /** @deprecated Renamed to {@link getRows}. */
   function getLines(): Cell[][] {
-    return backend.getLines()
+    return backend.getRows()
   }
 
-  function getCursor(): CursorState {
-    return backend.getCursor()
+  /**
+   * Normalize a backend cursor so both the canonical `col`/`row` and the
+   * deprecated `x`/`y` mirrors are always populated, regardless of which a
+   * given backend supplied.
+   */
+  function getCursor(): Cursor {
+    const c = backend.getCursor()
+    const col = c.col ?? c.x ?? 0
+    const row = c.row ?? c.y ?? 0
+    return { ...c, col, row, x: col, y: row }
   }
 
   function getMode(mode: TerminalMode): boolean {
@@ -150,8 +167,25 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     return backend.getTitle()
   }
 
+  /**
+   * Normalize a backend scrollback state so both the canonical
+   * `viewportTop`/`totalRows`/`screenRows` and the deprecated
+   * `viewportOffset`/`totalLines`/`screenLines` mirrors are always populated.
+   */
   function getScrollback(): ScrollbackState {
-    return backend.getScrollback()
+    const s = backend.getScrollback()
+    const viewportTop = s.viewportTop ?? s.viewportOffset ?? 0
+    const totalRows = s.totalRows ?? s.totalLines ?? 0
+    const screenRows = s.screenRows ?? s.screenLines ?? 0
+    return {
+      ...s,
+      viewportTop,
+      totalRows,
+      screenRows,
+      viewportOffset: viewportTop,
+      totalLines: totalRows,
+      screenLines: screenRows,
+    }
   }
 
   // ── Data feed ──
@@ -223,7 +257,10 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   /** Encode SGR button byte: button number + modifier bits. */
   function sgrButton(options?: MouseOptions): number {
-    let btn = options?.button ?? 0
+    const raw = options?.button ?? "left"
+    // Normalize the deprecated numeric spellings (0/1/2) and the canonical
+    // string spellings ("left"/"middle"/"right") to the SGR button number.
+    let btn = typeof raw === "number" ? raw : raw === "left" ? 0 : raw === "middle" ? 1 : 2
     if (options?.shift) btn += 4
     if (options?.alt) btn += 8
     if (options?.ctrl) btn += 16
@@ -319,22 +356,31 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   // ── Search ──
 
-  function find(text: string): TextPosition | null {
+  /** Collect the underlying cells for a match at an absolute buffer row/col. */
+  function matchCells(row: number, col: number, text: string): Cell[] {
+    const cells: Cell[] = []
+    for (let i = 0; i < text.length; i++) {
+      cells.push(backend.getCell(row, col + i))
+    }
+    return cells
+  }
+
+  function findText(text: string): TextMatch | null {
     const content = getText()
     const lines = content.split("\n")
     for (let row = 0; row < lines.length; row++) {
       const col = lines[row]!.indexOf(text)
       if (col !== -1) {
-        return { row, col, text }
+        return { row, col, text, cells: matchCells(row, col, text) }
       }
     }
     return null
   }
 
-  function findAll(pattern: RegExp): TextPosition[] {
+  function findAllText(pattern: RegExp): TextMatch[] {
     const content = getText()
     const lines = content.split("\n")
-    const results: TextPosition[] = []
+    const results: TextMatch[] = []
 
     for (let row = 0; row < lines.length; row++) {
       const line = lines[row]!
@@ -342,13 +388,23 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`)
       let match: RegExpExecArray | null
       while ((match = re.exec(line)) !== null) {
-        results.push({ row, col: match.index, text: match[0] })
+        results.push({ row, col: match.index, text: match[0], cells: matchCells(row, match.index, match[0]) })
         // Prevent infinite loop on zero-length matches
         if (match[0].length === 0) re.lastIndex++
       }
     }
 
     return results
+  }
+
+  /** @deprecated Renamed to {@link findText}. */
+  function find(text: string): TextMatch | null {
+    return findText(text)
+  }
+
+  /** @deprecated Renamed to {@link findAllText}. */
+  function findAll(pattern: RegExp): TextMatch[] {
+    return findAllText(pattern)
   }
 
   // ── Screenshot ──
@@ -505,7 +561,7 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
 
   // ── Terminal object ──
 
-  const terminal: Terminal = {
+  const terminal: TestTerminal = {
     get cols() {
       return cols
     },
@@ -516,10 +572,12 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
       return backend
     },
 
-    // TerminalReadable
+    // Terminal read contract
     getText,
     getTextRange,
     getCell,
+    getRow,
+    getRows,
     getLine,
     getLines,
     getCursor,
@@ -528,40 +586,43 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     getScrollback,
 
     // Region selectors
-    get screen(): RegionView {
+    get screen(): Region {
       return createScreenView(backend)
     },
-    get scrollback(): RegionView {
+    get scrollback(): Region {
       return createScrollbackView(backend)
     },
-    get buffer(): RegionView {
+    get buffer(): Region {
       return createBufferView(backend)
     },
-    get viewport(): RegionView {
+    get viewport(): Region {
       return createViewportView(backend)
     },
-    get out(): OutputView {
+    get output(): RawOutput {
       return out
     },
-    row(n: number): RowView {
-      const { totalLines, screenLines } = backend.getScrollback()
-      const base = totalLines - screenLines
-      const screenRow = n >= 0 ? n : screenLines + n
-      return createRowView(backend, base + screenRow, screenRow)
+    get out(): RawOutput {
+      return out
     },
-    cell(r: number, c: number): CellView {
-      const { totalLines, screenLines } = backend.getScrollback()
-      const base = totalLines - screenLines
-      const screenRow = r >= 0 ? r : screenLines + r
+    row(n: number): Row {
+      const s = getScrollback()
+      const base = s.totalRows - s.screenRows
+      const screenRow = n >= 0 ? n : s.screenRows + n
+      return createRow(backend, base + screenRow, screenRow)
+    },
+    cell(r: number, c: number): Cell {
+      const s = getScrollback()
+      const base = s.totalRows - s.screenRows
+      const screenRow = r >= 0 ? r : s.screenRows + r
       return createCellView(backend.getCell(base + screenRow, c), screenRow, c)
     },
-    range(r1: number, c1: number, r2: number, c2: number): RegionView {
+    range(r1: number, c1: number, r2: number, c2: number): Region {
       return createRangeView(backend, r1, c1, r2, c2)
     },
-    firstRow(): RowView {
+    firstRow(): Row {
       return this.row(0)
     },
-    lastRow(): RowView {
+    lastRow(): Row {
       return this.row(-1)
     },
 
@@ -597,6 +658,8 @@ export function createTerminal(options: TerminalCreateOptions): Terminal {
     waitForStable,
 
     // Search
+    findText,
+    findAllText,
     find,
     findAll,
 

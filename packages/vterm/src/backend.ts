@@ -191,6 +191,8 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     const s = ensureScreen()
     const pos = s.getCursorPosition()
     return {
+      col: pos.x,
+      row: pos.y,
       x: pos.x,
       y: pos.y,
       visible: s.getCursorVisible(),
@@ -214,6 +216,9 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // Scrolled up by N: absolute = scrollbackLength - N
     const relativeOffset = s.getViewportOffset()
     return {
+      viewportTop: scrollbackLength - relativeOffset,
+      totalRows: scrollbackLength + s.rows,
+      screenRows: s.rows,
       viewportOffset: scrollbackLength - relativeOffset,
       totalLines: scrollbackLength + s.rows,
       screenLines: s.rows,
@@ -295,6 +300,8 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCell,
     getLine,
     getLines,
+    getRow: getLine,
+    getRows: getLines,
     getCursor,
     getMode,
     getTitle,
