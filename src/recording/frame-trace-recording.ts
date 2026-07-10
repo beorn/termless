@@ -113,6 +113,12 @@ function projectFrame(frame: TraceFrame, firstTs: number, fingerprint: RendererF
     ansiPreview: frame.ansi_input_preview,
     bytesInSinceLast: frame.bytes_in_since_last,
     png: frame.png,
+    // Render-capture artifacts: the on-disk trace's absolute wall-clock `ts`
+    // and its per-frame `render_ms`. `iso` and inter-frame `duration` derive
+    // from `ts`, so the two artifacts are all the projection needs to be a
+    // lossless carrier — the inverse {@link recordingToTraceFrames} rebuilds
+    // the full on-disk row from them.
+    artifacts: { wallClockMs: frame.ts, renderMs: frame.render_ms },
   }
   // Carry the silvery render-state snapshot when the on-disk frame had one.
   // It is structurally the model's `signal` shape; copy only the two fields
@@ -167,4 +173,77 @@ export function traceToRecording(input: TraceToRecordingInput): Recording {
     frames: projected,
     provenance: { reproducible: input.reproducible ?? false },
   })
+}
+
+/**
+ * Project one model {@link ModelFrame} back to the on-disk {@link TraceFrame}
+ * row — the inverse of {@link projectFrame}.
+ *
+ * Render artifacts drive the reconstruction when present: `ts` is the frame's
+ * absolute `wallClockMs`, `render_ms` its `renderMs`, and `iso` derives from
+ * `ts`. When a frame has **no** artifacts (e.g. one derived from an `io` track
+ * rather than a visual trace), the on-disk `ts` falls back to the µs-from-start
+ * position downscaled to ms (epoch 0), `render_ms` to `0`, and `iso` to the
+ * empty string — the honest "no capture provenance" encoding.
+ *
+ * `duration_since_prev_ms` is recomputed from the reconstructed `ts` stream,
+ * exactly as the frame tracer computes it at capture time.
+ */
+function unprojectFrame(frame: ModelFrame, prevTs: number | null): TraceFrame {
+  const hasArtifacts = frame.artifacts !== undefined
+  const ts = frame.artifacts?.wallClockMs ?? Math.round(frame.at / 1000)
+  const trace: TraceFrame = {
+    seq: frame.seq,
+    ts,
+    iso: hasArtifacts ? new Date(ts).toISOString() : "",
+    hash: frame.contentHash,
+    duplicate_of: frame.duplicateOf,
+    bytes_in_since_last: frame.bytesInSinceLast,
+    ansi_input_preview: frame.ansiPreview,
+    buffer: {
+      cols: frame.buffer.cols,
+      rows: frame.buffer.rows,
+      cursor: { row: frame.buffer.cursor.row, col: frame.buffer.cursor.col },
+    },
+    duration_since_prev_ms: prevTs === null ? 0 : ts - prevTs,
+    render_ms: frame.artifacts?.renderMs ?? 0,
+    png: frame.png,
+  }
+  // Re-attach the silvery join event when the frame carried a render-state
+  // snapshot. The model's `signal` is the dependency-free subset of the raw
+  // `SilveryRenderEvent`; the extra join fields (renderCount, reason, ts,
+  // fiberHash) are not carried on the projection and are not reconstructed —
+  // a silvery-annotated trace is therefore not byte-lossless on that one
+  // field. Traces recorded without a silvery sidecar (the harness default)
+  // carry no `signal` and round-trip byte-for-byte.
+  if (frame.signal !== undefined) trace.silvery = { type: "RENDER_DISPATCHED", ...frame.signal }
+  return trace
+}
+
+/**
+ * Project a {@link Recording}'s `frames` projection back to the on-disk
+ * `TraceFrame[]` shape — the inverse of {@link traceToRecording}.
+ *
+ * This is the single, shared Recording → visual-trace codec: `native-rec`'s
+ * `.rec` writer, `writeVisualTraceFromRecording`, and the viewer's
+ * Recording-consuming entry point all route through it, so there is exactly
+ * one Frame → TraceFrame projection in termless (not three ad-hoc copies).
+ *
+ * For a trace whose frames carry {@link RenderArtifacts} (the output of
+ * {@link traceToRecording}), the round-trip
+ * `recordingToTraceFrames(traceToRecording(rows))` equals `rows` byte-for-byte
+ * — the recomposition's lossless guarantee.
+ *
+ * A recording with no `frames` projection yields an empty array.
+ */
+export function recordingToTraceFrames(recording: Recording): TraceFrame[] {
+  const frames = recording.frames ?? []
+  const result: TraceFrame[] = []
+  let prevTs: number | null = null
+  for (const frame of frames) {
+    const trace = unprojectFrame(frame, prevTs)
+    result.push(trace)
+    prevTs = trace.ts
+  }
+  return result
 }

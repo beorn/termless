@@ -88,6 +88,20 @@ export interface SilveryRenderEvent {
   fiberHash: string
 }
 
+/**
+ * The on-disk `index.jsonl` row of a visual trace — the **serialization** of a
+ * Recording {@link "./recording.ts" | Frame} plus its
+ * {@link "./recording.ts" | RenderArtifacts} (`ts` = the frame's wall-clock
+ * capture instant, `render_ms` = its render cost). A visual trace IS a
+ * Recording whose `frames` projection is populated; this row is how one such
+ * frame is written to disk.
+ *
+ * The symmetric codec pair `traceToRecording` ⇄ `recordingToTraceFrames`
+ * (in `frame-trace-recording.ts`) converts between this shape and the model —
+ * losslessly, so a trace round-trips `TraceFrame[] → Recording → TraceFrame[]`
+ * byte-for-byte. This shape is a **cross-repo ABI** (km's `toMatchVisualTrace`
+ * parses it), so its field names are frozen (snake_case, `duplicate_of`, …).
+ */
 export interface TraceFrame {
   seq: number
   ts: number

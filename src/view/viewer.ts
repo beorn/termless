@@ -20,8 +20,9 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { recordingToTraceFrames } from "../recording/frame-trace-recording.ts"
 import type { TraceFrame } from "../recording/frame-trace.ts"
-import type { Frame as ModelFrame, Recording } from "../recording/recording.ts"
+import type { Recording } from "../recording/recording.ts"
 
 export interface WriteViewerResult {
   /** Absolute path to the generated viewer.html. */
@@ -83,45 +84,16 @@ export function writeViewer(dir: string): WriteViewerResult {
 }
 
 /**
- * Project a unified-model {@link ModelFrame} onto the viewer's on-disk-shaped
- * wire {@link TraceFrame}. The browser-side viewer JS reads the frozen on-disk
- * field names (`ts`, `duplicate_of`, `ansi_input_preview`, …); this is the
- * one-way bridge from the {@link Recording} model into that wire shape.
- *
- * Timebase — the model carries `at` (integer µs from start). The viewer's
- * `ts` field is treated as a relative ms position when no wall clock exists,
- * so a model frame's `at` is converted µs → ms.
- */
-function modelFrameToViewerFrame(frame: ModelFrame, prevAtMicros: number): TraceFrame {
-  const tsMs = Math.round(frame.at / 1000)
-  return {
-    seq: frame.seq,
-    ts: tsMs,
-    iso: "",
-    hash: frame.contentHash,
-    duplicate_of: frame.duplicateOf,
-    bytes_in_since_last: frame.bytesInSinceLast,
-    ansi_input_preview: frame.ansiPreview,
-    buffer: {
-      cols: frame.buffer.cols,
-      rows: frame.buffer.rows,
-      cursor: { row: frame.buffer.cursor.row, col: frame.buffer.cursor.col },
-    },
-    duration_since_prev_ms: Math.round((frame.at - prevAtMicros) / 1000),
-    render_ms: 0,
-    png: frame.png,
-    ...(frame.signal !== undefined ? { silvery: frame.signal } : {}),
-  }
-}
-
-/**
  * Generate `viewer.html` from a unified {@link Recording}'s `frames`
  * projection (Phase 2 of the Recording-domain unification).
  *
  * This is the {@link Recording}-consuming entry point — `writeViewer` parses
- * the on-disk `index.jsonl`; this consumes the in-memory model directly. PNGs
- * are still inlined from `dir` (the projection's `png` field is a path
- * relative to the recording bundle).
+ * the on-disk `index.jsonl`; this consumes the in-memory model directly. The
+ * model → on-disk `TraceFrame` projection routes through the shared
+ * {@link recordingToTraceFrames} codec (the same one `native-rec` and
+ * `writeVisualTraceFromRecording` use), so there is exactly one such projection
+ * in termless. PNGs are still inlined from `dir` (the projection's `png` field
+ * is a path relative to the recording bundle).
  *
  * @throws {Error} when the recording has no `frames` projection.
  */
@@ -130,13 +102,7 @@ export function writeViewerFromRecording(recording: Recording, dir: string): Wri
   if (modelFrames === undefined || modelFrames.length === 0) {
     throw new Error("writeViewerFromRecording: recording has no frames projection")
   }
-  const frames: TraceFrame[] = []
-  let prevAt = 0
-  for (const mf of modelFrames) {
-    frames.push(modelFrameToViewerFrame(mf, prevAt))
-    prevAt = mf.at
-  }
-  return emitViewer(frames, dir)
+  return emitViewer(recordingToTraceFrames(recording), dir)
 }
 
 /**
