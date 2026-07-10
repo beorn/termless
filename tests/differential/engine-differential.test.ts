@@ -91,7 +91,7 @@ describe("engine differential: vterm guest vs xterm reference", () => {
   test("per-stream divergence stays within the recorded baseline", () => {
     for (const r of results) {
       const base = BASELINE[r.name]
-      expect(base, `no baseline recorded for stream "${r.name}"`).toBeTypeOf("number")
+      if (base === undefined) throw new Error(`no baseline recorded for stream "${r.name}"`)
 
       // Regression gate: diverging more than recorded fails loudly. See the
       // collection-time summary above for the formatted diff of each stream.
