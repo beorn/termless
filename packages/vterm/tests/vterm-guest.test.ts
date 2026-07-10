@@ -88,9 +88,12 @@ describe("vtermGuest — render path", () => {
     }
   })
 
-  test("palettePassthrough preserves basic-16 / 256 indices as ansi256(N); truecolor stays RGB", async () => {
+  test("palettePassthrough emits the palette-origin index as ansi256(N); truecolor stays RGB", async () => {
     const handle = await mount({ cols: 12, rows: 2, palettePassthrough: true })
     try {
+      // Each indexed SGR carries its ORIGIN index on the resolved color (32 → 2,
+      // 38;5;208 → 208); the guest reads that provenance straight off the cell —
+      // no RGB reverse-map. Truecolor has no origin index, so it stays exact RGB.
       handle.feedAnsi("\x1b[32mG\x1b[38;5;208mI\x1b[38;2;255;128;0mT\x1b[0m")
       const buf = handle.output.buffer
       expect(buf.getCell(0, 0).fg).toBe("ansi256(2)")
@@ -98,6 +101,35 @@ describe("vtermGuest — render path", () => {
       expect(buf.getCell(2, 0).fg).toBe("#ff8000")
     } finally {
       handle.dispose()
+    }
+  })
+
+  test("palettePassthrough survives an OSC 4 palette mutation — index 1 stays ansi256(1), not the mutated RGB", async () => {
+    // Mutate palette entry 1 to a distinctive non-standard RGB (#123456), THEN
+    // paint SGR 31 (basic red → palette index 1). vterm resolves 31 to the
+    // mutated RGB but tags the ORIGIN index (1) on the cell color.
+    const passthrough = await mount({ cols: 8, rows: 2, palettePassthrough: true })
+    try {
+      passthrough.feedAnsi("\x1b]4;1;#123456\x07\x1b[31mR\x1b[0m")
+      // Reading provenance, the cell reports ansi256(1) — faithful to what the
+      // app asked for, so the outer terminal re-applies its OWN palette entry 1.
+      // The deleted RGB reverse-map could not: it saw only #123456, which is no
+      // standard palette entry, so it would have leaked the raw RGB (an OSC-4
+      // misclassification) — or, had the mutation coincided with another slot,
+      // the WRONG index.
+      expect(passthrough.output.buffer.getCell(0, 0).fg).toBe("ansi256(1)")
+    } finally {
+      passthrough.dispose()
+    }
+
+    // Same bytes without passthrough prove the mutation actually took effect: the
+    // resolved color IS the mutated RGB, not vterm's built-in red (#800000).
+    const resolved = await mount({ cols: 8, rows: 2 })
+    try {
+      resolved.feedAnsi("\x1b]4;1;#123456\x07\x1b[31mR\x1b[0m")
+      expect(resolved.output.buffer.getCell(0, 0).fg).toBe("#123456")
+    } finally {
+      resolved.dispose()
     }
   })
 

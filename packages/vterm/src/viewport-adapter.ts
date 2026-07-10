@@ -17,8 +17,10 @@
  *
  * Backing reads (vterm.js public Screen API):
  *   - `getLine(row)` / `getCell(row,col)` read the LIVE grid only — they do NOT
- *     follow the scroll offset, so a scrolled viewport is composed from
- *     `snapshot().scrollback` + the live grid (see `snapshotBuffer`).
+ *     follow the scroll offset AND strip each color's palette-origin index, so a
+ *     scrolled viewport OR a palette-passthrough read is composed from
+ *     `snapshot()` (scrollback + the index-preserving grid) instead (see
+ *     `snapshotBuffer`).
  *   - `scrollViewport(delta)` on vterm uses a bottom-relative offset (positive =
  *     older); this guest's `scrollViewport` mirrors xterm's absolute-top
  *     convention (negative = older) by negating the delta.
@@ -85,12 +87,15 @@ export interface VtermGuestOptions {
    * Preserve the guest's palette INDICES (basic-16 / 256) as `ansi256(N)`
    * instead of resolving them to a fixed standard-palette RGB. Default `false`.
    *
-   * vterm.js resolves indexed colors to RGB eagerly (its public cell has no
-   * index), so this guest recovers the index by reverse-mapping the resolved
-   * RGB against the standard 256-color table — exactly reproducing xterm's
-   * `ansi256(N)` passthrough for any color that came from an index. A truecolor
-   * cell whose RGB coincides with a standard palette entry is the one ambiguous
-   * case (mapped to `ansi256`); it is documented in the differential test.
+   * vterm.js resolves each indexed SGR (`31`, `91`, `38;5;N`, …) to its palette
+   * RGB but keeps the ORIGIN index on the resolved color (`CellColor.index`).
+   * This guest reads that provenance directly (via the snapshot, which carries
+   * the index that `getCell`/`getLine` strip): an indexed color becomes
+   * `ansi256(N)` so the outer terminal owns the palette, a color with no index
+   * is genuine truecolor and stays RGB. Reading the origin index — rather than
+   * reverse-mapping RGB back to a palette slot — is exact even when the RGB
+   * coincides with another palette entry, and stays correct across an OSC 4
+   * palette mutation (the resolved RGB moves; the origin index does not).
    * @km/silvery/19426.
    */
   palettePassthrough?: boolean
@@ -117,72 +122,19 @@ function rgbHex(c: CellColor): string {
   return "#" + v.toString(16).padStart(6, "0")
 }
 
-const ANSI_16_HEX: readonly string[] = [
-  "#000000",
-  "#800000",
-  "#008000",
-  "#808000",
-  "#000080",
-  "#800080",
-  "#008080",
-  "#c0c0c0",
-  "#808080",
-  "#ff0000",
-  "#00ff00",
-  "#ffff00",
-  "#0000ff",
-  "#ff00ff",
-  "#00ffff",
-  "#ffffff",
-]
-
-function buildPalette256(): string[] {
-  const palette: string[] = [...ANSI_16_HEX]
-  const levels = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff]
-  for (let r = 0; r < 6; r++) {
-    for (let g = 0; g < 6; g++) {
-      for (let b = 0; b < 6; b++) {
-        const v = (levels[r]! << 16) | (levels[g]! << 8) | levels[b]!
-        palette.push("#" + v.toString(16).padStart(6, "0"))
-      }
-    }
-  }
-  for (let i = 0; i < 24; i++) {
-    const v = 8 + i * 10
-    palette.push("#" + ((v << 16) | (v << 8) | v).toString(16).padStart(6, "0"))
-  }
-  return palette
-}
-
-const PALETTE_256: readonly string[] = buildPalette256()
-
-/**
- * Reverse map: standard-palette hex → LOWEST index producing it. Lowest wins so
- * duplicate RGBs (e.g. #000000 at index 0 and cube-index 16) resolve to the
- * canonical basic-16 index — the index an app most likely used.
- */
-const HEX_TO_PALETTE_INDEX: ReadonlyMap<string, number> = (() => {
-  const m = new Map<string, number>()
-  for (let i = 0; i < PALETTE_256.length; i++) {
-    if (!m.has(PALETTE_256[i]!)) m.set(PALETTE_256[i]!, i)
-  }
-  return m
-})()
-
 /**
  * Convert a resolved vterm color to a silvery cell color string. In passthrough
- * mode, a color that exactly matches a standard palette entry is emitted as an
- * `ansi256(N)` token (outer terminal owns the palette); everything else is exact
- * RGB hex.
+ * mode a color carrying a palette-origin index (from an indexed SGR: `31`, `91`,
+ * `38;5;N`, …) is emitted as an `ansi256(N)` token so the outer terminal owns
+ * the palette; a color with no index is genuine truecolor and stays exact RGB
+ * hex. The index is vterm's own parse-time provenance (`CellColor.index`), so an
+ * OSC 4 palette mutation moves the resolved RGB but not the token — the index
+ * survives, and no RGB coincidence can misclassify a truecolor cell.
  */
 function cellColor(c: CellColor | null, passthrough: boolean): string | null {
   if (c === null) return null
-  const hex = rgbHex(c)
-  if (passthrough) {
-    const index = HEX_TO_PALETTE_INDEX.get(hex)
-    if (index !== undefined) return `ansi256(${index})`
-  }
-  return hex
+  if (passthrough && c.index !== undefined) return `ansi256(${c.index})`
+  return rgbHex(c)
 }
 
 const BLANK_CELL: Cell = { char: " ", fg: null, bg: null, attrs: {}, wide: false, continuation: false }
@@ -235,12 +187,19 @@ function convertRow(row: readonly ScreenCell[], cols: number, passthrough: boole
 /**
  * Read the current viewport into an immutable {@link CellBuffer}.
  *
- * Fast path (viewport at bottom): read the live grid row-by-row via `getLine`.
- * Scrolled path: vterm's row accessors ignore the scroll offset, so compose the
- * visible window from `snapshot().scrollback` (older lines) plus the live grid.
- * The visible row `i` maps to absolute buffer line `(S - V) + i`, where `S` is
- * the scrollback length and `V` the bottom-relative offset — identical geometry
- * to xterm's `viewportY`-based read.
+ * Fast path (viewport at bottom, non-passthrough): read the live grid
+ * row-by-row via `getLine`. `getLine`/`getCell` are vterm's resolved-RGB read
+ * boundary — they strip the palette-origin `CellColor.index`, which is fine when
+ * colors resolve straight to RGB anyway.
+ *
+ * Snapshot path (scrolled OR palette passthrough): vterm's row accessors ignore
+ * the scroll offset AND drop the origin index, so read the index-preserving
+ * {@link VtermScreen.snapshot} instead — passthrough needs the index to emit
+ * `ansi256(N)`, scrolling needs the older lines. The visible row `i` maps to
+ * absolute buffer line `(S - V) + i`, where `S` is the scrollback length and
+ * `V` the bottom-relative offset (0 at the bottom, so `i` reads live grid row
+ * `i`) — identical geometry to xterm's `viewportY`-based read. Reads the ACTIVE
+ * buffer's grid so an alt-screen app in passthrough mode still sees alt cells.
  */
 function snapshotBuffer(screen: VtermScreen, passthrough: boolean): CellBuffer {
   const cols = screen.cols
@@ -248,12 +207,12 @@ function snapshotBuffer(screen: VtermScreen, passthrough: boolean): CellBuffer {
   const rowsOut: Cell[][] = new Array(rows)
   const v = screen.getViewportOffset()
 
-  if (v <= 0) {
+  if (v <= 0 && !passthrough) {
     for (let row = 0; row < rows; row++) rowsOut[row] = convertRow(screen.getLine(row), cols, passthrough)
   } else {
     const snap = screen.snapshot()
     const scrollback = snap.scrollback
-    const grid = snap.main.grid
+    const grid = snap.activeBuffer === "alt" ? snap.alt.grid : snap.main.grid
     const s = scrollback.length
     for (let i = 0; i < rows; i++) {
       const abs = s - v + i
