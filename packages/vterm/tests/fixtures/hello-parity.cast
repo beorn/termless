@@ -1,0 +1,8 @@
+{"version": 2, "width": 24, "height": 6, "title": "hand-authored parity fixture — termless 21016 corpus differential"}
+[0.1, "o", "plain text\r\n"]
+[0.2, "o", "\u001b[1mB\u001b[0m\u001b[3mI\u001b[0m\u001b[4mU\u001b[0m\u001b[7mR\u001b[0m\r\n"]
+[0.3, "o", "\u001b[31;42mX\u001b[0m\u001b[91;104mY\u001b[0m \u001b[38;5;208m\u001b[48;5;27mZ\u001b[0m \u001b[38;2;10;20;30m\u001b[48;2;200;100;50mT\u001b[0m\r\n"]
+[0.4, "o", "abc\rQ"]
+[0.5, "o", "\u001b[5;3HCUP"]
+[0.6, "o", "\u001b[?1049hALT SCREEN\u001b[?1049l"]
+[0.7, "o", "\u001b[6;1Hend"]
