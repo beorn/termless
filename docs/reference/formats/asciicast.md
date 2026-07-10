@@ -86,9 +86,9 @@ await replayAsciicast(recording, term, { speed: 2 }) // 2x
 Convert a Recording to `.cast`:
 
 ```typescript
-import { toAsciicast } from "@termless/core"
+import { encodeAsciicast } from "@termless/core"
 
-const cast = toAsciicast(recording, { title: "My Demo" })
+const cast = encodeAsciicast(recording, { title: "My Demo" })
 await Bun.write("demo.cast", cast)
 ```
 
@@ -97,10 +97,19 @@ await Bun.write("demo.cast", cast)
 `.cast` decodes to the io track and encodes back from it:
 
 ```typescript
-import { recordingToAsciicast, asciicastToRecording } from "@termless/core"
+import { encodeAsciicast, decodeAsciicastSource } from "@termless/core"
 
-const asciicast = recordingToAsciicast(recording) // Recording → .cast
-const rec = asciicastToRecording(asciicast) // .cast → Recording
+const cast = encodeAsciicast(recording) // Recording → .cast text
+const rec = decodeAsciicastSource(cast) // .cast text → Recording
+```
+
+If you already hold a parsed asciicast (from `parseAsciicast`), decode it
+directly with `decodeAsciicast`:
+
+```typescript
+import { parseAsciicast, decodeAsciicast } from "@termless/core"
+
+const rec = decodeAsciicast(parseAsciicast(content))
 ```
 
 ### Streaming Writer

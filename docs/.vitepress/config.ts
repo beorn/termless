@@ -155,6 +155,7 @@ export default defineConfig({
         text: "Advanced",
         items: [
           { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
+          { text: "Conformance Corpus", link: "/advanced/conformance-corpus" },
           { text: "Silvery Integration", link: "/advanced/silvery-integration" },
         ],
       },
@@ -224,6 +225,7 @@ export default defineConfig({
           { text: ".tape", link: "/reference/formats/tape" },
           { text: ".cast", link: "/reference/formats/asciicast" },
           { text: ".rec", link: "/reference/formats/rec" },
+          { text: "Journal Replay", link: "/reference/formats/journal" },
         ],
       },
       {
@@ -273,6 +275,7 @@ export default defineConfig({
         text: "Advanced",
         items: [
           { text: "Silvery Integration", link: "/advanced/silvery-integration" },
+          { text: "Conformance Corpus", link: "/advanced/conformance-corpus" },
           { text: "Emulator Differences", link: "/emulator-differences" },
         ],
       },
