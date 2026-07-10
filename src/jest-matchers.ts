@@ -301,21 +301,47 @@ export const termlessMatchers = {
 // ── Vitest type augmentation ────────────────────────────────────
 // `toMatchAcrossRenderers` is the only termless matcher consumed via
 // `expect(x).toMatchAcrossRenderers(...)` (the rest are plain assertion
-// functions in assertions.ts). Augment vitest's Assertion + Matchers
-// interfaces so `tsc` knows about it once `expect.extend(termlessMatchers)`
-// has run. Without this, typecheck fails with TS2339 on every call site.
-// `toMatchAcrossRenderers` is registered via `expect.extend(termlessMatchers)`
-// at runtime; this augmentation tells `tsc` about it. The `Matchers<T>`
-// interface is the custom-matcher extension point — it is *declared* in
-// `@vitest/expect` (vitest only re-exports the type), and `Assertion<T>`
-// (what `expect()` returns) extends it. Augmenting `"vitest"` would create a
-// fresh, unmerged interface and TS2339 would persist on every call site, so
-// the augmentation must target `@vitest/expect` directly — declared as a
-// devDependency for that reason. The `<T = any>` default must match vitest's
-// own declaration exactly, otherwise TS2428 ("identical type parameters").
+// functions in assertions.ts). It is registered via
+// `expect.extend(termlessMatchers)` at runtime; the augmentations below tell
+// `tsc` about it. Without them, typecheck fails with TS2339 on every call
+// site.
+//
+// BOTH module targets are augmented on purpose (same belt-and-braces as
+// packages/viterm/src/matchers.ts). `Matchers<T>` is declared in
+// `@vitest/expect`, and vitest ≥4.1.10 re-exports it from the `"vitest"`
+// module surface — but WHICH physical copy of `@vitest/expect` this file's
+// augmentation lands on depends on the consumer's node_modules layout
+// (nested per-package symlink vs hoisted store vs a stale duplicate). When
+// that copy differs from the one vitest's own bundled types resolve, a
+// single-target augmentation silently misses and TS2339 returns (seen in hh
+// CI 2026-07-09: this file's @vitest/expect-only augmentation failed while
+// viterm's dual augmentation type-checked clean in the same run). Augmenting
+// `"vitest"` too covers every layout, because vitest itself resolves to one
+// copy. The `<T = any>` default must match vitest's own declaration exactly,
+// otherwise TS2428 ("identical type parameters").
 declare module "@vitest/expect" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   interface Matchers<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
+  // Assertion<T = any> extends Matchers<T> in @vitest/expect itself, but that
+  // extends-edge only helps when the augmentation lands on the SAME physical
+  // copy the consumer's `expect()` types come from. Augmenting Assertion
+  // directly (vitest's own internal pattern — its snapshot chunk does exactly
+  // this) covers layouts where the Matchers edge crosses a duplicate copy.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Assertion<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
+}
+
+declare module "vitest" {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Matchers<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Assertion<T = any> {
     toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
   }
 }
