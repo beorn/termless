@@ -90,6 +90,18 @@ export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"
 export { diffBuffers } from "./terminal/diff.ts"
 export type { CellDiff, CellSummary, DiffResult } from "./terminal/diff.ts"
 
+// State digest — one comparison vocabulary for "same terminal state".
+export { terminalStateDigest, diffTerminalStates } from "./terminal/state-digest.ts"
+export type {
+  TerminalStateDigest,
+  TerminalStateDigestOptions,
+  TerminalStateDiff,
+  DigestCursor,
+  DigestRow,
+  ModeDiff,
+  RowDiff,
+} from "./terminal/state-digest.ts"
+
 // The unified captured-session model — the canonical Recording type.
 export { createRecording, trackAuthority, micros, secondsToMicros, millisToMicros } from "./recording/recording.ts"
 export type {
