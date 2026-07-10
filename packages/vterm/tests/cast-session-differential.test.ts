@@ -22,53 +22,8 @@ import { join } from "node:path"
 import { xtermGuest, type XtermGuestHandle } from "@termless/xtermjs"
 import { describe, expect, test } from "vitest"
 import { parseAsciicast } from "../../../src/recording/asciicast/reader.ts"
-import type { Cell, CellBuffer, IslandContext, IslandSignal } from "../src/silvery-compat.ts"
 import { vtermGuest, type VtermGuestHandle } from "../src/viewport-adapter.ts"
-
-function ctx(cols: number, rows: number): IslandContext {
-  return {
-    cols,
-    rows,
-    emit: (_signal: IslandSignal) => {},
-    requestResize: () => {},
-    execOSC: () => Promise.resolve(),
-    abortSignal: new AbortController().signal,
-    now: () => 0,
-  }
-}
-
-// xtermGuest re-snapshots on a microtask; vtermGuest reads live. Two ticks
-// settle both so the comparison is between two SETTLED buffers.
-async function flush(): Promise<void> {
-  await Promise.resolve()
-  await Promise.resolve()
-}
-
-function attrsKey(c: Cell): string {
-  return Object.keys(c.attrs)
-    .sort()
-    .map((k) => `${k}=${(c.attrs as Record<string, unknown>)[k]}`)
-    .join(",")
-}
-function cellKey(c: Cell): string {
-  return `${JSON.stringify(c.char)}|${c.fg}|${c.bg}|${c.wide}|${c.continuation}|${attrsKey(c)}`
-}
-
-type CastDiff = { row: number; col: number; xterm: string; vterm: string }
-
-function diffCells(x: CellBuffer, v: CellBuffer): CastDiff[] {
-  const rows = Math.max(x.rows, v.rows)
-  const cols = Math.max(x.cols, v.cols)
-  const diffs: CastDiff[] = []
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const xc = cellKey(x.getCell(col, row))
-      const vc = cellKey(v.getCell(col, row))
-      if (xc !== vc) diffs.push({ row, col, xterm: xc, vterm: vc })
-    }
-  }
-  return diffs
-}
+import { type CellDiff, ctx, diffCells, flush } from "./differential-helpers.ts"
 
 /**
  * Replay one parsed asciicast through both guests and report the final-grid
@@ -76,7 +31,7 @@ function diffCells(x: CellBuffer, v: CellBuffer): CastDiff[] {
  * input ("i") and marker ("m") events are ignored — they never reach a
  * terminal's write side.
  */
-async function replayCast(source: string): Promise<{ diffs: CastDiff[]; outputEvents: number }> {
+async function replayCast(source: string): Promise<{ diffs: CellDiff[]; outputEvents: number }> {
   const cast = parseAsciicast(source)
   const cols = Math.min(cast.header.width, 250)
   const rows = Math.min(cast.header.height, 100)

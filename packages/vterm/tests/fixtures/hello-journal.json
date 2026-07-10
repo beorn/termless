@@ -1,0 +1,65 @@
+{
+  "size": {
+    "cols": 40,
+    "rows": 10
+  },
+  "events": [
+    {
+      "kind": "lifecycle",
+      "offset": 0,
+      "at": 1000,
+      "state": "awake"
+    },
+    {
+      "kind": "output",
+      "offset": 1,
+      "at": 1010,
+      "bytesB64": "am91cm5hbCBwYXJpdHkNCg=="
+    },
+    {
+      "kind": "output",
+      "offset": 2,
+      "at": 1020,
+      "bytesB64": "G1sxbUIbWzBtG1szbUkbWzBtG1s0bVUbWzBtG1s3bVIbWzBtDQo="
+    },
+    {
+      "kind": "output",
+      "offset": 3,
+      "at": 1030,
+      "bytesB64": "G1szMTs0Mm1YG1swbSAbWzM4OzU7MjA4bRtbNDg7NTsyN21aG1swbSAbWzM4OzI7MTA7MjA7MzBtVBtbMG0NCg=="
+    },
+    {
+      "kind": "input",
+      "offset": 4,
+      "at": 1040,
+      "bytesB64": "bHMgLWxhDQ=="
+    },
+    {
+      "kind": "resize",
+      "offset": 5,
+      "at": 1050,
+      "size": {
+        "cols": 60,
+        "rows": 12
+      }
+    },
+    {
+      "kind": "output",
+      "offset": 6,
+      "at": 1060,
+      "bytesB64": "YWZ0ZXIgcmVzaXplDQphYmMNUQ0K"
+    },
+    {
+      "kind": "output",
+      "offset": 7,
+      "at": 1070,
+      "bytesB64": "G1sxMjsxSBtbOTZtZW5kG1swbQ=="
+    },
+    {
+      "kind": "lifecycle",
+      "offset": 8,
+      "at": 1080,
+      "state": "exited"
+    }
+  ]
+}

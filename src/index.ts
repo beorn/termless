@@ -206,6 +206,7 @@ export {
   type JournalReplayEvent,
   type JournalReplayInput,
   type JournalReplayResult,
+  type JournalReplayTarget,
 } from "./recording/journal-replay.ts"
 export { parseAsciicast, replayAsciicast } from "./recording/asciicast/reader.ts"
 export type { ReplayOptions } from "./recording/asciicast/reader.ts"

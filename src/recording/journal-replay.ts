@@ -13,7 +13,15 @@
  * and `truncation` events are surfaced in the result for assertions.
  */
 
-import type { TestTerminal, TerminalBackend } from "../terminal/types.ts"
+/**
+ * Structural minimum a replay target must provide. `TestTerminal` and
+ * `TerminalBackend` both satisfy it; so does a thin wrapper over a guest
+ * handle (`feedAnsi` + the size owner's `requestResize`).
+ */
+export interface JournalReplayTarget {
+  feed(data: Uint8Array): void
+  resize(cols: number, rows: number): void
+}
 
 export interface JournalReplayEvent {
   kind: "output" | "input" | "resize" | "lifecycle" | "truncation"
@@ -45,7 +53,7 @@ export interface JournalReplayResult {
 }
 
 /** Replay journal events through a backend/terminal via its byte feed. */
-export function replayJournal(input: JournalReplayInput, target: TestTerminal | TerminalBackend): JournalReplayResult {
+export function replayJournal(input: JournalReplayInput, target: JournalReplayTarget): JournalReplayResult {
   if (input.size !== undefined) target.resize(input.size.cols, input.size.rows)
   const result: JournalReplayResult = { applied: 0, truncations: [], lifecycle: [] }
   for (const event of input.events) {
