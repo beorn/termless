@@ -2,11 +2,11 @@
  * Session Manager — shared between CLI and MCP server.
  *
  * Manages named terminal sessions backed by termless + xterm.js.
- * Each session wraps a Terminal instance with optional PTY process.
+ * Each session wraps a TestTerminal instance with optional PTY process.
  */
 
 import { createTerminal } from "@termless/core"
-import type { FrameTracer, Terminal, TerminalBackend } from "@termless/core"
+import type { FrameTracer, TestTerminal, TerminalBackend } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"
 
 // ── Types ──
@@ -54,8 +54,8 @@ export interface SessionInfo {
 }
 
 export interface SessionManager {
-  createSession(opts?: SessionCreateOptions): Promise<{ id: string; terminal: Terminal }>
-  getSession(id: string): Terminal
+  createSession(opts?: SessionCreateOptions): Promise<{ id: string; terminal: TestTerminal }>
+  getSession(id: string): TestTerminal
   listSessions(): SessionInfo[]
   stopSession(id: string): Promise<void>
   stopAll(): Promise<void>
@@ -85,7 +85,7 @@ export interface SessionManager {
 // ── Internal session record ──
 
 interface SessionRecord {
-  terminal: Terminal
+  terminal: TestTerminal
   command?: string[]
   tracer: FrameTracer | null
   traceDir: string | null
@@ -105,7 +105,7 @@ export function createSessionManager(): SessionManager {
   let counter = 0
   const sessions = new Map<string, SessionRecord>()
 
-  async function createSession(opts: SessionCreateOptions = {}): Promise<{ id: string; terminal: Terminal }> {
+  async function createSession(opts: SessionCreateOptions = {}): Promise<{ id: string; terminal: TestTerminal }> {
     const cols = opts.cols ?? DEFAULT_COLS
     const rows = opts.rows ?? DEFAULT_ROWS
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT
@@ -146,7 +146,7 @@ export function createSessionManager(): SessionManager {
     return { id, terminal }
   }
 
-  function getSession(id: string): Terminal {
+  function getSession(id: string): TestTerminal {
     const record = sessions.get(id)
     if (!record) throw new Error(`Session not found: ${id}`)
     return record.terminal
@@ -245,7 +245,7 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
 
 // ── Helpers ──
 
-async function waitForContent(terminal: Terminal, timeout: number): Promise<void> {
+async function waitForContent(terminal: TestTerminal, timeout: number): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < timeout) {
     const text = terminal.getText().trim()

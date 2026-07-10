@@ -346,6 +346,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     return {
       x: cursorCol,
       y: cursorRow,
+      col: cursorCol,
+      row: cursorRow,
       visible: true, // libvterm doesn't expose cursor visibility via this API
       style: "block", // libvterm doesn't expose cursor style via this API
     }
@@ -393,6 +395,9 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
       viewportOffset: 0,
       totalLines: rows,
       screenLines: rows,
+      viewportTop: 0,
+      totalRows: rows,
+      screenRows: rows,
     }
   }
 
@@ -426,6 +431,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     getTextRange,
     getCell,
     getLine,
+    getRow: getLine,
+    getRows: getLines,
     getLines,
     getCursor,
     getMode,

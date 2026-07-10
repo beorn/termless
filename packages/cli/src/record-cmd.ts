@@ -383,7 +383,7 @@ export function eventsToTape(
 
     const cmd = bytesToTapeCommand(event.bytes, raw)
     if (cmd === SKIP) {
-      // Terminal protocol response — skip entirely
+      // TestTerminal protocol response — skip entirely
       continue
     } else if (cmd === null) {
       // Printable character — accumulate into Type
@@ -521,7 +521,7 @@ async function interactiveRecord(
   // ── Recorded-grid size — the viewport-fit contract ─────────────────────────
   //
   // When the live overlay is mounted, the recorded child PTY, the headless
-  // terminal mirroring it, and silvery's `<Terminal>` grid MUST all be the
+  // terminal mirroring it, and silvery's `<TestTerminal>` grid MUST all be the
   // SAME size, and that size MUST fit inside the host viewport minus the
   // overlay's chrome. Sizing the recorded child to a host-independent default
   // (`--cols/--rows`, README-fit 80×30) is the root cause of
@@ -1143,8 +1143,8 @@ export function registerRecordCommand(program: Command): void {
         "browser is opt-in premium (headless Chromium — needs playwright installed).",
       "auto",
     )
-    .option("--cols <n>", "Terminal columns", parseNum, DEFAULT_COLS)
-    .option("--rows <n>", "Terminal rows", parseNum, DEFAULT_ROWS)
+    .option("--cols <n>", "TestTerminal columns", parseNum, DEFAULT_COLS)
+    .option("--rows <n>", "TestTerminal rows", parseNum, DEFAULT_ROWS)
     .option(
       "--scale <n>",
       "Raster resolution multiplier for .gif/.apng/.png — 1 = native, 2 = retina",

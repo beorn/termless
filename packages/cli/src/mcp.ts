@@ -2,14 +2,14 @@
  * termless MCP Server — drive and observe terminal sessions over MCP stdio.
  *
  * The tools map onto the recording-domain vocabulary (three objects —
- * Backend, Terminal, Recording — and four verbs — record · view · play ·
+ * Backend, TestTerminal, Recording — and four verbs — record · view · play ·
  * compare), so an agent reading the tool list sees the same verbs the
  * `termless` CLI exposes, not a separate vocabulary:
  *
  * - `start` / `stop` / `list` / `press` / `type` / `text` / `wait` drive a
- *   *live* Terminal object — open a session, send input, read state, close it.
- *   These are Terminal operations, not recording verbs.
- * - `screenshot` is a one-frame **view**: it renders the live Terminal's
+ *   *live* TestTerminal object — open a session, send input, read state, close it.
+ *   These are TestTerminal operations, not recording verbs.
+ * - `screenshot` is a one-frame **view**: it renders the live TestTerminal's
  *   current buffer to a PNG/SVG image.
  * - `start({ trace: { dir } })` turns the session into a **record**: every
  *   buffer mutation is captured as a frame. `trace` then **views** the
@@ -75,18 +75,18 @@ export async function startMcpServer(): Promise<void> {
   const sessions = createSessionManager()
   const server = new McpServer({ name: "termless", version: "0.1.0" })
 
-  // start — Open a live Terminal session (optionally recording its frames)
+  // start — Open a live TestTerminal session (optionally recording its frames)
   register(
     server,
     "start",
     {
       description:
-        "Open a live terminal session — a Terminal object backed by a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to also *record* the session: every buffer mutation is captured as a debounced PNG + JSONL frame. Read the recorded frames with the `trace` tool; finalize the recording with `stop`.",
+        "Open a live terminal session — a TestTerminal object backed by a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to also *record* the session: every buffer mutation is captured as a debounced PNG + JSONL frame. Read the recorded frames with the `trace` tool; finalize the recording with `stop`.",
       inputSchema: {
         command: z.array(z.string()).describe("Command to run (e.g. ['bun', 'km', 'view', '/path'])"),
         env: z.record(z.string(), z.string()).optional().describe("Environment variables"),
-        cols: z.number().default(120).describe("Terminal columns (default: 120)"),
-        rows: z.number().default(40).describe("Terminal rows (default: 40)"),
+        cols: z.number().default(120).describe("TestTerminal columns (default: 120)"),
+        rows: z.number().default(40).describe("TestTerminal rows (default: 40)"),
         waitFor: z
           .union([z.literal("content"), z.literal("stable"), z.string()])
           .optional()
@@ -97,7 +97,7 @@ export async function startMcpServer(): Promise<void> {
           .enum(["xtermjs", "ghostty", "vterm", "vt100", "peekaboo"])
           .optional()
           .describe(
-            "Terminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect).",
+            "TestTerminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect).",
           ),
         trace: z
           .object({
@@ -166,7 +166,7 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // stop — Close the live Terminal session (finalize the recording if any)
+  // stop — Close the live TestTerminal session (finalize the recording if any)
   register(
     server,
     "stop",
@@ -254,13 +254,13 @@ export async function startMcpServer(): Promise<void> {
     }),
   )
 
-  // screenshot — View the live Terminal as a one-frame image (PNG or SVG)
+  // screenshot — View the live TestTerminal as a one-frame image (PNG or SVG)
   register(
     server,
     "screenshot",
     {
       description:
-        "View the live terminal as a single-frame image. Renders the Terminal's current buffer to a high-fidelity PNG via the auto-picker (Terminal.screenshot — backend-native renderer → @termless/ghostty native canvas → resvg fallback). No Chromium / Playwright dependency. SVG output stays accessible via `.svg` extension on outputPath or `format: 'svg'`.",
+        "View the live terminal as a single-frame image. Renders the TestTerminal's current buffer to a high-fidelity PNG via the auto-picker (TestTerminal.screenshot — backend-native renderer → @termless/ghostty native canvas → resvg fallback). No Chromium / Playwright dependency. SVG output stays accessible via `.svg` extension on outputPath or `format: 'svg'`.",
       inputSchema: {
         sessionId: z.string().describe("Session ID"),
         outputPath: z
@@ -309,7 +309,7 @@ export async function startMcpServer(): Promise<void> {
         return { content: [{ type: "text", text: svg }] }
       }
 
-      // PNG path — auto-picker on Terminal: backend-native (ghostty) →
+      // PNG path — auto-picker on TestTerminal: backend-native (ghostty) →
       // @termless/ghostty proxy → resvg fallback. Same fidelity contract as
       // bearly's tty_screenshot but without the Chromium / Playwright launch.
       const png = await terminal.screenshot({
@@ -427,13 +427,13 @@ export async function startMcpServer(): Promise<void> {
     "compat-screenshot",
     {
       description:
-        "View a TUI as a one-frame image, captured against the peekaboo backend — the user's ACTUAL desktop terminal app (Ghostty / kitty / iTerm / Terminal.app) via macOS screencapture. Pixel-perfect for that specific terminal + the user's real font/theme config — the COMPAT path. Use this ONLY for terminal-specific compat bugs ('does it look right in Ghostty 1.3 with my Tokyo Night theme?'). For routine visual iteration use the `screenshot` tool (headless canvas renderer — fast, no GUI, cross-platform). macOS-only; needs a GUI session + Screen Recording permission. Spawns and then closes a real window.",
+        "View a TUI as a one-frame image, captured against the peekaboo backend — the user's ACTUAL desktop terminal app (Ghostty / kitty / iTerm / TestTerminal.app) via macOS screencapture. Pixel-perfect for that specific terminal + the user's real font/theme config — the COMPAT path. Use this ONLY for terminal-specific compat bugs ('does it look right in Ghostty 1.3 with my Tokyo Night theme?'). For routine visual iteration use the `screenshot` tool (headless canvas renderer — fast, no GUI, cross-platform). macOS-only; needs a GUI session + Screen Recording permission. Spawns and then closes a real window.",
       inputSchema: {
         cmd: z.string().describe("TUI command to run as a shell string (e.g. 'bun km view ~/Vault')"),
         terminal: z
           .enum(["ghostty", "kitty", "iterm", "terminal"])
           .optional()
-          .describe("Terminal app. Auto-detected (ghostty > kitty > iterm > terminal) if omitted."),
+          .describe("TestTerminal app. Auto-detected (ghostty > kitty > iterm > terminal) if omitted."),
         outputPath: z.string().optional().describe("Output PNG path. A temp file is used if omitted."),
         cols: z.number().default(120).describe("Requested terminal columns (best-effort sizing; default 120)"),
         rows: z.number().default(40).describe("Requested terminal rows (best-effort sizing; default 40)"),
