@@ -324,11 +324,24 @@ declare module "@vitest/expect" {
   interface Matchers<T = any> {
     toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
   }
+  // Assertion<T = any> extends Matchers<T> in @vitest/expect itself, but that
+  // extends-edge only helps when the augmentation lands on the SAME physical
+  // copy the consumer's `expect()` types come from. Augmenting Assertion
+  // directly (vitest's own internal pattern — its snapshot chunk does exactly
+  // this) covers layouts where the Matchers edge crosses a duplicate copy.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Assertion<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
 }
 
 declare module "vitest" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   interface Matchers<T = any> {
+    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  interface Assertion<T = any> {
     toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
   }
 }
