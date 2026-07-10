@@ -10,7 +10,7 @@
 
 import { afterEach, describe, expect, test } from "vitest"
 import { createVtermBackend } from "../packages/vterm/src/index.ts"
-import { diffTerminalStates, terminalStateDigest } from "../src/terminal/state-digest.ts"
+import { diffTerminalStates, terminalStateDigest, type TerminalStateDigest } from "../src/terminal/state-digest.ts"
 import type { TerminalBackend } from "../src/terminal/types.ts"
 
 const encoder = new TextEncoder()
@@ -73,7 +73,10 @@ describe("terminalStateDigest", () => {
 
   test("survives a JSON round-trip unchanged", () => {
     const d = terminalStateDigest(fed(FLOOD))
-    const round = JSON.parse(JSON.stringify(d))
+    // `as` (not an annotation): under the hh root gate's ts-reset regime JSON.parse
+    // returns `unknown`, which an annotation alone can't accept. The toEqual below
+    // is what actually asserts round-trip fidelity.
+    const round = JSON.parse(JSON.stringify(d)) as TerminalStateDigest
     expect(round).toEqual(d)
     expect(diffTerminalStates(d, round).equal).toBe(true)
   })
