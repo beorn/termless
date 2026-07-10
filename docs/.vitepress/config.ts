@@ -156,6 +156,7 @@ export default defineConfig({
         items: [
           { text: "Cross-Backend Conformance", link: "/advanced/compat-matrix" },
           { text: "Conformance Corpus", link: "/advanced/conformance-corpus" },
+          { text: "Terminal Runtime Boundary", link: "/advanced/terminal-runtime-boundary" },
           { text: "Silvery Integration", link: "/advanced/silvery-integration" },
         ],
       },
@@ -276,6 +277,7 @@ export default defineConfig({
         items: [
           { text: "Silvery Integration", link: "/advanced/silvery-integration" },
           { text: "Conformance Corpus", link: "/advanced/conformance-corpus" },
+          { text: "Terminal Runtime Boundary", link: "/advanced/terminal-runtime-boundary" },
           { text: "Emulator Differences", link: "/emulator-differences" },
         ],
       },
