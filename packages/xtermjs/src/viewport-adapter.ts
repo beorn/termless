@@ -42,6 +42,8 @@ import type {
   ViewportInputMode,
   ViewportRect,
 } from "./silvery-compat.ts"
+import { scanMouseDecsetTracking } from "@termless/core"
+import { bufferFromRows, cloneBufferRows, mergeDirtyRows, type DirtyRect } from "../../../src/terminal/dirty-plane.ts"
 
 type IBufferCell = import("@xterm/headless").IBufferCell
 
@@ -367,7 +369,8 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   let cols = opts.cols
   let rows = opts.rows
   const palettePassthrough = opts.palettePassthrough ?? false
-  let buffer: CellBuffer = snapshotBuffer(term, palettePassthrough)
+  let bufferRows = cloneBufferRows(snapshotBuffer(term, palettePassthrough))
+  let buffer: CellBuffer = bufferFromRows(bufferRows)
   let disposed = false
   let outputScheduled = false
   let outputTimer: ReturnType<typeof setTimeout> | null = null
@@ -401,21 +404,6 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     modes.mouseTracking = next
     for (const listener of modeListeners) listener(modes)
   }
-  const MOUSE_DECSET = /\x1b\[\?([\d;]+)([hl])/g
-  function scanMouseDecset(data: string): void {
-    if (!trackMouse || !data.includes("\x1b[?")) return
-    let changed = false
-    MOUSE_DECSET.lastIndex = 0
-    for (let m = MOUSE_DECSET.exec(data); m !== null; m = MOUSE_DECSET.exec(data)) {
-      const on = m[2] === "h"
-      for (const param of m[1]!.split(";")) {
-        if (param === "1000") ((mouseModes.m1000 = on), (changed = true))
-        else if (param === "1002") ((mouseModes.m1002 = on), (changed = true))
-        else if (param === "1003") ((mouseModes.m1003 = on), (changed = true))
-      }
-    }
-    if (changed) recomputeMouseTracking()
-  }
   let resolveExit: ((exit: { code?: number; reason?: string }) => void) | null = null
   const exit = opts.child?.exited
     ? opts.child.exited.then(normalizeExit)
@@ -446,7 +434,8 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     outputScheduled = false
     outputTimer = null
     if (!term || disposed) return
-    buffer = snapshotBuffer(term, palettePassthrough)
+    bufferRows = cloneBufferRows(snapshotBuffer(term, palettePassthrough))
+    buffer = bufferFromRows(bufferRows)
     notifyOutput()
   }
 
@@ -463,7 +452,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   function feedAnsi(chunk: Uint8Array | string): void {
     if (!term || disposed) return
     const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
-    scanMouseDecset(data)
+    scanMouseDecsetTracking(data, trackMouse, mouseModes, recomputeMouseTracking)
     writeSync(term, data)
     scheduleOutput()
   }
@@ -481,7 +470,8 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     cols = size.cols
     rows = size.rows
     cancelScheduledOutput()
-    buffer = snapshotBuffer(term, palettePassthrough)
+    bufferRows = cloneBufferRows(snapshotBuffer(term, palettePassthrough))
+    buffer = bufferFromRows(bufferRows)
     notifySize()
     notifyOutput()
   }
@@ -531,7 +521,8 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
     cols = nextCols
     rows = nextRows
     cancelScheduledOutput()
-    buffer = snapshotBuffer(term, palettePassthrough)
+    bufferRows = cloneBufferRows(snapshotBuffer(term, palettePassthrough))
+    buffer = bufferFromRows(bufferRows)
     notifySize()
     notifyOutput()
   }
@@ -588,8 +579,9 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
         outputListeners.add(listener)
         return () => outputListeners.delete(listener)
       },
-      writeCells(_dirtyRects, nextBuffer) {
-        buffer = nextBuffer
+      writeCells(dirtyRects, nextBuffer) {
+        bufferRows = mergeDirtyRows(bufferRows, nextBuffer, dirtyRects as readonly DirtyRect[])
+        buffer = bufferFromRows(bufferRows)
         notifyOutput()
       },
       invalidateAll() {

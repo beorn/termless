@@ -90,6 +90,7 @@ export { captureCrossRenderer, pngDimensions, dHash, hashDistance } from "./comp
 export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } from "./compare.ts"
 export { parseKey, keyToAnsi } from "./terminal/key-mapping.ts"
 export { encodeKeyToAnsi } from "./terminal/key-encoding.ts"
+export { scanMouseDecset, scanMouseDecsetTracking, scanWindowOpQueries } from "./terminal/escape-scans.ts"
 export { createCellView, createRegion, createRegionView, createRow, createRowView } from "./terminal/views.ts"
 export { termlessMatchers } from "./jest-matchers.ts"
 export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"

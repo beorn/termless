@@ -29,8 +29,8 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   RGB,
-} from "../../../src/terminal/types.ts"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+} from "@termless/core"
+import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 
 // ═══════════════════════════════════════════════════════
 // ANSI 256-color palette
@@ -195,13 +195,6 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   const CELL_W_PX = 8
   const CELL_H_PX = 17
 
-  /** Intercept CSI 14t (text-area pixel size query). xterm.js's
-   *  windowOptions.getWinSizePixels has a default implementation that
-   *  returns 0;0 in headless contexts (no real window), which silvery
-   *  rejects via its isSanePositive guard. Synthesize a sensible
-   *  response from the configured rows/cols × standard cell metrics. */
-  const CSI_14t_RE = /\x1b\[14t/g
-
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     const text = decoder.decode(data, { stream: true })
@@ -209,15 +202,13 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // Synthesize 14t responses out-of-band BEFORE writing the bytes to
     // xterm.js (which would drop them as unhandled when the default
     // implementation reports 0;0).
-    if (backend.onResponse && CSI_14t_RE.test(text)) {
-      // Reset lastIndex — regex is /g, so a prior test() may leave state
-      CSI_14t_RE.lastIndex = 0
-      let m: RegExpExecArray | null
-      while ((m = CSI_14t_RE.exec(text)) !== null) {
+    if (backend.onResponse) {
+      scanWindowOpQueries(text, (query) => {
+        if (query !== "14t") return
         const heightPx = t.rows * CELL_H_PX
         const widthPx = t.cols * CELL_W_PX
         backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      }
+      })
     }
 
     // xterm.js write() is async — use internal writeSync for immediate buffer updates
@@ -453,7 +444,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function getLines(): Cell[][] {
     const t = ensureTerm()
-    const rows = t.rows
+    const rows = t.buffer.active.length
     const result: Cell[][] = []
     for (let row = 0; row < rows; row++) {
       result.push(getLine(row))

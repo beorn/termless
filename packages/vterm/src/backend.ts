@@ -6,7 +6,7 @@
  * Supports every SGR attribute, cursor shapes, OSC 8 hyperlinks, and more.
  */
 
-import { createVtermScreen as createScreen, type VtermScreen as Screen } from "vterm.js"
+import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -16,8 +16,8 @@ import type {
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-} from "../../../src/terminal/types.ts"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+} from "@termless/core"
+import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 
 // ═══════════════════════════════════════════════════════
 // Backend factory
@@ -25,6 +25,7 @@ import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
+const BLANK_CELL: Cell = { char: " ", fg: null, bg: null, bold: false, dim: false, italic: false, underline: false, underlineColor: null, strikethrough: false, inverse: false, blink: false, hidden: false, wide: false, continuation: false, hyperlink: null }
 
 /**
  * Create a full-featured vterm.js backend for termless.
@@ -77,34 +78,23 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   const CELL_W_PX = 8
   const CELL_H_PX = 17
 
-  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
-  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
-  // DSR ?996 = color-scheme query; reply CSI ?997;1n (dark)
-  const CSI_14t_RE = /\x1b\[14t/g
-  const CSI_18t_RE = /\x1b\[18t/g
-  const DSR_COLOR_SCHEME_RE = /\x1b\[\?996n/g
-
   function feed(data: Uint8Array): void {
     const s = ensureScreen()
     s.process(data)
 
     if (backend.onResponse) {
       const text = new TextDecoder().decode(data)
-      CSI_14t_RE.lastIndex = 0
-      let m: RegExpExecArray | null
-      while ((m = CSI_14t_RE.exec(text)) !== null) {
-        const heightPx = s.rows * CELL_H_PX
-        const widthPx = s.cols * CELL_W_PX
-        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      }
-      CSI_18t_RE.lastIndex = 0
-      while ((m = CSI_18t_RE.exec(text)) !== null) {
-        backend.onResponse(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
-      }
-      DSR_COLOR_SCHEME_RE.lastIndex = 0
-      while ((m = DSR_COLOR_SCHEME_RE.exec(text)) !== null) {
-        backend.onResponse(new TextEncoder().encode("\x1b[?997;1n"))
-      }
+      scanWindowOpQueries(text, (query) => {
+        if (query === "14t") {
+          const heightPx = s.rows * CELL_H_PX
+          const widthPx = s.cols * CELL_W_PX
+          backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+        } else if (query === "18t") {
+          backend.onResponse(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
+        } else {
+          backend.onResponse(new TextEncoder().encode("\x1b[?997;1n"))
+        }
+      })
     }
   }
 
@@ -114,14 +104,6 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function reset(): void {
     ensureScreen().reset()
-  }
-
-  function getText(): string {
-    return ensureScreen().getText()
-  }
-
-  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
-    return ensureScreen().getTextRange(startRow, startCol, endRow, endCol)
   }
 
   /** Map vterm screen underline ("none"|"single"|...) to Cell underline (false|"single"|...) */
@@ -135,10 +117,10 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return shape
   }
 
-  function getCell(row: number, col: number): Cell {
-    const sc = ensureScreen().getCell(row, col)
+  function convertCell(sc: ScreenCell | undefined): Cell {
+    if (!sc) return BLANK_CELL
     return {
-      char: sc.char,
+      char: sc.char === "" ? " " : sc.char,
       fg: sc.fg,
       bg: sc.bg,
       bold: sc.bold,
@@ -151,16 +133,18 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       blink: sc.blink,
       hidden: sc.hidden,
       wide: sc.wide,
-      continuation: false,
+      continuation: sc.char === "",
       hyperlink: sc.url,
     }
   }
 
-  function getLine(row: number): Cell[] {
-    return ensureScreen()
-      .getLine(row)
-      .map((sc) => ({
-        char: sc.char,
+  function convertRow(row: readonly ScreenCell[] | undefined): Cell[] {
+    const cells: Cell[] = []
+    let prevWide = false
+    for (const sc of row ?? []) {
+      const continuation = prevWide && sc.char === ""
+      cells.push({
+        char: continuation ? "" : sc.char === "" ? " " : sc.char,
         fg: sc.fg,
         bg: sc.bg,
         bold: sc.bold,
@@ -173,18 +157,54 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
         blink: sc.blink,
         hidden: sc.hidden,
         wide: sc.wide,
-        continuation: false,
+        continuation,
         hyperlink: sc.url,
-      }))
+      })
+      prevWide = sc.wide
+    }
+    return cells
+  }
+
+  function snapshotRows(): Cell[][] {
+    const snap = ensureScreen().snapshot()
+    const scrollback = snap.scrollback
+    const grid = snap.activeBuffer === "alt" ? snap.alt.grid : snap.main.grid
+    const rows: Cell[][] = new Array(scrollback.length + grid.length)
+    for (let row = 0; row < scrollback.length; row++) rows[row] = convertRow(scrollback[row])
+    for (let row = 0; row < grid.length; row++) rows[scrollback.length + row] = convertRow(grid[row])
+    return rows
+  }
+
+  function getCell(row: number, col: number): Cell {
+    const rows = snapshotRows()
+    return rows[row]?.[col] ?? BLANK_CELL
+  }
+
+  function getLine(row: number): Cell[] {
+    return snapshotRows()[row] ?? []
   }
 
   function getLines(): Cell[][] {
-    const s = ensureScreen()
-    const result: Cell[][] = []
-    for (let row = 0; row < s.rows; row++) {
-      result.push(getLine(row))
+    return snapshotRows()
+  }
+
+  function getText(): string {
+    return snapshotRows()
+      .map((row) => row.map((cell) => cell.char || " ").join(""))
+      .join("\n")
+  }
+
+  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
+    const rows = snapshotRows()
+    const parts: string[] = []
+    for (let row = startRow; row <= endRow; row++) {
+      const cells = rows[row]
+      if (!cells) continue
+      const start = row === startRow ? startCol : 0
+      const end = row === endRow ? endCol : cells.length
+      parts.push(cells.slice(start, end).map((cell) => cell.char || " ").join(""))
     }
-    return result
+    return parts.join("\n")
   }
 
   function getCursor(): CursorState {

@@ -41,6 +41,8 @@ import type {
   IslandProtocolModes,
   ViewportCursorStyle,
 } from "./silvery-compat.ts"
+import { scanMouseDecsetTracking } from "@termless/core"
+import { bufferFromRows, cloneBufferRows, mergeDirtyRows, type DirtyRect } from "../../../src/terminal/dirty-plane.ts"
 
 type VtermDataChunk = Buffer | Uint8Array | string
 
@@ -325,11 +327,13 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
   // Lazy snapshot: vterm.process() is synchronous, so the grid is current the
   // instant feedAnsi returns; recompute the CellBuffer only when read after a
   // mutation. Notifications are coalesced separately (scheduleOutput).
-  let buffer: CellBuffer = snapshotBuffer(screen, palettePassthrough)
+  let bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
+  let buffer: CellBuffer = bufferFromRows(bufferRows)
   let bufferDirty = false
   function currentBuffer(): CellBuffer {
     if (bufferDirty && screen) {
-      buffer = snapshotBuffer(screen, palettePassthrough)
+      bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
+      buffer = bufferFromRows(bufferRows)
       bufferDirty = false
     }
     return buffer
@@ -354,22 +358,6 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     modes.mouseTracking = next
     for (const listener of modeListeners) listener(modes)
   }
-  const MOUSE_DECSET = /\x1b\[\?([\d;]+)([hl])/g
-  function scanMouseDecset(data: string): void {
-    if (!trackMouse || !data.includes("\x1b[?")) return
-    let changed = false
-    MOUSE_DECSET.lastIndex = 0
-    for (let m = MOUSE_DECSET.exec(data); m !== null; m = MOUSE_DECSET.exec(data)) {
-      const on = m[2] === "h"
-      for (const param of m[1]!.split(";")) {
-        if (param === "1000") ((mouseModes.m1000 = on), (changed = true))
-        else if (param === "1002") ((mouseModes.m1002 = on), (changed = true))
-        else if (param === "1003") ((mouseModes.m1003 = on), (changed = true))
-      }
-    }
-    if (changed) recomputeMouseTracking()
-  }
-
   let lastTitle = screen.getTitle()
 
   let resolveExit: ((exit: { code?: number; reason?: string }) => void) | null = null
@@ -426,7 +414,7 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
   function feedAnsi(chunk: Uint8Array | string): void {
     if (!screen || disposed) return
     const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
-    scanMouseDecset(data)
+    scanMouseDecsetTracking(data, trackMouse, mouseModes, recomputeMouseTracking)
     screen.process(typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk)
     bufferDirty = true
     maybeEmitTitle()
@@ -551,8 +539,9 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
         outputListeners.add(listener)
         return () => outputListeners.delete(listener)
       },
-      writeCells(_dirtyRects, nextBuffer) {
-        buffer = nextBuffer
+      writeCells(dirtyRects, nextBuffer) {
+        bufferRows = mergeDirtyRows(bufferRows, nextBuffer, dirtyRects as readonly DirtyRect[])
+        buffer = bufferFromRows(bufferRows)
         bufferDirty = false
         notifyOutput()
       },
@@ -632,7 +621,10 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       // (the lazy snapshot may not have run if no notify flushed). vterm is a
       // pure emulator — there is nothing external to release.
       if (screen) {
-        if (bufferDirty) buffer = snapshotBuffer(screen, palettePassthrough)
+        if (bufferDirty) {
+          bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
+          buffer = bufferFromRows(bufferRows)
+        }
         bufferDirty = false
         screen = null
       }

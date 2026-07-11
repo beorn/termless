@@ -428,6 +428,18 @@ describe("createXtermBackend", () => {
     backend.destroy()
   })
 
+  test("getRows returns the full absolute buffer, including scrollback rows", () => {
+    const backend = createXtermBackend({ cols: 10, rows: 3 })
+    for (let i = 0; i < 6; i++) backend.feed(new TextEncoder().encode(`row${i}\r\n`))
+
+    const rows = backend.getRows()
+    expect(rows.length).toBeGreaterThan(3)
+    const rendered = rows.map((row) => row.map((cell) => cell.char).join("").trim())
+    expect(rendered.some((line) => line.includes("row0"))).toBe(true)
+    expect(rendered.some((line) => line.includes("row5"))).toBe(true)
+    backend.destroy()
+  })
+
   // ── Default cell ──
 
   test("getCell on empty position returns default cell", () => {

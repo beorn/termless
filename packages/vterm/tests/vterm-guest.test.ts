@@ -44,6 +44,19 @@ function rowText(handle: VtermGuestHandle, row: number): string {
   return line.replace(/\s+$/u, "")
 }
 
+function cellBufferFromRows(rows: string[]): VtermGuestHandle["output"]["buffer"] {
+  const grid = rows.map((row) =>
+    row.split("").map((char) => ({ char, fg: null, bg: null, attrs: {}, wide: false, continuation: false })),
+  )
+  return {
+    cols: grid.reduce((max, row) => Math.max(max, row.length), 0),
+    rows: grid.length,
+    getCell(col, row) {
+      return grid[row]?.[col] ?? { char: " ", fg: null, bg: null, attrs: {}, wide: false, continuation: false }
+    },
+  }
+}
+
 describe("vtermGuest — render path", () => {
   test("plain text lands as cells with the cursor after it", async () => {
     const handle = await mount({ cols: 10, rows: 3 })
@@ -52,6 +65,21 @@ describe("vtermGuest — render path", () => {
       expect(rowText(handle, 0)).toBe("abc")
       expect(handle.output.buffer.getCell(0, 0).char).toBe("a")
       expect(handle.output.cursor).toEqual({ row: 0, col: 3, style: "block" })
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  test("writeCells applies dirty rectangles without repainting untouched cells", async () => {
+    const handle = await mount({ cols: 4, rows: 2 })
+    try {
+      handle.output.writeCells(
+        [{ row: 0, col: 0, width: 4, height: 2 }],
+        cellBufferFromRows(["abcd", "efgh"]),
+      )
+      handle.output.writeCells([{ row: 0, col: 2, width: 1, height: 1 }], cellBufferFromRows(["abZd", "efgh"]))
+      expect(rowText(handle, 0)).toBe("abZd")
+      expect(rowText(handle, 1)).toBe("efgh")
     } finally {
       handle.dispose()
     }
