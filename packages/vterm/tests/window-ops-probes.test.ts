@@ -53,4 +53,18 @@ describe("window-op probe responses — vterm backend", () => {
     expect(Number(m[1])).toBe(24)
     expect(Number(m[2])).toBe(80)
   })
+
+  test("answers a window probe split across feed chunks", async () => {
+    const backend = createVtermBackend()
+    backend.init?.({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes): void => {
+      responses.push(new TextDecoder().decode(bytes))
+    }
+
+    backend.feed(new TextEncoder().encode("\x1b[1"))
+    backend.feed(new TextEncoder().encode("8t"))
+
+    expect(responses.filter((response) => response === "\x1b[8;24;80t")).toHaveLength(1)
+  })
 })

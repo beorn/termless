@@ -41,7 +41,6 @@ import type {
   IslandProtocolModes,
   ViewportCursorStyle,
 } from "./silvery-compat.ts"
-import { scanMouseDecsetTracking } from "@termless/core"
 import { bufferFromRows, cloneBufferRows, mergeDirtyRows, type DirtyRect } from "../../../src/terminal/dirty-plane.ts"
 
 type VtermDataChunk = Buffer | Uint8Array | string
@@ -189,10 +188,9 @@ function convertRow(row: readonly ScreenCell[], cols: number, passthrough: boole
 /**
  * Read the current viewport into an immutable {@link CellBuffer}.
  *
- * Fast path (viewport at bottom, non-passthrough): read the live grid
- * row-by-row via `getLine`. `getLine`/`getCell` are vterm's resolved-RGB read
- * boundary — they strip the palette-origin `CellColor.index`, which is fine when
- * colors resolve straight to RGB anyway.
+ * Fast path (non-passthrough): read viewport rows through vterm's absolute-row
+ * contract. The accessor strips palette-origin `CellColor.index`, which is fine
+ * when colors resolve straight to RGB anyway.
  *
  * Snapshot path (scrolled OR palette passthrough): vterm's row accessors ignore
  * the scroll offset AND drop the origin index, so read the index-preserving
@@ -209,8 +207,11 @@ function snapshotBuffer(screen: VtermScreen, passthrough: boolean): CellBuffer {
   const rowsOut: Cell[][] = new Array(rows)
   const v = screen.getViewportOffset()
 
-  if (v <= 0 && !passthrough) {
-    for (let row = 0; row < rows; row++) rowsOut[row] = convertRow(screen.getLine(row), cols, passthrough)
+  if (!passthrough) {
+    const viewportTop = screen.viewportTop()
+    for (let row = 0; row < rows; row++) {
+      rowsOut[row] = convertRow(screen.getRowAbsolute(viewportTop + row), cols, passthrough)
+    }
   } else {
     const snap = screen.snapshot()
     const scrollback = snap.scrollback
@@ -240,7 +241,7 @@ function defaultVtermGuestModes(): IslandProtocolModes {
     bracketedPaste: true,
     kittyKeyboard: true,
     // A freshly-spawned guest has NOT enabled mouse reporting; it is updated to
-    // the live mode by scanning the child's DECSET output (see scanMouseDecset).
+    // the live mode from vterm's parser-owned mode signal.
     mouseTracking: "off",
     focusReporting: true,
   }
@@ -324,41 +325,63 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     onResponse: (data: string) => writeToChild(data),
   })
 
-  // Lazy snapshot: vterm.process() is synchronous, so the grid is current the
-  // instant feedAnsi returns; recompute the CellBuffer only when read after a
-  // mutation. Notifications are coalesced separately (scheduleOutput).
+  // Cache the projected viewport and consume vterm's absolute dirty rows. A
+  // structural scroll/resize still rebuilds the viewport, while ordinary writes
+  // replace only rows the engine marked dirty.
   let bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
   let buffer: CellBuffer = bufferFromRows(bufferRows)
-  let bufferDirty = false
-  function currentBuffer(): CellBuffer {
-    if (bufferDirty && screen) {
-      bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
-      buffer = bufferFromRows(bufferRows)
-      bufferDirty = false
+  screen.takeDirty()
+  function rebuildBuffer(): void {
+    if (!screen) return
+    bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
+    buffer = bufferFromRows(bufferRows)
+  }
+  function refreshBuffer(): void {
+    if (!screen) return
+    const dirty = screen.takeDirty()
+    if (
+      dirty.rows === "all" ||
+      dirty.scrolled !== 0 ||
+      palettePassthrough ||
+      bufferRows.length !== screen.rows ||
+      bufferRows.some((row) => row.length !== screen!.cols)
+    ) {
+      rebuildBuffer()
+      return
     }
+    const viewportTop = screen.viewportTop()
+    let changed = false
+    for (const absoluteRow of dirty.rows) {
+      const viewportRow = absoluteRow - viewportTop
+      if (viewportRow < 0 || viewportRow >= screen.rows) continue
+      bufferRows[viewportRow] = convertRow(screen.getRowAbsolute(absoluteRow), screen.cols, false)
+      changed = true
+    }
+    if (changed) buffer = bufferFromRows(bufferRows)
+  }
+  function currentBuffer(): CellBuffer {
+    refreshBuffer()
     return buffer
   }
 
   const modes = opts.modes ?? defaultVtermGuestModes()
-  // Mouse-mode tracking (20349): report the REAL mouse-reporting state so a
-  // mode-aware host only forwards mouse once the child turns it on. Scan the
-  // child's output for DECSET 1000/1002/1003; a caller-supplied `modes` is a
-  // fixed override, so skip scanning then.
-  const trackMouse = opts.modes === undefined
-  const mouseModes = { m1000: false, m1002: false, m1003: false }
-  function recomputeMouseTracking(): void {
-    const next: IslandProtocolModes["mouseTracking"] = mouseModes.m1003
-      ? "any"
-      : mouseModes.m1002
-        ? "drag"
-        : mouseModes.m1000
-          ? "click"
-          : "off"
+  // Parser-owned signals retain escape-sequence state across PTY chunk
+  // boundaries; a second byte scanner cannot do that correctly.
+  const unsubscribeModes = screen.signals.modes$.subscribe((nextModes) => {
+    if (opts.modes) return
+    const next: IslandProtocolModes["mouseTracking"] =
+      nextModes.mouseTrackingMode === 1003
+        ? "any"
+        : nextModes.mouseTrackingMode === 1002
+          ? "drag"
+          : nextModes.mouseTrackingMode === 1000
+            ? "click"
+            : "off"
     if (modes.mouseTracking === next) return
     modes.mouseTracking = next
     for (const listener of modeListeners) listener(modes)
-  }
-  let lastTitle = screen.getTitle()
+  })
+  const unsubscribeTitle = screen.signals.title$.subscribe((title) => opts.onTitle?.(title))
 
   let resolveExit: ((exit: { code?: number; reason?: string }) => void) | null = null
   const exit = opts.child?.exited
@@ -389,7 +412,7 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     outputScheduled = false
     outputTimer = null
     if (!screen || disposed) return
-    currentBuffer()
+    refreshBuffer()
     notifyOutput()
   }
   function scheduleOutput(): void {
@@ -402,22 +425,9 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     queueMicrotask(flushScheduledOutput)
   }
 
-  function maybeEmitTitle(): void {
-    if (!opts.onTitle || !screen) return
-    const title = screen.getTitle()
-    if (title !== lastTitle) {
-      lastTitle = title
-      opts.onTitle(title)
-    }
-  }
-
   function feedAnsi(chunk: Uint8Array | string): void {
     if (!screen || disposed) return
-    const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
-    scanMouseDecsetTracking(data, trackMouse, mouseModes, recomputeMouseTracking)
     screen.process(typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk)
-    bufferDirty = true
-    maybeEmitTitle()
     scheduleOutput()
   }
 
@@ -434,9 +444,9 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     screen.resize(size.cols, size.rows)
     cols = size.cols
     rows = size.rows
-    bufferDirty = true
     cancelScheduledOutput()
-    currentBuffer()
+    screen.takeDirty()
+    rebuildBuffer()
     notifySize()
     notifyOutput()
   }
@@ -453,9 +463,9 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     screen.resize(nextCols, nextRows)
     cols = nextCols
     rows = nextRows
-    bufferDirty = true
     cancelScheduledOutput()
-    currentBuffer()
+    screen.takeDirty()
+    rebuildBuffer()
     notifySize()
     notifyOutput()
   }
@@ -471,9 +481,9 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     // negate to keep `getScrollback().viewportOffset` and scroll direction in
     // lockstep with the xterm guest.
     screen.scrollViewport(-delta)
-    bufferDirty = true
     cancelScheduledOutput()
-    currentBuffer()
+    screen.takeDirty()
+    rebuildBuffer()
     notifyOutput()
   }
 
@@ -542,7 +552,6 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       writeCells(dirtyRects, nextBuffer) {
         bufferRows = mergeDirtyRows(bufferRows, nextBuffer, dirtyRects as readonly DirtyRect[])
         buffer = bufferFromRows(bufferRows)
-        bufferDirty = false
         notifyOutput()
       },
       invalidateAll() {
@@ -609,6 +618,8 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       cancelScheduledOutput()
       opts.child?.stdout?.off?.("data", onStdoutData)
       unsubscribeStreamResize?.()
+      unsubscribeModes()
+      unsubscribeTitle()
       sizeListeners.clear()
       outputListeners.clear()
       modeListeners.clear()
@@ -621,11 +632,7 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       // (the lazy snapshot may not have run if no notify flushed). vterm is a
       // pure emulator — there is nothing external to release.
       if (screen) {
-        if (bufferDirty) {
-          bufferRows = cloneBufferRows(snapshotBuffer(screen, palettePassthrough))
-          buffer = bufferFromRows(bufferRows)
-        }
-        bufferDirty = false
+        refreshBuffer()
         screen = null
       }
       resolveExit?.({ reason: "disposed" })

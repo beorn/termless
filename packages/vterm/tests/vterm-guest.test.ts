@@ -73,12 +73,23 @@ describe("vtermGuest — render path", () => {
   test("writeCells applies dirty rectangles without repainting untouched cells", async () => {
     const handle = await mount({ cols: 4, rows: 2 })
     try {
-      handle.output.writeCells(
-        [{ row: 0, col: 0, width: 4, height: 2 }],
-        cellBufferFromRows(["abcd", "efgh"]),
-      )
+      handle.output.writeCells([{ row: 0, col: 0, width: 4, height: 2 }], cellBufferFromRows(["abcd", "efgh"]))
       handle.output.writeCells([{ row: 0, col: 2, width: 1, height: 1 }], cellBufferFromRows(["abZd", "efgh"]))
       expect(rowText(handle, 0)).toBe("abZd")
+      expect(rowText(handle, 1)).toBe("efgh")
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  test("feedAnsi refreshes only engine-dirty rows", async () => {
+    const handle = await mount({ cols: 4, rows: 2 })
+    try {
+      handle.output.writeCells([{ row: 0, col: 0, width: 4, height: 2 }], cellBufferFromRows(["abcd", "efgh"]))
+
+      handle.feedAnsi("Z")
+
+      expect(rowText(handle, 0)).toBe("Z")
       expect(rowText(handle, 1)).toBe("efgh")
     } finally {
       handle.dispose()
@@ -216,6 +227,17 @@ describe("vtermGuest — render path", () => {
       expect(handle.modes?.modes.mouseTracking).toBe("any")
       handle.feedAnsi("\x1b[?1000l\x1b[?1003l")
       expect(handle.modes?.modes.mouseTracking).toBe("off")
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  test("mouse-tracking DECSET survives a feed chunk boundary", async () => {
+    const handle = await mount({ cols: 6, rows: 2 })
+    try {
+      handle.feedAnsi("\x1b[?10")
+      handle.feedAnsi("02h")
+      expect(handle.modes?.modes.mouseTracking).toBe("drag")
     } finally {
       handle.dispose()
     }
