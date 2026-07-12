@@ -195,6 +195,11 @@ declare module "@vitest/expect" {
 declare module "vitest" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   interface Matchers<T = any> {
+    // Vitest's snapshot matcher is itself layered onto the assertion type;
+    // carry its public signature through this fallback augmentation so the
+    // custom snapshot wrappers remain typed under per-package resolution.
+    toMatchSnapshot(propertiesOrHint?: object | string, hint?: string): void
+
     // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
