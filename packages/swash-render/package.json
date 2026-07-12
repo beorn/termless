@@ -50,7 +50,7 @@
     "postbuild:native": "node -e \"const fs=require('fs'),p='native/target/release/';for(const f of fs.readdirSync(p))if(/^libtermless_swash_render_native\\.(dylib|so)$/.test(f)||f==='termless_swash_render_native.dll')fs.copyFileSync(p+f,'termless-swash-render.node')\""
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0"
+    "@napi-rs/cli": "^3.7.3"
   },
   "peerDependencies": {
     "@termless/core": "^0.8.1"

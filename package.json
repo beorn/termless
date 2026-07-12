@@ -77,17 +77,17 @@
     "@types/node": "^22.19.15",
     "@types/react": "^19.2.14",
     "@vitest/expect": "^4.1.1",
-    "@vue/server-renderer": "^3.5.31",
+    "@vue/server-renderer": "^3.5.39",
     "loggily": "^0.4.0",
     "oxfmt": "0.38.0",
     "silvery": "^0.4.2",
-    "tsdown": "^0.21.7",
+    "tsdown": "^0.22.5",
     "typescript": "^5.9.3",
     "vitepress": "^1.6.4",
     "vitepress-enrich": "^0.4.0",
-    "vitepress-plugin-llms": "^1.12.0",
+    "vitepress-plugin-llms": "^1.13.3",
     "vitest": "^4.1.1",
-    "vue": "^3.5.31"
+    "vue": "^3.5.39"
   },
   "peerDependencies": {
     "node-pty": ">=1.0.0"
@@ -98,7 +98,7 @@
     }
   },
   "optionalDependencies": {
-    "@napi-rs/canvas": "^1.0.0",
+    "@napi-rs/canvas": "^1.0.2",
     "@resvg/resvg-js": "^2.6.2",
     "@twemoji/svg": "^15.0.0",
     "ghostty-web": "^0.4.0",
