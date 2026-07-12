@@ -43,6 +43,9 @@
   "dependencies": {
     "vterm.js": "^0.1.0"
   },
+  "devDependencies": {
+    "@termless/xtermjs": "workspace:*"
+  },
   "peerDependencies": {
     "@termless/core": "^0.8.1"
   },
