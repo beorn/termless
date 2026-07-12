@@ -202,12 +202,13 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // Synthesize 14t responses out-of-band BEFORE writing the bytes to
     // xterm.js (which would drop them as unhandled when the default
     // implementation reports 0;0).
-    if (backend.onResponse) {
+    const onResponse = backend.onResponse
+    if (onResponse) {
       scanWindowOpQueries(text, (query) => {
         if (query !== "14t") return
         const heightPx = t.rows * CELL_H_PX
         const widthPx = t.cols * CELL_W_PX
-        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+        onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
       })
     }
 
