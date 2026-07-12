@@ -233,7 +233,7 @@ export interface CaseMismatch {
 /** Absolute buffer row of the viewport's top line (offset 0 = at bottom). */
 function viewportTop(backend: TerminalBackend): number {
   const sb = backend.getScrollback()
-  return Math.max(0, sb.totalLines - sb.screenLines - sb.viewportOffset)
+  return sb.viewportTop
 }
 
 /**

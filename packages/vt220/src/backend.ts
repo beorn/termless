@@ -6,7 +6,7 @@
  * insert mode (IRM), selective erase (DECSED/DECSEL), and soft reset (DECSTR).
  */
 
-import { createVt220Screen as createScreen, type Vt220Screen as Screen } from "vt220.js"
+import { createVt220Screen as createScreen, type ScreenCell, type Vt220Screen as Screen } from "vt220.js"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -114,16 +114,27 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
     ensureScreen().reset()
   }
 
-  function getText(): string {
-    return ensureScreen().getText()
+  function emptyCell(): Cell {
+    return {
+      char: "",
+      fg: null,
+      bg: null,
+      bold: false,
+      dim: false,
+      italic: false,
+      underline: false,
+      underlineColor: null,
+      strikethrough: false,
+      inverse: false,
+      blink: false,
+      hidden: false,
+      wide: false,
+      continuation: false,
+      hyperlink: null,
+    }
   }
 
-  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
-    return ensureScreen().getTextRange(startRow, startCol, endRow, endCol)
-  }
-
-  function getCell(row: number, col: number): Cell {
-    const sc = ensureScreen().getCell(row, col)
+  function convertCell(sc: ScreenCell): Cell {
     return {
       char: sc.char,
       fg: sc.fg,
@@ -143,35 +154,47 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
+  function snapshotRows(): Cell[][] {
+    const snap = ensureScreen().snapshot()
+    const rows: Cell[][] = new Array(snap.scrollback.length + snap.grid.length)
+    for (let row = 0; row < snap.scrollback.length; row++) {
+      rows[row] = snap.scrollback[row]!.map(convertCell)
+    }
+    for (let row = 0; row < snap.grid.length; row++) {
+      rows[snap.scrollback.length + row] = snap.grid[row]!.map(convertCell)
+    }
+    return rows
+  }
+
+  function getText(): string {
+    return snapshotRows()
+      .map((row) => row.map((cell) => cell.char || " ").join(""))
+      .join("\n")
+  }
+
+  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
+    const rows = snapshotRows()
+    const parts: string[] = []
+    for (let row = startRow; row <= endRow; row++) {
+      const cells = rows[row]
+      if (!cells) continue
+      const start = row === startRow ? startCol : 0
+      const end = row === endRow ? endCol : cells.length
+      parts.push(cells.slice(start, end).map((cell) => cell.char || " ").join("").replace(/\s+$/, ""))
+    }
+    return parts.join("\n")
+  }
+
+  function getCell(row: number, col: number): Cell {
+    return getLine(row)[col] ?? emptyCell()
+  }
+
   function getLine(row: number): Cell[] {
-    return ensureScreen()
-      .getLine(row)
-      .map((sc) => ({
-        char: sc.char,
-        fg: sc.fg,
-        bg: sc.bg,
-        bold: sc.bold,
-        dim: false,
-        italic: false,
-        underline: sc.underline ? ("single" as const) : false,
-        underlineColor: null,
-        strikethrough: false,
-        inverse: sc.inverse,
-        blink: sc.blink,
-        hidden: sc.hidden,
-        wide: false,
-        continuation: false,
-        hyperlink: null,
-      }))
+    return snapshotRows()[row] ?? Array.from({ length: ensureScreen().cols }, () => emptyCell())
   }
 
   function getLines(): Cell[][] {
-    const s = ensureScreen()
-    const result: Cell[][] = []
-    for (let row = 0; row < s.rows; row++) {
-      result.push(getLine(row))
-    }
-    return result
+    return snapshotRows()
   }
 
   function getCursor(): CursorState {

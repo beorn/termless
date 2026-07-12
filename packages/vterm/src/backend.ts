@@ -82,18 +82,17 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     const s = ensureScreen()
     s.process(data)
 
-    const onResponse = backend.onResponse
-    if (onResponse) {
+    if (backend.onResponse) {
       const text = new TextDecoder().decode(data)
       scanWindowOpQueries(text, (query) => {
         if (query === "14t") {
           const heightPx = s.rows * CELL_H_PX
           const widthPx = s.cols * CELL_W_PX
-          onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
+          backend.onResponse?.(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
         } else if (query === "18t") {
-          onResponse(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
+          backend.onResponse?.(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
         } else {
-          onResponse(new TextEncoder().encode("\x1b[?997;1n"))
+          backend.onResponse?.(new TextEncoder().encode("\x1b[?997;1n"))
         }
       })
     }

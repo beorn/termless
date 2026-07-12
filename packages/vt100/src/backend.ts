@@ -6,7 +6,7 @@
  * inspired by the Rust vt100 crate's design.
  */
 
-import { createVt100Screen as createScreen, type Vt100Screen as Screen } from "vt100.js"
+import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -117,16 +117,27 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     ensureScreen().reset()
   }
 
-  function getText(): string {
-    return ensureScreen().getText()
+  function emptyCell(): Cell {
+    return {
+      char: "",
+      fg: null,
+      bg: null,
+      bold: false,
+      dim: false,
+      italic: false,
+      underline: false,
+      underlineColor: null,
+      strikethrough: false,
+      inverse: false,
+      blink: false,
+      hidden: false,
+      wide: false,
+      continuation: false,
+      hyperlink: null,
+    }
   }
 
-  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
-    return ensureScreen().getTextRange(startRow, startCol, endRow, endCol)
-  }
-
-  function getCell(row: number, col: number): Cell {
-    const sc = ensureScreen().getCell(row, col)
+  function convertCell(sc: ScreenCell): Cell {
     return {
       char: sc.char,
       fg: sc.fg,
@@ -146,32 +157,56 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
+  function absoluteLine(row: number): ScreenCell[] | undefined {
+    const s = ensureScreen()
+    const scrollbackLength = s.getScrollbackLength()
+    if (row < 0 || row >= scrollbackLength + s.rows) return undefined
+    return row < scrollbackLength ? s.getScrollbackLine(row) : s.getLine(row - scrollbackLength)
+  }
+
+  function getText(): string {
+    const s = ensureScreen()
+    const lines: string[] = []
+    for (let row = 0; row < s.getScrollbackLength() + s.rows; row++) {
+      lines.push(
+        getLine(row)
+          .map((cell) => cell.char || " ")
+          .join("")
+          .replace(/\s+$/, ""),
+      )
+    }
+    return lines.join("\n")
+  }
+
+  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
+    const parts: string[] = []
+    for (let row = startRow; row <= endRow; row++) {
+      const cells = getLine(row)
+      if (cells.length === 0) continue
+      const start = row === startRow ? startCol : 0
+      const end = row === endRow ? endCol : cells.length
+      parts.push(cells.slice(start, end).map((cell) => cell.char || " ").join("").replace(/\s+$/, ""))
+    }
+    return parts.join("\n")
+  }
+
+  function getCell(row: number, col: number): Cell {
+    return getLine(row)[col] ?? emptyCell()
+  }
+
   function getLine(row: number): Cell[] {
-    return ensureScreen()
-      .getLine(row)
-      .map((sc) => ({
-        char: sc.char,
-        fg: sc.fg,
-        bg: sc.bg,
-        bold: sc.bold,
-        dim: false,
-        italic: false,
-        underline: sc.underline ? ("single" as const) : false,
-        underlineColor: null,
-        strikethrough: false,
-        inverse: sc.inverse,
-        blink: sc.blink,
-        hidden: sc.hidden,
-        wide: false,
-        continuation: false,
-        hyperlink: null,
-      }))
+    const cells = absoluteLine(row)
+    if (!cells) {
+      const s = ensureScreen()
+      return Array.from({ length: s.cols }, () => emptyCell())
+    }
+    return cells.map(convertCell)
   }
 
   function getLines(): Cell[][] {
-    const s = ensureScreen()
     const result: Cell[][] = []
-    for (let row = 0; row < s.rows; row++) {
+    const totalRows = ensureScreen().getScrollbackLength() + ensureScreen().rows
+    for (let row = 0; row < totalRows; row++) {
       result.push(getLine(row))
     }
     return result

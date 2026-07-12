@@ -447,13 +447,47 @@ export function createGhosttyBackend(
     return line.replace(/\s+$/, "") // Trim trailing whitespace
   }
 
-  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
+  function emptyCell(): Cell {
+    return {
+      char: "",
+      fg: null,
+      bg: null,
+      bold: false,
+      dim: false,
+      italic: false,
+      underline: false,
+      underlineColor: null,
+      strikethrough: false,
+      inverse: false,
+      blink: false,
+      hidden: false,
+      wide: false,
+      continuation: false,
+      hyperlink: null,
+    }
+  }
+
+  function absoluteLine(row: number): Cell[] {
     const t = ensureTerm()
     t.update()
+    const scrollbackLen = t.getScrollbackLength()
+    const totalRows = scrollbackLen + rows
+    if (row < 0 || row >= totalRows) return Array.from({ length: cols }, () => emptyCell())
+    const cells =
+      row < scrollbackLen ? t.getScrollbackLine(row) : t.getLine(row - scrollbackLen)
+    if (!cells) return Array.from({ length: cols }, () => emptyCell())
+    return cells.map((cell, col) =>
+      row < scrollbackLen
+        ? convertScrollbackCell(cell, t, row, col, defaultColors)
+        : convertGhosttyCell(cell, t, row - scrollbackLen, col, defaultColors),
+    )
+  }
+
+  function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
     const parts: string[] = []
 
     for (let row = startRow; row <= endRow; row++) {
-      const cells = t.getLine(row)
+      const cells = absoluteLine(row)
       if (!cells) continue
 
       const colStart = row === startRow ? startCol : 0
@@ -462,14 +496,8 @@ export function createGhosttyBackend(
       let line = ""
       for (let col = colStart; col < colEnd; col++) {
         const cell = cells[col]
-        if (!cell || cell.width === 0) continue
-        if (cell.grapheme_len > 0) {
-          line += t.getGraphemeString(row, col)
-        } else if (cell.codepoint === 0) {
-          line += " "
-        } else {
-          line += String.fromCodePoint(cell.codepoint)
-        }
+        if (!cell || cell.char === "") continue
+        line += cell.char
       }
       parts.push(line.replace(/\s+$/, ""))
     }
@@ -478,60 +506,19 @@ export function createGhosttyBackend(
   }
 
   function getCell(row: number, col: number): Cell {
-    const t = ensureTerm()
-    t.update()
-    const cells = t.getLine(row)
-    if (!cells || col >= cells.length) {
-      return {
-        char: "",
-        fg: null,
-        bg: null,
-        bold: false,
-        dim: false,
-        italic: false,
-        underline: false,
-        underlineColor: null,
-        strikethrough: false,
-        inverse: false,
-        blink: false,
-        hidden: false,
-        wide: false,
-        continuation: false,
-        hyperlink: null,
-      }
-    }
-    return convertGhosttyCell(cells[col]!, t, row, col, defaultColors)
+    return absoluteLine(row)[col] ?? emptyCell()
   }
 
   function getLine(row: number): Cell[] {
-    const t = ensureTerm()
-    t.update()
-    const ghosttyCells = t.getLine(row)
-    if (!ghosttyCells) {
-      return Array.from({ length: cols }, () => ({
-        char: "",
-        fg: null,
-        bg: null,
-        bold: false,
-        dim: false,
-        italic: false,
-        underline: false as const,
-        underlineColor: null,
-        strikethrough: false,
-        inverse: false,
-        blink: false,
-        hidden: false,
-        wide: false,
-        continuation: false,
-        hyperlink: null,
-      }))
-    }
-    return ghosttyCells.map((cell, col) => convertGhosttyCell(cell, t, row, col, defaultColors))
+    return absoluteLine(row)
   }
 
   function getLines(): Cell[][] {
     const result: Cell[][] = []
-    for (let row = 0; row < rows; row++) {
+    const t = ensureTerm()
+    t.update()
+    const totalRows = t.getScrollbackLength() + rows
+    for (let row = 0; row < totalRows; row++) {
       result.push(getLine(row))
     }
     return result
