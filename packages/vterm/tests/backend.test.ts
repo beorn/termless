@@ -15,6 +15,13 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 
+  test("blank cells stay empty-string in the cell API", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    const cell = backend.getCell(0, 0)
+    expect(cell.char).toBe("")
+    backend.destroy()
+  })
+
   test("creates backend with custom cols/rows", () => {
     const backend = createVtermBackend({ cols: 120, rows: 40 })
     const scrollback = backend.getScrollback()

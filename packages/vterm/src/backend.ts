@@ -25,7 +25,7 @@ import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
-const BLANK_CELL: Cell = { char: " ", fg: null, bg: null, bold: false, dim: false, italic: false, underline: false, underlineColor: null, strikethrough: false, inverse: false, blink: false, hidden: false, wide: false, continuation: false, hyperlink: null }
+const BLANK_CELL: Cell = { char: "", fg: null, bg: null, bold: false, dim: false, italic: false, underline: false, underlineColor: null, strikethrough: false, inverse: false, blink: false, hidden: false, wide: false, continuation: false, hyperlink: null }
 
 /**
  * Create a full-featured vterm.js backend for termless.
@@ -120,7 +120,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function convertCell(sc: ScreenCell | undefined): Cell {
     if (!sc) return BLANK_CELL
     return {
-      char: sc.char === "" ? " " : sc.char,
+      char: sc.char,
       fg: sc.fg,
       bg: sc.bg,
       bold: sc.bold,
@@ -144,7 +144,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     for (const sc of row ?? []) {
       const continuation = prevWide && sc.char === ""
       cells.push({
-        char: continuation ? "" : sc.char === "" ? " " : sc.char,
+        char: continuation ? "" : sc.char,
         fg: sc.fg,
         bg: sc.bg,
         bold: sc.bold,

@@ -54,18 +54,9 @@ function cellToSummary(cell: Cell): CellSummary {
   }
 }
 
-function isBlankChar(char: string): boolean {
-  return char === "" || char === " "
-}
-
-function charEqual(a: string, b: string): boolean {
-  return a === b || (isBlankChar(a) && isBlankChar(b))
-}
-
 function cellsEqual(a: Cell, b: Cell): boolean {
-  const blankPair = isBlankChar(a.char) && isBlankChar(b.char)
   return (
-    charEqual(a.char, b.char) &&
+    a.char === b.char &&
     rgbEqual(a.fg, b.fg) &&
     rgbEqual(a.bg, b.bg) &&
     a.bold === b.bold &&
@@ -77,8 +68,8 @@ function cellsEqual(a: Cell, b: Cell): boolean {
     a.inverse === b.inverse &&
     a.blink === b.blink &&
     a.hidden === b.hidden &&
-    (blankPair || a.wide === b.wide) &&
-    (blankPair || a.continuation === b.continuation) &&
+    a.wide === b.wide &&
+    a.continuation === b.continuation &&
     a.hyperlink === b.hyperlink
   )
 }

@@ -36,7 +36,7 @@ const BASELINE: Record<string, number> = {
   // xterm segments the ZWJ family 👨‍👩‍👧‍👦 across 4 wide cells and treats VS16
   // ❤️/☀️ as wide (shifting following cells); vterm keeps the family as one
   // cluster in a single cell and widths the VS16 glyphs differently.
-  "wide-cjk-emoji": 9,
+  "wide-cjk-emoji": 13,
   "alt-screen-roundtrip": 0,
   "margins-region-scroll": 0,
   "wrap-pending": 0,
