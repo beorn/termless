@@ -17,7 +17,7 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
 } from "@termless/core"
-import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
+import { encodeKeyToAnsi } from "@termless/core"
 
 // ═══════════════════════════════════════════════════════
 // Backend factory
@@ -25,7 +25,23 @@ import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
-const BLANK_CELL: Cell = { char: "", fg: null, bg: null, bold: false, dim: false, italic: false, underline: false, underlineColor: null, strikethrough: false, inverse: false, blink: false, hidden: false, wide: false, continuation: false, hyperlink: null }
+const BLANK_CELL: Cell = {
+  char: "",
+  fg: null,
+  bg: null,
+  bold: false,
+  dim: false,
+  italic: false,
+  underline: false,
+  underlineColor: null,
+  strikethrough: false,
+  inverse: false,
+  blink: false,
+  hidden: false,
+  wide: false,
+  continuation: false,
+  hyperlink: null,
+}
 
 /**
  * Create a full-featured vterm.js backend for termless.
@@ -40,6 +56,7 @@ const BLANK_CELL: Cell = { char: "", fg: null, bg: null, bold: false, dim: false
  */
 export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let screen: Screen | null = null
+  let unsubscribeParser: (() => void) | null = null
 
   function ensureScreen(): Screen {
     if (!screen) throw new Error("vterm backend not initialized — call init() first")
@@ -47,6 +64,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   }
 
   function init(options: TerminalOptions): void {
+    unsubscribeParser?.()
     screen = createScreen({
       cols: options.cols,
       rows: options.rows,
@@ -58,44 +76,20 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
         }
       },
     })
+    unsubscribeParser = screen.tapParser((event) => {
+      if (event.kind !== "csi" || event.final !== "n" || event.prefix !== "?" || event.params[0] !== 996) return
+      backend.onResponse?.(new TextEncoder().encode("\x1b[?997;1n"))
+    })
   }
 
   function destroy(): void {
+    unsubscribeParser?.()
+    unsubscribeParser = null
     screen = null
   }
 
-  /**
-   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
-   * responses. vterm.js doesn't carry a window pixel size — it's a pure
-   * cell-grid emulator. Synthesize 14t/18t responses so silvery's
-   * `resolveMouseOption()` probe sees the expected shape and switches
-   * to SGR-Pixels (1016) mouse coordinate mode.
-   *
-   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt 96 DPI.
-   * What matters is the ratio matches the backend's cell grid
-   * (one cell = one cell, invariant).
-   */
-  const CELL_W_PX = 8
-  const CELL_H_PX = 17
-
   function feed(data: Uint8Array): void {
-    const s = ensureScreen()
-    s.process(data)
-
-    if (backend.onResponse) {
-      const text = new TextDecoder().decode(data)
-      scanWindowOpQueries(text, (query) => {
-        if (query === "14t") {
-          const heightPx = s.rows * CELL_H_PX
-          const widthPx = s.cols * CELL_W_PX
-          backend.onResponse?.(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-        } else if (query === "18t") {
-          backend.onResponse?.(new TextEncoder().encode(`\x1b[8;${s.rows};${s.cols}t`))
-        } else {
-          backend.onResponse?.(new TextEncoder().encode("\x1b[?997;1n"))
-        }
-      })
-    }
+    ensureScreen().process(data)
   }
 
   function resize(cols: number, rows: number): void {
@@ -202,7 +196,12 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       if (!cells) continue
       const start = row === startRow ? startCol : 0
       const end = row === endRow ? endCol : cells.length
-      parts.push(cells.slice(start, end).map((cell) => cell.char || " ").join(""))
+      parts.push(
+        cells
+          .slice(start, end)
+          .map((cell) => cell.char || " ")
+          .join(""),
+      )
     }
     return parts.join("\n")
   }

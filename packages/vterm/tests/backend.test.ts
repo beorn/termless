@@ -62,6 +62,24 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 
+  test("answers each window-size query exactly once across feed chunks", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+
+    backend.feed(new TextEncoder().encode("\x1b[14t"))
+    backend.feed(new TextEncoder().encode("\x1b[18t"))
+    backend.feed(new TextEncoder().encode("\x1b["))
+    backend.feed(new TextEncoder().encode("18"))
+    backend.feed(new TextEncoder().encode("t"))
+    backend.feed(new TextEncoder().encode("\x1b["))
+    backend.feed(new TextEncoder().encode("?996"))
+    backend.feed(new TextEncoder().encode("n"))
+
+    expect(responses).toEqual(["\x1b[4;384;640t", "\x1b[8;24;80t", "\x1b[8;24;80t", "\x1b[?997;1n"])
+    backend.destroy()
+  })
+
   // ── Colors ──
 
   test("feed ANSI color codes, getCell() has correct fg color", () => {
@@ -746,7 +764,12 @@ describe("createVtermBackend", () => {
 
     const rows = backend.getRows()
     expect(rows.length).toBeGreaterThan(3)
-    const rendered = rows.map((row) => row.map((cell) => cell.char).join("").trim())
+    const rendered = rows.map((row) =>
+      row
+        .map((cell) => cell.char)
+        .join("")
+        .trim(),
+    )
     expect(rendered.some((line) => line.includes("row0"))).toBe(true)
     expect(rendered.some((line) => line.includes("row5"))).toBe(true)
     backend.destroy()
