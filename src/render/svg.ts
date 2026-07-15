@@ -433,7 +433,10 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
       }
       if (!textOpen) {
         parts.push(
-          `<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
+          // xml:space="preserve" is required: without it, XML whitespace
+          // collapsing eats leading/run-of-space characters in tspans, which
+          // desyncs them from the per-character x position lists.
+          `<text xml:space="preserve" x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
         )
         textOpen = true
       }
