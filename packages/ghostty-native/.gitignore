@@ -1,8 +1,0 @@
-# Build artifacts
-*.node
-native/zig-out/
-native/.zig-cache/
-native/zig-cache/
-
-# Ghostty source (cloned by build script)
-native/.ghostty-src/

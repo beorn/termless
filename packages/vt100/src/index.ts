@@ -1,9 +1,0 @@
-export { createVt100Backend } from "./backend.ts"
-
-import { createVt100Backend } from "./backend.ts"
-import type { TerminalBackend, TerminalOptions } from "../../../src/terminal/types.ts"
-
-/** Resolve this backend for the registry. */
-export async function resolve(opts?: Partial<TerminalOptions>): Promise<TerminalBackend> {
-  return createVt100Backend(opts)
-}
