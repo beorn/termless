@@ -10,7 +10,7 @@ harness      compare, replay, assert                       (termless)
 engine       bytes → screen state                          (vterm.js, xterm, ghostty-web, vt100.js)
 ```
 
-Dependencies point down only. Engines know nothing about the harness; the harness consumes engines through [backends](/concepts/backend); runtimes consume both.
+Dependencies point down only. Engines know nothing about the harness; the harness consumes engines through [backends](/concepts/backend). Runtimes consume engines directly as their state authority; they may use Termless in tests and tooling, never as a production runtime dependency.
 
 ## What the engine owns (vterm.js and peers)
 
