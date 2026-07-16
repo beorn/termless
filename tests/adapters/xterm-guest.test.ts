@@ -273,4 +273,13 @@ describe("xtermGuest", () => {
 
     await handle.dispose()
   })
+
+  test("input feed and EOF fail loud when no writable child is attached", async () => {
+    const handle = await xtermGuest({ cols: 10, rows: 2 }).init(createContext(10, 2))
+
+    expect(() => handle.input!.feed!(new TextEncoder().encode("abc"))).toThrow(/writable child/)
+    expect(() => handle.input!.sendEof!()).toThrow(/writable child/)
+
+    await handle.dispose()
+  })
 })

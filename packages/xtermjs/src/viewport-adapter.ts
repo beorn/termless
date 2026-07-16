@@ -485,9 +485,13 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   function writeToChild(data: string): void {
     if (opts.child?.write) {
       opts.child.write(data)
-    } else {
-      opts.child?.stdin?.write(data)
+      return
     }
+    if (opts.child?.stdin) {
+      opts.child.stdin.write(data)
+      return
+    }
+    throw new Error("@termless/xtermjs: cannot forward input without a writable child")
   }
 
   if (opts.child && (opts.child.write || opts.child.stdin)) {
