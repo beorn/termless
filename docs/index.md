@@ -197,7 +197,7 @@ Every backend wraps a real terminal emulator and implements the same interface â
 
 | Backend            | Engine                  | Highlights                                                                           | Type   |
 | ------------------ | ----------------------- | ------------------------------------------------------------------------------------ | ------ |
-| **xtermjs**        | @xterm/headless 5.5     | VS Code's terminal. Most mature, zero native deps.                                   | JS     |
+| **xtermjs**        | @xterm/headless 6.0     | VS Code's terminal. Most mature, zero native deps.                                   | JS     |
 | **ghostty**        | ghostty-web 0.4         | Modern GPU-accelerated parser. Best standards compliance, Kitty keyboard protocol.   | WASM   |
 | **vt100**          | (built-in)              | Pure TypeScript, zero dependencies. Fastest backend, ideal for CI.                   | JS     |
 | **alacritty**      | alacritty_terminal 0.26 | Rust parser via napi-rs. Strong reflow behavior.                                     | Native |

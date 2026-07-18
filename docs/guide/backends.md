@@ -64,7 +64,7 @@ Each backend can be used via factory function (explicit, sync) or string name vi
 
 The default backend. Uses `@xterm/headless` — the same xterm.js terminal emulator used in VS Code's integrated terminal, but without a DOM renderer.
 
-- **Engine**: @xterm/headless 5.5
+- **Engine**: @xterm/headless 6.0
 - **Upstream**: `npm:@xterm/headless`
 - **Best for**: Most testing scenarios. Well-tested, stable, zero native dependencies.
 - **Limitations**: No Kitty keyboard protocol. Emoji width detection may differ from native terminals in headless mode.

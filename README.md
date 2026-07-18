@@ -227,7 +227,7 @@ Every backend implements the same `TerminalBackend` interface — write tests on
 
 | Backend        | Engine                  | What It Is                                                                               | Type   | Default |
 | -------------- | ----------------------- | ---------------------------------------------------------------------------------------- | ------ | ------- |
-| **xtermjs**    | @xterm/headless 5.5     | The terminal emulator inside VS Code. Most battle-tested.                                | JS     | Yes     |
+| **xtermjs**    | @xterm/headless 6.0     | The terminal emulator inside VS Code. Most battle-tested.                                | JS     | Yes     |
 | **ghostty**    | ghostty-web 0.4         | Ghostty's GPU-accelerated VT parser via WASM. Best standards compliance, Kitty keyboard. | WASM   | Yes     |
 | **vt100**      | (built-in)              | Pure TypeScript, zero dependencies. Lightning fast, great for CI.                        | JS     | Yes     |
 | **alacritty**  | alacritty_terminal 0.25 | Alacritty's Rust VT parser via napi-rs. Strong reflow.                                   | Native | No      |
