@@ -39,8 +39,8 @@ await expect(term.output).toContainOutput("a=d,d=i", { timeout: 5000 })
 
 ## Accepts
 
-| View       | Supported |
-| ---------- | --------- |
+| View          | Supported |
+| ------------- | --------- |
 | `term.output` | Yes       |
 
 ## Notes

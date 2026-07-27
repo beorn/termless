@@ -35,11 +35,11 @@ expect(term).not.toHaveScrollbackLines(0)
 
 ## Accepts
 
-| Target                    | Supported |
-| ------------------------- | --------- |
-| `term` (Terminal)         | Yes       |
-| `term.screen`             | No        |
-| `term.cell(r, c)`         | No        |
+| Target            | Supported |
+| ----------------- | --------- |
+| `term` (Terminal) | Yes       |
+| `term.screen`     | No        |
+| `term.cell(r, c)` | No        |
 
 ## See Also
 

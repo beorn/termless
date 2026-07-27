@@ -39,26 +39,26 @@ Two separate buffers, not regions within one:
 - **Normal mode** (default): Primary buffer. Output scrolls, scrollback accumulates above the screen. Used by shells, build tools, inline CLI.
 - **Alt mode** (`\x1b[?1049h`): Separate clean `rows × cols` buffer, no scrollback. Used by fullscreen apps (vim, htop, TUI dashboards). Entering saves normal buffer; exiting restores it.
 
-| Region     | Normal mode              | Alt mode          |
-| ---------- | ------------------------ | ----------------- |
-| screen     | Bottom rows × cols       | Entire alt buffer |
-| scrollback | Lines above screen       | Empty             |
-| buffer     | scrollback + screen      | = screen          |
-| viewport   | Window at viewportTop     | = screen          |
+| Region     | Normal mode           | Alt mode          |
+| ---------- | --------------------- | ----------------- |
+| screen     | Bottom rows × cols    | Entire alt buffer |
+| scrollback | Lines above screen    | Empty             |
+| buffer     | scrollback + screen   | = screen          |
+| viewport   | Window at viewportTop | = screen          |
 
 ## Cross-Reference: Terminology by Terminal
 
 ### Core buffer model (well-documented internals)
 
-| Concept          | Termless                      | Ghostty                                | Kitty                              | xterm.js                  |
-| ---------------- | ----------------------------- | -------------------------------------- | ---------------------------------- | ------------------------- |
-| Visible area     | **screen**                    | screen (screen coordinates)            | screen (`@screen`)                 | viewport (viewportY)      |
-| History above    | **scrollback**                | scrollback buffer                      | scrollback / history buffer        | scrollback                |
-| Everything       | **buffer**                    | absolute buffer (absolute coordinates) | text (`@text` = screen+scrollback) | buffer (`buffer.active`)  |
-| Alt screen       | **altScreen** mode            | alternate screen buffer                | secondary screen (`@alternate`)    | alternate (`buffer.type`) |
+| Concept          | Termless                   | Ghostty                                | Kitty                              | xterm.js                  |
+| ---------------- | -------------------------- | -------------------------------------- | ---------------------------------- | ------------------------- |
+| Visible area     | **screen**                 | screen (screen coordinates)            | screen (`@screen`)                 | viewport (viewportY)      |
+| History above    | **scrollback**             | scrollback buffer                      | scrollback / history buffer        | scrollback                |
+| Everything       | **buffer**                 | absolute buffer (absolute coordinates) | text (`@text` = screen+scrollback) | buffer (`buffer.active`)  |
+| Alt screen       | **altScreen** mode         | alternate screen buffer                | secondary screen (`@alternate`)    | alternate (`buffer.type`) |
 | Scroll position  | **viewport** / viewportTop | viewportY (0=bottom)                   | scrolled_by                        | viewportY (0=bottom)      |
-| Single character | **cell**                      | GhosttyCell                            | CPUCell / GPUCell                  | IBufferCell               |
-| Character row    | **row**                       | row                                    | line (LineBuf)                     | line (IBufferLine)        |
+| Single character | **cell**                   | GhosttyCell                            | CPUCell / GPUCell                  | IBufferCell               |
+| Character row    | **row**                    | row                                    | line (LineBuf)                     | line (IBufferLine)        |
 
 ### Additional terminals (implement VT100/ECMA-48 buffer model)
 
@@ -91,14 +91,14 @@ Silvery operates at a higher level (React component tree → rendered cells), no
 
 ### Standards
 
-| Standard                                                                                               | Relevance                                                                              |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| [ECMA-48 / ISO 6429](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/) | CSI/OSC sequences — the foundation. Defines SGR, cursor control, screen modes.         |
-| [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)                     | De facto terminal standard. Extends ECMA-48 with mouse, paste, true color, alt screen. |
-| `smcup`/`rmcup` (terminfo)                                                                             | Enter/exit alternate screen — `\x1b[?1049h` / `\x1b[?1049l`.                           |
-| [DEC 2026](https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036)                  | Synchronized output — batch rendering to prevent tearing.                              |
-| [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                          | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
-| [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)                 | Clickable hyperlinks in terminal output.                                               |
+| Standard                                                                                           | Relevance                                                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [ECMA-48 / ISO 6429](https://ecma-international.org/publications-and-standards/standards/ecma-48/) | CSI/OSC sequences — the foundation. Defines SGR, cursor control, screen modes.         |
+| [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)                 | De facto terminal standard. Extends ECMA-48 with mouse, paste, true color, alt screen. |
+| `smcup`/`rmcup` (terminfo)                                                                         | Enter/exit alternate screen — `\x1b[?1049h` / `\x1b[?1049l`.                           |
+| [DEC 2026](https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036)              | Synchronized output — batch rendering to prevent tearing.                              |
+| [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                      | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
+| [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)             | Clickable hyperlinks in terminal output.                                               |
 
 See also the [silvery terminal matrix](https://silvery.dev/reference/terminal-matrix) for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
 
@@ -122,20 +122,20 @@ A cell holds one character with attributes:
 
 Every old name below still works as a deprecated alias; prefer the new spelling.
 
-| Old (deprecated) | New | Notes |
-| --- | --- | --- |
-| `TerminalReadable` | `Terminal` | The read contract |
-| `Terminal` (harness) | `TestTerminal` | Extends `Terminal` |
-| `RegionView` / `RowView` | `Region` / `Row` | |
-| `CellView` | `Cell` | Accessors return `Cell`; position comes from the query |
-| `CursorState` `{x,y}` | `Cursor` `{col,row}` | |
-| `RGB` | `Color` `{r,g,b,index?}` | |
-| `OutputView` / `term.out` | `RawOutput` / `term.output` | |
-| `TextPosition` | `TextMatch` `{text,row,col,cells}` | |
-| `getLine` / `getLines(): Cell[][]` | `getRow` / `getRows` | row = cells (text lines keep `getLines`) |
-| `viewportOffset` / `totalLines` / `screenLines` | `viewportTop` / `totalRows` / `screenRows` | |
-| `find` / `findAll` | `findText` / `findAllText` | return `TextMatch` |
-| `MouseOptions.button: 0\|1\|2` | `"left"\|"middle"\|"right"` | numbers still accepted |
-| `UnderlineStyle: false` | `"none"` | `false` still accepted |
+| Old (deprecated)                                | New                                        | Notes                                                  |
+| ----------------------------------------------- | ------------------------------------------ | ------------------------------------------------------ |
+| `TerminalReadable`                              | `Terminal`                                 | The read contract                                      |
+| `Terminal` (harness)                            | `TestTerminal`                             | Extends `Terminal`                                     |
+| `RegionView` / `RowView`                        | `Region` / `Row`                           |                                                        |
+| `CellView`                                      | `Cell`                                     | Accessors return `Cell`; position comes from the query |
+| `CursorState` `{x,y}`                           | `Cursor` `{col,row}`                       |                                                        |
+| `RGB`                                           | `Color` `{r,g,b,index?}`                   |                                                        |
+| `OutputView` / `term.out`                       | `RawOutput` / `term.output`                |                                                        |
+| `TextPosition`                                  | `TextMatch` `{text,row,col,cells}`         |                                                        |
+| `getLine` / `getLines(): Cell[][]`              | `getRow` / `getRows`                       | row = cells (text lines keep `getLines`)               |
+| `viewportOffset` / `totalLines` / `screenLines` | `viewportTop` / `totalRows` / `screenRows` |                                                        |
+| `find` / `findAll`                              | `findText` / `findAllText`                 | return `TextMatch`                                     |
+| `MouseOptions.button: 0\|1\|2`                  | `"left"\|"middle"\|"right"`                | numbers still accepted                                 |
+| `UnderlineStyle: false`                         | `"none"`                                   | `false` still accepted                                 |
 
 Kept unchanged: `waitFor`; `Region.getText()`/`getLines(): string[]`; the `buffer`/`screen`/`viewport`/`scrollback` regions; `Recording` `commands`/`io`.

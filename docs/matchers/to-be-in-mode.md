@@ -57,11 +57,11 @@ await expect(term).toBeInMode("altScreen", { timeout: 5000 })
 
 ## Accepts
 
-| Target                    | Supported |
-| ------------------------- | --------- |
-| `term` (Terminal)         | Yes       |
-| `term.screen`             | No        |
-| `term.cell(r, c)`         | No        |
+| Target            | Supported |
+| ----------------- | --------- |
+| `term` (Terminal) | Yes       |
+| `term.screen`     | No        |
+| `term.cell(r, c)` | No        |
 
 ## See Also
 

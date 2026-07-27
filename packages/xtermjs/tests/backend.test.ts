@@ -434,7 +434,12 @@ describe("createXtermBackend", () => {
 
     const rows = backend.getRows()
     expect(rows.length).toBeGreaterThan(3)
-    const rendered = rows.map((row) => row.map((cell) => cell.char).join("").trim())
+    const rendered = rows.map((row) =>
+      row
+        .map((cell) => cell.char)
+        .join("")
+        .trim(),
+    )
     expect(rendered.some((line) => line.includes("row0"))).toBe(true)
     expect(rendered.some((line) => line.includes("row5"))).toBe(true)
     backend.destroy()

@@ -79,13 +79,17 @@ export type TerminalFixtureOptions = SyncTestTerminalOptions
 // Track active fixtures for cleanup
 const activeFixtures: TestTerminal[] = []
 
-// Register cleanup hook — runs after each test to close all terminal fixtures
-afterEach(async () => {
-  for (const t of activeFixtures) {
-    await t.close()
-  }
-  activeFixtures.length = 0
-})
+// Register cleanup only while Vitest is collecting a suite. Keeping package
+// import side-effect-free outside Vitest lets Node consumers and publishability
+// checks load @termless/test without requiring an active runner.
+if (process.env.VITEST) {
+  afterEach(async () => {
+    for (const t of activeFixtures) {
+      await t.close()
+    }
+    activeFixtures.length = 0
+  })
+}
 
 // ═══════════════════════════════════════════════════════
 // Fixture factories

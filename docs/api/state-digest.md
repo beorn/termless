@@ -10,7 +10,7 @@ import { terminalStateDigest, diffTerminalStates } from "@termless/core"
 import type { TerminalStateDigest, TerminalStateDiff } from "@termless/core"
 ```
 
-A **state digest** is a plain, serializable snapshot of everything that defines a terminal's observable state: geometry, cursor, title, modes, and the visible grid as text lines plus a per-row style signature. It answers one question — *are these two terminals in the same state?* — with one vocabulary, for any [backend](/concepts/backend) and for a live terminal versus a rehydrated one.
+A **state digest** is a plain, serializable snapshot of everything that defines a terminal's observable state: geometry, cursor, title, modes, and the visible grid as text lines plus a per-row style signature. It answers one question — _are these two terminals in the same state?_ — with one vocabulary, for any [backend](/concepts/backend) and for a live terminal versus a rehydrated one.
 
 It reads through the shared [`Terminal`](/api/terminal) contract, so the same equivalence check works across every emulator instead of each test suite hand-rolling its own comparison.
 
@@ -18,11 +18,11 @@ It reads through the shared [`Terminal`](/api/terminal) contract, so the same eq
 
 ```typescript
 interface TerminalStateDigest {
-  size: { cols: number; rows: number }   // terminal geometry
-  cursor: DigestCursor                    // row/col + visibility + shape
+  size: { cols: number; rows: number } // terminal geometry
+  cursor: DigestCursor // row/col + visibility + shape
   title: string
-  modes: Record<TerminalMode, boolean>    // every TerminalMode, fixed order
-  rows: DigestRow[]                        // the visible grid (the screen)
+  modes: Record<TerminalMode, boolean> // every TerminalMode, fixed order
+  rows: DigestRow[] // the visible grid (the screen)
 }
 
 interface DigestCursor {
@@ -33,8 +33,8 @@ interface DigestCursor {
 }
 
 interface DigestRow {
-  text: string    // the row's characters (trailing blanks trimmed by default)
-  style: string   // canonical, run-length-encoded per-cell style signature
+  text: string // the row's characters (trailing blanks trimmed by default)
+  style: string // canonical, run-length-encoded per-cell style signature
 }
 ```
 
@@ -85,7 +85,7 @@ interface TerminalStateDiff {
   title?: { a: string; b: string }
   modes?: { mode: TerminalMode; a: boolean; b: boolean }[]
   rows?: { row: number; a: DigestRow; b: DigestRow }[]
-  formatted: string   // "Terminal states are identical" when equal
+  formatted: string // "Terminal states are identical" when equal
 }
 ```
 
@@ -107,8 +107,8 @@ Because a one-cell color change leaves the text intact but changes the row's `st
 ```typescript
 const diff = diffTerminalStates(before, after)
 expect(diff.rows).toHaveLength(1)
-expect(diff.rows![0].row).toBe(1)           // divergence is on row 1
-expect(diff.rows![0].a.text).toBe(diff.rows![0].b.text)   // text unchanged
+expect(diff.rows![0].row).toBe(1) // divergence is on row 1
+expect(diff.rows![0].a.text).toBe(diff.rows![0].b.text) // text unchanged
 expect(diff.rows![0].a.style).not.toBe(diff.rows![0].b.style)
 ```
 

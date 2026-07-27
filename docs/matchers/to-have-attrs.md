@@ -15,15 +15,15 @@ expect(cell).toHaveAttrs(attrs: CellAttrs)
 
 ## Parameters
 
-| Parameter             | Type                        | Description                           |
-| --------------------- | --------------------------- | ------------------------------------- |
-| `attrs.bold`          | `boolean`                   | Bold styling                          |
-| `attrs.italic`        | `boolean`                   | Italic styling                        |
-| `attrs.dim`           | `boolean`                   | Dim/faint styling                     |
-| `attrs.strikethrough` | `boolean`                   | Strikethrough styling                 |
-| `attrs.inverse`       | `boolean`                   | Inverse/reverse video                 |
-| `attrs.wide`          | `boolean`                   | Double-width character                |
-| `attrs.underline`     | `boolean \| UnderlineStyle` | `true` = any style, or specific style |
+| Parameter             | Type                        | Description                            |
+| --------------------- | --------------------------- | -------------------------------------- |
+| `attrs.bold`          | `boolean`                   | Bold styling                           |
+| `attrs.italic`        | `boolean`                   | Italic styling                         |
+| `attrs.dim`           | `boolean`                   | Dim/faint styling                      |
+| `attrs.strikethrough` | `boolean`                   | Strikethrough styling                  |
+| `attrs.inverse`       | `boolean`                   | Inverse/reverse video                  |
+| `attrs.wide`          | `boolean`                   | Double-width character                 |
+| `attrs.underline`     | `boolean \| UnderlineStyle` | `true` = any style, or specific style  |
 | `attrs.fg`            | `string \| Color`           | Foreground color (hex or Color object) |
 | `attrs.bg`            | `string \| Color`           | Background color (hex or Color object) |
 

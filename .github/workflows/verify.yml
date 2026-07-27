@@ -65,12 +65,17 @@ jobs:
             name=$(node -e "console.log(require('$GITHUB_WORKSPACE/$dir/package.json').name)")
             private=$(node -e "const p=require('$GITHUB_WORKSPACE/$dir/package.json'); console.log(p.private || false)")
             [ "$private" = "true" ] && continue
+            [ "$name" = "@termless/test" ] && continue
 
             node -e "import('$name').then(m => console.log('✓ $name:', Object.keys(m).slice(0,3).join(', ')))" 2>&1 || {
               echo "❌ import('$name') failed"
               exit 1
             }
           done
+
+          cp "$GITHUB_WORKSPACE/tests/packed-vitest-smoke.test.ts" .
+          TERMLESS_PACKED_SMOKE=1 ./node_modules/.bin/vitest run packed-vitest-smoke.test.ts
+          echo "✓ @termless/test verified inside its supported Vitest runner"
 
           rm -rf "$tmpdir"
           echo "✓ All packages verified"

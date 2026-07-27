@@ -1,6 +1,6 @@
 {
   "name": "@termless/swash-render",
-  "version": "0.8.1",
+  "version": "0.8.3",
   "description": "Pure-native swash text rasterizer for termless — cell grid → RGBA via napi-rs, browser-grade color-emoji fidelity with no Skia",
   "keywords": [
     "headless",

@@ -18,14 +18,14 @@ this page is the site-reader summary.
 
 Every `<suite>/` directory provides exactly this shape:
 
-| Path          | Role                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------ |
-| `README.md`   | Provenance: upstream URL, exact license and how it was verified, pinned upstream commit, fetch date, attribution notice. |
+| Path          | Role                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `README.md`   | Provenance: upstream URL, exact license and how it was verified, pinned upstream commit, fetch date, attribution notice.                   |
 | `fetch.ts`    | Standalone Bun script; fetches upstream sources at a **pinned** ref (an unpinned fetch makes "reproducible" a lie the day upstream moves). |
-| `extract.ts`  | Standalone Bun script; **deterministic** — re-running fetch + extract with no arguments reproduces the checked-in tree byte-identically. |
-| `raw/`        | Optional, license-gated: upstream test text, minimally structured (one `.jsonl` per upstream file). |
-| `cases/`      | Executable cases (schema below).                                                                 |
-| `COVERAGE.md` | Generated extraction-pipeline health (blocks found / converted / rejection reasons) — **not** engine conformance results. |
+| `extract.ts`  | Standalone Bun script; **deterministic** — re-running fetch + extract with no arguments reproduces the checked-in tree byte-identically.   |
+| `raw/`        | Optional, license-gated: upstream test text, minimally structured (one `.jsonl` per upstream file).                                        |
+| `cases/`      | Executable cases (schema below).                                                                                                           |
+| `COVERAGE.md` | Generated extraction-pipeline health (blocks found / converted / rejection reasons) — **not** engine conformance results.                  |
 
 Scripts are standalone (`node:*` imports only, no Termless imports) so a suite
 regenerates from a bare clone.
