@@ -77,5 +77,8 @@ jobs:
           TERMLESS_PACKED_SMOKE=1 ./node_modules/.bin/vitest run packed-vitest-smoke.test.ts
           echo "✓ @termless/test verified inside its supported Vitest runner"
 
+          ./node_modules/.bin/termless --help >/dev/null
+          echo "✓ installed termless binary starts"
+
           rm -rf "$tmpdir"
           echo "✓ All packages verified"

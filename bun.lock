@@ -46,7 +46,7 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "devDependencies": {
         "@napi-rs/cli": "^3.7.3",
       },
@@ -56,14 +56,14 @@
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "bin": {
         "termless": "./src/cli.ts",
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.12.1",
         "@resvg/resvg-js": "^2.6.0",
-        "@silvery/commander": "^0.6.0",
+        "@silvery/commander": "^0.18.2",
         "react": "^19.0.0",
         "silvery": "^0.16.6",
         "zod": "^3.24.0",
@@ -85,7 +85,7 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "@napi-rs/canvas": "^1.0.2",
         "ghostty-web": "^0.4.0",
@@ -96,28 +96,28 @@
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "@xterm/headless": "^6.0.0",
       },
@@ -128,7 +128,7 @@
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "devDependencies": {
         "@napi-rs/cli": "^3.7.3",
       },
@@ -138,7 +138,7 @@
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
         "vitest": ">=2.0.0",
@@ -146,7 +146,7 @@
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "vt100.js": "^0.1.3",
       },
@@ -156,14 +156,14 @@
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "vt220.js": "^0.1.3",
       },
@@ -173,7 +173,7 @@
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "vterm.js": "^0.5.1",
       },
@@ -186,7 +186,7 @@
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
@@ -196,14 +196,14 @@
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "peerDependencies": {
         "@termless/core": "^0.8.1",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
@@ -685,13 +685,11 @@
 
     "@shikijs/vscode-textmate": ["@shikijs/vscode-textmate@10.0.2", "", {}, "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg=="],
 
-    "@silvery/ansi": ["@silvery/ansi@0.23.0", "", { "dependencies": { "@silvery/color": "0.23.0", "string-width": "^8.2.2" } }, "sha512-2ASMhl5RugMcKIBZE7/0M65nI4fmdaMF12+QE3EA6IUycnBJlwQBolHjjDkLpCT//Fx0lCOxOr3cPsKlXSfVsw=="],
+    "@silvery/ansi": ["@silvery/ansi@0.18.1", "", { "dependencies": { "@silvery/color": "0.18.1", "string-width": "^8.2.0" } }, "sha512-nL0r8iuA9lMgzhrlkEhFYch4rjsfo+6OTVz+XXmLm1f6uo8EyVGJFfG+mMtfeLmqPjLVAgaAiDwdKm+6dGyrtw=="],
 
-    "@silvery/color": ["@silvery/color@0.23.0", "", {}, "sha512-ZV1xwMRWBCzRrVUyrwdtYr4tcfuGKjdPyHw4HfzcLZpOaQMawyPEtZ+p5Yd1XqE+mF8wfcb7tQNB/HGpmoNSQw=="],
+    "@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
-    "@silvery/commander": ["@silvery/commander@0.6.1", "", { "dependencies": { "@silvery/ansi": ">=0.1.0", "@silvery/style": ">=0.1.0", "commander": ">=12.0.0" }, "peerDependencies": { "zod": ">=3.0.0" }, "optionalPeers": ["zod"] }, "sha512-BGEpK0CRKD9dA95FMfxNzjijpM9IBjKuJoSa4253XEuxe6Com5QcAfHD6jHMz8WaUPrhn6mLaElBJKrRWDUKUA=="],
-
-    "@silvery/style": ["@silvery/style@0.1.1", "", { "dependencies": { "@silvery/ansi": ">=0.1.0", "@silvery/color": ">=0.1.0" } }, "sha512-Ullo38c6dMTVJtxVRDUxjYXQ6NHtUlg4oi3t1Xc6jlWIK3puMUFmOXRffd/XiTTmOFBoWvwPjGy7iVwYurB8sg=="],
+    "@silvery/commander": ["@silvery/commander@0.18.2", "", { "dependencies": { "@silvery/ansi": "0.18.1", "commander": ">=13.0.0", "zod": ">=3.0.0" } }, "sha512-XFjNSc2Hbb8GObX+bJYx4A+mKurHUo6HkkXHDvmTx53kUrWn1A2BaZIcLIE2nfb/7atON1SCj3a4FTUjJ0827g=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

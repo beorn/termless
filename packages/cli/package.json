@@ -1,6 +1,6 @@
 {
   "name": "@termless/cli",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "CLI and MCP server for termless — terminal capture, screenshots, and AI agent integration",
   "keywords": [
     "ai-agent",
@@ -49,7 +49,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@resvg/resvg-js": "^2.6.0",
-    "@silvery/commander": "^0.6.0",
+    "@silvery/commander": "^0.18.2",
     "react": "^19.0.0",
     "silvery": "^0.16.6",
     "zod": "^3.24.0"

@@ -1,6 +1,6 @@
 {
   "name": "@termless/ghostty-native",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Native Ghostty backend for termless — Ghostty VT Zig module via napigen N-API bindings",
   "keywords": [
     "ghostty",
