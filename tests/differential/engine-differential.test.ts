@@ -47,7 +47,7 @@ const BASELINE: Record<string, number> = {
   // leaves the linked runs ("LINKED", "IDLINK") with no underline.
   "osc8-links": 12,
   "cursor-style": 0,
-  "tabs": 0,
+  tabs: 0,
 }
 
 const results = runEngineDifferential(CORPUS)
@@ -60,8 +60,7 @@ const results = runEngineDifferential(CORPUS)
   const lines: string[] = ["", "══ engine differential: vterm guest vs xterm reference ══"]
   for (const r of results) {
     const base = BASELINE[r.name] ?? Number.NaN
-    const status =
-      r.diffCount > base ? "REGRESSED" : r.diffCount < base ? "IMPROVED" : "ok"
+    const status = r.diffCount > base ? "REGRESSED" : r.diffCount < base ? "IMPROVED" : "ok"
     lines.push(
       `  ${r.name.padEnd(22)} diff=${String(r.diffCount).padStart(3)} baseline=${String(base).padStart(3)} [${status}]`,
     )

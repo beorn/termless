@@ -35,11 +35,11 @@ expect(term).not.toHaveTitle("untitled")
 
 ## Accepts
 
-| Target                    | Supported |
-| ------------------------- | --------- |
-| `term` (Terminal)         | Yes       |
-| `term.screen`             | No        |
-| `term.cell(r, c)`         | No        |
+| Target            | Supported |
+| ----------------- | --------- |
+| `term` (Terminal) | Yes       |
+| `term.screen`     | No        |
+| `term.cell(r, c)` | No        |
 
 ## Notes
 

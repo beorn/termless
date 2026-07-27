@@ -43,11 +43,11 @@ The snapshot includes a header with terminal dimensions and cursor state, follow
 
 ## Accepts
 
-| Target                    | Supported |
-| ------------------------- | --------- |
-| `term` (Terminal)         | Yes       |
-| `term.screen`             | No        |
-| `term.cell(r, c)`         | No        |
+| Target            | Supported |
+| ----------------- | --------- |
+| `term` (Terminal) | Yes       |
+| `term.screen`     | No        |
+| `term.cell(r, c)` | No        |
 
 ## Notes
 

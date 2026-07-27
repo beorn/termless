@@ -51,13 +51,13 @@ Only **`output`** and **`resize`** events mutate the terminal — they feed byte
 and apply a new size. Everything else is **surfaced in the result for
 assertions** rather than applied:
 
-| Kind         | Effect                                                                        |
-| ------------ | ----------------------------------------------------------------------------- |
-| `output`     | Feeds `bytesB64` to the target; counted in `applied`.                         |
-| `resize`     | Applies `size` to the target; counted in `applied`.                           |
-| `input`      | **Not** fed — these are bytes a client *sent*; replaying them as output would corrupt the screen. Present for assertions only. |
-| `lifecycle`  | Appends `state` to `result.lifecycle`.                                         |
-| `truncation` | Appends `retainedFromOffset` to `result.truncations` (history older than this offset is gone). |
+| Kind         | Effect                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `output`     | Feeds `bytesB64` to the target; counted in `applied`.                                                                          |
+| `resize`     | Applies `size` to the target; counted in `applied`.                                                                            |
+| `input`      | **Not** fed — these are bytes a client _sent_; replaying them as output would corrupt the screen. Present for assertions only. |
+| `lifecycle`  | Appends `state` to `result.lifecycle`.                                                                                         |
+| `truncation` | Appends `retainedFromOffset` to `result.truncations` (history older than this offset is gone).                                 |
 
 ## Replaying
 

@@ -41,11 +41,7 @@ function feed(backend: TerminalBackend, bytes: Uint8Array): void {
  * owns destruction. Throws loudly if the backend did not yield a full grid —
  * that means init/feed silently failed and any diff would be meaningless.
  */
-function render(
-  create: () => TerminalBackend,
-  engineLabel: string,
-  s: EngineStream,
-): TerminalBackend {
+function render(create: () => TerminalBackend, engineLabel: string, s: EngineStream): TerminalBackend {
   const backend = create()
   backend.init({ cols: s.size.cols, rows: s.size.rows })
   feed(backend, s.bytes)

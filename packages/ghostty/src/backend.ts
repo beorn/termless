@@ -473,8 +473,7 @@ export function createGhosttyBackend(
     const scrollbackLen = t.getScrollbackLength()
     const totalRows = scrollbackLen + rows
     if (row < 0 || row >= totalRows) return Array.from({ length: cols }, () => emptyCell())
-    const cells =
-      row < scrollbackLen ? t.getScrollbackLine(row) : t.getLine(row - scrollbackLen)
+    const cells = row < scrollbackLen ? t.getScrollbackLine(row) : t.getLine(row - scrollbackLen)
     if (!cells) return Array.from({ length: cols }, () => emptyCell())
     return cells.map((cell, col) =>
       row < scrollbackLen

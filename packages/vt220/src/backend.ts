@@ -180,7 +180,13 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
       if (!cells) continue
       const start = row === startRow ? startCol : 0
       const end = row === endRow ? endCol : cells.length
-      parts.push(cells.slice(start, end).map((cell) => cell.char || " ").join("").replace(/\s+$/, ""))
+      parts.push(
+        cells
+          .slice(start, end)
+          .map((cell) => cell.char || " ")
+          .join("")
+          .replace(/\s+$/, ""),
+      )
     }
     return parts.join("\n")
   }
