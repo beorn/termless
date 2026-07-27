@@ -91,14 +91,14 @@ Silvery operates at a higher level (React component tree → rendered cells), no
 
 ### Standards
 
-| Standard                                                                                               | Relevance                                                                              |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| [ECMA-48 / ISO 6429](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/) | CSI/OSC sequences — the foundation. Defines SGR, cursor control, screen modes.         |
-| [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)                     | De facto terminal standard. Extends ECMA-48 with mouse, paste, true color, alt screen. |
-| `smcup`/`rmcup` (terminfo)                                                                             | Enter/exit alternate screen — `\x1b[?1049h` / `\x1b[?1049l`.                           |
-| [DEC 2026](https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036)                  | Synchronized output — batch rendering to prevent tearing.                              |
-| [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                          | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
-| [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)                 | Clickable hyperlinks in terminal output.                                               |
+| Standard                                                                                           | Relevance                                                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [ECMA-48 / ISO 6429](https://ecma-international.org/publications-and-standards/standards/ecma-48/) | CSI/OSC sequences — the foundation. Defines SGR, cursor control, screen modes.         |
+| [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)                 | De facto terminal standard. Extends ECMA-48 with mouse, paste, true color, alt screen. |
+| `smcup`/`rmcup` (terminfo)                                                                         | Enter/exit alternate screen — `\x1b[?1049h` / `\x1b[?1049l`.                           |
+| [DEC 2026](https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036)              | Synchronized output — batch rendering to prevent tearing.                              |
+| [Kitty Keyboard Protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)                      | Unambiguous key identification. Supported by Ghostty, Kitty, WezTerm, foot.            |
+| [OSC 8 Hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)             | Clickable hyperlinks in terminal output.                                               |
 
 See also the [silvery terminal matrix](https://silvery.dev/reference/terminal-matrix) for the full capability matrix (colors, keyboard protocol, graphics, clipboard) across all terminals.
 

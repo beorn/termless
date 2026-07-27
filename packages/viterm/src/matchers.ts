@@ -19,7 +19,8 @@
  * only adds vitest-specific wrappers (type declarations + snapshot matchers).
  */
 
-import { expect, Snapshots } from "vitest"
+import { expect } from "vitest"
+import * as Vitest from "vitest"
 import type { MatcherState } from "vitest"
 import type {
   TerminalReadable,
@@ -64,6 +65,35 @@ import {
   type CellAttrs,
   type CursorProps,
 } from "../../../src/assertions.ts"
+
+interface SnapshotComposables {
+  toMatchSnapshot(
+    this: MatcherState,
+    received: unknown,
+    propertiesOrHint?: object | string,
+    hint?: string,
+  ): { pass: boolean; message: () => string }
+}
+
+function matchSnapshot(this: MatcherState, received: unknown, hint?: string) {
+  const snapshots = (Vitest as typeof Vitest & { Snapshots?: SnapshotComposables }).Snapshots
+  if (snapshots) return snapshots.toMatchSnapshot.call(this, received, hint)
+
+  // Vitest 2 and 3 predate the composable snapshot API. Keep their supported
+  // peer range working through the built-in assertion exposed at runtime.
+  try {
+    ;(expect(received) as unknown as { toMatchSnapshot(hint?: string): void }).toMatchSnapshot(hint)
+    return {
+      pass: true,
+      message: () => "Expected snapshot not to match",
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      message: () => (error instanceof Error ? error.message : String(error)),
+    }
+  }
+}
 
 // =============================================================================
 // Helper: Convert AssertionResult to vitest matcher format
@@ -448,7 +478,7 @@ export const terminalMatchers = {
   toMatchTerminalSnapshot(this: MatcherState, received: unknown, options?: { name?: string }) {
     assertTerminalReadable(received, "toMatchTerminalSnapshot")
     const snapshot = formatTerminalSnapshot(received)
-    return Snapshots.toMatchSnapshot.call(this, snapshot, options?.name)
+    return matchSnapshot.call(this, snapshot, options?.name)
   },
 
   /** Match terminal SVG screenshot against a snapshot. */
@@ -456,7 +486,7 @@ export const terminalMatchers = {
     assertTerminalReadable(received, "toMatchSvgSnapshot")
     const svgOptions: SvgScreenshotOptions | undefined = options?.theme ? { theme: options.theme } : undefined
     const svg = screenshotSvg(received, svgOptions)
-    return Snapshots.toMatchSnapshot.call(this, svg, options?.name)
+    return matchSnapshot.call(this, svg, options?.name)
   },
 }
 
