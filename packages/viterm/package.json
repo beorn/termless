@@ -1,6 +1,6 @@
 {
   "name": "@termless/test",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Playwright-style Vitest integration for terminal apps — fixtures, terminal matchers, snapshots, PTY support, and xterm.js-backed tests",
   "keywords": [
     "ansi",
