@@ -19,7 +19,8 @@
  * only adds vitest-specific wrappers (type declarations + snapshot matchers).
  */
 
-import { expect } from "vitest"
+import { expect, Snapshots } from "vitest"
+import type { MatcherState } from "vitest"
 import type {
   TerminalReadable,
   CursorStyle,
@@ -444,44 +445,18 @@ export const terminalMatchers = {
   // ── Snapshot Matchers (TerminalReadable, vitest-only) ──
 
   /** Match terminal content against a snapshot. */
-  toMatchTerminalSnapshot(received: unknown, options?: { name?: string }) {
+  toMatchTerminalSnapshot(this: MatcherState, received: unknown, options?: { name?: string }) {
     assertTerminalReadable(received, "toMatchTerminalSnapshot")
     const snapshot = formatTerminalSnapshot(received)
-
-    // Delegate to Vitest's built-in snapshot machinery
-    try {
-      expect(snapshot).toMatchSnapshot(options?.name)
-      return {
-        pass: true,
-        message: () => `Expected terminal snapshot not to match`,
-      }
-    } catch (error) {
-      return {
-        pass: false,
-        message: () => (error instanceof Error ? error.message : String(error)),
-      }
-    }
+    return Snapshots.toMatchSnapshot.call(this, snapshot, options?.name)
   },
 
   /** Match terminal SVG screenshot against a snapshot. */
-  toMatchSvgSnapshot(received: unknown, options?: { name?: string; theme?: SvgTheme }) {
+  toMatchSvgSnapshot(this: MatcherState, received: unknown, options?: { name?: string; theme?: SvgTheme }) {
     assertTerminalReadable(received, "toMatchSvgSnapshot")
     const svgOptions: SvgScreenshotOptions | undefined = options?.theme ? { theme: options.theme } : undefined
     const svg = screenshotSvg(received, svgOptions)
-
-    // Delegate to Vitest's built-in snapshot machinery
-    try {
-      expect(svg).toMatchSnapshot(options?.name)
-      return {
-        pass: true,
-        message: () => `Expected SVG terminal snapshot not to match`,
-      }
-    } catch (error) {
-      return {
-        pass: false,
-        message: () => (error instanceof Error ? error.message : String(error)),
-      }
-    }
+    return Snapshots.toMatchSnapshot.call(this, svg, options?.name)
   },
 }
 
