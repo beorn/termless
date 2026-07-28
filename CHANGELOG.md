@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- **Bounded native-canvas screenshots** — `renderTerminalPng()` now sizes inferred renders to the visible viewport instead of the scrollback-backed buffer, and every Skia surface has a fail-loud 64-MiPixel ceiling checked before allocation. The renderer uses a 1×1 measurement canvas, applies DPR once at the measured resize, and reports attempted dimensions when a render or resample exceeds the ceiling.
 - **Ghostty backend initialization under Bun** — `initGhostty()` now provides the browser-style `self` global expected by `ghostty-web`, so the backend and native-canvas screenshot tests run directly in Bun without a browser harness.
 
 ## 0.6.0 - 2026-04-09

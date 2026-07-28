@@ -182,6 +182,10 @@ const DEFAULT_THEME: Required<CanvasTheme> = {
   brightWhite: "#c0caf5",
 }
 
+// 64 MiPixels = 256 MiB for one raw RGBA surface. This still permits an 8K
+// frame with headroom while bounding Skia's additional backing-store cost.
+const MAX_CANVAS_PIXELS = 64 * 1024 * 1024
+
 // ── DOM shim (lazy, idempotent) ──
 
 let domShimApplied = false
@@ -481,6 +485,20 @@ function toUtf8String(bytes: string | Uint8Array): string {
   return new TextDecoder().decode(bytes)
 }
 
+function assertCanvasPixelCeiling(width: number, height: number, surface: "render" | "target"): void {
+  if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
+    throw new RangeError(
+      `Termless canvas ${surface} dimensions must be positive safe integers; received ${width}x${height}`,
+    )
+  }
+  const pixels = width * height
+  if (!Number.isSafeInteger(pixels) || pixels > MAX_CANVAS_PIXELS) {
+    throw new RangeError(
+      `Termless canvas ${surface} ${width}x${height} (${pixels} pixels) exceeds the ${MAX_CANVAS_PIXELS}-pixel ceiling`,
+    )
+  }
+}
+
 /**
  * Render raw ANSI bytes to a PNG via ghostty-web's CanvasRenderer + native
  * Skia canvas. This is the preferred entry point when the ANSI source is
@@ -517,6 +535,18 @@ export async function renderAnsiPng(
   const cursorStyle = mapCursorStyle(opts.cursorStyle)
   const cursorBlink = opts.cursorBlink ?? false
 
+  if (opts.targetWidth != null && opts.targetHeight != null) {
+    assertCanvasPixelCeiling(opts.targetWidth, opts.targetHeight, "target")
+  }
+  // Reject absurd terminal geometry before either the WASM cell grid or Skia
+  // can allocate. The exact post-font-measurement dimensions are checked again
+  // immediately before CanvasRenderer.resize().
+  const estimatedCellWidth = opts.cellWidth ?? Math.ceil(fontSize * 0.6)
+  const estimatedCellHeight = opts.cellHeight ?? Math.ceil(fontSize * 1.25)
+  const estimatedWidth = Math.ceil(cols * estimatedCellWidth * dpr)
+  const estimatedHeight = Math.ceil(rows * estimatedCellHeight * dpr)
+  assertCanvasPixelCeiling(estimatedWidth, estimatedHeight, "render")
+
   // 1. DOM shim (idempotent).
   ensureDomShim(dpr)
 
@@ -534,13 +564,10 @@ export async function renderAnsiPng(
   // 4. Create the WASM terminal.
   const terminal = ghostty.createTerminal(cols, rows)
 
-  // 5. Create the target canvas. CanvasRenderer.resize() will overwrite the
-  //    dimensions, but @napi-rs/canvas requires a positive initial size. Pick
-  //    a generous default that matches the eventual ratio so we don't pay for
-  //    an unused buffer.
-  const initialW = Math.max(1, cols * Math.ceil(fontSize * 0.6) * dpr)
-  const initialH = Math.max(1, rows * Math.ceil(fontSize * 1.25) * dpr)
-  let canvas = createCanvas(initialW, initialH) as Canvas
+  // 5. CanvasRenderer needs a positive bootstrap canvas to measure fonts. Keep
+  //    it at 1×1 so the only target-sized allocation happens after the exact
+  //    measured geometry passes the ceiling below.
+  let canvas = createCanvas(1, 1) as Canvas
 
   // 6. Instantiate CanvasRenderer with our shim'd canvas.
   const renderer = new mod.CanvasRenderer(canvas, {
@@ -560,6 +587,9 @@ export async function renderAnsiPng(
     renderer.metrics.height = opts.cellHeight
     renderer.metrics.baseline = Math.min(renderer.metrics.baseline, opts.cellHeight - 1)
   }
+  const renderWidth = Math.ceil(cols * renderer.metrics.width * dpr)
+  const renderHeight = Math.ceil(rows * renderer.metrics.height * dpr)
+  assertCanvasPixelCeiling(renderWidth, renderHeight, "render")
   renderer.resize(cols, rows)
   renderer.setCursorBlink(cursorBlink)
   if (opts.hideCursor && typeof renderer.setCursorVisible === "function") {
@@ -644,11 +674,20 @@ function inferCols(terminal: TerminalReadable): number | null {
 }
 
 function inferRows(terminal: TerminalReadable): number | null {
+  let lineCount: number
   try {
-    const lines = terminal.getLines()
-    return lines.length || null
+    lineCount = terminal.getLines().length
+    if (lineCount === 0) return null
   } catch {
     return null
+  }
+  try {
+    const scrollback = terminal.getScrollback()
+    const viewportRows = scrollback.screenRows ?? scrollback.screenLines
+    if (!Number.isSafeInteger(viewportRows) || viewportRows <= 0) return lineCount
+    return Math.min(lineCount, viewportRows)
+  } catch {
+    return lineCount
   }
 }
 

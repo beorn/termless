@@ -109,6 +109,44 @@ describe("renderAnsiPng", () => {
     expect(png.length).toBeGreaterThan(0)
   })
 
+  test("throws a dimensional diagnostic before allocating a surface above the pixel ceiling", async () => {
+    await expect(
+      renderAnsiPng("x", {
+        cols: 10,
+        rows: 2,
+        targetWidth: 100_000,
+        targetHeight: 100_000,
+      }),
+    ).rejects.toThrow("Termless canvas target 100000x100000 (10000000000 pixels) exceeds the 67108864-pixel ceiling")
+  })
+
+  test("checks estimated render geometry before allocating the terminal grid", async () => {
+    await expect(
+      renderAnsiPng("x", {
+        cols: 100_000,
+        rows: 100_000,
+        fontSize: 16,
+        dpr: 2,
+      }),
+    ).rejects.toThrow(
+      "Termless canvas render 2000000x4000000 (8000000000000 pixels) exceeds the 67108864-pixel ceiling",
+    )
+  })
+
+  test("applies device-pixel ratio exactly once when resizing the render surface", async () => {
+    const result = await renderAnsiPng("x", {
+      cols: 10,
+      rows: 2,
+      cellWidth: 8,
+      cellHeight: 12,
+      dpr: 2,
+      returnMeta: true,
+    })
+
+    expect(result.meta.width).toBe(160)
+    expect(result.meta.height).toBe(48)
+  })
+
   // Gated on the km-owned fixture: standalone termless clones don't have
   // apps/km-tui/tests/fixtures, so this canonical regression test skips there.
   const hasCanonicalFixture = existsSync(FIXTURE_ANSI) && existsSync(FIXTURE_PNG)
@@ -176,6 +214,19 @@ describe("renderTerminalPng", () => {
     const result = await renderTerminalPng(backend, { cols: 20, rows: 4, returnMeta: true })
     expect(result.meta.cols).toBe(20)
     expect(result.meta.rows).toBe(4)
+
+    backend.destroy()
+  })
+
+  test("infers canvas rows from the viewport instead of the scrollback-backed buffer", async () => {
+    const backend: TerminalBackend = createGhosttyBackend(undefined, ghostty)
+    backend.init({ cols: 10, rows: 2 })
+    backend.feed(new TextEncoder().encode("one\r\ntwo\r\nthree\r\nfour"))
+
+    expect(backend.getLines().length).toBeGreaterThan(backend.getScrollback().screenRows)
+
+    const result = await renderTerminalPng(backend, { returnMeta: true })
+    expect(result.meta.rows).toBe(2)
 
     backend.destroy()
   })
