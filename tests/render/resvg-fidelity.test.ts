@@ -215,6 +215,49 @@ describe("resvg letter-spacing (bug 2)", () => {
     },
     60000,
   )
+
+  test.skipIf(!CANVAS_AVAILABLE)(
+    "leading and boundary spaces retain their cells in raster output",
+    async () => {
+      const marker = await decode(
+        await screenshotPng(
+          readableFromCells([
+            cell("1", { fg: { r: 0x8f, g: 0x95, b: 0xa1 } }),
+            cell(".", { fg: { r: 0x8f, g: 0x95, b: 0xa1 } }),
+            cell(" "),
+            ...[..."22541"].map((ch) => cell(ch)),
+          ]),
+          { scale: SCALE },
+        ),
+      )
+      expect(cellBandInk(marker, 2), "marker gap cell gained ink").toBe(0)
+      expect(cellBandInk(marker, 3), "content collapsed into the marker gap").toBeGreaterThan(20)
+
+      const continuation = await decode(
+        await screenshotPng(readableFromCells([...Array.from({ length: 4 }, () => cell(" ")), cell("W")]), {
+          scale: SCALE,
+        }),
+      )
+      for (let col = 0; col < 4; col++) {
+        expect(cellBandInk(continuation, col), `hanging-indent cell ${col} gained ink`).toBe(0)
+      }
+      expect(cellBandInk(continuation, 4), "continuation glyph collapsed to column zero").toBeGreaterThan(20)
+
+      const inline = await decode(
+        await screenshotPng(
+          readableFromCells([
+            ...[..."@ci"].map((ch) => cell(ch, { fg: { r: 0x81, g: 0xa1, b: 0xc1 } })),
+            cell(" "),
+            ...[..."diagnosing"].map((ch) => cell(ch)),
+          ]),
+          { scale: SCALE },
+        ),
+      )
+      expect(cellBandInk(inline, 3), "inline boundary space gained ink").toBe(0)
+      expect(cellBandInk(inline, 4), "inline text collapsed into its boundary space").toBeGreaterThan(20)
+    },
+    60000,
+  )
 })
 
 /** Raster one glyph alone via raw resvg, with a caller-chosen `font` config. */

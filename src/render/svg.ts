@@ -656,7 +656,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
     // emit it explicitly so consumers can override via the SVG element if
     // they want a different fit strategy.
     parts.push(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
+      `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
     )
     if (opts.embedFonts) parts.push(embeddedFontFaceDefs())
     parts.push(`<rect width="100%" height="100%" fill="${themeBg}"/>`)
@@ -688,7 +688,7 @@ export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreensho
   // viewBox + preserveAspectRatio mirror the fast-path emission so chrome-mode
   // SVGs scale predictably under rasterizers that ignore intrinsic dimensions.
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" preserveAspectRatio="xMidYMid meet">`,
   )
   if (opts.embedFonts) parts.push(embeddedFontFaceDefs())
 
