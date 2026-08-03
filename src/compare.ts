@@ -26,8 +26,11 @@
  *   GUI access + spawns a real window.
  */
 
-import type { TestTerminal, SvgScreenshotOptions } from "./terminal/types.ts"
+import { spawnSync } from "node:child_process"
+
 import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
+
+import type { TestTerminal, SvgScreenshotOptions } from "./terminal/types.ts"
 
 export interface CrossRendererOptions {
   /**
@@ -203,22 +206,21 @@ export async function captureCrossRenderer(
   }
 
   // Compute perceptual hashes for canvas + peekaboo (SVG is XML, not a
-  // raster — skipped). pHash is dep-free via sips on macOS; falls back
-  // to a no-op zero-hash on other platforms or when sips is missing.
+  // raster — skipped). dHash uses the same cross-platform canvas boundary
+  // as the renderer. A decode failure remains non-fatal and leaves that
+  // renderer's hash null.
   let canvasHash: string | null = null
   let peekHash: string | null = null
-  if (process.platform === "darwin") {
+  try {
+    canvasHash = await dHash(canvasBytes)
+  } catch {
+    // preserve capture output when hashing fails
+  }
+  if (peekabooBytes) {
     try {
-      canvasHash = await dHash(canvasBytes)
+      peekHash = await dHash(peekabooBytes)
     } catch {
-      // ignore — leaves hash null
-    }
-    if (peekabooBytes) {
-      try {
-        peekHash = await dHash(peekabooBytes)
-      } catch {
-        // ignore — leaves hash null
-      }
+      // preserve capture output when hashing fails
     }
   }
 
@@ -290,7 +292,6 @@ async function captureRealTerminal(opts: {
   /** Working directory for the spawned shell. */
   cwd?: string
 }): Promise<Uint8Array> {
-  const { spawnSync } = await import("node:child_process")
   const { mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } = await import("node:fs")
   const { tmpdir } = await import("node:os")
   const { join } = await import("node:path")
@@ -453,8 +454,8 @@ async function captureRealTerminal(opts: {
 /** Compute a 64-bit difference hash for a PNG. Returns a 16-char hex string. */
 export async function dHash(pngBytes: Uint8Array): Promise<string> {
   // @napi-rs/canvas is already Termless's cross-platform raster boundary.
-  // The former `sips` subprocess silently returned an all-zero hash on Linux
-  // and Windows, making every visual comparison look identical there.
+  // The former platform subprocess silently returned an all-zero hash on
+  // Linux and Windows, making every visual comparison look identical there.
   const { createCanvas, loadImage } = await import("@napi-rs/canvas")
   const image = await loadImage(pngBytes)
   const canvas = createCanvas(9, 8)
@@ -495,7 +496,6 @@ export function hashDistance(a: string, b: string): number {
 
 /** Get CGWindowIDs (numeric) for all on-screen windows owned by an app. */
 function listCGWindowIds(bundle: string): string[] {
-  const { spawnSync } = require("node:child_process") as typeof import("node:child_process")
   const swiftSnippet = `import Foundation
 import CoreGraphics
 let opts: CGWindowListOption = [.optionOnScreenOnly]
@@ -523,7 +523,6 @@ for w in windows {
 function listWindowIds(app: keyof typeof APP_BUNDLE_NAMES): string[] {
   // sync version of peekaboo's listGhosttyWindowIds — applies to any
   // terminal app, returns AppleScript window ids comma-separated.
-  const { spawnSync } = require("node:child_process") as typeof import("node:child_process")
   const bundle = APP_BUNDLE_NAMES[app]
   const r = spawnSync(
     "osascript",

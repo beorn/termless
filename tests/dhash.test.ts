@@ -1,7 +1,8 @@
 import { createCanvas } from "@napi-rs/canvas"
 import { describe, expect, test } from "vitest"
 
-import { dHash, hashDistance } from "../src/compare.ts"
+import { createVt100Backend } from "../packages/vt100/src/index.ts"
+import { captureCrossRenderer, createTerminal, dHash, hashDistance } from "../src/index.ts"
 
 function gradientPng(horizontal: boolean): Uint8Array {
   const canvas = createCanvas(128, 128)
@@ -21,5 +22,24 @@ describe("dHash", () => {
 
     expect(horizontal).not.toBe("0".repeat(16))
     expect(hashDistance(horizontal, vertical)).toBe(64)
+  })
+
+  test("captureCrossRenderer hashes the canvas without enabling peekaboo", async () => {
+    const terminal = createTerminal({ backend: createVt100Backend(), cols: 20, rows: 4 })
+    terminal.feed("hash me")
+
+    try {
+      const result = await captureCrossRenderer(terminal, {})
+
+      expect(result.report).toMatchObject({
+        hashes: {
+          canvas: expect.stringMatching(/^[0-9a-f]{16}$/),
+          peekaboo: null,
+        },
+        hashDistances: { canvasVsPeekaboo: null },
+      })
+    } finally {
+      await terminal.close()
+    }
   })
 })
