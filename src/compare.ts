@@ -441,7 +441,7 @@ async function captureRealTerminal(opts: {
 }
 
 // ─────────────────────────────────────────────────────────
-// Image similarity — perceptual hash (no external deps)
+// Image similarity — perceptual hash
 // ─────────────────────────────────────────────────────────
 //
 // pHash via Difference Hash (dHash): downscale to 9×8 grayscale, compute
@@ -452,69 +452,33 @@ async function captureRealTerminal(opts: {
 
 /** Compute a 64-bit difference hash for a PNG. Returns a 16-char hex string. */
 export async function dHash(pngBytes: Uint8Array): Promise<string> {
-  // Decode PNG via playwright's image — heavy. Alternative: shell out to
-  // sips (macOS) for resize+grayscale, then read raw bytes.
-  const { spawnSync } = await import("node:child_process")
-  const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs")
-  const { tmpdir } = await import("node:os")
-  const { join } = await import("node:path")
-  const tmp = mkdtempSync(join(tmpdir(), "dhash-"))
-  try {
-    const inPath = join(tmp, "in.png")
-    const outPath = join(tmp, "out.png")
-    writeFileSync(inPath, pngBytes)
-    // Resize to 9×8 grayscale BMP (raw-ish format easy to parse).
-    // sips -s format bmp -s formatOptions normal -z 8 9 -s pixelsPerInchH 72 ...
-    const r = spawnSync("sips", ["-s", "format", "png", "-z", "8", "9", inPath, "--out", outPath], { stdio: "ignore" })
-    if (r.status !== 0) {
-      // Fallback: return null-like hash so similarity returns Infinity
-      return "0".repeat(16)
-    }
-    const png = readFileSync(outPath)
-    // We don't have a PNG decoder in dep-free TS. Use Bun's built-in
-    // image bitmap via Canvas — but Bun has no canvas. Workaround: shell
-    // out again to sips to convert to raw RGB.
-    const rawPath = join(tmp, "raw.bmp")
-    const r2 = spawnSync("sips", ["-s", "format", "bmp", outPath, "--out", rawPath], { stdio: "ignore" })
-    if (r2.status !== 0) return "0".repeat(16)
-    const bmp = readFileSync(rawPath)
-    // BMP header: 14 bytes file header + 40 bytes DIB header for BITMAPINFOHEADER.
-    // Pixel data starts at offset given by the file header (bytes 10-13).
-    const view = new DataView(bmp.buffer, bmp.byteOffset, bmp.byteLength)
-    const pixOffset = view.getUint32(10, true)
-    const width = view.getInt32(18, true)
-    const height = view.getInt32(22, true)
-    const bpp = view.getUint16(28, true)
-    if (bpp !== 24 && bpp !== 32) return "0".repeat(16)
-    const bytesPerPx = bpp / 8
-    const rowSize = Math.floor((bpp * width + 31) / 32) * 4
-    // BMP rows are bottom-up by default.
-    const gray = new Uint8Array(Math.abs(width) * Math.abs(height))
-    for (let row = 0; row < Math.abs(height); row++) {
-      const srcRow = height > 0 ? Math.abs(height) - 1 - row : row
-      for (let col = 0; col < Math.abs(width); col++) {
-        const idx = pixOffset + srcRow * rowSize + col * bytesPerPx
-        // BMP is BGR (or BGRA)
-        const b = bmp[idx] ?? 0
-        const g = bmp[idx + 1] ?? 0
-        const r = bmp[idx + 2] ?? 0
-        gray[row * Math.abs(width) + col] = Math.round(0.299 * r + 0.587 * g + 0.114 * b)
-      }
-    }
-    // 8 rows × 9 cols → 8 rows × 8 bits = 64 bits
-    let hash = 0n
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const left = gray[row * Math.abs(width) + col] ?? 0
-        const right = gray[row * Math.abs(width) + col + 1] ?? 0
-        if (left < right) hash |= 1n << BigInt(row * 8 + col)
-      }
-    }
-    void png
-    return hash.toString(16).padStart(16, "0")
-  } finally {
-    rmSync(tmp, { recursive: true, force: true })
+  // @napi-rs/canvas is already Termless's cross-platform raster boundary.
+  // The former `sips` subprocess silently returned an all-zero hash on Linux
+  // and Windows, making every visual comparison look identical there.
+  const { createCanvas, loadImage } = await import("@napi-rs/canvas")
+  const image = await loadImage(pngBytes)
+  const canvas = createCanvas(9, 8)
+  const context = canvas.getContext("2d")
+  context.drawImage(image, 0, 0, 9, 8)
+  const rgba = context.getImageData(0, 0, 9, 8).data
+  const gray = new Uint8Array(9 * 8)
+  for (let pixel = 0; pixel < gray.length; pixel++) {
+    const offset = pixel * 4
+    const red = rgba[offset] ?? 0
+    const green = rgba[offset + 1] ?? 0
+    const blue = rgba[offset + 2] ?? 0
+    gray[pixel] = Math.round(0.299 * red + 0.587 * green + 0.114 * blue)
   }
+
+  let hash = 0n
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const left = gray[row * 9 + col] ?? 0
+      const right = gray[row * 9 + col + 1] ?? 0
+      if (left < right) hash |= 1n << BigInt(row * 8 + col)
+    }
+  }
+  return hash.toString(16).padStart(16, "0")
 }
 
 /** Hamming distance between two hex hashes (64 bits / 16 hex chars). */
