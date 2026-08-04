@@ -21,9 +21,44 @@ Termless supports [10 backends](/guide/backends), each wrapping a different term
 | `@termless/ghostty` | Ghostty 0.4.0   | `ghostty-web` (WASM)   | Yes    | Yes            | Yes   |
 | `@termless/vt100`   | Pure TypeScript | Zero native deps       | No     | No             | No    |
 
-xterm.js is the **reference backend** -- it has the widest adoption, passes the most conformance tests, and is what Silvery's test infrastructure (`createTermless()`) uses by default. Divergences from xterm.js are considered bugs in the other backend or in our ANSI output.
+xterm.js is the **reference backend** -- it has the widest adoption, passes the most conformance tests, and is what Silvery's test infrastructure (`createTermless()`) uses by default. Divergences from xterm.js are usually bugs in the other backend or in our ANSI output.
+
+**Usually, not always.** Being the reference means being the *fixed point of comparison*, not being right about everything. Where the reference itself is the less faithful of the two, that is recorded rather than smoothed over -- see the **vterm vs xterm.js** section below, where xterm.js is the degrading side in four of six known divergences.
 
 For the full capability matrix across all 10 backends, see the [Backend Capabilities](/guide/backends) page or [terminfo.dev](https://terminfo.dev).
+
+## vterm vs xterm.js
+
+vterm is the production shell guest; xterm.js is the differential reference it is measured against. Those are different jobs, and the reason for the split is not that vterm is a lighter xterm.js -- **on most of the points where the two disagree, vterm is the faithful one and xterm.js is the side that degrades.**
+
+Six divergences are known and asserted. In four of them vterm reports what the terminal actually said and xterm.js flattens it:
+
+| #  | Divergence                              | xterm.js                                  | vterm                                     | Faithful     |
+| -- | --------------------------------------- | ----------------------------------------- | ----------------------------------------- | ------------ |
+| D1 | ZWJ emoji clustering                    | one wide cell per sub-emoji               | one wide cell for the whole cluster       | neither\*    |
+| D2 | OSC 8 hyperlink presentation            | auto-underlines linked cells              | stores the link, does not force underline | neither\*\*  |
+| D3 | DECSCUSR cursor shape                   | hardcodes `block`                         | reports the real shape (underline/bar)    | **vterm**    |
+| D4 | DECTCEM cursor visibility               | always reports visible                    | reports real hide/show                    | **vterm**    |
+| D5 | Fancy underline styles                  | collapses curly/double/dotted to plain    | reports `underlineStyle`                  | **vterm**    |
+| D6 | Narrowing reflow at `scrollback: 0`     | truncates the row, drops the overflow     | rewraps downward, content preserved       | **vterm**    |
+
+\* Real terminals disagree on D1 too; single non-ZWJ emoji agree across both.
+\*\* The Silvery `Cell` vocabulary has no hyperlink slot, so on D2 **the link itself is dropped by both backends.** Only the underline decoration differs. This one bites anything that renders links -- see below.
+
+**So the answer to "why vterm" is not performance or dependency count.** It is that a UI which draws a bar cursor, hides the cursor, uses a dotted underline, or narrows a pane with no scrollback gets the truth from vterm and a flattened approximation from xterm.js. Three of those four are ordinary things for a terminal UI to do.
+
+### If you are designing text decoration, read D5 and D2 together
+
+They interact in a way that is easy to miss:
+
+- **D5** means a decoration such as a dotted underline survives on vterm and silently becomes a plain underline on xterm.js. A design that distinguishes two kinds of text *by underline style alone* stops distinguishing them on the reference backend.
+- **D2** means the hyperlink target is dropped by **both** backends. Retiring xterm.js fixes D5 and does nothing for D2.
+
+The practical consequence: if a design needs links to be both visually distinct and actually resolvable, D5 is a backend question and D2 is a `Cell`-vocabulary question. Solving the first does not touch the second.
+
+### Source
+
+These are executable, not prose-only. Each entry is asserted in `packages/vterm/tests/vterm-guest-differential.test.ts`, which runs both emulators side by side and fails if the divergence *set* changes -- so a fix, a regression, or a new divergence all break the test rather than quietly editing this table's meaning. The header of that file is the authoritative catalog; this section is its readable form.
 
 ## Known Divergences
 
