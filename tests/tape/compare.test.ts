@@ -201,12 +201,23 @@ describe("diff mode", () => {
   })
 
   test("diff with single backend falls back to side-by-side", async () => {
-    const result = await compareTape(SIMPLE_TAPE, {
-      backends: [vt100Spec()],
-      mode: "diff",
-    })
+    // Asserted as the title's literal claim: `composeDiff` returns
+    // `composeSideBySide(screenshots)` when there are fewer than two, so the
+    // fallback output should BE the side-by-side output. Previously this only
+    // checked `composedSvg` was defined, which the diff path satisfies too —
+    // the test would have passed even if the fallback had never fired.
+    const [fellBack, sideBySide] = await Promise.all([
+      compareTape(SIMPLE_TAPE, { backends: [vt100Spec()], mode: "diff" }),
+      compareTape(SIMPLE_TAPE, { backends: [vt100Spec()], mode: "side-by-side" }),
+    ])
 
-    expect(result.composedSvg).toBeDefined()
+    expect(fellBack.composedSvg).toBe(sideBySide.composedSvg)
+
+    // And none of the artifacts the real diff path emits — the sibling test
+    // above asserts these positively for two backends, so their absence here is
+    // what distinguishes "fell back" from "ran diff and produced something".
+    expect(fellBack.composedSvg).not.toContain("Pixel diff vs baseline")
+    expect(fellBack.composedSvg).not.toContain("data-diff-overlay")
   })
 })
 
