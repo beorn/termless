@@ -22,10 +22,14 @@ vterm is the sole production shell **guest** (`@si/vterm/21016-terminal-runtime`
 **`@termless/web-player` — KEEPS xterm.js. Settled, on merit.**
 It imports `@xterm/xterm` (the full browser package, not `@xterm/headless`) and calls `terminal.open(element)` to mount into the DOM. vterm cannot do this and is not meant to: it has no DOM renderer at all — no `document`/`HTMLElement`/`canvas` references anywhere in `packages/vterm/src`, no `browser` field, a single export. Browser playback is a different problem from being a terminal emulator, and the two packages are not substitutes. This is a keep with a reason, not a deferral.
 
-**`@termless/peekaboo` — NOT settled here. Belongs with the `session.ts` decision.**
-It uses `@xterm/headless` plus `createXtermBackend` — the **backend** seam, the same class as `packages/cli/src/session.ts`, which is explicitly ruled to need its own bead and its own differential before anything changes. Calling peekaboo a "separate product that keeps xterm on merit" would smuggle a backend-seam decision through as a product exemption. It gets the same treatment as session.ts: a differential showing a non-xterm backend satisfies its actual use cases, or an explicit keep with evidence. Neither exists yet.
+**`@termless/peekaboo` — MOVED to vterm (2026-08-04). Settled, and not by implication.**
+It used `createXtermBackend` for its **data path** only (`getText`/`getCell`/`getCursor`) behind a real terminal app — the same `TerminalBackend` seam as `packages/cli/src/session.ts`, not a DOM dependency. That is what discriminates it from web-player: web-player's keep is *structural* (vterm has no DOM renderer, so `terminal.open(element)` is impossible), while peekaboo's "merit" was only that nobody had checked.
 
-*Noted while checking:* peekaboo declares `@termless/xtermjs` as a dependency but imports it by relative path (`../../xtermjs/src/backend.ts`), bypassing its own declaration. Unrelated to the retirement question, worth fixing on its own.
+The divergence bites harder here than anywhere else in the codebase. peekaboo exists to be authoritative about what a real terminal app is doing, and the xterm adapter hardcodes cursor shape to `block` and visibility to `visible` — so it reported a visible block cursor for an app that had hidden the cursor and asked for a beam. Confidently wrong about precisely the thing peekaboo is consulted for. Guarded by `packages/peekaboo/tests/data-path-vterm.test.ts`, which runs everywhere because `visual: false` needs no OS automation.
+
+Ruled by @chief on the evidence rather than swept along with the session default — the distinction Track 2 exists to preserve.
+
+*Fixed at the same time:* peekaboo declared `@termless/xtermjs` as a peer dependency while importing it by relative path (`../../xtermjs/src/backend.ts`), and carried a direct `@xterm/headless` dependency it never imported. The peer dep now names `@termless/vterm` and the unused direct dependency is gone.
 
 ## Packages
 
@@ -38,7 +42,7 @@ It uses `@xterm/headless` plus `createXtermBackend` — the **backend** seam, th
 | `@termless/vterm`      | Full-featured vterm.js backend (100% terminfo.dev coverage)                | Bun + Node.js | Active                 |
 | `@termless/alacritty`  | Alacritty backend (alacritty_terminal via napi-rs)                         | Bun + Node.js | Needs Rust build       |
 | `@termless/wezterm`    | WezTerm backend (wezterm-term via napi-rs)                                 | Bun + Node.js | Needs Rust build       |
-| `@termless/peekaboo`   | OS-level terminal automation (xterm.js + real app)                         | Bun + Node.js | Active (macOS)         |
+| `@termless/peekaboo`   | OS-level terminal automation (vterm data path + real app)                  | Bun + Node.js | Active (macOS)         |
 | `@termless/web-player` | Browser xterm.js player for `.cast` / `.tape` recordings                   | Browser       | Active                 |
 | `@termless/vt100-rust` | Rust vt100 crate via napi-rs                                               | Bun + Node.js | Needs Rust build       |
 | `@termless/libvterm`   | neovim's libvterm via WASM                                                 | Bun + Node.js | Needs Emscripten build |
@@ -68,7 +72,7 @@ It uses `@xterm/headless` plus `createXtermBackend` — the **backend** seam, th
         ├── @termless/vt100-rust (Rust napi-rs)
         ├── @termless/libvterm (C via Emscripten WASM)
         ├── @termless/kitty (C built from GPL source)
-        ├── @termless/peekaboo (xterm.js + OS automation)
+        ├── @termless/peekaboo (vterm data path + OS automation)
         └── @termless/web-player (@xterm/xterm browser playback)
 ```
 

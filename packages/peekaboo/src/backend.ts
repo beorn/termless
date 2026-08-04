@@ -1,25 +1,32 @@
 /**
  * Peekaboo backend for termless.
  *
- * Combines a headless xterm.js backend (for data) with a real terminal app
- * (for visual verification). Data methods delegate to the xterm backend.
- * Visual methods launch a terminal app and take screenshots via screencapture.
+ * Combines a headless emulator (for data) with a real terminal app (for visual
+ * verification). Data methods delegate to the data backend. Visual methods
+ * launch a terminal app and take screenshots via screencapture.
  *
  * Architecture:
  * 1. A real terminal app is launched running the command (for screenshots)
- * 2. A separate PTY process runs the same command, piping output to xterm.js (for data)
+ * 2. A separate PTY process runs the same command, piping output to the data
+ *    backend (for getText/getCell/getCursor/…)
  * 3. takeScreenshot() captures the real terminal app for visual comparison
  *
  * IMPORTANT: Steps 1 and 2 are separate OS processes. The visual screenshot and
- * the xterm.js data come from different process instances and may diverge. See
+ * the emulator data come from different process instances and may diverge. See
  * the createPeekabooBackend() JSDoc for details and implications.
  *
- * The "data path" (getText, getCell, etc.) uses xterm.js for speed/accuracy.
+ * The "data path" (getText, getCell, etc.) uses **vterm**, the production engine
+ * (@si/vterm/21016). It was xterm.js until 2026-08-04. The swap matters more
+ * here than anywhere else in the codebase: peekaboo exists to be authoritative
+ * about what a real terminal app is doing, and the xterm adapter hardcodes
+ * cursor shape to `block` and visibility to `visible`, so it would confidently
+ * report a visible block cursor for an app that had hidden the cursor and asked
+ * for a beam — wrong about precisely the thing peekaboo is consulted for.
  * The "visual path" (takeScreenshot) uses the real terminal for fidelity.
  */
 
 import { spawnSync } from "node:child_process"
-import { createXtermBackend } from "../../xtermjs/src/backend.ts"
+import { createVtermBackend } from "../../vterm/src/backend.ts"
 import { spawnPty, type PtyHandle } from "../../../src/terminal/pty.ts"
 import { exec, execDetached, readFileAsBuffer } from "./exec.ts"
 import type {
@@ -50,7 +57,7 @@ export interface PeekabooOptions {
 export interface PeekabooBackend extends TerminalBackend {
   /** Take a real screenshot of the terminal app window (returns PNG buffer). Requires visual=true. */
   takeScreenshot(): Promise<Buffer>
-  /** Spawn a command in the PTY, feeding output to both xterm.js and the real terminal. */
+  /** Spawn a command in the PTY, feeding output to both the data backend and the real terminal. */
   spawnCommand(command: string[], opts?: { env?: Record<string, string>; cwd?: string }): Promise<PtyHandle>
   /** The terminal app being used for visual verification (null if visual=false). */
   readonly terminalApp: TerminalApp | null
@@ -396,22 +403,22 @@ const DEFAULT_ROWS = 24
 /**
  * Create a peekaboo backend for termless.
  *
- * Wraps an xterm.js headless backend for data operations and optionally
+ * Wraps a headless vterm backend for data operations and optionally
  * launches a real terminal app for visual verification via screenshots.
  *
  * Data flow:
- *   PTY → xterm.js backend (headless, for getText/getCell/etc.)
+ *   PTY → vterm backend (headless, for getText/getCell/etc.)
  *   PTY → real terminal app (visual, for takeScreenshot)
  *
  * **Known limitation — dual-process divergence:**
  *
  * In visual mode, `spawnCommand()` starts TWO independent processes:
  * 1. `launchTerminalApp()` — opens a real terminal app running the command (for screenshots)
- * 2. `spawnPty()` — spawns a separate PTY feeding xterm.js (for data: getText, getCell, etc.)
+ * 2. `spawnPty()` — spawns a separate PTY feeding vterm (for data: getText, getCell, etc.)
  *
  * These are separate OS processes with independent state. The screenshot
  * (`takeScreenshot()`) captures the real terminal app, while data methods
- * (`getText()`, `getCell()`, etc.) read from the xterm.js backend. Because the
+ * (`getText()`, `getCell()`, etc.) read from the vterm backend. Because the
  * two processes run the same command independently, their output can diverge at
  * any moment — different timing, different random values, different interleaving.
  *
@@ -422,7 +429,7 @@ const DEFAULT_ROWS = 24
  *   that cross-reference data and screenshots.
  * - Data-only mode (visual=false) uses a single process and is fully consistent.
  *
- * A future fix would pipe a single PTY's output to both xterm.js and the terminal
+ * A future fix would pipe a single PTY's output to both the data backend and the terminal
  * app, eliminating the dual-process issue.
  *
  * Usage:
@@ -430,15 +437,16 @@ const DEFAULT_ROWS = 24
  *   backend.init({ cols: 80, rows: 24 })
  *   const pty = await backend.spawnCommand(["bun", "km"])
  *   await new Promise(r => setTimeout(r, 2000))
- *   const text = backend.getText()        // from xterm.js (PTY #2)
+ *   const text = backend.getText()        // from vterm (PTY #2)
  *   const png = await backend.takeScreenshot()  // from real terminal (PTY #1, may differ!)
  */
 export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   const app = opts?.app ?? "ghostty"
   const visual = opts?.visual ?? false
 
-  // Delegate data operations to xterm.js backend
-  const xterm = createXtermBackend()
+  // Delegate data operations to vterm — the production engine (@si/vterm/21016).
+  // Named for its ROLE, not its engine: the next swap should not need a rename.
+  const dataBackend = createVtermBackend()
 
   let initialized = false
   let currentCols = DEFAULT_COLS
@@ -448,14 +456,14 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   // ── TerminalBackend: Lifecycle ──
 
   function init(options: TerminalOptions): void {
-    xterm.init(options)
+    dataBackend.init(options)
     currentCols = options.cols
     currentRows = options.rows
     initialized = true
   }
 
   function destroy(): void {
-    xterm.destroy()
+    dataBackend.destroy()
     if (appHandle) {
       // TerminalBackend.destroy is sync but we MUST close the window
       // synchronously here — async close() is fire-and-forget and the
@@ -474,66 +482,66 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
     initialized = false
   }
 
-  // ── TerminalBackend: Data flow (delegated to xterm) ──
+  // ── TerminalBackend: Data flow (delegated to the data backend) ──
 
   function feed(data: Uint8Array): void {
-    xterm.feed(data)
+    dataBackend.feed(data)
   }
 
   function resize(cols: number, rows: number): void {
     currentCols = cols
     currentRows = rows
-    xterm.resize(cols, rows)
+    dataBackend.resize(cols, rows)
   }
 
   function reset(): void {
-    xterm.reset()
+    dataBackend.reset()
   }
 
-  // ── TerminalBackend: Read operations (delegated to xterm) ──
+  // ── TerminalBackend: Read operations (delegated to the data backend) ──
 
   function getText(): string {
-    return xterm.getText()
+    return dataBackend.getText()
   }
 
   function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
-    return xterm.getTextRange(startRow, startCol, endRow, endCol)
+    return dataBackend.getTextRange(startRow, startCol, endRow, endCol)
   }
 
   function getCell(row: number, col: number): Cell {
-    return xterm.getCell(row, col)
+    return dataBackend.getCell(row, col)
   }
 
   function getLine(row: number): Cell[] {
-    return xterm.getLine(row)
+    return dataBackend.getLine(row)
   }
 
   function getLines(): Cell[][] {
-    return xterm.getLines()
+    return dataBackend.getLines()
   }
 
   function getCursor(): CursorState {
-    return xterm.getCursor()
+    return dataBackend.getCursor()
   }
 
   function getMode(mode: TerminalMode): boolean {
-    return xterm.getMode(mode)
+    return dataBackend.getMode(mode)
   }
 
   function getTitle(): string {
-    return xterm.getTitle()
+    return dataBackend.getTitle()
   }
 
   function getScrollback(): ScrollbackState {
-    return xterm.getScrollback()
+    return dataBackend.getScrollback()
   }
 
   function scrollViewport(delta: number): void {
-    xterm.scrollViewport(delta)
+    dataBackend.scrollViewport(delta)
   }
 
   function encodeKey(key: KeyDescriptor): Uint8Array {
-    return xterm.encodeKey(key)
+    return dataBackend.encodeKey(key)
   }
 
   // ── Peekaboo: Spawn command ──
@@ -546,13 +554,13 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
 
     // Launch real terminal app if visual mode is enabled.
     // NOTE: This starts a SEPARATE process from the PTY below. The terminal app
-    // runs the command independently, so its state may diverge from xterm.js.
+    // runs the command independently, so its state may diverge from the data backend.
     // See the createPeekabooBackend JSDoc for the full explanation.
     if (visual && !appHandle) {
       appHandle = await launchTerminalApp(app, command, spawnOpts)
     }
 
-    // Spawn a SECOND process via PTY that feeds data to the xterm.js backend.
+    // Spawn a SECOND process via PTY that feeds data to the vterm backend.
     // This is independent from the terminal app process above.
     const pty = spawnPty({
       command,
@@ -561,7 +569,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
       cols: currentCols,
       rows: currentRows,
       onData: (data) => {
-        xterm.feed(data)
+        dataBackend.feed(data)
       },
     })
 
@@ -585,7 +593,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
   const capabilities: TerminalCapabilities = {
     name: "peekaboo",
     version: "0.1.0",
-    // Data capabilities match xterm.js since we delegate to it
+    // Data capabilities match vterm since we delegate to it
     truecolor: true,
     kittyKeyboard: false,
     kittyGraphics: false,
