@@ -15,6 +15,18 @@ VitePress docs at `docs/` — deployed to termless.dev via GitHub Pages.
 
 **Do NOT create or edit `docs/site/`** — docs live directly in `docs/`.
 
+## Ruling: which packages keep xterm.js, and why
+
+vterm is the sole production shell **guest** (`@si/vterm/21016-terminal-runtime`). That ruling settles the guest seam and nothing else, so the remaining xterm.js consumers were each checked rather than swept. Recorded here so the next inventory does not re-open a settled question — or quietly close an unsettled one.
+
+**`@termless/web-player` — KEEPS xterm.js. Settled, on merit.**
+It imports `@xterm/xterm` (the full browser package, not `@xterm/headless`) and calls `terminal.open(element)` to mount into the DOM. vterm cannot do this and is not meant to: it has no DOM renderer at all — no `document`/`HTMLElement`/`canvas` references anywhere in `packages/vterm/src`, no `browser` field, a single export. Browser playback is a different problem from being a terminal emulator, and the two packages are not substitutes. This is a keep with a reason, not a deferral.
+
+**`@termless/peekaboo` — NOT settled here. Belongs with the `session.ts` decision.**
+It uses `@xterm/headless` plus `createXtermBackend` — the **backend** seam, the same class as `packages/cli/src/session.ts`, which is explicitly ruled to need its own bead and its own differential before anything changes. Calling peekaboo a "separate product that keeps xterm on merit" would smuggle a backend-seam decision through as a product exemption. It gets the same treatment as session.ts: a differential showing a non-xterm backend satisfies its actual use cases, or an explicit keep with evidence. Neither exists yet.
+
+*Noted while checking:* peekaboo declares `@termless/xtermjs` as a dependency but imports it by relative path (`../../xtermjs/src/backend.ts`), bypassing its own declaration. Unrelated to the retirement question, worth fixing on its own.
+
 ## Packages
 
 | Package                | Description                                                                | Runtime       | Status                 |
