@@ -51,7 +51,15 @@ import { createSessionManager } from "../src/session.ts"
 const HIDE_CURSOR = "\x1b[?25l"
 const BAR_CURSOR = "\x1b[6 q"
 
-async function cursorAfterProbe(backend?: "xtermjs" | "vterm"): Promise<{ visible: boolean; style: string }> {
+/**
+ * `visible` and `style` are nullable on the backend contract — a backend is
+ * allowed to not know. Kept nullable here rather than narrowed at the boundary,
+ * so that "reported nothing" stays distinguishable from "reported false", which
+ * is exactly the distinction these tests turn on.
+ */
+async function cursorAfterProbe(
+  backend?: "xtermjs" | "vterm",
+): Promise<{ visible: boolean | null; style: string | null }> {
   const manager = createSessionManager()
   try {
     const { terminal } = await manager.createSession(backend ? { backend } : {})
