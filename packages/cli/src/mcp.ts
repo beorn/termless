@@ -31,7 +31,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createFrameTracer, type FrameTracer } from "@termless/core"
 import { z } from "zod"
-import { createSessionManager } from "./session.ts"
+import { createSessionManager, SESSION_BACKENDS } from "./session.ts"
 
 // ── Error handling ──
 
@@ -94,10 +94,10 @@ export async function startMcpServer(): Promise<void> {
         timeout: z.number().default(5000).describe("Timeout in ms for waitFor condition (default: 5000)"),
         cwd: z.string().optional().describe("Working directory"),
         backend: z
-          .enum(["xtermjs", "ghostty", "vterm", "vt100", "peekaboo"])
+          .enum(SESSION_BACKENDS)
           .optional()
           .describe(
-            "TestTerminal emulator backend. 'xtermjs' (default) — fast, portable, 256-color fallback. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vterm' — pure-TS standards-compliant. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect).",
+            "TestTerminal emulator backend. 'vterm' (default) — pure-TS, standards-compliant, the production engine; reports cursor shape, cursor visibility and narrowing reflow faithfully. 'xtermjs' — the differential reference; fast and portable, but flattens those three. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect). An unknown name is refused, never substituted.",
           ),
         trace: z
           .object({

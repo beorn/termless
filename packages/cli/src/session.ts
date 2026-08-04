@@ -25,7 +25,17 @@ import { createXtermBackend } from "@termless/xtermjs"
  * (em-dashes, sigils, box-drawing) which produces misleading screenshots that
  * misrepresent km view rendering. See bead @km/all/15297-agent-screenshot-fidelity-gap.
  */
-export type SessionBackend = "xtermjs" | "ghostty" | "vterm" | "vt100" | "peekaboo"
+/**
+ * Every backend a session may name, as ONE runtime list.
+ *
+ * The type is derived from this rather than declared alongside it, so "the
+ * valid names" has a single home: a refusal message, the MCP tool's enum, and
+ * the compiler cannot disagree about what is valid. A second hand-maintained
+ * list is how a refusal ends up recommending a name that no longer resolves.
+ */
+export const SESSION_BACKENDS = ["xtermjs", "ghostty", "vterm", "vt100", "peekaboo"] as const
+
+export type SessionBackend = (typeof SESSION_BACKENDS)[number]
 
 export interface SessionCreateOptions {
   command?: string[]
@@ -214,16 +224,15 @@ export function createSessionManager(): SessionManager {
 
 /**
  * Resolve a backend name to a TerminalBackend instance. xtermjs is sync; the
- * rest are async to handle WASM/init. Falls back to vterm — the production
- * engine — on an unknown name (defensive; the type system already constrains
- * the input but runtime callers may pass arbitrary strings).
+ * rest are async to handle WASM/init.
  *
- * The fallback used to be xtermjs, which meant a MISTYPED backend name quietly
- * handed back the retired reference engine. Note that falling back at all is
- * still a silent substitution: a caller who asks for "vtem" gets a working
- * terminal rather than an error naming the typo. Making it throw is the right
- * end state but is a behaviour change beyond the defaults ruling, so it is
- * raised separately rather than smuggled in here.
+ * An unknown name REFUSES (@km/infra/22814). There is no fallback: the type
+ * system constrains typed callers, and the callers who can actually reach the
+ * default branch — plain JS, a parsed config value, an MCP client sending
+ * arbitrary JSON — are exactly the ones a silent substitution would mislead.
+ * Returning a working backend for "vtem" is survivable, which is what makes it
+ * dangerous: every downstream assertion passes and the only symptom is that the
+ * emulator under test is not the one that was named.
  */
 async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
   switch (name) {
@@ -248,11 +257,13 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
       return mod.resolve()
     }
     default:
-      return resolveVterm()
+      throw new Error(
+        `Unknown terminal backend ${JSON.stringify(name)}. Valid backends: ${SESSION_BACKENDS.join(", ")}.`,
+      )
   }
 }
 
-/** The production engine, shared by the `vterm` case and the unknown-name fallback. */
+/** The production engine (@si/vterm/21016), and the default when no backend is named. */
 async function resolveVterm(): Promise<TerminalBackend> {
   const mod = await import("@termless/vterm")
   return mod.resolve()

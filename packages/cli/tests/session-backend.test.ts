@@ -101,16 +101,26 @@ describe("createSessionManager — backend option", () => {
     }
   })
 
-  test("unknown backend name falls back to xtermjs (defensive)", async () => {
+  test("unknown backend name is REFUSED, not substituted", async () => {
+    // Was "falls back to xtermjs (defensive)" until @km/infra/22814. That title
+    // was never true of the assertion beneath it: the body only checked
+    // `toBeDefined()`, so it passed for any backend at all — including after the
+    // fallback was changed from xtermjs to vterm, which it did not notice.
+    // A test that asserts "something came back" is how a silent substitution
+    // survives review, so the contract is now stated rather than implied.
+    // Detailed coverage — message contents, drift-proofing — is in
+    // session-unknown-backend.test.ts; this case exists so a reader of the
+    // backend-option suite finds the answer here too.
     const mgr = createSessionManager()
     try {
-      const { terminal } = await mgr.createSession({
-        cols: 40,
-        rows: 10,
-        // @ts-expect-error — exercise the runtime defensive default branch
-        backend: "nonexistent-backend",
-      })
-      expect(terminal).toBeDefined()
+      await expect(
+        mgr.createSession({
+          cols: 40,
+          rows: 10,
+          // @ts-expect-error — only an untyped caller can reach the default branch
+          backend: "nonexistent-backend",
+        }),
+      ).rejects.toThrow(/nonexistent-backend/u)
     } finally {
       await mgr.stopAll()
     }
