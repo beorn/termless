@@ -51,7 +51,7 @@ bun vitest run packages/cli/tests/record.test.ts # Frame recording + slideshow
 
 ## Efficiency
 
-Pure in-memory tests (~30ms). Sessions use xterm.js backend but no PTY. Recording tests are pure string operations. Always clean up with `manager.stopAll()` in `finally` blocks.
+Pure in-memory tests (~30ms). Sessions use the vterm backend (the default, and the production engine) but no PTY. Recording tests are pure string operations. Always clean up with `manager.stopAll()` in `finally` blocks.
 
 ## See Also
 
