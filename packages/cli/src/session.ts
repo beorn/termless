@@ -109,7 +109,11 @@ export function createSessionManager(): SessionManager {
     const cols = opts.cols ?? DEFAULT_COLS
     const rows = opts.rows ?? DEFAULT_ROWS
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT
-    const backendName: SessionBackend = opts.backend ?? "xtermjs"
+    // vterm is the production engine (@si/vterm/21016). A consumer who does not
+    // name a backend gets it, rather than xterm.js — which is retained as the
+    // differential REFERENCE and is the less faithful of the two on cursor
+    // shape, cursor visibility and narrowing reflow.
+    const backendName: SessionBackend = opts.backend ?? "vterm"
 
     const backend: TerminalBackend = await resolveBackend(backendName)
     const terminal = createTerminal({ backend, cols, rows, onAfterWrite: opts.onAfterWrite })
@@ -210,9 +214,16 @@ export function createSessionManager(): SessionManager {
 
 /**
  * Resolve a backend name to a TerminalBackend instance. xtermjs is sync; the
- * rest are async to handle WASM/init. Falls back to xtermjs on unknown name
- * (defensive — type system already constrains the input but runtime callers
- * may pass arbitrary strings).
+ * rest are async to handle WASM/init. Falls back to vterm — the production
+ * engine — on an unknown name (defensive; the type system already constrains
+ * the input but runtime callers may pass arbitrary strings).
+ *
+ * The fallback used to be xtermjs, which meant a MISTYPED backend name quietly
+ * handed back the retired reference engine. Note that falling back at all is
+ * still a silent substitution: a caller who asks for "vtem" gets a working
+ * terminal rather than an error naming the typo. Making it throw is the right
+ * end state but is a behaviour change beyond the defaults ruling, so it is
+ * raised separately rather than smuggled in here.
  */
 async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
   switch (name) {
@@ -222,10 +233,8 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
       const mod = await import("@termless/ghostty")
       return mod.resolve()
     }
-    case "vterm": {
-      const mod = await import("@termless/vterm")
-      return mod.resolve()
-    }
+    case "vterm":
+      return resolveVterm()
     case "vt100": {
       const mod = await import("@termless/vt100")
       return mod.resolve()
@@ -239,8 +248,14 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
       return mod.resolve()
     }
     default:
-      return createXtermBackend()
+      return resolveVterm()
   }
+}
+
+/** The production engine, shared by the `vterm` case and the unknown-name fallback. */
+async function resolveVterm(): Promise<TerminalBackend> {
+  const mod = await import("@termless/vterm")
+  return mod.resolve()
 }
 
 // ── Helpers ──

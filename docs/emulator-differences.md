@@ -54,7 +54,16 @@ They interact in a way that is easy to miss:
 - **D5** means a decoration such as a dotted underline survives on vterm and silently becomes a plain underline on xterm.js. A design that distinguishes two kinds of text *by underline style alone* stops distinguishing them on the reference backend.
 - **D2** means the hyperlink target is dropped by **both** backends. Retiring xterm.js fixes D5 and does nothing for D2.
 
-The practical consequence: if a design needs links to be both visually distinct and actually resolvable, D5 is a backend question and D2 is a `Cell`-vocabulary question. Solving the first does not touch the second.
+The practical consequence: if a design needs links to be both visually distinct and actually resolvable, D5 is a rendering-path question and D2 is a `Cell`-vocabulary question. Solving the first does not touch the second.
+
+#### Which seam D5 actually applies to
+
+This catches people out, so it is worth being exact. **D5 is a property of the xterm _guest adapter_, not of xterm.js.** Measured at both seams:
+
+- Through the **backend** (`createXtermBackend()` / `session.ts`, read via `getCell()`), xterm.js reports `underline: "dotted"` correctly. Both backends agree, and there is no divergence to worry about.
+- Through the **guest adapter** (`xtermGuest`, read via `handle.output.buffer`), the style is flattened to `attrs: { underline: true }` when translating into Silvery's `Cell` vocabulary. vterm carries `underlineStyle` through.
+
+So "dotted underlines collapse under xterm" is true only of the guest path. Since `vtermGuest` is now the sole production guest (`@si/vterm/21016`), a dotted-underline design renders correctly in production. What remains on the xterm guest is **test code** — which inverts the usual failure: the design is right in the product and flattened in the harness, so a test asserting a dotted underline can fail while nothing is actually broken.
 
 ### Source
 

@@ -47,8 +47,12 @@ agent opens one with `start`, drives it, and closes it with `stop`.
 ### `start`
 
 Opens a live terminal session — a [Terminal](../concepts/terminal) backed by a
-PTY and a [Backend](../concepts/backend). The default backend is `xtermjs`; pass
-`backend: "ghostty"` for visual-faithful screenshots.
+PTY and a [Backend](../concepts/backend). The default backend is `vterm` — the
+production engine, and the more faithful of the two on cursor shape, cursor
+visibility and narrowing reflow (see [Emulator
+Differences](../emulator-differences#vterm-vs-xterm-js)). Pass
+`backend: "ghostty"` for visual-faithful screenshots, or `backend: "xtermjs"`
+to compare against the reference emulator.
 
 Pass a `trace` directory to also **record** the session into a
 [Recording](../concepts/recording): every buffer mutation is captured as a

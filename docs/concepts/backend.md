@@ -51,6 +51,10 @@ import { backend } from "@termless/core"
 const term = createTerminal({ backend: await backend("ghostty") })
 ```
 
-Default to `xtermjs` for speed; reach for `ghostty` when visual fidelity matters
-(screenshots, visual-bug evidence); reach for `peekaboo` only when you need a
-real desktop terminal app in the loop.
+Default to `vterm` — it is the production engine, has zero native dependencies,
+and reports cursor shape, cursor visibility and narrowing reflow faithfully
+where xterm.js flattens them (see [Emulator
+Differences](../emulator-differences#vterm-vs-xterm-js)). Reach for `xtermjs`
+when you specifically want the reference emulator to compare against; reach for
+`ghostty` when visual fidelity matters (screenshots, visual-bug evidence); reach
+for `peekaboo` only when you need a real desktop terminal app in the loop.
