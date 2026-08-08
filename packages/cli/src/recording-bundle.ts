@@ -1,20 +1,9 @@
-/** Open any Recording encoding and own its temporary unpacking. */
-
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { readBundle, unpackRecording, type ReadBundleResult } from "@termless/core"
+import { readBundle, unpackRecording } from "@termless/core"
 
-export interface OpenRecordingBundle extends Disposable, ReadBundleResult {
-  rootDir: string
-  framesDir: string
-}
-
-/**
- * Open a `.tty` bundle or `.ttyz` archive for frame-consuming CLI verbs.
- * The manifest, rather than path probes, locates the frames member.
- */
-export function openRecordingBundle(path: string): OpenRecordingBundle {
+export function openRecordingBundle(path: string) {
   const source = resolve(path)
   let rootDir = source
   let cleanup = () => {}
@@ -33,7 +22,6 @@ export function openRecordingBundle(path: string): OpenRecordingBundle {
     }
     return {
       ...result,
-      rootDir,
       framesDir: resolve(rootDir, dirname(framesMember.path)),
       [Symbol.dispose]: cleanup,
     }

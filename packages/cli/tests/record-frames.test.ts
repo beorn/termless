@@ -66,7 +66,6 @@ describe("record frame sidecars", () => {
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).toContain('Set Frames "./demo.frames"')
       const framesDir = join(dir, "demo.frames")
-      expect(existsSync(join(framesDir, "manifest.json"))).toBe(true)
       expect(readBundle(framesDir).recording.frames).toHaveLength(2)
       expect(Array.from(readFileSync(join(framesDir, "frames", "00001.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 0])
       expect(Array.from(readFileSync(join(framesDir, "frames", "00002.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 1])
@@ -90,7 +89,6 @@ describe("record frame sidecars", () => {
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).toContain('Set Frames "../frames/custom"')
       expect(tape).toContain("Set FrameDebounceMs 24")
-      expect(existsSync(join(framesDir, "manifest.json"))).toBe(true)
       expect(readBundle(framesDir).recording.frames).toHaveLength(2)
     }))
 

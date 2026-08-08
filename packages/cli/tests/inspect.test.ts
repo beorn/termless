@@ -19,15 +19,7 @@ function writeTrace(dir: string): void {
   writeFileSync(join(dir, "viewer.html"), "<!doctype html>")
   writeFileSync(
     join(dir, "manifest.json"),
-    JSON.stringify({
-      ttyVersion: 1,
-      recordingVersion: 1,
-      cols: 0,
-      rows: 0,
-      durationMicros: 0,
-      reproducible: false,
-      members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
-    }),
+    '{"ttyVersion":1,"recordingVersion":1,"cols":0,"rows":0,"durationMicros":0,"reproducible":false,"members":[{"path":"index.jsonl","type":"frames","encoding":"trace-index"}]}',
   )
   writeFileSync(
     join(dir, "index.jsonl"),

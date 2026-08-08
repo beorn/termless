@@ -46,8 +46,6 @@ export interface ViewCliOpts {
  * Exported for unit testing.
  */
 export async function viewAction(opts: ViewCliOpts): Promise<void> {
-  // Validate options before opening the input so usage errors stay about the
-  // invocation, even when the named recording does not exist yet.
   const format = opts.format?.toLowerCase()
   const output = opts.output
   if (format && format !== "gif") {
