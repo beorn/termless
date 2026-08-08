@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { traceToRecording, unpackRecording, writeRecording, type TraceFrame } from "@termless/core"
 import { formatInspectSummary, inspectRecordingBundle } from "../src/inspect-cmd.ts"
 
 function withTempDir(fn: (dir: string) => void): void {
@@ -14,13 +15,11 @@ function withTempDir(fn: (dir: string) => void): void {
 }
 
 function writeTrace(dir: string): void {
-  mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, "00001.png"), new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
-  writeFileSync(join(dir, "viewer.html"), "<!doctype html>")
-  writeFileSync(
-    join(dir, "index.jsonl"),
-    [
-      JSON.stringify({
+  const staging = mkdtempSync(join(tmpdir(), "termless-inspect-trace-"))
+  try {
+    writeFileSync(join(staging, "00001.png"), new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
+    const frames: TraceFrame[] = [
+      {
         seq: 1,
         ts: 1000,
         iso: "2026-05-29T00:00:01.000Z",
@@ -32,8 +31,8 @@ function writeTrace(dir: string): void {
         duration_since_prev_ms: 0,
         render_ms: 1,
         png: "00001.png",
-      }),
-      JSON.stringify({
+      },
+      {
         seq: 2,
         ts: 1042,
         iso: "2026-05-29T00:00:01.042Z",
@@ -45,9 +44,17 @@ function writeTrace(dir: string): void {
         duration_since_prev_ms: 42,
         render_ms: 0,
         png: null,
-      }),
-    ].join("\n") + "\n",
-  )
+      },
+    ]
+    const archive = join(staging, "frames.rec")
+    writeRecording(archive, traceToRecording({ frames, cols: 80, rows: 24, backend: "ghostty" }), {
+      pngSourceDir: staging,
+    })
+    unpackRecording(archive, dir)
+    writeFileSync(join(dir, "frames", "viewer.html"), "<!doctype html>")
+  } finally {
+    rmSync(staging, { recursive: true, force: true })
+  }
 }
 
 describe("inspectRecordingBundle", () => {

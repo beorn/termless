@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { readRecording } from "@termless/core"
 import { eventsToTape } from "../src/record-cmd.ts"
 import {
   tapeFrameTraceDir,
@@ -48,7 +49,7 @@ describe("record frame sidecars", () => {
     expect(tapeFrameTraceDir("out/session.tape")).toBe("out/session.frames")
   })
 
-  test("writes a tape plus sibling frame trace by default", async () =>
+  test("writes a tape plus sibling recording bundle by default", async () =>
     withTempDir(async (dir) => {
       const tapePath = join(dir, "demo.tape")
       const renderFramePng: OutputFrameTraceOptions["renderFramePng"] = async (_frame, index) =>
@@ -64,13 +65,11 @@ describe("record frame sidecars", () => {
 
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).toContain('Set Frames "./demo.frames"')
-      expect(
-        readFileSync(join(dir, "demo.frames", "index.jsonl"), "utf-8")
-          .trim()
-          .split("\n"),
-      ).toHaveLength(2)
-      expect(Array.from(readFileSync(join(dir, "demo.frames", "00001.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 0])
-      expect(Array.from(readFileSync(join(dir, "demo.frames", "00002.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 1])
+      const framesDir = join(dir, "demo.frames")
+      expect(existsSync(join(framesDir, "manifest.json"))).toBe(true)
+      expect(readRecording(framesDir).frames).toHaveLength(2)
+      expect(Array.from(readFileSync(join(framesDir, "frames", "00001.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 0])
+      expect(Array.from(readFileSync(join(framesDir, "frames", "00002.png")))).toEqual([0x89, 0x50, 0x4e, 0x47, 1])
     }))
 
   test("respects an explicit frames dir and debounce header", async () =>
@@ -91,7 +90,8 @@ describe("record frame sidecars", () => {
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).toContain('Set Frames "../frames/custom"')
       expect(tape).toContain("Set FrameDebounceMs 24")
-      expect(readFileSync(join(framesDir, "index.jsonl"), "utf-8").trim().split("\n")).toHaveLength(2)
+      expect(existsSync(join(framesDir, "manifest.json"))).toBe(true)
+      expect(readRecording(framesDir).frames).toHaveLength(2)
     }))
 
   test("respects --no-frames by omitting Set Frames and the sidecar directory", async () =>
@@ -107,6 +107,6 @@ describe("record frame sidecars", () => {
 
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).not.toContain("Set Frames")
-      expect(() => readFileSync(join(dir, "demo.frames", "index.jsonl"))).toThrow()
+      expect(existsSync(join(dir, "demo.frames"))).toBe(false)
     }))
 })

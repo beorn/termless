@@ -26,6 +26,7 @@ import { resolveTheme } from "../../../src/recording/tape/themes.ts"
 import { backends as listBackends, isReady as isBackendReady } from "../../../src/backend/backends.ts"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { SvgScreenshotOptions, WindowBar } from "../../../src/terminal/types.ts"
+import { readBundle } from "./recording-bundle.ts"
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -68,11 +69,10 @@ function isRecordedFrameOutputPath(path: string): boolean {
 }
 
 function tapeFrameTraceExists(tapePath: string, tape: TapeFile): boolean {
-  try {
-    return existsSync(join(resolveTapeFramesDir(tapePath, tape.settings.Frames), "index.jsonl"))
-  } catch {
-    return false
-  }
+  const path = resolveTapeFramesDir(tapePath, tape.settings.Frames)
+  if (!existsSync(path)) return false
+  using bundle = readBundle(path)
+  return (bundle.recording.frames?.length ?? 0) > 0
 }
 
 /** Resolve the output directory for `--compare separate`. */
@@ -246,16 +246,14 @@ export async function playFrameReplayFromTape(
   tape: TapeFile,
   opts: { output?: string[] } = {},
 ): Promise<FrameReplayResult> {
-  const framesDir = resolveTapeFramesDir(tapePath, tape.settings.Frames)
-  const indexFile = join(framesDir, "index.jsonl")
-  if (!existsSync(indexFile)) {
-    throw new Error(`play --frame-replay: no frame trace found at ${indexFile}`)
+  const bundlePath = resolveTapeFramesDir(tapePath, tape.settings.Frames)
+  if (!existsSync(bundlePath)) {
+    throw new Error(`play --frame-replay: no recording bundle found at ${bundlePath}`)
   }
 
-  const { loadVisualTrace } = await import("../../../src/recording/load-visual-trace.ts")
   const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
-  const recording = loadVisualTrace(framesDir, { backend: tape.settings.Backend ?? "unknown" })
-  const frames = recordingToPngFrames(recording, framesDir)
+  using bundle = readBundle(bundlePath)
+  const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
   const outputs = opts.output ?? []
 
   for (const output of outputs) {
@@ -265,13 +263,13 @@ export async function playFrameReplayFromTape(
 
   if (outputs.length === 0) {
     const { writeViewer } = await import("../../../src/view/viewer.ts")
-    const result = writeViewer(framesDir)
+    const result = writeViewer(bundle.framesDir)
     console.log(`Frame replay viewer: ${result.viewerFile}`)
   }
 
   return {
-    framesDir,
-    frameCount: recording.frames?.length ?? frames.length,
+    framesDir: bundle.framesDir,
+    frameCount: bundle.recording.frames?.length ?? frames.length,
     outputCount: outputs.length,
   }
 }

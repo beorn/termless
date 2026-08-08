@@ -25,9 +25,9 @@
  */
 
 import type { Command } from "@silvery/commander"
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
+import { readBundle } from "./recording-bundle.ts"
 
 /** Parsed options for the `view` verb. */
 export interface ViewCliOpts {
@@ -40,92 +40,56 @@ export interface ViewCliOpts {
 }
 
 /**
- * Resolve a recording path to a directory working form.
- *
- * A single `.rec` file is a ZIP container — it is unpacked to a fresh temp
- * directory so the directory-oriented presentation code (`writeViewer`,
- * `recordingToPngFrames`) can read its PNGs. A directory (a `.rec` directory
- * bundle or a bare frame-trace directory) is used as-is.
- *
- * Returns the directory plus a `cleanup` callback — a no-op for a real
- * directory, an `rm -rf` for an unpacked temp directory.
- */
-async function resolveRecordingDir(path: string): Promise<{ dir: string; cleanup: () => void }> {
-  const abs = resolve(path)
-  if (existsSync(abs) && statSync(abs).isFile()) {
-    const { unpackRecording } = await import("../../../src/recording/native/native-rec.ts")
-    const tmp = mkdtempSync(join(tmpdir(), "termless-rec-"))
-    unpackRecording(abs, tmp)
-    return { dir: tmp, cleanup: () => rmSync(tmp, { recursive: true, force: true }) }
-  }
-  return { dir: abs, cleanup: () => {} }
-}
-
-/**
  * Execute the `view` verb: scrub mode (default — writes `viewer.html`) or
  * animate mode (`--format gif` — writes a GIF to `--output`).
  *
  * Exported for unit testing.
  */
 export async function viewAction(opts: ViewCliOpts): Promise<void> {
-  const { dir, cleanup } = await resolveRecordingDir(opts.recording)
-  try {
-    // ── Animate mode: --format gif ──
-    if (opts.format) {
-      const format = opts.format.toLowerCase()
-      if (format !== "gif") {
-        console.error(`Error: --format only supports "gif". A recording stores rasterized PNGs;`)
-        console.error(`       GIF is the only animation encoding derivable without re-rendering.`)
-        process.exitCode = 1
-        return
-      }
-      if (!opts.output) {
-        console.error("Error: --format gif needs an output path. Pass -o <file>.gif.")
-        process.exitCode = 1
-        return
-      }
-
-      const { readRecording } = await import("../../../src/recording/native/native-rec.ts")
-      const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
-      const { createGifFromPngs } = await import("../../../src/view/gif.ts")
-
-      const recording = readRecording(dir)
-      // A `.rec` bundle holds its PNGs under `frames/`; a bare frame-trace
-      // directory holds them in the directory root.
-      const nested = join(dir, "frames")
-      const framesDir = existsSync(nested) && statSync(nested).isDirectory() ? nested : dir
-      const frames = recordingToPngFrames(recording, framesDir)
-      const gif = await createGifFromPngs(frames)
-
-      const out = resolve(opts.output)
-      mkdirSync(dirname(out), { recursive: true })
-      writeFileSync(out, gif)
-      console.log(`Saved: ${opts.output} (${frames.length} frames)`)
+  using bundle = readBundle(opts.recording)
+  // ── Animate mode: --format gif ──
+  if (opts.format) {
+    const format = opts.format.toLowerCase()
+    if (format !== "gif") {
+      console.error(`Error: --format only supports "gif". A recording stores rasterized PNGs;`)
+      console.error(`       GIF is the only animation encoding derivable without re-rendering.`)
+      process.exitCode = 1
+      return
+    }
+    if (!opts.output) {
+      console.error("Error: --format gif needs an output path. Pass -o <file>.gif.")
+      process.exitCode = 1
       return
     }
 
-    // ── Scrub mode (default): self-contained HTML viewer ──
-    const { writeViewer } = await import("../../../src/view/viewer.ts")
-    // A `.rec` bundle keeps `index.jsonl` + PNGs under `frames/`; a bare
-    // frame-trace directory keeps them in the directory root.
-    const nested = join(dir, "frames")
-    const viewerDir = existsSync(join(nested, "index.jsonl")) ? nested : dir
-    const result = writeViewer(viewerDir)
-    let viewerFile = result.viewerFile
-    // When the source was a single `.rec` file, the viewer was written into a
-    // temp directory — copy it next to the original `.rec`.
-    const srcAbs = resolve(opts.recording)
-    if (existsSync(srcAbs) && statSync(srcAbs).isFile()) {
-      const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.rec$/i, "") + ".viewer.html")
-      copyFileSync(result.viewerFile, dest)
-      viewerFile = dest
-    }
-    console.log(`Viewer: ${viewerFile}`)
-    console.log(`  ${result.frameCount} frames, ${result.imageCount} images, ${(result.bytes / 1024).toFixed(0)} KB`)
-    console.log(`  Open it in a browser — no server needed.`)
-  } finally {
-    cleanup()
+    const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
+    const { createGifFromPngs } = await import("../../../src/view/gif.ts")
+
+    const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
+    const gif = await createGifFromPngs(frames)
+
+    const out = resolve(opts.output)
+    mkdirSync(dirname(out), { recursive: true })
+    writeFileSync(out, gif)
+    console.log(`Saved: ${opts.output} (${frames.length} frames)`)
+    return
   }
+
+  // ── Scrub mode (default): self-contained HTML viewer ──
+  const { writeViewer } = await import("../../../src/view/viewer.ts")
+  const result = writeViewer(bundle.framesDir)
+  let viewerFile = result.viewerFile
+  // When the source was a single `.rec` file, the viewer was written into a
+  // temp directory — copy it next to the original `.rec`.
+  const srcAbs = resolve(opts.recording)
+  if (existsSync(srcAbs) && statSync(srcAbs).isFile()) {
+    const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.rec$/i, "") + ".viewer.html")
+    copyFileSync(result.viewerFile, dest)
+    viewerFile = dest
+  }
+  console.log(`Viewer: ${viewerFile}`)
+  console.log(`  ${result.frameCount} frames, ${result.imageCount} images, ${(result.bytes / 1024).toFixed(0)} KB`)
+  console.log(`  Open it in a browser — no server needed.`)
 }
 
 export function registerViewCommand(program: Command): void {

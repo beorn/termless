@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
+import { traceToRecording, unpackRecording, writeRecording, type TraceFrame } from "@termless/core"
 import {
   compareSeparateOutputDir,
   playFrameReplayFromTape,
@@ -86,13 +87,12 @@ describe("frame replay", () => {
   )
 
   function writeTrace(dir: string): void {
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, "00001.png"), onePixelPng)
-    writeFileSync(join(dir, "00002.png"), onePixelPng)
-    writeFileSync(
-      join(dir, "index.jsonl"),
-      [
-        JSON.stringify({
+    const staging = mkdtempSync(join(tmpdir(), "termless-play-trace-"))
+    try {
+      writeFileSync(join(staging, "00001.png"), onePixelPng)
+      writeFileSync(join(staging, "00002.png"), onePixelPng)
+      const frames: TraceFrame[] = [
+        {
           seq: 1,
           ts: 1000,
           iso: "2026-05-29T00:00:01.000Z",
@@ -104,8 +104,8 @@ describe("frame replay", () => {
           duration_since_prev_ms: 0,
           render_ms: 1,
           png: "00001.png",
-        }),
-        JSON.stringify({
+        },
+        {
           seq: 2,
           ts: 1042,
           iso: "2026-05-29T00:00:01.042Z",
@@ -117,9 +117,16 @@ describe("frame replay", () => {
           duration_since_prev_ms: 42,
           render_ms: 1,
           png: "00002.png",
-        }),
-      ].join("\n") + "\n",
-    )
+        },
+      ]
+      const archive = join(staging, "frames.rec")
+      writeRecording(archive, traceToRecording({ frames, cols: 1, rows: 1, backend: "ghostty" }), {
+        pngSourceDir: staging,
+      })
+      unpackRecording(archive, dir)
+    } finally {
+      rmSync(staging, { recursive: true, force: true })
+    }
   }
 
   it("renders a GIF from the tape's frame trace without executing the tape", async () => {
@@ -135,7 +142,7 @@ describe("frame replay", () => {
         output: [output],
       })
 
-      expect(result.framesDir).toBe(framesDir)
+      expect(result.framesDir).toBe(join(framesDir, "frames"))
       expect(result.frameCount).toBe(2)
       expect(readFileSync(output).subarray(0, 6).toString("ascii")).toBe("GIF89a")
     } finally {

@@ -3,10 +3,11 @@
  * `viewer.html`; animate mode (`--format gif`) writes a GIF.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { traceToRecording, writeRecording, type TraceFrame } from "@termless/core"
 import { viewAction } from "../src/view-cmd.ts"
 
 // `viewAction` is a CLI verb — it intentionally writes user-facing progress
@@ -26,6 +27,35 @@ const FIXTURE = join(here, "../../../tests/fixtures/legacy-frame-trace")
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), "view-cmd-test-"))
+}
+
+function writeRec(path: string): void {
+  const png = "00001.png"
+  writeFileSync(
+    join(dirname(path), png),
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  )
+  const frames: TraceFrame[] = [
+    {
+      seq: 1,
+      ts: 1000,
+      iso: "1970-01-01T00:00:01.000Z",
+      hash: "a",
+      duplicate_of: null,
+      bytes_in_since_last: 0,
+      ansi_input_preview: "",
+      buffer: { cols: 1, rows: 1, cursor: { row: 0, col: 0 } },
+      duration_since_prev_ms: 0,
+      render_ms: 1,
+      png,
+    },
+  ]
+  writeRecording(path, traceToRecording({ frames, cols: 1, rows: 1, backend: "ghostty" }), {
+    pngSourceDir: dirname(path),
+  })
 }
 
 describe("termless view — scrub mode (default)", () => {
@@ -81,8 +111,8 @@ describe("termless view — animate mode (--format)", () => {
   it("encodes a recording's frames into a GIF", async () => {
     const dir = tmp()
     try {
-      const recording = join(dir, "trace")
-      cpSync(FIXTURE, recording, { recursive: true })
+      const recording = join(dir, "trace.rec")
+      writeRec(recording)
       const out = join(dir, "demo.gif")
 
       await viewAction({ recording, format: "gif", output: out })
