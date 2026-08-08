@@ -120,13 +120,54 @@ function writeHtsBundle(
     durationMicros: 3_000_000,
     reproducible: true,
     ...(opts.originWallMs !== undefined ? { originWallMs: opts.originWallMs } : {}),
-    members:
-      opts.asTail === true ? [] : [{ path: memberPath, type: "io", encoding: "hts1" }],
+    members: opts.asTail === true ? [] : [{ path: memberPath, type: "io", encoding: "hts1" }],
     ...(opts.asTail === true ? { tail: { path: memberPath, type: "io", encoding: "hts1" } } : {}),
   }
   writeFileSync(join(bundle, "manifest.json"), JSON.stringify(manifest, null, 2))
   return bundle
 }
+
+describe("habcp members — opaque by ruling", () => {
+  test("a bundle listing habcp members reads fine; the members are surfaced, never loaded", () => {
+    const dir = tmp()
+    try {
+      // Hand-author a bundle the way a hab session dir presents itself: one
+      // io member plus the habitat journal (live tail + a sealed segment).
+      // This format knows the `habcp` kind string and that the content is
+      // NDJSON — the row shapes below are deliberately arbitrary junk to this
+      // reader (hab-side readers own row semantics).
+      const bundle = join(dir, "session.tty")
+      mkdirSync(join(bundle, "io"), { recursive: true })
+      writeFileSync(join(bundle, "io", "io.jsonl"), `{"at":0,"dir":"out","data":"x"}\n`)
+      writeFileSync(join(bundle, "habcp.log"), `{"habcp_log":1}\n{"whatever":"opaque"}\n`)
+      writeFileSync(join(bundle, "habcp-00000000000000000001-00000000000000000004.log"), `{"opaque":true}\n`)
+      const manifest = {
+        ttyVersion: 1,
+        recordingVersion: 1,
+        cols: 80,
+        rows: 24,
+        durationMicros: 0,
+        reproducible: true,
+        members: [
+          { path: "io/io.jsonl", type: "io", encoding: "jsonl" },
+          { path: "habcp-00000000000000000001-00000000000000000004.log", type: "habcp", encoding: "jsonl" },
+          { path: "habcp.log", type: "habcp", encoding: "jsonl" },
+        ],
+      }
+      writeFileSync(join(bundle, "manifest.json"), JSON.stringify(manifest, null, 2))
+
+      const surfaced = readBundle(bundle)
+      expect(surfaced.manifest.members.filter((m) => m.type === "habcp")).toHaveLength(2)
+
+      // The Recording loads without touching the habcp rows — junk content
+      // proves opacity: a loaded member would have thrown on these shapes.
+      const rec = readRecording(bundle)
+      expect(rec.io?.[0]?.data).toBe("x")
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
 
 describe(".tty/.ttyz — round-trips and encoding-blindness", () => {
   test("Recording → .ttyz file → identical read", () => {
@@ -288,7 +329,7 @@ describe("hts1 io members — the journal framing, decoded natively", () => {
   function conversationFrames(): Uint8Array {
     return concatBytes([
       htsFrame({ kind: "lifecycle", offset: 0, at: ORIGIN, state: "awake" }),
-      htsFrame({ kind: "output", offset: 1, at: ORIGIN, }, text("$ ")),
+      htsFrame({ kind: "output", offset: 1, at: ORIGIN }, text("$ ")),
       htsFrame({ kind: "input", offset: 2, at: ORIGIN + 500, owner: { peer: "user" } }, text("ls\r")),
       htsFrame({ kind: "resize", offset: 3, at: ORIGIN + 1_000, size: { cols: 120, rows: 40 } }),
       htsFrame({ kind: "output", offset: 4, at: ORIGIN + 1_500 }, text("README.md\r\n")),
@@ -506,11 +547,11 @@ describe("zip machinery — ZIP64 count + per-member method", () => {
       expect(methods.get("frames/00001.png")).toBe(0)
       expect(methods.get("manifest.json")).toBe(8)
       // And the sealed bytes still parse as a coherent archive.
-      expect(parseZip(raw).map((e) => e.path).sort()).toEqual([
-        "frames/00001.png",
-        "frames/index.jsonl",
-        "manifest.json",
-      ])
+      expect(
+        parseZip(raw)
+          .map((e) => e.path)
+          .sort(),
+      ).toEqual(["frames/00001.png", "frames/index.jsonl", "manifest.json"])
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

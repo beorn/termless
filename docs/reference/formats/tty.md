@@ -41,6 +41,8 @@ mysession.tty/                  ← the bundle: live, or sealed-at-rest
   io/000…000-000…123.hts        ← an io member, hts1 encoding (optional, many)
   io/current                    ← the open tail of a LIVE bundle (at most one)
   facts/000…000-000…456.jsonl   ← a facts member (optional, many)
+  habcp.log                     ← a habcp member: the habitat journal's live tail (optional)
+  habcp-000…001-000…456.log     ← habcp members: sealed journal segments (optional, many)
   frames/index.jsonl            ← a frames member (optional)
   frames/00001.png              ← frame rasters, beside their index
   checkpoints/000…123.json      ← checkpoint members (optional, many)
@@ -111,6 +113,7 @@ valid `.tty` bundle with zero artifact churn.)
 | `commands`   | timed intent (keys, resize, sleeps)       | `commands` track   |
 | `frames`     | rendered frame index + rasters            | `frames` projection |
 | `facts`      | session fact events (annotation source)   | *not loaded* — exposed to annotation/windowed readers |
+| `habcp`      | the habitat's control-plane journal (NDJSON rows; tail + sealed segments) | *not loaded* — opaque; hab-side readers own row semantics |
 | `checkpoint` | serialized terminal state at an offset    | *not loaded* — seek keyframes for players and reattach |
 
 `facts` and `checkpoint` members are first-class bundle members that the
@@ -120,11 +123,19 @@ and checkpoints are derived seek keyframes (streams are stored; snapshots are
 derived). `readBundle` surfaces them; `readRecording` returns the Recording
 and **tallies** what it did not load — never a silent skip.
 
+`habcp` members are DELIBERATELY OPAQUE at this layer: this format knows the
+kind string and that the content is one JSON object per line, and nothing
+else — no habcp row schema crosses into this spec or its readers (the same
+layering law that keeps this format vterm-free). The session fact lane and
+every row semantic are defined hab-side; see the habitat's own `habcp.md`
+specification. A `habcp` member naming the journal's live tail (`habcp.log`)
+is the one declared mutable member — consumers read it to EOF.
+
 ### Member encodings
 
 | encoding      | member types     | wire shape                                        |
 | ------------- | ---------------- | ------------------------------------------------- |
-| `jsonl`       | io, commands, facts | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command` |
+| `jsonl`       | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
 | `hts1`        | io               | the binary journal framing (below); wall-ms `at`, rebased on read |
 | `trace-index` | frames           | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it |
 | `json`        | checkpoint       | one JSON document                                 |

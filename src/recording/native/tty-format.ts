@@ -56,7 +56,7 @@ const MANIFEST_FILE = "manifest.json"
 // =============================================================================
 
 /** What a member carries — the dispatch key for the reader. */
-export type TtyMemberType = "io" | "commands" | "frames" | "facts" | "checkpoint"
+export type TtyMemberType = "io" | "commands" | "frames" | "facts" | "checkpoint" | "habcp"
 
 /**
  * How a member's bytes are encoded. `zstd-seekable` is RESERVED for large
@@ -275,7 +275,10 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
   let framesDurationMicros: Micros | undefined
   const skipped: TtySkipTally = { lifecycle: 0, truncation: 0 }
 
-  const loadable: Array<TtyMember | TtyTail> = [...manifest.members, ...(manifest.tail !== undefined ? [manifest.tail] : [])]
+  const loadable: Array<TtyMember | TtyTail> = [
+    ...manifest.members,
+    ...(manifest.tail !== undefined ? [manifest.tail] : []),
+  ]
 
   // The µs origin for wall-clock members: the manifest's anchor, else the
   // first event of the earliest hts1 member (resolved lazily below).
@@ -292,9 +295,13 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
           io.push(...parseJsonl<IoEvent>(rows))
         } else if (member.type === "commands") {
           commands.push(...parseJsonl<Command>(rows))
-        } else if (member.type === "facts") {
+        } else if (member.type === "facts" || member.type === "habcp") {
           // Facts are the annotation source, not a Recording track — the
           // member is surfaced through the manifest, deliberately not loaded.
+          // A habcp member (the habitat's control-plane journal: tail +
+          // sealed segments) is equally opaque here BY RULING: this reader
+          // knows the kind string and that the content is NDJSON rows, never
+          // the row schema — hab-side readers own those semantics.
         } else {
           throw new Error(
             `readRecording: member "${member.path}" declares type "${member.type}" with jsonl encoding — no such track`,
@@ -304,7 +311,9 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
       }
       case "hts1": {
         if (member.type !== "io") {
-          throw new Error(`readRecording: hts1 encoding is an io framing; member "${member.path}" declares "${member.type}"`)
+          throw new Error(
+            `readRecording: hts1 encoding is an io framing; member "${member.path}" declares "${member.type}"`,
+          )
         }
         const frames1 = decodeHtsFrames(source.bytesOf(member.path), member.path)
         if (originWallMs === undefined && frames1.length > 0) originWallMs = frames1[0]!.header.at
@@ -369,7 +378,9 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
       }
       case "json": {
         if (member.type !== "checkpoint") {
-          throw new Error(`readRecording: json encoding carries checkpoints; member "${member.path}" declares "${member.type}"`)
+          throw new Error(
+            `readRecording: json encoding carries checkpoints; member "${member.path}" declares "${member.type}"`,
+          )
         }
         // Checkpoints are derived seek keyframes — streams are stored,
         // snapshots are derived. Surfaced through the manifest, not loaded
@@ -577,7 +588,9 @@ export function writeRecording(path: string, recording: Recording, options: Writ
     }
     return
   }
-  throw new Error(`writeRecording: ${path} names neither encoding — write a .tty bundle directory or a .ttyz sealed archive`)
+  throw new Error(
+    `writeRecording: ${path} names neither encoding — write a .tty bundle directory or a .ttyz sealed archive`,
+  )
 }
 
 // =============================================================================
