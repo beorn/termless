@@ -12,7 +12,7 @@
  * | `.png`          | last SVG frame        | raster — `canvas` → `resvg`        |
  * | `.svg`          | SVG frames            | none (vector)                     |
  * | `.html`         | SVG frames            | none (browser viewer at view-time) |
- * | `.rec`          | SVG frames + io       | the native single-file container  |
+ * | `.ttyz` `.tty`  | SVG frames + io       | the sealed archive / live bundle  |
  * | `.cast`         | io events             | none (asciicast)                  |
  * | `.tape`         | input events          | none                              |
  */
@@ -225,20 +225,20 @@ function writeTape(
 }
 
 // =============================================================================
-// .rec — native single-file container (frames + io)
+// .ttyz / .tty — the unified recording format (frames + io)
 // =============================================================================
 
 /**
- * Write a single `.rec` file from the captured session.
+ * Write a `.ttyz` sealed archive (or `.tty` bundle) from the captured session.
  *
  * The SVG frames are rasterized to PNGs (via the session's renderer) into a
  * temp directory, projected into a frames {@link "../../../src/recording/recording.ts".Recording},
- * and serialized with `writeRecording`. The io track is carried alongside.
+ * and serialized with `writeRecording` — which dispatches on the extension.
  */
-async function writeRec(path: string, session: CapturedSession): Promise<void> {
+async function writeRecordingOutput(path: string, session: CapturedSession): Promise<void> {
   const { createRecording, micros } = await import("../../../src/recording/recording.ts")
   const { fingerprintFromCanvas } = await import("../../../src/recording/frame-trace-recording.ts")
-  const { writeRecording } = await import("../../../src/recording/native/native-rec.ts")
+  const { writeRecording } = await import("../../../src/recording/native/tty-format.ts")
   const { selectRasterizer } = await import("../../../src/view/rasterizer.ts")
 
   const fingerprint = fingerprintFromCanvas("ghostty")
@@ -325,14 +325,14 @@ async function writeImage(path: string, format: OutputFormat, session: CapturedS
   }
   if (format === "html") {
     // A self-contained scrubbable browser viewer — written through a temp
-    // `.rec` so the viewer reads the same frame projection `view` would.
+    // sealed recording so the viewer reads the same frame projection `view` would.
     const { writeViewer } = await import("../../../src/view/viewer.ts")
-    const { unpackRecording } = await import("../../../src/recording/native/native-rec.ts")
+    const { unpackRecording } = await import("../../../src/recording/native/tty-format.ts")
     const tmpRecDir = mkdtempSync(join(tmpdir(), "termless-html-"))
-    const tmpRec = join(tmpRecDir, "session.rec")
+    const tmpRec = join(tmpRecDir, "session.ttyz")
     const tmpDir = mkdtempSync(join(tmpdir(), "termless-html-dir-"))
     try {
-      await writeRec(tmpRec, session)
+      await writeRecordingOutput(tmpRec, session)
       unpackRecording(tmpRec, tmpDir)
       const result = writeViewer(join(tmpDir, "frames"))
       copyFileSync(result.viewerFile, path)
@@ -411,8 +411,9 @@ export async function writeOutputs(
           }
         }
         break
-      case "rec":
-        await writeRec(target.path, session)
+      case "ttyz":
+      case "tty":
+        await writeRecordingOutput(target.path, session)
         break
       default:
         await writeImage(target.path, target.format, session)

@@ -32,7 +32,8 @@ import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node
 import { join } from "node:path"
 import { recordingToTraceFrames } from "./frame-trace-recording.ts"
 import type { TraceFrame } from "./frame-trace.ts"
-import type { Recording } from "./recording.ts"
+import { TTY_FORMAT_VERSION, type TtyManifest } from "./native/tty-format.ts"
+import type { Recording, RendererFingerprint } from "./recording.ts"
 
 /** Options for {@link writeVisualTrace}. */
 export interface WriteVisualTraceOptions {
@@ -45,6 +46,13 @@ export interface WriteVisualTraceOptions {
    * Omit when the trace carries no PNGs (every frame's `png` is `null`).
    */
   pngSourceDir?: string
+  /**
+   * The renderer fingerprint recorded in the trace's manifest. When present,
+   * `loadVisualTrace` restores it authentically instead of synthesizing one
+   * from a backend fallback. {@link writeVisualTraceFromRecording} passes the
+   * recording's own first-frame fingerprint automatically.
+   */
+  fingerprint?: RendererFingerprint
 }
 
 /**
@@ -84,6 +92,23 @@ export function writeVisualTrace(dir: string, frames: TraceFrame[], options: Wri
   // non-empty (matches the tracer's append-with-newline output).
   const body = frames.map((f) => JSON.stringify(f)).join("\n") + (frames.length > 0 ? "\n" : "")
   writeFileSync(join(dir, "index.jsonl"), body)
+
+  // The manifest that makes the trace a valid `.tty` bundle. The frames
+  // member sits at the bundle ROOT — member paths are declarative, so the
+  // historical trace layout (index.jsonl + PNGs beside it) is byte-stable;
+  // the manifest is the one addition. Geometry and duration stay 0: for a
+  // frames-only trace the rows are authoritative and the reader derives both.
+  const manifest: TtyManifest = {
+    ttyVersion: TTY_FORMAT_VERSION,
+    recordingVersion: 1,
+    cols: 0,
+    rows: 0,
+    durationMicros: 0,
+    reproducible: false,
+    ...(options.fingerprint !== undefined ? { fingerprint: options.fingerprint } : {}),
+    members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
+  }
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n")
 }
 
 /**
@@ -112,5 +137,9 @@ export function writeVisualTraceFromRecording(
   recording: Recording,
   options: WriteVisualTraceOptions = {},
 ): void {
-  writeVisualTrace(dir, recordingToTraceFrames(recording), options)
+  const fingerprint = options.fingerprint ?? recording.frames?.[0]?.fingerprint
+  writeVisualTrace(dir, recordingToTraceFrames(recording), {
+    ...options,
+    ...(fingerprint !== undefined ? { fingerprint } : {}),
+  })
 }

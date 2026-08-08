@@ -90,7 +90,7 @@ export function writeViewer(dir: string): WriteViewerResult {
  * This is the {@link Recording}-consuming entry point — `writeViewer` parses
  * the on-disk `index.jsonl`; this consumes the in-memory model directly. The
  * model → on-disk `TraceFrame` projection routes through the shared
- * {@link recordingToTraceFrames} codec (the same one `native-rec` and
+ * {@link recordingToTraceFrames} codec (the same one `tty-format` and
  * `writeVisualTraceFromRecording` use), so there is exactly one such projection
  * in termless. PNGs are still inlined from `dir` (the projection's `png` field
  * is a path relative to the recording bundle).

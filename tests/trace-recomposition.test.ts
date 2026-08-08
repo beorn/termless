@@ -171,13 +171,26 @@ describe("writeVisualTrace over the canonical Recording noun", () => {
     const recomposedIndex = readFileSync(join(recomposedDir, "index.jsonl")).toString("base64")
     expect(recomposedIndex).toBe(legacyIndex)
 
-    // And every PNG copied identically.
+    // And every PNG copied identically. The manifests are compared
+    // SEMANTICALLY, not byte-wise: the Recording-sourced door carries the
+    // recording's fingerprint into its manifest, which the raw-TraceFrame[]
+    // door cannot know — the recomposition guarantee is about the frame data.
     for (const name of readdirSync(legacyDir)) {
-      if (name === "index.jsonl") continue
+      if (name === "index.jsonl" || name === "manifest.json") continue
       expect(readFileSync(join(recomposedDir, name)).toString("base64")).toBe(
         readFileSync(join(legacyDir, name)).toString("base64"),
       )
     }
+    const legacyManifest = JSON.parse(readFileSync(join(legacyDir, "manifest.json"), "utf-8")) as {
+      members: unknown
+      fingerprint?: unknown
+    }
+    const recomposedManifest = JSON.parse(readFileSync(join(recomposedDir, "manifest.json"), "utf-8")) as {
+      members: unknown
+      fingerprint?: { backend?: string }
+    }
+    expect(recomposedManifest.members).toEqual(legacyManifest.members)
+    expect(recomposedManifest.fingerprint?.backend).toBe("vt100")
   })
 
   test("recomposed write then load reproduces the Recording frames", async () => {

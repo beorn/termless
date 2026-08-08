@@ -9,7 +9,7 @@
  * | `-o` value                | Mode                                                       |
  * | ------------------------- | ---------------------------------------------------------- |
  * | _(absent)_                | default — `out.gif` in the cwd                             |
- * | trailing `/` or a dir     | folder bundle — `<dir>/out.{rec,gif,cast,tape}`            |
+ * | trailing `/` or a dir     | folder bundle — `<dir>/out.{ttyz,gif,cast,tape}`            |
  * | has an extension          | that single file                                          |
  * | repeated, extensioned     | each named file                                            |
  *
@@ -21,7 +21,7 @@ import { existsSync, statSync } from "node:fs"
 import { basename, join } from "node:path"
 
 /** The recording output formats `record` can write, keyed by file extension. */
-export type OutputFormat = "rec" | "gif" | "apng" | "png" | "svg" | "html" | "cast" | "tape"
+export type OutputFormat = "ttyz" | "tty" | "gif" | "apng" | "png" | "svg" | "html" | "cast" | "tape"
 
 /** One resolved output target — an absolute-or-relative path and its format. */
 export interface OutputTarget {
@@ -33,7 +33,8 @@ export interface OutputTarget {
 
 /** Map a lowercased file extension (no dot) to an {@link OutputFormat}. */
 const EXT_TO_FORMAT: Record<string, OutputFormat> = {
-  rec: "rec",
+  ttyz: "ttyz",
+  tty: "tty",
   gif: "gif",
   apng: "apng",
   png: "png",
@@ -44,7 +45,7 @@ const EXT_TO_FORMAT: Record<string, OutputFormat> = {
 }
 
 /** The fixed set a folder bundle (`-o demos/`) writes. */
-const FOLDER_BUNDLE: OutputFormat[] = ["rec", "gif", "cast", "tape"]
+const FOLDER_BUNDLE: OutputFormat[] = ["ttyz", "gif", "cast", "tape"]
 
 /** Whether a path string denotes a folder (trailing `/`, or an existing dir). */
 function isFolderPath(value: string): boolean {
@@ -78,7 +79,7 @@ export function resolveOutputTargets(outputs: readonly string[]): OutputTarget[]
   const targets: OutputTarget[] = []
   for (const value of outputs) {
     if (isFolderPath(value)) {
-      // Folder bundle — the fixed `rec`/`gif`/`cast`/`tape` set under `<dir>/`.
+      // Folder bundle — the fixed `ttyz`/`gif`/`cast`/`tape` set under `<dir>/`.
       const dir = value.replace(/[/\\]+$/, "")
       for (const format of FOLDER_BUNDLE) {
         targets.push({ path: join(dir, `out.${format}`), format })

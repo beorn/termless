@@ -89,6 +89,19 @@ describe("frame replay", () => {
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, "00001.png"), onePixelPng)
     writeFileSync(join(dir, "00002.png"), onePixelPng)
+    // The manifest that makes the sidecar a valid .tty bundle.
+    writeFileSync(
+      join(dir, "manifest.json"),
+      JSON.stringify({
+        ttyVersion: 1,
+        recordingVersion: 1,
+        cols: 0,
+        rows: 0,
+        durationMicros: 0,
+        reproducible: false,
+        members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
+      }),
+    )
     writeFileSync(
       join(dir, "index.jsonl"),
       [

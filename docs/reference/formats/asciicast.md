@@ -161,5 +161,5 @@ recorded for reference; markers are reported via the `onEvent` callback.
 
 - [Recording Sessions](../../guide/recording-sessions) -- recording and playback how-to.
 - [.tape format](./tape) -- the VHS-compatible compiler format.
-- [.rec format](./rec) -- termless's native, all-tracks format.
+- [.tty/.ttyz format](./tty) -- termless's native, all-tracks format.
 - [asciinema documentation](https://docs.asciinema.org/manual/asciicast/v2/) -- upstream spec.

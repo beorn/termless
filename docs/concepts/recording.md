@@ -1,6 +1,6 @@
 ---
 title: Recording
-description: A Recording is a captured terminal session — a timeline of commands, I/O, and frames, serializable to the .tape, .cast, and .rec formats.
+description: A Recording is a captured terminal session — a timeline of commands, I/O, and frames, serializable to the .tape, .cast, and .tty/.ttyz formats.
 ---
 
 # Recording
@@ -11,7 +11,7 @@ Recording is that session frozen onto a timeline you can replay, scrub, animate,
 and diff.
 
 A Recording is **one concept** — not five. The file formats it serializes to
-(`.tape`, `.cast`, `.rec`) are _encodings_, not separate things. Naming the
+(`.tape`, `.cast`, `.tty`/`.ttyz`) are _encodings_, not separate things. Naming the
 concept after a serialization would be the JPEG-vs-Photo error: the photo is the
 thing; JPEG is one way to store it.
 
@@ -66,7 +66,7 @@ TraceFrame (on-disk row)  ⇄  Frame (projection entry) + RenderArtifacts
 
 The conversion is one symmetric codec pair — `traceToRecording` (rows →
 Recording) and `recordingToTraceFrames` (Recording → rows). Every consumer that
-needs the on-disk shape routes through that one pair: the `.rec` writer, the
+needs the on-disk shape routes through that one pair: the `.tty`/`.ttyz` writer, the
 `writeVisualTraceFromRecording` disk writer, and the browser viewer. There is
 no second Frame → row projection. Because the artifacts survive the round trip,
 `recordingToTraceFrames(traceToRecording(rows))` reproduces `rows`
@@ -103,12 +103,12 @@ _encodings_ — see the [Formats reference](../reference/formats/) for full spec
 | ----------- | -------------------------------------------------------------------------------------------- |
 | **`.tape`** | charm/VHS interop. A _compiler_ input — `.tape` → commands track. Round-trip is lossy.       |
 | **`.cast`** | asciinema interop. A symmetric _codec_ — `.cast` ⇄ io track, lossless.                       |
-| **`.rec`**  | termless's own native format — a single-file container carrying all three tracks losslessly. |
+| **`.tty`/`.ttyz`** | termless's own native format — a live bundle directory sealed into a single-file archive, carrying every track losslessly. |
 
 `.tape` is special: it is a _scenario compiler_, not a symmetric codec. `Type "hi"`
 _expands_ into key events with timing; `Sleep` is a player directive. Going back
 out (Recording → `.tape`) is best-effort. `.cast` is a true codec — the io track
-round-trips losslessly. `.rec` is termless's lossless canonical form.
+round-trips losslessly. `.tty`/`.ttyz` is termless's lossless canonical form.
 
 For how-to material see the [Recording Sessions](../guide/recording-sessions)
 and [Tracing Visual Bugs](../guide/tracing-visual-bugs) guides.

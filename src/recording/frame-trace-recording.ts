@@ -224,8 +224,8 @@ function unprojectFrame(frame: ModelFrame, prevTs: number | null): TraceFrame {
  * Project a {@link Recording}'s `frames` projection back to the on-disk
  * `TraceFrame[]` shape — the inverse of {@link traceToRecording}.
  *
- * This is the single, shared Recording → visual-trace codec: `native-rec`'s
- * `.rec` writer, `writeVisualTraceFromRecording`, and the viewer's
+ * This is the single, shared Recording → visual-trace codec: `tty-format`'s
+ * bundle writer, `writeVisualTraceFromRecording`, and the viewer's
  * Recording-consuming entry point all route through it, so there is exactly
  * one Frame → TraceFrame projection in termless (not three ad-hoc copies).
  *

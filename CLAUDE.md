@@ -174,14 +174,20 @@ timer.advanceTime(500) // Partial advance
 
 ## Recording & Replay
 
+The captured-session model is `Recording` (`src/recording/recording.ts`) — io
+truth, commands intent, frames projection, integer-µs clock. On disk it is the
+`.tty`/`.ttyz` format: one format, two encodings (live bundle directory ⇄
+sealed ZIP archive), one encoding-blind reader. Reference:
+`docs/reference/formats/tty.md`.
+
 ```typescript
-import { startRecording, replayRecording } from "@termless/core"
+import { readRecording, writeRecording, packRecording, unpackRecording } from "@termless/core"
 
-// Record a terminal session
-const recording = startRecording(terminal)
-// ... interact with terminal ...
-const data = recording.stop() // JSON-serializable
-
-// Replay
-await replayRecording(terminal, data)
+const rec = readRecording("session.tty") // or "session.ttyz" — identical result
+writeRecording("out.ttyz", rec) // seal; "out.tty" writes the bundle directory
 ```
+
+Codecs: `.cast` (symmetric asciicast v2), `.tape` (compiler input), `ttyrec`
+(import-only). Visual traces read/write through `loadVisualTrace` /
+`writeVisualTrace`; the frame tracer's live directory is itself a valid `.tty`
+bundle.

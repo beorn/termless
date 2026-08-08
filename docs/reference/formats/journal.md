@@ -11,7 +11,7 @@ replayed through any Termless [Terminal](../../concepts/terminal) or
 [Backend](../../concepts/backend) to reproduce a session deterministically for
 recording, conformance, and visual fixtures.
 
-Unlike the three on-disk [formats](./) (`.tape`, `.cast`, `.rec`), the journal
+Unlike the on-disk [formats](./) (`.tape`, `.cast`, `.tty`/`.ttyz`), the journal
 surface is a **replay input shape**, not a serializer. Its types are
 deliberately **structural** — Termless declares no dependency on whatever
 produced the journal. External adapters convert a real session log into this

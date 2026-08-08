@@ -42,7 +42,7 @@ mode — there is no separate format flag and no separate screenshot flag:
 # No -o → a single out.gif in the cwd
 $ termless record -- bun km view ~/Vault
 
-# A trailing slash → a folder bundle: out.rec, out.gif, out.cast, out.tape
+# A trailing slash → a folder bundle: out.ttyz, out.gif, out.cast, out.tape
 $ termless record -o demos/ -- bun km view ~/Vault
 
 # An extension → that single file. -o is repeatable.
@@ -54,7 +54,7 @@ $ termless record -o shot.png -- bun km view ~/Vault
 
 The extension picks the format: `.gif` / `.apng` / `.png` are raster (they
 consult the renderer — see below), `.svg` is vector, `.html` is a scrubbable
-browser viewer, and `.rec` / `.tape` / `.cast` are recording data.
+browser viewer, and `.ttyz` / `.tty` / `.tape` / `.cast` are recording data.
 
 ### Bare `record` — the help gate
 
@@ -93,7 +93,7 @@ bytes pipe straight to the host terminal at the top-left, with no frame.
 Useful in narrow hosts, in pipes-to-file, and when the host terminal doesn't
 render border glyphs well.
 
-The live frame is **preview only** — the recording artifact (`.rec` / `.gif`
+The live frame is **preview only** — the recording artifact (`.ttyz` / `.gif`
 / `.png` / `.svg`) is byte-identical regardless of `--live-chrome`. The
 output's window chrome is controlled by `--chrome`.
 
@@ -227,7 +227,7 @@ the recording's frames into a GIF. See
 
 ```bash
 # Scrub a recording in the browser
-$ termless view ./mysession.rec
+$ termless view ./mysession.ttyz
 
 # Animate a recording to a GIF
 $ termless view ./trace --format gif -o demo.gif
@@ -279,7 +279,7 @@ Recordings render to multiple output formats — no Chromium, no ffmpeg:
 | APNG         | `.apng`   | Multi-frame  | `upng-js` (pure JS)    |
 | Web player   | browser   | Interactive  | `@termless/web-player` |
 
-The three on-disk recording **formats** — `.tape`, `.cast`, `.rec` — are
+The on-disk recording **formats** — `.tape`, `.cast`, `.tty`/`.ttyz` — are
 documented under [Recording Formats](../reference/formats/).
 
 ## Programmatic API
@@ -308,7 +308,7 @@ await replayRecording(term2, recording, { realtime: true }) // original timing
 
 - [Recording](../concepts/recording) -- the concept and its three tracks.
 - [Tracing Visual Bugs](./tracing-visual-bugs) -- the frames projection + scrubbable viewer.
-- [Recording Formats](../reference/formats/) -- the `.tape`, `.cast`, and `.rec` specs.
+- [Recording Formats](../reference/formats/) -- the `.tape`, `.cast`, and `.tty`/`.ttyz` specs.
 - [Web Player](./web-player) -- embed a recording in browser docs.
 - [Screenshots](./screenshots) -- single-frame SVG and PNG capture.
 - [Multi-Backend Testing](./multi-backend) -- backend comparison in Vitest.

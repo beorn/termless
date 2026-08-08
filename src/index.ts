@@ -64,19 +64,29 @@ export { loadVisualTrace } from "./recording/load-visual-trace.ts"
 export type { LoadVisualTraceOptions } from "./recording/load-visual-trace.ts"
 export { writeVisualTrace, writeVisualTraceFromRecording } from "./recording/write-visual-trace.ts"
 export type { WriteVisualTraceOptions } from "./recording/write-visual-trace.ts"
-// Native `.rec` recording format (Phase 5): the canonical full-fidelity
-// on-disk form — a single-file ZIP container, superset of the frame-trace
-// layout.
+// The `.tty`/`.ttyz` recording format: one format, two encodings — the live
+// bundle directory and the sealed archive — read by one encoding-blind reader.
 export {
   readRecording,
+  readBundle,
   writeRecording,
   packRecording,
   unpackRecording,
-  isRecPath,
-  REC_FORMAT_VERSION,
-} from "./recording/native/native-rec.ts"
-export type { RecManifest, ReadRecordingOptions, WriteRecordingOptions } from "./recording/native/native-rec.ts"
-// ZIP container helper backing the `.rec` format.
+  isTtyPath,
+  isTtyzPath,
+  TTY_FORMAT_VERSION,
+} from "./recording/native/tty-format.ts"
+export type {
+  TtyManifest,
+  TtyMember,
+  TtyMemberType,
+  TtyMemberEncoding,
+  TtyTail,
+  TtySkipTally,
+  ReadBundleResult,
+  WriteRecordingOptions,
+} from "./recording/native/tty-format.ts"
+// ZIP container codec backing the sealed (`.ttyz`) encoding.
 export { buildZip, parseZip } from "./recording/native/zip-archive.ts"
 export type { ZipEntry } from "./recording/native/zip-archive.ts"
 // view verb + view/ module (Phase 3): one verb, one viewer, all presentation.
@@ -211,6 +221,9 @@ export {
 } from "./recording/journal-replay.ts"
 export { parseAsciicast, replayAsciicast } from "./recording/asciicast/reader.ts"
 export type { ReplayOptions } from "./recording/asciicast/reader.ts"
+// ttyrec import codec — decode-only; two decades of archived recordings.
+export { decodeTtyrec } from "./recording/ttyrec/recording-codec.ts"
+export type { DecodeTtyrecOptions } from "./recording/ttyrec/recording-codec.ts"
 export { createAsciicastWriter } from "./recording/asciicast/writer.ts"
 export type { AsciicastWriter } from "./recording/asciicast/writer.ts"
 // Recording-domain adapter (Phase 2): .cast ⇄ Recording symmetric codec.

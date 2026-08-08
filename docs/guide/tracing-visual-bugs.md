@@ -36,7 +36,7 @@ recorded alongside. Identical buffer states (by xxHash64) skip the PNG and recor
 ### Via the CLI
 
 ```bash
-$ termless record --frames -o trace.rec -- bun km view ~/Vault
+$ termless record --frames -o trace.ttyz -- bun km view ~/Vault
 ```
 
 ### Via a `.tape`
@@ -87,9 +87,9 @@ const summary = await tracer.stop()
 // { count, uniqueCount, duplicateRatio, indexFile, firstTs, lastTs, totalBytes, truncated }
 ```
 
-The frames land in the `frames/` subtree of a [`.rec`](../reference/formats/rec)
+The frames land in the `frames/` subtree of a [`.ttyz`](../reference/formats/tty)
 directory (or a bare frame-trace directory) — `index.jsonl` plus `NNNNN.png`.
-See the [`.rec` format reference](../reference/formats/rec#frames-index-jsonl)
+See the [`.tty`/`.ttyz` format reference](../reference/formats/tty)
 for the row schema.
 
 ## Scrubbing frames — `termless view`
@@ -164,4 +164,4 @@ See the [MCP reference](../reference/mcp) for the full tool list.
 
 - [Recording](../concepts/recording) -- the frames projection in context.
 - [Recording Sessions](./recording-sessions) -- record / play / view / compare how-to.
-- [.rec format](../reference/formats/rec) -- the on-disk frames layout.
+- [.tty/.ttyz format](../reference/formats/tty) -- the on-disk frames layout.

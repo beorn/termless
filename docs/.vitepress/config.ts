@@ -225,7 +225,7 @@ export default defineConfig({
           { text: "Overview", link: "/reference/formats/" },
           { text: ".tape", link: "/reference/formats/tape" },
           { text: ".cast", link: "/reference/formats/asciicast" },
-          { text: ".rec", link: "/reference/formats/rec" },
+          { text: ".tty / .ttyz", link: "/reference/formats/tty" },
           { text: "Journal Replay", link: "/reference/formats/journal" },
         ],
       },

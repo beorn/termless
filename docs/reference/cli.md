@@ -52,7 +52,7 @@ screenshot flag.
 | Invocation                             | Output                                                            |
 | -------------------------------------- | ----------------------------------------------------------------- |
 | `termless record -- <cmd>` (no `-o`)   | `out.gif` — a single file in the cwd                              |
-| `termless record -o demos/ -- <cmd>`   | `demos/` folder — `out.rec` · `out.gif` · `out.cast` · `out.tape` |
+| `termless record -o demos/ -- <cmd>`   | `demos/` folder — `out.ttyz` · `out.gif` · `out.cast` · `out.tape` |
 | `termless record -o a.gif -o b.cast`   | exactly `a.gif` + `b.cast` (`-o` is repeatable)                   |
 | `termless record -o shot.png -- <cmd>` | a single still PNG                                                |
 | `termless record` (no command)         | shows a help gate, then records a live `$SHELL` on Enter          |
@@ -66,7 +66,7 @@ is involved:
 | `.png`                 | raster still              | the renderer — `auto` (see below) |
 | `.svg`                 | vector still/animation    | none (vector)                     |
 | `.html`                | scrubbable browser viewer | none server-side                  |
-| `.rec` `.tape` `.cast` | recording data            | none                              |
+| `.ttyz` `.tty` `.tape` `.cast` | recording data            | none                              |
 
 ### Renderers
 
@@ -209,13 +209,13 @@ See [Recording Sessions](../guide/recording-sessions) for detailed usage.
 
 ## `termless view` {#view}
 
-Present a recording — a single `.rec` file or a bare frame-trace directory. By
+Present a recording — a sealed `.ttyz` archive or a `.tty` bundle directory. By
 default `view` writes a self-contained, scrubbable `viewer.html` alongside the
 recording; with `--format gif` it animates the recording's frames into a GIF.
 
 ```bash
 # Scrub a recording in the browser (writes viewer.html next to it)
-$ termless view ./mysession.rec
+$ termless view ./mysession.ttyz
 
 # Animate a recording to a GIF
 $ termless view ./trace --format gif -o demo.gif

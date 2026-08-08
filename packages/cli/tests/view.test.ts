@@ -3,7 +3,7 @@
  * `viewer.html`; animate mode (`--format gif`) writes a GIF.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -26,6 +26,22 @@ const FIXTURE = join(here, "../../../tests/fixtures/legacy-frame-trace")
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), "view-cmd-test-"))
+}
+
+/** Upgrade a copied legacy fixture into a valid `.tty` bundle: add the manifest. */
+function addManifest(dir: string): void {
+  writeFileSync(
+    join(dir, "manifest.json"),
+    JSON.stringify({
+      ttyVersion: 1,
+      recordingVersion: 1,
+      cols: 0,
+      rows: 0,
+      durationMicros: 0,
+      reproducible: false,
+      members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
+    }),
+  )
 }
 
 describe("termless view — scrub mode (default)", () => {
@@ -83,6 +99,7 @@ describe("termless view — animate mode (--format)", () => {
     try {
       const recording = join(dir, "trace")
       cpSync(FIXTURE, recording, { recursive: true })
+      addManifest(recording)
       const out = join(dir, "demo.gif")
 
       await viewAction({ recording, format: "gif", output: out })

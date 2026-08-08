@@ -26,7 +26,8 @@
  * The legacy fragmented artifacts (the old `recording.ts`, `asciicast/convert`)
  * were purged in Phase 6A; this `Recording` type owns the concept. The format
  * codecs live alongside it: `asciicast/recording-codec.ts` (the `.cast` codec),
- * `tape/compile.ts` (the `.tape` compiler), `native/native-rec.ts` (`.rec`).
+ * `tape/compile.ts` (the `.tape` compiler), `native/tty-format.ts`
+ * (`.tty`/`.ttyz`), `ttyrec/recording-codec.ts` (`ttyrec` import).
  */
 
 // =============================================================================

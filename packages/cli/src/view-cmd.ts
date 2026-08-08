@@ -2,8 +2,8 @@
  * `termless view` — present a recorded terminal session.
  *
  * `view` is the first-class **view** verb of the recording domain (record ·
- * **view** · play · compare). It takes a recording on disk — a single `.rec`
- * file or a bare frame-trace directory — and presents it:
+ * **view** · play · compare). It takes a recording on disk — a sealed `.ttyz`
+ * archive or a `.tty` bundle directory — and presents it:
  *
  * - default (`--scrub`): writes a self-contained scrubbable `viewer.html`
  *   alongside the recording (timeline scrub, find, filter, pixel-diff,
@@ -17,10 +17,10 @@
  * @example
  * ```bash
  * # Scrub a recording in the browser (writes viewer.html next to it)
- * termless view ./mysession.rec
+ * termless view ./mysession.ttyz
  *
  * # Animate a recording to a GIF
- * termless view ./mysession.rec --format gif -o demo.gif
+ * termless view ./mysession.ttyz --format gif -o demo.gif
  * ```
  */
 
@@ -31,7 +31,7 @@ import { basename, dirname, join, resolve } from "node:path"
 
 /** Parsed options for the `view` verb. */
 export interface ViewCliOpts {
-  /** Path to the recording — a `.rec` file or a frame-trace directory. */
+  /** Path to the recording — a sealed `.ttyz` archive or a `.tty` bundle directory. */
   recording: string
   /** Output file path — required for `--format`. */
   output?: string
@@ -42,10 +42,9 @@ export interface ViewCliOpts {
 /**
  * Resolve a recording path to a directory working form.
  *
- * A single `.rec` file is a ZIP container — it is unpacked to a fresh temp
- * directory so the directory-oriented presentation code (`writeViewer`,
- * `recordingToPngFrames`) can read its PNGs. A directory (a `.rec` directory
- * bundle or a bare frame-trace directory) is used as-is.
+ * A sealed `.ttyz` archive is unpacked to a fresh temp directory so the
+ * directory-oriented presentation code (`writeViewer`, `recordingToPngFrames`)
+ * can read its PNGs. A `.tty` bundle directory is used as-is.
  *
  * Returns the directory plus a `cleanup` callback — a no-op for a real
  * directory, an `rm -rf` for an unpacked temp directory.
@@ -53,8 +52,8 @@ export interface ViewCliOpts {
 async function resolveRecordingDir(path: string): Promise<{ dir: string; cleanup: () => void }> {
   const abs = resolve(path)
   if (existsSync(abs) && statSync(abs).isFile()) {
-    const { unpackRecording } = await import("../../../src/recording/native/native-rec.ts")
-    const tmp = mkdtempSync(join(tmpdir(), "termless-rec-"))
+    const { unpackRecording } = await import("../../../src/recording/native/tty-format.ts")
+    const tmp = mkdtempSync(join(tmpdir(), "termless-view-"))
     unpackRecording(abs, tmp)
     return { dir: tmp, cleanup: () => rmSync(tmp, { recursive: true, force: true }) }
   }
@@ -85,13 +84,13 @@ export async function viewAction(opts: ViewCliOpts): Promise<void> {
         return
       }
 
-      const { readRecording } = await import("../../../src/recording/native/native-rec.ts")
+      const { readRecording } = await import("../../../src/recording/native/tty-format.ts")
       const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
       const { createGifFromPngs } = await import("../../../src/view/gif.ts")
 
       const recording = readRecording(dir)
-      // A `.rec` bundle holds its PNGs under `frames/`; a bare frame-trace
-      // directory holds them in the directory root.
+      // A written bundle holds its PNGs under `frames/`; a visual trace
+      // holds them in the bundle root.
       const nested = join(dir, "frames")
       const framesDir = existsSync(nested) && statSync(nested).isDirectory() ? nested : dir
       const frames = recordingToPngFrames(recording, framesDir)
@@ -106,17 +105,17 @@ export async function viewAction(opts: ViewCliOpts): Promise<void> {
 
     // ── Scrub mode (default): self-contained HTML viewer ──
     const { writeViewer } = await import("../../../src/view/viewer.ts")
-    // A `.rec` bundle keeps `index.jsonl` + PNGs under `frames/`; a bare
-    // frame-trace directory keeps them in the directory root.
+    // A written bundle keeps `index.jsonl` + PNGs under `frames/`; a visual
+    // trace keeps them in the bundle root.
     const nested = join(dir, "frames")
     const viewerDir = existsSync(join(nested, "index.jsonl")) ? nested : dir
     const result = writeViewer(viewerDir)
     let viewerFile = result.viewerFile
-    // When the source was a single `.rec` file, the viewer was written into a
-    // temp directory — copy it next to the original `.rec`.
+    // When the source was a sealed `.ttyz`, the viewer was written into a
+    // temp directory — copy it next to the original archive.
     const srcAbs = resolve(opts.recording)
     if (existsSync(srcAbs) && statSync(srcAbs).isFile()) {
-      const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.rec$/i, "") + ".viewer.html")
+      const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.ttyz$/i, "") + ".viewer.html")
       copyFileSync(result.viewerFile, dest)
       viewerFile = dest
     }
@@ -132,12 +131,12 @@ export function registerViewCommand(program: Command): void {
   const cmd = program
     .command("view")
     .description("Present a recording — scrub it in the browser or animate it")
-    .argument("<recording>", "Recording — a .rec file or a frame-trace directory")
+    .argument("<recording>", "Recording — a .ttyz archive or a .tty bundle directory")
     .option("-o, --output <path>", "Output file for --format")
     .option("--format <type>", "Animate the recording to a file: gif")
 
   cmd.addHelpSection("Examples:", [
-    ["$ termless view ./mysession.rec", "Write a scrubbable viewer.html"],
+    ["$ termless view ./mysession.ttyz", "Write a scrubbable viewer.html"],
     ["$ termless view ./trace --format gif -o demo.gif", "Animate the recording to a GIF"],
   ])
 

@@ -114,6 +114,20 @@ describe("loadVisualTrace", () => {
     const blankDir = mkdtempSync(join(tmpdir(), "load-visual-trace-blank-"))
     try {
       writeFileSync(join(blankDir, "index.jsonl"), "\n\nnot json\n")
+      // A valid bundle manifest pointing at the garbage index — the failure
+      // under test is the CONTENT, not a missing manifest.
+      writeFileSync(
+        join(blankDir, "manifest.json"),
+        JSON.stringify({
+          ttyVersion: 1,
+          recordingVersion: 1,
+          cols: 0,
+          rows: 0,
+          durationMicros: 0,
+          reproducible: false,
+          members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
+        }),
+      )
       expect(() => loadVisualTrace(blankDir)).toThrow(/no parseable frames/)
     } finally {
       rmSync(blankDir, { recursive: true, force: true })
@@ -168,13 +182,14 @@ describe("writeVisualTrace", () => {
     writeVisualTrace(destDir, srcFrames, { pngSourceDir: srcDir })
 
     // index.jsonl + every PNG copied byte-identically. The source dir also
-    // holds a viewer.html (written by stop()); writeVisualTrace writes only
-    // the index + PNGs, so compare those.
+    // holds a viewer.html (written by stop()); the written bundle adds its
+    // own manifest.json — the one addition the format makes to the layout.
     const destSnap = snapshotDir(destDir)
     const srcIndex = readFileSync(join(srcDir, "index.jsonl")).toString("base64")
     expect(destSnap.get("index.jsonl")).toBe(srcIndex)
+    expect(destSnap.has("manifest.json")).toBe(true)
     for (const [name, bytes] of destSnap) {
-      if (name === "index.jsonl") continue
+      if (name === "index.jsonl" || name === "manifest.json") continue
       expect(name.endsWith(".png")).toBe(true)
       expect(bytes).toBe(readFileSync(join(srcDir, name)).toString("base64"))
     }
