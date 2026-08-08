@@ -18,9 +18,10 @@
  */
 
 import { createHash } from "node:crypto"
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, dirname, extname, join, relative, resolve } from "node:path"
+import type { TraceFrame } from "@termless/core"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { OutputFormat, OutputTarget } from "./output-targets.ts"
 
@@ -137,18 +138,20 @@ function frameColsRows(frame: AnimationFrame, session: CapturedSession): { cols:
  * `record`. The trace is target-derived output, so it intentionally reuses the
  * post-frame-gate session frames instead of subscribing to the live terminal.
  */
-export async function writeFrameTraceSidecar(
+export async function writeRecordingBundleSidecar(
   dir: string,
   session: CapturedSession,
   options: OutputFrameTraceOptions = {},
 ): Promise<void> {
-  rmSync(dir, { recursive: true, force: true })
-  mkdirSync(dir, { recursive: true })
-
+  const parentDir = dirname(resolve(dir))
+  mkdirSync(parentDir, { recursive: true })
   const { selectRasterizer } = await import("../../../src/view/rasterizer.ts")
   const rasterizer = options.renderFramePng ? null : await selectRasterizer(session.renderer)
+  const stageDir = mkdtempSync(join(parentDir, ".termless-bundle-"))
+  const pngDir = join(stageDir, "png")
+  mkdirSync(pngDir)
   const hashToSeq = new Map<string, number>()
-  const lines: string[] = []
+  const frames: TraceFrame[] = []
   const baseTs = Date.now()
   let elapsedMs = 0
 
@@ -168,38 +171,48 @@ export async function writeFrameTraceSidecar(
           : await rasterizer!.toPng(frame.svg, session.scale)
         renderMs = +(performance.now() - started).toFixed(2)
         png = `${String(seq).padStart(5, "0")}.png`
-        writeFileSync(join(dir, png), bytes)
+        writeFileSync(join(pngDir, png), bytes)
         hashToSeq.set(hash, seq)
       }
 
       const ts = baseTs + elapsedMs
-      lines.push(
-        JSON.stringify({
-          seq,
-          ts,
-          iso: new Date(ts).toISOString(),
-          hash,
-          duplicate_of: duplicateOf,
-          bytes_in_since_last: 0,
-          ansi_input_preview: "",
-          buffer: { ...frameColsRows(frame, session), cursor: frameCursor(frame) },
-          duration_since_prev_ms: index === 0 ? 0 : session.frames[index - 1]!.duration,
-          render_ms: renderMs,
-          png,
-        }),
-      )
+      frames.push({
+        seq,
+        ts,
+        iso: new Date(ts).toISOString(),
+        hash,
+        duplicate_of: duplicateOf,
+        bytes_in_since_last: 0,
+        ansi_input_preview: "",
+        buffer: { ...frameColsRows(frame, session), cursor: frameCursor(frame) },
+        duration_since_prev_ms: index === 0 ? 0 : session.frames[index - 1]!.duration,
+        render_ms: renderMs,
+        png,
+      })
       elapsedMs += frame.duration
+    }
+
+    const { traceToRecording, writeRecording } = await import("@termless/core")
+    const recording = traceToRecording({
+      frames,
+      cols: session.cols,
+      rows: session.rows,
+      backend: "unknown",
+    })
+    const stagedBundle = join(stageDir, "recording.tty")
+    writeRecording(stagedBundle, recording, { pngSourceDir: pngDir })
+    rmSync(dir, { recursive: true, force: true })
+    renameSync(stagedBundle, dir)
+
+    try {
+      const { writeViewer } = await import("../../../src/view/viewer.ts")
+      writeViewer(join(dir, "frames"))
+    } catch {
+      // The recording itself is the contract; viewer generation is best-effort.
     }
   } finally {
     await rasterizer?.dispose?.()
-  }
-
-  writeFileSync(join(dir, "index.jsonl"), lines.join("\n") + (lines.length > 0 ? "\n" : ""))
-  try {
-    const { writeViewer } = await import("../../../src/view/viewer.ts")
-    writeViewer(dir)
-  } catch {
-    // The trace itself is the contract; viewer generation is best-effort.
+    rmSync(stageDir, { recursive: true, force: true })
   }
 }
 
@@ -405,7 +418,7 @@ export async function writeOutputs(
           if (frameTrace?.dir) {
             const resolvedDir = resolve(frameTrace.dir)
             if (!writtenTraceDirs.has(resolvedDir)) {
-              await writeFrameTraceSidecar(frameTrace.dir, session, frameTrace)
+              await writeRecordingBundleSidecar(frameTrace.dir, session, frameTrace)
               writtenTraceDirs.add(resolvedDir)
             }
           }

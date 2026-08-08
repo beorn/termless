@@ -18,6 +18,18 @@ function writeTrace(dir: string): void {
   writeFileSync(join(dir, "00001.png"), new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
   writeFileSync(join(dir, "viewer.html"), "<!doctype html>")
   writeFileSync(
+    join(dir, "manifest.json"),
+    JSON.stringify({
+      ttyVersion: 1,
+      recordingVersion: 1,
+      cols: 0,
+      rows: 0,
+      durationMicros: 0,
+      reproducible: false,
+      members: [{ path: "index.jsonl", type: "frames", encoding: "trace-index" }],
+    }),
+  )
+  writeFileSync(
     join(dir, "index.jsonl"),
     [
       JSON.stringify({
@@ -72,7 +84,7 @@ describe("inspectRecordingBundle", () => {
       expect(summary.frameTrace?.uniqueCount).toBe(1)
       expect(summary.frameTrace?.duplicateRatio).toBe(0.5)
       expect(summary.frameTrace?.durationMs).toBe(42)
-      expect(summary.frameTrace?.files).toEqual(["00001.png", "index.jsonl", "viewer.html"])
+      expect(summary.frameTrace?.files).toEqual(["00001.png", "index.jsonl", "manifest.json", "viewer.html"])
     }))
 
   test("falls back to the sibling .frames directory when the tape has no Set Frames", () =>
@@ -101,6 +113,6 @@ describe("inspectRecordingBundle", () => {
       expect(output).toContain("Backend: ghostty")
       expect(output).toContain("Frames: 2 total, 1 unique, 50% duplicates")
       expect(output).toContain("Duration: 42ms")
-      expect(output).toContain("Files: 00001.png, index.jsonl, viewer.html")
+      expect(output).toContain("Files: 00001.png, index.jsonl, manifest.json, viewer.html")
     }))
 })

@@ -6,11 +6,10 @@ import type { Command } from "@silvery/commander"
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { basename, dirname, extname, join, resolve } from "node:path"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
-import type { TraceFrame } from "../../../src/recording/frame-trace.ts"
+import { openRecordingBundle } from "./recording-bundle.ts"
 
 export interface FrameTraceInspection {
   dir: string
-  indexFile: string
   frameCount: number
   uniqueCount: number
   duplicateRatio: number
@@ -37,37 +36,21 @@ function resolveFramesDir(tapePath: string, framesSetting: string | undefined): 
   return resolve(dirname(tapePath), framesSetting)
 }
 
-function readTraceFrames(indexFile: string): TraceFrame[] {
-  const content = readFileSync(indexFile, "utf-8")
-  const frames: TraceFrame[] = []
-  for (const line of content.split("\n")) {
-    const trimmed = line.trim()
-    if (trimmed.length === 0) continue
-    try {
-      frames.push(JSON.parse(trimmed) as TraceFrame)
-    } catch {
-      // Match the append-only trace reader contract: ignore a malformed tail.
-    }
-  }
-  return frames
-}
-
 function inspectFrameTrace(dir: string): FrameTraceInspection | null {
-  const indexFile = join(dir, "index.jsonl")
-  if (!existsSync(indexFile)) return null
+  if (!existsSync(dir)) return null
 
-  const frames = readTraceFrames(indexFile)
-  const uniqueCount = frames.filter((frame) => frame.duplicate_of === null).length
+  using bundle = openRecordingBundle(dir)
+  const frames = bundle.recording.frames ?? []
+  const uniqueCount = frames.filter((frame) => frame.duplicateOf === null).length
   const first = frames[0]
   const last = frames[frames.length - 1]
   return {
     dir,
-    indexFile,
     frameCount: frames.length,
     uniqueCount,
     duplicateRatio: frames.length === 0 ? 0 : 1 - uniqueCount / frames.length,
-    durationMs: first && last ? Math.max(0, last.ts - first.ts) : 0,
-    files: existsSync(dir) ? readdirSync(dir).sort() : [],
+    durationMs: first && last ? Math.max(0, Math.round((last.at - first.at) / 1000)) : 0,
+    files: readdirSync(bundle.framesDir).sort(),
   }
 }
 

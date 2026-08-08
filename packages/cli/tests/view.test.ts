@@ -50,6 +50,7 @@ describe("termless view — scrub mode (default)", () => {
     try {
       const recording = join(dir, "trace")
       cpSync(FIXTURE, recording, { recursive: true })
+      addManifest(recording)
 
       await viewAction({ recording })
 
