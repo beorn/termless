@@ -25,6 +25,8 @@ const catalog = {
   ready: (name: string) => name !== "alacritty",
 }
 
+const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
+
 describe("resolveBackendNames", () => {
   it("leaves unspecified backend selection to the player default", () => {
     expect(resolveBackendNames(undefined, catalog)).toBeUndefined()
@@ -79,7 +81,6 @@ describe("comparison output helpers", () => {
 })
 
 it("documents native source precedence at the CLI help door", () => {
-  const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
   const result = spawnSync("bun", [cli, "play", "--help"], { encoding: "utf8" })
 
   expect(result.status, result.stderr).toBe(0)
@@ -143,6 +144,45 @@ describe("native Recording playback source", () => {
 
       expect(output.logs.join("\n")).toContain("io-track")
       expect(output.errors).toEqual(["replaying from io (no commands present)"])
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("auto replays a dual-track .tty from commands through the CLI door", () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-cli-"))
+    try {
+      const path = nativeRecording(dir, "commands.tty", {
+        commands: [{ kind: "type", at: micros(0), text: "cli-command-track" }],
+        io: [{ at: micros(0), direction: "out", data: "cli-io-track" }],
+      })
+
+      const result = spawnSync("bun", [cli, "play", "--speed", "0", path], { encoding: "utf8" })
+
+      expect(result.status, result.stderr).toBe(0)
+      expect(result.stdout).toContain("cli-command-track")
+      expect(result.stdout).not.toContain("cli-io-track")
+      expect(result.stderr).not.toContain("replaying from io")
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("auto replays an io-only .ttyz through the CLI door and discloses the fallback", () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-cli-"))
+    try {
+      const path = nativeRecording(dir, "io.ttyz", {
+        commands: [],
+        io: [{ at: micros(0), direction: "out", data: "cli-io-track" }],
+      })
+
+      const result = spawnSync("bun", [cli, "play", "--speed", "0", path], { encoding: "utf8" })
+
+      expect(result.status, result.stderr).toBe(0)
+      expect(result.stdout).toContain("cli-io-track")
+      expect(result.stderr).toContain("replaying from io (no commands present)")
     } finally {
       // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
       rmSync(dir, { recursive: true, force: true })
