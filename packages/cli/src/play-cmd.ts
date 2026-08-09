@@ -1,8 +1,8 @@
 /**
- * `termless play` — tape player for terminal recordings.
+ * `termless play` — re-execute terminal recordings.
  *
- * Replaces the old `tape play` subcommand. Plays .tape files against
- * one or more backends, producing screenshots or cross-backend comparisons.
+ * Accepts authored `.tape` scripts, `.cast` recordings, and either encoding
+ * of the native recording format (`.tty` bundle or `.ttyz` archive).
  *
  * @example
  * ```bash
@@ -26,6 +26,7 @@ import { resolveTheme } from "../../../src/recording/tape/themes.ts"
 import { backends as listBackends, isReady as isBackendReady } from "../../../src/backend/backends.ts"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { SvgScreenshotOptions, WindowBar } from "../../../src/terminal/types.ts"
+import { generateTape, isTtyPath, isTtyzPath, readRecording } from "@termless/core"
 import { openRecordingBundle } from "./recording-bundle.ts"
 
 /** Read all of stdin as a string. */
@@ -403,7 +404,8 @@ export async function playAction(
     source = await readStdin()
     fileName = "stdin"
   } else {
-    source = readFileSync(resolve(file), "utf-8")
+    const path = resolve(file)
+    source = isTtyPath(path) || isTtyzPath(path) ? generateTape(readRecording(path)) : readFileSync(path, "utf-8")
     fileName = file
   }
 
@@ -764,6 +766,7 @@ export function registerPlayCommand(program: Command): void {
 
   cmd.addHelpSection("Examples:", [
     ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],
+    ["$ termless play session.ttyz", "Re-execute a native recording's command track"],
     ["$ termless play demo.cast", "Play an asciicast recording"],
     ["$ termless play -o demo.gif demo.tape", "Convert tape to animated GIF"],
     ["$ termless play -o demo.svg demo.tape", "Convert to animated SVG"],

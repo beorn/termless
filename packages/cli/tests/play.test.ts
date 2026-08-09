@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { spawnSync } from "node:child_process"
+import { mkdirSync, mkdtempSync, readFileSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { tmpdir } from "node:os"
+import { fileURLToPath } from "node:url"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
+import { createRecording, micros, writeRecording } from "@termless/core"
 import {
   compareSeparateOutputDir,
   playFrameReplayFromTape,
@@ -15,6 +18,44 @@ const catalog = {
   names: () => ["vterm", "ghostty", "alacritty", "vt100"],
   ready: (name: string) => name !== "alacritty",
 }
+
+describe("recording inputs", () => {
+  it.each([".tty", ".ttyz"])("plays the %s encoding through the command door", (extension) => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-recording-"))
+    try {
+      const recordingPath = join(dir, `session${extension}`)
+      const marker = `played-from-${extension.slice(1)}`
+      writeRecording(
+        recordingPath,
+        createRecording({
+          cols: 40,
+          rows: 4,
+          durationMicros: micros(0),
+          commands: [{ kind: "type", at: micros(0), text: marker, speedMicros: micros(0) }],
+        }),
+      )
+      // Exercise the executable command door: directory-vs-file dispatch is
+      // the contract under test, and an in-process action call cannot prove it.
+      const cli = join(dirname(fileURLToPath(import.meta.url)), "../src/cli.ts")
+      const result = spawnSync("bun", [cli, "play", recordingPath], {
+        cwd: dir,
+        encoding: "utf-8",
+      })
+
+      expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: "" })
+      expect(result.stdout).toContain(marker)
+    } finally {
+      if (extension === ".tty") {
+        unlinkSync(join(dir, "session.tty", "commands.jsonl"))
+        unlinkSync(join(dir, "session.tty", "manifest.json"))
+        rmdirSync(join(dir, "session.tty"))
+      } else {
+        unlinkSync(join(dir, "session.ttyz"))
+      }
+      rmdirSync(dir)
+    }
+  })
+})
 
 describe("resolveBackendNames", () => {
   it("leaves unspecified backend selection to the player default", () => {
