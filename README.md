@@ -405,6 +405,10 @@ termless record -o demo.tape -- ls -la
 # Play back as an animated GIF
 termless play -o demo.gif demo.tape
 
+# Play a native bundle/archive: prefer non-empty commands, else disclose io
+termless play demo.ttyz
+termless play --source=io demo.tty
+
 # Cross-terminal comparison
 termless play -b vterm,ghostty --compare side-by-side demo.tape
 

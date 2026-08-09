@@ -15,8 +15,9 @@
  *
  * Track authority — the invariant that makes `play` deterministic: when
  * multiple tracks exist, **`io` is the authoritative observation; `commands`
- * is the authoritative intent.** `play` defaults to `commands` (editable);
- * `reproduce` uses `io` (byte-exact).
+ * is the authoritative intent.** `play` automatically prefers a non-empty
+ * `commands` track (editable), otherwise discloses its fallback to `io`
+ * (byte-exact); `--source` forces either track and refuses when it is absent.
  *
  * Timebase — every timestamp on every track is **integer microseconds** on a
  * single monotonic clock. Never a float. asciicast's float-second timestamps
@@ -344,7 +345,8 @@ export interface Recording {
  *  - `intent` — the authoritative *intent*: `"commands"` when a commands track
  *    exists, else `null`.
  *
- * `play` follows `intent`; `reproduce` follows `observation`.
+ * Automatic `play` follows `intent` when it exists, otherwise `observation`;
+ * an explicit source selection follows only the requested authority.
  */
 export interface TrackAuthority {
   observation: "io" | null

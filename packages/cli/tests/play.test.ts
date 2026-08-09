@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
+import { createRecording, micros, writeRecording, type Recording } from "../../../src/index.ts"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import {
   compareSeparateOutputDir,
@@ -10,6 +13,12 @@ import {
   resolveBackendNames,
   writeComparisonOutput,
 } from "../src/play-cmd.ts"
+
+vi.mock("../../../src/backend/backends.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/backend/backends.ts")>()
+  const { createVt100Backend } = await import("../../vt100/src/backend.ts")
+  return { ...actual, backend: async () => createVt100Backend() }
+})
 
 const catalog = {
   names: () => ["vterm", "ghostty", "alacritty", "vt100"],
@@ -64,6 +73,132 @@ describe("comparison output helpers", () => {
 
       expect(readFileSync(output).subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a")
     } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+it("documents native source precedence at the CLI help door", () => {
+  const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
+  const result = spawnSync("bun", [cli, "play", "--help"], { encoding: "utf8" })
+
+  expect(result.status, result.stderr).toBe(0)
+  expect(result.stdout).toContain("--source <track>")
+  expect(result.stdout).toContain("auto prefers non-empty commands, then discloses io fallback")
+  expect(result.stdout).toContain("termless play --source=io demo.tty")
+})
+
+describe("native Recording playback source", () => {
+  function nativeRecording(dir: string, name: "commands.tty" | "io.ttyz", tracks: Pick<Recording, "commands" | "io">) {
+    const path = join(dir, name)
+    writeRecording(
+      path,
+      createRecording({
+        cols: 20,
+        rows: 4,
+        durationMicros: micros(0),
+        ...tracks,
+      }),
+    )
+    return path
+  }
+
+  function captureConsole(): { logs: string[]; errors: string[] } {
+    const logs: string[] = []
+    const errors: string[] = []
+    vi.spyOn(console, "log").mockImplementation((...args) => logs.push(args.join(" ")))
+    vi.spyOn(console, "error").mockImplementation((...args) => errors.push(args.join(" ")))
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+    return { logs, errors }
+  }
+
+  it("auto replays a .tty recording from non-empty commands without fallback disclosure", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-"))
+    try {
+      const path = nativeRecording(dir, "commands.tty", {
+        commands: [{ kind: "type", at: micros(0), text: "cmd-track" }],
+      })
+      const output = captureConsole()
+
+      await playAction(path, { speed: 0 })
+
+      expect(output.logs.join("\n")).toContain("cmd-track")
+      expect(output.errors).toEqual([])
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("auto replays an io-only .ttyz recording and discloses the fallback", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-"))
+    try {
+      const path = nativeRecording(dir, "io.ttyz", {
+        commands: [],
+        io: [{ at: micros(0), direction: "out", data: "io-track" }],
+      })
+      const output = captureConsole()
+
+      await playAction(path, { speed: 0 })
+
+      expect(output.logs.join("\n")).toContain("io-track")
+      expect(output.errors).toEqual(["replaying from io (no commands present)"])
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    [
+      "commands" as const,
+      "commands.tty" as const,
+      { commands: [{ kind: "type" as const, at: micros(0), text: "forced-cmd" }] },
+      "forced-cmd",
+    ],
+    [
+      "io" as const,
+      "io.ttyz" as const,
+      { io: [{ at: micros(0), direction: "out" as const, data: "forced-io" }] },
+      "forced-io",
+    ],
+  ])("honors a forced %s source when its track is non-empty", async (source, name, tracks, expected) => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-"))
+    try {
+      const path = nativeRecording(dir, name, tracks)
+      const output = captureConsole()
+
+      await playAction(path, { source, speed: 0 })
+
+      expect(output.logs.join("\n")).toContain(expected)
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    [
+      "commands" as const,
+      "io.ttyz" as const,
+      { io: [{ at: micros(0), direction: "out" as const, data: "only-io" }] },
+      "play --source=commands: recording has no non-empty commands track; use --source=io",
+    ],
+    [
+      "io" as const,
+      "commands.tty" as const,
+      { commands: [{ kind: "type" as const, at: micros(0), text: "only-commands" }] },
+      "play --source=io: recording has no non-empty io track; use --source=commands",
+    ],
+  ])("refuses forced %s when that track is absent", async (source, name, tracks, message) => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-play-native-"))
+    try {
+      const path = nativeRecording(dir, name, tracks)
+      captureConsole()
+
+      await expect(playAction(path, { source, speed: 0 })).rejects.toThrow(message)
+    } finally {
+      // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
       rmSync(dir, { recursive: true, force: true })
     }
   })

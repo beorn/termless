@@ -24,6 +24,10 @@ $ termless record -o demos/ -- bun km view ~/Vault
 # Play a recording back and render a GIF
 $ termless play -o demo.gif demo.tape
 
+# Native recordings prefer commands, then disclose an io fallback
+$ termless play ./session.ttyz
+$ termless play --source=io ./session.tty
+
 # Compare across backends — same recording, two emulators
 $ termless compare demo.tape -b vterm,ghostty --compare side-by-side
 ```
@@ -217,6 +221,13 @@ $ termless play -o demo.apng demo.tape
 | `--compare <mode>`     | Comparison mode (delegates to `compare`)                       | --      |
 | `--cols <n>`           | Override terminal columns                                      | --      |
 | `--rows <n>`           | Override terminal rows                                         | --      |
+| `--source <track>`     | Native source: `auto`, `commands`, or `io`                     | auto    |
+
+For `.tty` bundle directories and `.ttyz` archives, `--source=auto` prefers a
+non-empty `commands` track. If commands are absent or empty, it replays `io`
+and prints `replaying from io (no commands present)`. Forcing `commands` or
+`io` refuses with a remedy when that track is absent; it never silently changes
+the requested source.
 
 ## View
 
@@ -282,26 +293,16 @@ Recordings render to multiple output formats — no Chromium, no ffmpeg:
 The on-disk recording **formats** — `.tape`, `.cast`, `.tty`/`.ttyz` — are
 documented under [Recording Formats](../reference/formats/).
 
-## Programmatic API
+## Programmatic Recording API
 
-Record and replay are also library functions:
+The public library reads both native encodings into the same Recording model:
 
 ```typescript
-import { startRecording, replayRecording, createTerminal } from "@termless/core"
-import { createXtermBackend } from "@termless/xtermjs"
+import { readRecording, trackAuthority } from "@termless/core"
 
-// Record a session
-const term = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
-const handle = startRecording(term)
-handle.recordOutput("$ ")
-handle.recordInput("ls\n")
-handle.recordOutput("file1  file2\n$ ")
-const recording = handle.stop() // JSON-serializable
-
-// Replay into another terminal
-const term2 = createTerminal({ backend: createXtermBackend(), cols: 80, rows: 24 })
-await replayRecording(term2, recording)
-await replayRecording(term2, recording, { realtime: true }) // original timing
+const recording = readRecording("session.ttyz") // `.tty` has the same result
+const authority = trackAuthority(recording)
+// { intent: "commands" | null, observation: "io" | null }
 ```
 
 ## See Also

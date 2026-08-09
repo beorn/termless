@@ -15,6 +15,15 @@
  */
 
 import type { Command } from "@silvery/commander"
+import {
+  encodeAsciicast,
+  generateTape,
+  isTtyPath,
+  isTtyzPath,
+  readRecording,
+  trackAuthority,
+  type Recording,
+} from "@termless/core"
 
 const parseNum = (v: string) => parseInt(v, 10)
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
@@ -128,6 +137,35 @@ export interface BackendCatalog {
 const defaultBackendCatalog: BackendCatalog = {
   names: listBackends,
   ready: isBackendReady,
+}
+
+export type RecordingPlaySource = "auto" | "commands" | "io"
+
+function recordingPlaySource(recording: Recording, requested: string | undefined): "commands" | "io" {
+  const source = requested ?? "auto"
+  if (source !== "auto" && source !== "commands" && source !== "io") {
+    throw new Error(`play --source must be auto, commands, or io; got: ${source}`)
+  }
+
+  const authority = trackAuthority(recording)
+  if (source === "commands") {
+    if (authority.intent === null) {
+      throw new Error("play --source=commands: recording has no non-empty commands track; use --source=io")
+    }
+    return "commands"
+  }
+  if (source === "io") {
+    if (authority.observation === null) {
+      throw new Error("play --source=io: recording has no non-empty io track; use --source=commands")
+    }
+    return "io"
+  }
+  if (authority.intent !== null) return "commands"
+  if (authority.observation !== null) {
+    console.error("replaying from io (no commands present)")
+    return "io"
+  }
+  throw new Error("play: recording has neither commands nor io; use `termless view` for a frames-only recording")
 }
 
 /** Resolve a comma-separated CLI backend list, expanding `all` to ready backends. */
@@ -327,7 +365,7 @@ async function playCast(
   // Replay with real-time delays, streaming output
   let lastText = ""
   await replayAsciicast(recording, term, {
-    speed: 1,
+    speed: opts.speed,
     onEvent: () => {
       const text = term.getText()
       if (text !== lastText) {
@@ -394,6 +432,7 @@ export async function playAction(
     speed?: number
     framerate?: number
     frameReplay?: boolean
+    source?: RecordingPlaySource
   },
 ): Promise<void> {
   // stdin support: read from stdin if file is "-"
@@ -402,6 +441,15 @@ export async function playAction(
   if (file === "-") {
     source = await readStdin()
     fileName = "stdin"
+  } else if (isTtyPath(file) || isTtyzPath(file)) {
+    const recording = readRecording(resolve(file))
+    const replaySource = recordingPlaySource(recording, opts.source)
+    if (replaySource === "io") {
+      await playCast(encodeAsciicast(recording), opts)
+      return
+    }
+    source = generateTape(recording)
+    fileName = file
   } else {
     source = readFileSync(resolve(file), "utf-8")
     fileName = file
@@ -759,12 +807,18 @@ export function registerPlayCommand(program: Command): void {
     .option("--margin <n>", "Outer margin in px", parseNum)
     .option("--margin-fill <color>", "Outer margin fill color (e.g. #1a1a2e)")
     .option("--speed <n>", "Playback speed multiplier (e.g. 2 for 2x)", Number.parseFloat)
+    .option(
+      "--source <track>",
+      "Native Recording source: auto, commands, io (auto prefers non-empty commands, then discloses io fallback)",
+    )
     .option("--framerate <n>", "Output framerate in FPS", parseNum)
     .option("--frame-replay", "Replay the tape's recorded .frames sidecar without spawning a PTY")
 
   cmd.addHelpSection("Examples:", [
     ["$ termless play demo.tape", "Play a .tape file (shows output in terminal)"],
     ["$ termless play demo.cast", "Play an asciicast recording"],
+    ["$ termless play demo.ttyz", "Auto-select a native Recording source"],
+    ["$ termless play --source=io demo.tty", "Force byte-exact native io replay"],
     ["$ termless play -o demo.gif demo.tape", "Convert tape to animated GIF"],
     ["$ termless play -o demo.svg demo.tape", "Convert to animated SVG"],
     ["$ termless play --frame-replay -o demo.gif demo.tape", "Animate the recorded .frames sidecar"],

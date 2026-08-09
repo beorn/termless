@@ -241,6 +241,8 @@ terminal text, screenshots, or animated output.
 # Play a recording (prints terminal text)
 $ termless play demo.tape
 $ termless play demo.cast
+$ termless play demo.ttyz
+$ termless play --source=io demo.tty
 
 # Generate an animated GIF
 $ termless play -o demo.gif demo.tape
@@ -258,6 +260,11 @@ $ termless play -o demo.svg demo.tape
 | `--compare <mode>`     | Comparison mode — a thin alias for `termless compare`          | --      |
 | `--cols <n>`           | Override terminal columns                                      | --      |
 | `--rows <n>`           | Override terminal rows                                         | --      |
+| `--source <track>`     | Native source: `auto`, `commands`, or `io`                     | auto    |
+
+For `.tty` and `.ttyz`, auto prefers non-empty commands. If none exist, play
+prints `replaying from io (no commands present)` and replays the io track.
+Forcing `commands` or `io` refuses when the requested track is absent or empty.
 
 ## `termless compare` {#compare}
 
