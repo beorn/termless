@@ -92,8 +92,9 @@ Everything you do with a Recording is one of the [four verbs](./overview):
   GIF/APNG/SVG, or embed it with the web player.
 - **play** re-executes a Recording into a Terminal. Its automatic source
   prefers a non-empty `commands` track (editable), then discloses a fallback to
-  `io` (byte-exact). `--source=commands` or `--source=io` forces one track and
-  refuses when that track is absent or empty.
+  `io` (byte-exact). For native `.tty` and `.ttyz` inputs,
+  `--source=commands` or `--source=io` forces one track and refuses when that
+  track is absent or empty; other input formats reject `--source`.
 - **compare** diffs one Recording across N backends.
 
 ## Formats

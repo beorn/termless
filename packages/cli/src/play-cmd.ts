@@ -435,13 +435,18 @@ export async function playAction(
     source?: RecordingPlaySource
   },
 ): Promise<void> {
+  const isNativeRecording = file !== "-" && (isTtyPath(file) || isTtyzPath(file))
+  if (opts.source !== undefined && !isNativeRecording) {
+    throw new Error("play --source is only valid for native .tty/.ttyz recordings; omit it for .tape/.cast/stdin")
+  }
+
   // stdin support: read from stdin if file is "-"
   let source: string
   let fileName: string
   if (file === "-") {
     source = await readStdin()
     fileName = "stdin"
-  } else if (isTtyPath(file) || isTtyzPath(file)) {
+  } else if (isNativeRecording) {
     const recording = readRecording(resolve(file))
     const replaySource = recordingPlaySource(recording, opts.source)
     if (replaySource === "io") {

@@ -227,7 +227,8 @@ For `.tty` bundle directories and `.ttyz` archives, `--source=auto` prefers a
 non-empty `commands` track. If commands are absent or empty, it replays `io`
 and prints `replaying from io (no commands present)`. Forcing `commands` or
 `io` refuses with a remedy when that track is absent; it never silently changes
-the requested source.
+the requested source. Other input formats reject `--source` instead of silently
+ignoring it.
 
 ## View
 

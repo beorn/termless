@@ -265,6 +265,7 @@ $ termless play -o demo.svg demo.tape
 For `.tty` and `.ttyz`, auto prefers non-empty commands. If none exist, play
 prints `replaying from io (no commands present)` and replays the io track.
 Forcing `commands` or `io` refuses when the requested track is absent or empty.
+Other input formats reject `--source` instead of silently ignoring it.
 
 ## `termless compare` {#compare}
 

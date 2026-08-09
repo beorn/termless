@@ -204,6 +204,21 @@ describe("native Recording playback source", () => {
   })
 })
 
+it.each(["demo.tape", "demo.cast"])("refuses --source for non-native %s input", async (name) => {
+  const dir = mkdtempSync(join(tmpdir(), "termless-play-source-scope-"))
+  try {
+    const path = join(dir, name)
+    writeFileSync(path, "")
+
+    await expect(playAction(path, { source: "io" })).rejects.toThrow(
+      "play --source is only valid for native .tty/.ttyz recordings; omit it for .tape/.cast/stdin",
+    )
+  } finally {
+    // raw-delete-allow: test fixture cleanup is physically contained by mkdtempSync.
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 describe("frame replay", () => {
   // Frame-replay verbs print a user-facing `Frame replay saved: …` line; the
   // shared vitest setup fails on any console output, so suppress it (these
