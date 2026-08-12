@@ -5,19 +5,19 @@
  * that any matcher wrapper (vitest, jest, bun:test, node:test) can use.
  *
  * Three categories match the composable API:
- *   - Region assertions: operate on RegionView (getText, getLines, containsText)
+ *   - Region assertions: operate on Region (getText, getLines, containsText)
  *   - Cell assertions: operate on CellView (bold, italic, fg, bg, etc.)
- *   - Terminal assertions: operate on TerminalReadable (cursor, modes, scrollback)
+ *   - Terminal assertions: operate on Terminal (cursor, modes, scrollback)
  */
 
 import type {
   CellView,
   CursorStyle,
-  OutputView,
-  RegionView,
-  RGB,
+  RawOutput,
+  Region,
+  Color,
   TerminalMode,
-  TerminalReadable,
+  Terminal,
   UnderlineStyle,
 } from "./terminal/types.ts"
 
@@ -36,7 +36,7 @@ export interface AssertionResult {
 // Type Guards
 // ═══════════════════════════════════════════════════════
 
-export function isRegionView(value: unknown): value is RegionView {
+export function isRegionView(value: unknown): value is Region {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -45,7 +45,7 @@ export function isRegionView(value: unknown): value is RegionView {
   )
 }
 
-export function isOutputView(value: unknown): value is OutputView {
+export function isOutputView(value: unknown): value is RawOutput {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -62,7 +62,7 @@ export function isCellView(value: unknown): value is CellView {
   )
 }
 
-export function isTerminalReadable(value: unknown): value is TerminalReadable {
+export function isTerminalReadable(value: unknown): value is Terminal {
   if (value === null || value === undefined) return false
   // Accept both objects and functions — Proxy-based wrappers (silvery Term)
   // use a function target for callability, so typeof returns "function"
@@ -74,7 +74,7 @@ export function isTerminalReadable(value: unknown): value is TerminalReadable {
 // Type Assertions (throw on wrong type)
 // ═══════════════════════════════════════════════════════
 
-export function assertRegionView(value: unknown, matcherName: string): asserts value is RegionView {
+export function assertRegionView(value: unknown, matcherName: string): asserts value is Region {
   if (isRegionView(value)) return
   if (isTerminalReadable(value)) {
     throw new Error(
@@ -83,7 +83,7 @@ export function assertRegionView(value: unknown, matcherName: string): asserts v
     )
   }
   throw new Error(
-    `${matcherName} requires a RegionView (an object with containsText, getText, getLines). ` + `Got ${typeof value}.`,
+    `${matcherName} requires a Region (an object with containsText, getText, getLines). ` + `Got ${typeof value}.`,
   )
 }
 
@@ -95,20 +95,20 @@ export function assertCellView(value: unknown, matcherName: string): asserts val
   )
 }
 
-export function assertOutputView(value: unknown, matcherName: string): asserts value is OutputView {
+export function assertOutputView(value: unknown, matcherName: string): asserts value is RawOutput {
   if (isOutputView(value)) return
   if (isTerminalReadable(value)) {
     throw new Error(`${matcherName} requires raw output. Use term.out. Example: expect(term.out).${matcherName}(...)`)
   }
   throw new Error(
-    `${matcherName} requires an OutputView (an object with containsOutput and getText). ` + `Got ${typeof value}.`,
+    `${matcherName} requires an RawOutput (an object with containsOutput and getText). ` + `Got ${typeof value}.`,
   )
 }
 
-export function assertTerminalReadable(value: unknown, matcherName: string): asserts value is TerminalReadable {
+export function assertTerminalReadable(value: unknown, matcherName: string): asserts value is Terminal {
   if (isTerminalReadable(value)) return
   throw new Error(
-    `${matcherName} expects a TerminalReadable, got ${typeof value}. ` +
+    `${matcherName} expects a Terminal, got ${typeof value}. ` +
       `Pass an object with getCell(), getCursor(), and getMode() methods.`,
   )
 }
@@ -117,7 +117,7 @@ export function assertTerminalReadable(value: unknown, matcherName: string): ass
 // Color Helpers
 // ═══════════════════════════════════════════════════════
 
-export function parseColor(color: string | RGB): RGB {
+export function parseColor(color: string | Color): Color {
   if (typeof color === "object") return color
   const hex = color.replace("#", "")
   return {
@@ -127,22 +127,22 @@ export function parseColor(color: string | RGB): RGB {
   }
 }
 
-export function colorsMatch(a: RGB | null, b: RGB): boolean {
+export function colorsMatch(a: Color | null, b: Color): boolean {
   if (!a) return false
   return a.r === b.r && a.g === b.g && a.b === b.b
 }
 
-export function formatRgb(color: RGB | null): string {
+export function formatRgb(color: Color | null): string {
   if (!color) return "null"
   return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
 }
 
 // ═══════════════════════════════════════════════════════
-// Region Assertions (RegionView)
+// Region Assertions (Region)
 // ═══════════════════════════════════════════════════════
 
 /** Assert region contains the given text as a substring. */
-export function assertContainsText(region: RegionView, text: string): AssertionResult {
+export function assertContainsText(region: Region, text: string): AssertionResult {
   const pass = region.containsText(text)
   const content = region.getText()
   return {
@@ -154,7 +154,7 @@ export function assertContainsText(region: RegionView, text: string): AssertionR
 }
 
 /** Assert region text matches exactly after trimming. */
-export function assertHasText(region: RegionView, text: string): AssertionResult {
+export function assertHasText(region: Region, text: string): AssertionResult {
   const actual = region.getText().trim()
   const pass = actual === text
   return {
@@ -168,7 +168,7 @@ export function assertHasText(region: RegionView, text: string): AssertionResult
 }
 
 /** Assert region lines match expected lines (trailing whitespace trimmed per line). */
-export function assertMatchesLines(region: RegionView, expectedLines: string[]): AssertionResult {
+export function assertMatchesLines(region: Region, expectedLines: string[]): AssertionResult {
   const actualLines = region.getLines().map((l) => l.trimEnd())
 
   const maxLen = Math.max(actualLines.length, expectedLines.length)
@@ -193,11 +193,11 @@ export function assertMatchesLines(region: RegionView, expectedLines: string[]):
 }
 
 // ═══════════════════════════════════════════════════════
-// Output Assertions (OutputView)
+// Output Assertions (RawOutput)
 // ═══════════════════════════════════════════════════════
 
 /** Assert the raw output stream contains the given protocol/text bytes. */
-export function assertContainsOutput(out: OutputView, text: string): AssertionResult {
+export function assertContainsOutput(out: RawOutput, text: string): AssertionResult {
   const pass = out.containsOutput(text)
   const content = out.getText()
   return {
@@ -291,7 +291,7 @@ export function assertHasUnderline(cell: CellView, style?: UnderlineStyle): Asse
 }
 
 /** Assert cell foreground color. Accepts hex string or {r,g,b}. */
-export function assertHasFg(cell: CellView, color: string | RGB): AssertionResult {
+export function assertHasFg(cell: CellView, color: string | Color): AssertionResult {
   const loc = cellLocation(cell)
   const expected = parseColor(color)
   const pass = colorsMatch(cell.fg, expected)
@@ -306,7 +306,7 @@ export function assertHasFg(cell: CellView, color: string | RGB): AssertionResul
 }
 
 /** Assert cell background color. Accepts hex string or {r,g,b}. */
-export function assertHasBg(cell: CellView, color: string | RGB): AssertionResult {
+export function assertHasBg(cell: CellView, color: string | Color): AssertionResult {
   const loc = cellLocation(cell)
   const expected = parseColor(color)
   const pass = colorsMatch(cell.bg, expected)
@@ -334,8 +334,8 @@ export interface CellAttrs {
   wide?: boolean
   /** `true` matches any underline style; a string matches a specific style. */
   underline?: UnderlineStyle | boolean
-  fg?: string | RGB
-  bg?: string | RGB
+  fg?: string | Color
+  bg?: string | Color
 }
 
 /** Assert multiple cell attributes at once. Only specified fields are checked. */
@@ -392,11 +392,11 @@ export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResu
 }
 
 // ═══════════════════════════════════════════════════════
-// Terminal Assertions (TerminalReadable)
+// Terminal Assertions (Terminal)
 // ═══════════════════════════════════════════════════════
 
 /** Assert cursor is at the given position. */
-export function assertCursorAt(term: TerminalReadable, x: number, y: number): AssertionResult {
+export function assertCursorAt(term: Terminal, x: number, y: number): AssertionResult {
   const cursor = term.getCursor()
   const pass = cursor.col === x && cursor.row === y
   return {
@@ -410,7 +410,7 @@ export function assertCursorAt(term: TerminalReadable, x: number, y: number): As
 }
 
 /** Assert cursor has a specific style (block, underline, beam). */
-export function assertCursorStyle(term: TerminalReadable, style: CursorStyle): AssertionResult {
+export function assertCursorStyle(term: Terminal, style: CursorStyle): AssertionResult {
   const cursor = term.getCursor()
   if (cursor.style === null) {
     return {
@@ -432,7 +432,7 @@ export function assertCursorStyle(term: TerminalReadable, style: CursorStyle): A
 }
 
 /** Assert cursor is visible. */
-export function assertCursorVisible(term: TerminalReadable): AssertionResult {
+export function assertCursorVisible(term: Terminal): AssertionResult {
   const cursor = term.getCursor()
   if (cursor.visible === null) {
     return {
@@ -447,7 +447,7 @@ export function assertCursorVisible(term: TerminalReadable): AssertionResult {
 }
 
 /** Assert cursor is hidden. */
-export function assertCursorHidden(term: TerminalReadable): AssertionResult {
+export function assertCursorHidden(term: Terminal): AssertionResult {
   const cursor = term.getCursor()
   if (cursor.visible === null) {
     return {
@@ -462,7 +462,7 @@ export function assertCursorHidden(term: TerminalReadable): AssertionResult {
 }
 
 // ═══════════════════════════════════════════════════════
-// Composable Cursor Assertion (TerminalReadable)
+// Composable Cursor Assertion (Terminal)
 // ═══════════════════════════════════════════════════════
 
 /** Partial cursor properties for composable matching. */
@@ -474,7 +474,7 @@ export interface CursorProps {
 }
 
 /** Assert multiple cursor properties at once. Only specified fields are checked. */
-export function assertHaveCursor(term: TerminalReadable, props: CursorProps): AssertionResult {
+export function assertHaveCursor(term: Terminal, props: CursorProps): AssertionResult {
   const cursor = term.getCursor()
   const details: string[] = []
   let allMatch = true
@@ -521,7 +521,7 @@ export function assertHaveCursor(term: TerminalReadable, props: CursorProps): As
 }
 
 /** Assert a specific terminal mode is enabled. */
-export function assertInMode(term: TerminalReadable, mode: TerminalMode): AssertionResult {
+export function assertInMode(term: Terminal, mode: TerminalMode): AssertionResult {
   const pass = term.getMode(mode)
   return {
     pass,
@@ -530,7 +530,7 @@ export function assertInMode(term: TerminalReadable, mode: TerminalMode): Assert
 }
 
 /** Assert terminal has a specific title (set via OSC escape). */
-export function assertTitle(term: TerminalReadable, title: string): AssertionResult {
+export function assertTitle(term: Terminal, title: string): AssertionResult {
   const actual = term.getTitle()
   const pass = actual === title
   return {
@@ -544,7 +544,7 @@ export function assertTitle(term: TerminalReadable, title: string): AssertionRes
 }
 
 /** Assert scrollback has a specific number of lines (excluding visible screen lines). */
-export function assertScrollbackLines(term: TerminalReadable, n: number): AssertionResult {
+export function assertScrollbackLines(term: Terminal, n: number): AssertionResult {
   const scrollback = term.getScrollback()
   const scrollbackLines = Math.max(0, scrollback.totalRows - scrollback.screenRows)
   const pass = scrollbackLines === n
@@ -559,7 +559,7 @@ export function assertScrollbackLines(term: TerminalReadable, n: number): Assert
 }
 
 /** Assert viewport is at the bottom of scrollback (viewing the latest output). */
-export function assertAtBottomOfScrollback(term: TerminalReadable): AssertionResult {
+export function assertAtBottomOfScrollback(term: Terminal): AssertionResult {
   const scrollback = term.getScrollback()
   const bottomOffset = scrollback.totalRows - scrollback.screenRows
   const pass = scrollback.viewportTop === bottomOffset

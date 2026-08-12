@@ -10,7 +10,7 @@
  *   expect.addSnapshotSerializer(terminalSerializer)
  */
 
-import type { TerminalReadable, Cell, RGB } from "../../../src/terminal/types.ts"
+import type { Terminal, Cell, Color } from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Snapshot Marker
@@ -19,12 +19,12 @@ import type { TerminalReadable, Cell, RGB } from "../../../src/terminal/types.ts
 /** Marker interface for objects that should be serialized as terminal snapshots. */
 export interface TerminalSnapshotMarker {
   __terminalSnapshot: true
-  terminal: TerminalReadable
+  terminal: Terminal
   name?: string
 }
 
-/** Wrap a TerminalReadable for snapshot serialization. */
-export function terminalSnapshot(terminal: TerminalReadable, name?: string): TerminalSnapshotMarker {
+/** Wrap a Terminal for snapshot serialization. */
+export function terminalSnapshot(terminal: Terminal, name?: string): TerminalSnapshotMarker {
   return { __terminalSnapshot: true, terminal, name }
 }
 
@@ -32,7 +32,7 @@ export function terminalSnapshot(terminal: TerminalReadable, name?: string): Ter
 // Helpers
 // =============================================================================
 
-function formatRgb(color: RGB): string {
+function formatRgb(color: Color): string {
   return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
 }
 

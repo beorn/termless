@@ -5,13 +5,13 @@
  * - The serializer identifies SVG snapshot markers correctly
  * - SVG output is valid and contains expected elements
  * - Custom themes are applied
- * - The toMatchSvgSnapshot matcher works with TerminalReadable
+ * - The toMatchSvgSnapshot matcher works with Terminal
  */
 
 import { describe, test, expect } from "vitest"
 import { svgTerminalSerializer, svgTerminalSnapshot } from "../src/svg-serializer.ts"
 import "../src/matchers.ts" // Auto-register matchers (includes toMatchSvgSnapshot)
-import type { TerminalReadable, Cell, CursorState, ScrollbackState, TerminalMode } from "../../../src/terminal/types.ts"
+import type { Terminal, Cell, Cursor, ScrollbackState, TerminalMode } from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Terminal
@@ -39,11 +39,11 @@ function createMockTerminal(
   options: {
     lines?: string[]
     cells?: Map<string, Partial<Cell>>
-    cursor?: Partial<CursorState>
+    cursor?: Partial<Cursor>
     modes?: Partial<Record<TerminalMode, boolean>>
     title?: string
   } = {},
-): TerminalReadable {
+): Terminal {
   const { lines = [""], cells = new Map(), cursor = {}, modes = {} } = options
 
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
@@ -62,7 +62,7 @@ function createMockTerminal(
     }
   }
 
-  const cursorState: CursorState = {
+  const cursorState: Cursor = {
     col: cursor.x ?? 0,
     row: cursor.y ?? 0,
     x: cursor.x ?? 0,
@@ -308,7 +308,7 @@ describe("styled cells", () => {
 // =============================================================================
 
 describe("toMatchSvgSnapshot matcher", () => {
-  test("produces SVG output from TerminalReadable", () => {
+  test("produces SVG output from Terminal", () => {
     const term = createMockTerminal({ lines: ["Hello", "World"] })
     // The matcher integrates with vitest snapshot — just verify it doesn't throw
     expect(() => expect(term).toMatchSvgSnapshot()).not.toThrow()
@@ -328,8 +328,8 @@ describe("toMatchSvgSnapshot matcher", () => {
     ).not.toThrow()
   })
 
-  test("rejects non-TerminalReadable values", () => {
-    expect(() => expect("not a terminal").toMatchSvgSnapshot()).toThrow(/TerminalReadable/)
+  test("rejects non-Terminal values", () => {
+    expect(() => expect("not a terminal").toMatchSvgSnapshot()).toThrow(/Terminal/)
   })
 
   test("rejects null", () => {

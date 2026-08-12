@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "vitest"
 import { snapshotVisualState } from "../src/recording/visual-snapshot.ts"
-import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable } from "../src/index.ts"
+import type { Cell, Cursor, ScrollbackState, TerminalMode, Terminal } from "../src/index.ts"
 
 // =============================================================================
 // snapshotVisualState
@@ -37,11 +37,11 @@ function createReadable(
   opts: {
     lines?: string[]
     cells?: Map<string, Partial<Cell>>
-    cursor?: Partial<CursorState>
+    cursor?: Partial<Cursor>
     modes?: Partial<Record<TerminalMode, boolean>>
     title?: string
   } = {},
-): TerminalReadable {
+): Terminal {
   const { lines = [""], cells = new Map(), cursor = {}, modes = {}, title = "" } = opts
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
 
@@ -55,7 +55,7 @@ function createReadable(
     return rowCells
   })
 
-  const cursorState: CursorState = {
+  const cursorState: Cursor = {
     x: cursor.x ?? 0,
     y: cursor.y ?? 0,
     col: cursor.x ?? 0,

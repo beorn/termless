@@ -43,7 +43,7 @@ in napi-rs optional packages or release artifacts, not in the main tarball.
 ```ts
 import { renderCells } from "@termless/swash-render"
 
-// `term` is any termless TerminalReadable
+// `term` is any termless Terminal
 const bitmap = renderCells(term) // { pixels, width, height }
 ```
 

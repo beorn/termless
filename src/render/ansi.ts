@@ -13,7 +13,7 @@
  * setRawMode, or alt-screen state.
  */
 
-import type { Cell, RGB } from "../terminal/types.ts"
+import type { Cell, Color } from "../terminal/types.ts"
 
 /** ANSI SGR reset — clears every attribute. */
 export const SGR_RESET = "\x1b[0m"
@@ -69,8 +69,8 @@ export function ansiCursorTo(row: number, col: number): string {
  * without committing to a default for any individual flag.
  */
 export interface CellStyle {
-  fg: RGB | null
-  bg: RGB | null
+  fg: Color | null
+  bg: Color | null
   bold: boolean
   dim: boolean
   italic: boolean
@@ -95,7 +95,7 @@ export function freshStyle(): CellStyle {
   }
 }
 
-function rgbEq(a: RGB | null, b: RGB | null): boolean {
+function rgbEq(a: Color | null, b: Color | null): boolean {
   if (a === b) return true
   if (a === null || b === null) return false
   return a.r === b.r && a.g === b.g && a.b === b.b

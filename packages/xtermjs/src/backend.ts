@@ -24,11 +24,11 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "@termless/core"
 import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 
@@ -37,7 +37,7 @@ import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
 // ═══════════════════════════════════════════════════════
 
 /** Standard 16-color ANSI palette */
-const ANSI_16: readonly RGB[] = [
+const ANSI_16: readonly Color[] = [
   { r: 0x00, g: 0x00, b: 0x00 }, // 0  Black
   { r: 0x80, g: 0x00, b: 0x00 }, // 1  Red
   { r: 0x00, g: 0x80, b: 0x00 }, // 2  Green
@@ -57,8 +57,8 @@ const ANSI_16: readonly RGB[] = [
 ]
 
 /** Build the full 256-color palette (16 base + 216 cube + 24 grayscale) */
-function buildPalette256(): RGB[] {
-  const palette: RGB[] = [...ANSI_16]
+function buildPalette256(): Color[] {
+  const palette: Color[] = [...ANSI_16]
 
   // 6x6x6 color cube (indices 16-231)
   const levels = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff]
@@ -82,12 +82,12 @@ function buildPalette256(): RGB[] {
 const PALETTE_256 = buildPalette256()
 
 /** Convert a palette index (0-255) to RGB */
-function paletteToRgb(index: number): RGB {
+function paletteToRgb(index: number): Color {
   return PALETTE_256[index] ?? { r: 0, g: 0, b: 0 }
 }
 
 /** Extract RGB from a 24-bit color value (0xRRGGBB) */
-function truecolorToRgb(value: number): RGB {
+function truecolorToRgb(value: number): Color {
   return {
     r: (value >> 16) & 0xff,
     g: (value >> 8) & 0xff,
@@ -310,7 +310,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
    * The public IBufferCell API only exposes isUnderline (boolean),
    * but the internal _extendedAttrs stores the actual underline style and color.
    */
-  function getExtendedAttrs(row: number, col: number): { underlineStyle?: number; underlineColor?: RGB | null } {
+  function getExtendedAttrs(row: number, col: number): { underlineStyle?: number; underlineColor?: Color | null } {
     const t = ensureTerm()
     try {
       const internalLine = (t as any)._core.buffer.lines.get(row + t.buffer.active.baseY)
@@ -319,7 +319,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       if (!ext) return {}
 
       const style = ext.underlineStyle as number | undefined
-      let color: RGB | null = null
+      let color: Color | null = null
       // Use the underlineColor getter which returns the raw 0xRRGGBB value
       const rawColor = ext.underlineColor as number | undefined
       if (rawColor && rawColor !== 0) {
@@ -361,7 +361,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
 
     // Foreground color
-    let fg: RGB | null = null
+    let fg: Color | null = null
     if (bufCell.isFgRGB()) {
       fg = truecolorToRgb(bufCell.getFgColor())
     } else if (bufCell.isFgPalette()) {
@@ -369,7 +369,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
 
     // Background color
-    let bg: RGB | null = null
+    let bg: Color | null = null
     if (bufCell.isBgRGB()) {
       bg = truecolorToRgb(bufCell.getBgColor())
     } else if (bufCell.isBgPalette()) {
@@ -378,7 +378,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
     // Read extended attributes for accurate underline style
     let underline: Cell["underline"] = false
-    let underlineColor: RGB | null = null
+    let underlineColor: Color | null = null
     if (bufCell.isUnderline() !== 0 && row !== undefined && col !== undefined) {
       const ext = getExtendedAttrs(row, col)
       underline = (ext.underlineStyle ? UNDERLINE_STYLES[ext.underlineStyle] : "single") ?? "single"
@@ -452,7 +452,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return result
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const t = ensureTerm()
     return {
       col: t.buffer.active.cursorX,

@@ -190,7 +190,7 @@ describe("renderAnsiPng", () => {
 })
 
 describe("renderTerminalPng", () => {
-  test("renders a TerminalReadable produced by the ghostty backend", async () => {
+  test("renders a Terminal produced by the ghostty backend", async () => {
     const backend: TerminalBackend = createGhosttyBackend(undefined, ghostty)
     backend.init({ cols: 40, rows: 8 })
     backend.feed(new TextEncoder().encode("\x1b[1mBOLD\x1b[0m normal"))

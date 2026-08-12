@@ -23,11 +23,11 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { execFileSync } from "node:child_process"
@@ -131,8 +131,8 @@ const BRIDGE_SCRIPT = `${__kittyDir}/build/bridge.py`
 // ===============================================================
 
 function convertBridgeCell(cell: BridgeCell): Cell {
-  const fg: RGB | null = cell.fg ? { r: cell.fg[0], g: cell.fg[1], b: cell.fg[2] } : null
-  const bg: RGB | null = cell.bg ? { r: cell.bg[0], g: cell.bg[1], b: cell.bg[2] } : null
+  const fg: Color | null = cell.fg ? { r: cell.fg[0], g: cell.fg[1], b: cell.fg[2] } : null
+  const bg: Color | null = cell.bg ? { r: cell.bg[0], g: cell.bg[1], b: cell.bg[2] } : null
 
   return {
     char: cell.text,
@@ -413,7 +413,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return s.cells.map((row) => row.map(convertBridgeCell))
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const s = ensureSnapshot()
     return {
       col: s.cursor.x,
@@ -421,7 +421,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
       x: s.cursor.x,
       y: s.cursor.y,
       visible: s.cursor.visible,
-      style: (s.cursor.style as CursorState["style"]) ?? "block",
+      style: (s.cursor.style as Cursor["style"]) ?? "block",
     }
   }
 

@@ -23,13 +23,13 @@ vterm is the sole production shell **guest** (`@si/vterm/21016-terminal-runtime`
 It imports `@xterm/xterm` (the full browser package, not `@xterm/headless`) and calls `terminal.open(element)` to mount into the DOM. vterm cannot do this and is not meant to: it has no DOM renderer at all — no `document`/`HTMLElement`/`canvas` references anywhere in `packages/vterm/src`, no `browser` field, a single export. Browser playback is a different problem from being a terminal emulator, and the two packages are not substitutes. This is a keep with a reason, not a deferral.
 
 **`@termless/peekaboo` — MOVED to vterm (2026-08-04). Settled, and not by implication.**
-It used `createXtermBackend` for its **data path** only (`getText`/`getCell`/`getCursor`) behind a real terminal app — the same `TerminalBackend` seam as `packages/cli/src/session.ts`, not a DOM dependency. That is what discriminates it from web-player: web-player's keep is *structural* (vterm has no DOM renderer, so `terminal.open(element)` is impossible), while peekaboo's "merit" was only that nobody had checked.
+It used `createXtermBackend` for its **data path** only (`getText`/`getCell`/`getCursor`) behind a real terminal app — the same `TerminalBackend` seam as `packages/cli/src/session.ts`, not a DOM dependency. That is what discriminates it from web-player: web-player's keep is _structural_ (vterm has no DOM renderer, so `terminal.open(element)` is impossible), while peekaboo's "merit" was only that nobody had checked.
 
 The divergence bites harder here than anywhere else in the codebase. peekaboo exists to be authoritative about what a real terminal app is doing, and the xterm adapter hardcodes cursor shape to `block` and visibility to `visible` — so it reported a visible block cursor for an app that had hidden the cursor and asked for a beam. Confidently wrong about precisely the thing peekaboo is consulted for. Guarded by `packages/peekaboo/tests/data-path-vterm.test.ts`, which runs everywhere because `visual: false` needs no OS automation.
 
 Ruled by @chief on the evidence rather than swept along with the session default — the distinction Track 2 exists to preserve.
 
-*Fixed at the same time:* peekaboo declared `@termless/xtermjs` as a peer dependency while importing it by relative path (`../../xtermjs/src/backend.ts`), and carried a direct `@xterm/headless` dependency it never imported. The peer dep now names `@termless/vterm` and the unused direct dependency is gone.
+_Fixed at the same time:_ peekaboo declared `@termless/xtermjs` as a peer dependency while importing it by relative path (`../../xtermjs/src/backend.ts`), and carried a direct `@xterm/headless` dependency it never imported. The peer dep now names `@termless/vterm` and the unused direct dependency is gone.
 
 ## Packages
 
@@ -125,11 +125,11 @@ Factory functions, `using` cleanup, no classes, no globals. Same conventions as 
 ## Key Types
 
 - `TerminalBackend` -- interface all backends implement (~18 methods)
-- `TerminalReadable` -- read protocol for backends (getText, getTextRange, getCell, getLine, getLines, getCursor, getMode, getTitle, getScrollback)
-- `Terminal` -- high-level API: backend + optional PTY + search + screenshots + region selectors + mouse input (click/dblclick)
-- `RegionView` -- a lazy region view that recomputes offsets on every access (getText(), getLines(), containsText())
+- `Terminal` -- read contract for backends (getText, getTextRange, getCell, getRow, getRows, getCursor, getMode, getTitle, getScrollback)
+- `TestTerminal` -- high-level API: backend + optional PTY + search + screenshots + region selectors + mouse input (click/dblclick)
+- `Region` -- a lazy region view that recomputes offsets on every access (getText(), getLines(), containsText())
 - `CellView` -- a single cell with positional context (row, col, fg, bg, bold, italic, etc.)
-- `RowView` -- a row (extends RegionView) with row number and cellAt(col) access
+- `Row` -- a row (extends Region) with row number and cellAt(col) access
 - `Cell` -- single terminal cell with text, colors, and style flags
 
 ## Composable API Pattern
@@ -139,7 +139,7 @@ WHERE (region selector)     +  WHAT (matcher)
 ─────────────────────────      ──────────────
 term.screen                    toContainText("x")
 term.cell(r, c)                toBeBold()
-term (TerminalReadable)        toHaveCursorAt(x, y)
+term (Terminal)                toHaveCursorAt(x, y)
 ```
 
 All text and terminal matchers accept an optional `{ timeout: number }` as the last argument for auto-retry:

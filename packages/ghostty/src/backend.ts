@@ -29,11 +29,11 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
   EmulatorWarning,
   WarningExtension,
   ScreenshotOptions,
@@ -91,7 +91,7 @@ export function _resetSharedForTesting(): void {
 // ═══════════════════════════════════════════════════════
 
 /** Check if an fg/bg matches the terminal's default colors (= "no explicit color set") */
-function isDefaultColor(r: number, g: number, b: number, defaults: { fg: RGB; bg: RGB }, isFg: boolean): boolean {
+function isDefaultColor(r: number, g: number, b: number, defaults: { fg: Color; bg: Color }, isFg: boolean): boolean {
   const d = isFg ? defaults.fg : defaults.bg
   return r === d.r && g === d.g && b === d.b
 }
@@ -101,7 +101,7 @@ function convertGhosttyCell(
   ghosttyTerm: GhosttyTerminal,
   row: number,
   col: number,
-  defaults: { fg: RGB; bg: RGB },
+  defaults: { fg: Color; bg: Color },
 ): Cell {
   // Get proper text — use grapheme API for multi-codepoint characters
   let text: string
@@ -114,11 +114,11 @@ function convertGhosttyCell(
   }
 
   // Map default terminal colors to null (meaning "use default")
-  const fg: RGB | null = isDefaultColor(cell.fg_r, cell.fg_g, cell.fg_b, defaults, true)
+  const fg: Color | null = isDefaultColor(cell.fg_r, cell.fg_g, cell.fg_b, defaults, true)
     ? null
     : { r: cell.fg_r, g: cell.fg_g, b: cell.fg_b }
 
-  const bg: RGB | null = isDefaultColor(cell.bg_r, cell.bg_g, cell.bg_b, defaults, false)
+  const bg: Color | null = isDefaultColor(cell.bg_r, cell.bg_g, cell.bg_b, defaults, false)
     ? null
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
@@ -146,7 +146,7 @@ function convertScrollbackCell(
   ghosttyTerm: GhosttyTerminal,
   offset: number,
   col: number,
-  defaults: { fg: RGB; bg: RGB },
+  defaults: { fg: Color; bg: Color },
 ): Cell {
   let text: string
   if (cell.grapheme_len > 0) {
@@ -157,11 +157,11 @@ function convertScrollbackCell(
     text = String.fromCodePoint(cell.codepoint)
   }
 
-  const fg: RGB | null = isDefaultColor(cell.fg_r, cell.fg_g, cell.fg_b, defaults, true)
+  const fg: Color | null = isDefaultColor(cell.fg_r, cell.fg_g, cell.fg_b, defaults, true)
     ? null
     : { r: cell.fg_r, g: cell.fg_g, b: cell.fg_b }
 
-  const bg: RGB | null = isDefaultColor(cell.bg_r, cell.bg_g, cell.bg_b, defaults, false)
+  const bg: Color | null = isDefaultColor(cell.bg_r, cell.bg_g, cell.bg_b, defaults, false)
     ? null
     : { r: cell.bg_r, g: cell.bg_g, b: cell.bg_b }
 
@@ -212,7 +212,7 @@ export function createGhosttyBackend(
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let title = ""
-  let defaultColors: { fg: RGB; bg: RGB } = {
+  let defaultColors: { fg: Color; bg: Color } = {
     fg: { r: 0, g: 0, b: 0 },
     bg: { r: 0, g: 0, b: 0 },
   }
@@ -523,7 +523,7 @@ export function createGhosttyBackend(
     return result
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const t = ensureTerm()
     t.update()
     const cursor = t.getCursor()

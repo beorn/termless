@@ -11,7 +11,7 @@
  * buffer-snapshot helper used by the `record` verb's change-detection loop.
  */
 
-import type { Cell, RGB, TerminalReadable, TerminalMode, UnderlineStyle } from "../terminal/types.ts"
+import type { Cell, Color, Terminal, TerminalMode, UnderlineStyle } from "../terminal/types.ts"
 
 // =============================================================================
 // Visual State Snapshotting
@@ -20,7 +20,7 @@ import type { Cell, RGB, TerminalReadable, TerminalMode, UnderlineStyle } from "
 /** Modes that affect visual appearance and should be tracked for change detection. */
 const VISUAL_MODES: TerminalMode[] = ["altScreen", "cursorVisible", "reverseVideo"]
 
-function rgbToString(color: RGB | null): string {
+function rgbToString(color: Color | null): string {
   if (color === null) return "-"
   return `${color.r},${color.g},${color.b}`
 }
@@ -61,7 +61,7 @@ function cellToString(cell: Cell): string {
  * }
  * ```
  */
-export function snapshotVisualState(readable: TerminalReadable): string {
+export function snapshotVisualState(readable: Terminal): string {
   const parts: string[] = []
 
   // Cursor state

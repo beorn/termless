@@ -15,7 +15,7 @@
  *   expect(term).toHaveCursorAt(5, 10)
  */
 
-import type { CursorStyle, RGB, TerminalMode, UnderlineStyle } from "./terminal/types.ts"
+import type { CursorStyle, Color, TerminalMode, UnderlineStyle } from "./terminal/types.ts"
 import {
   assertRegionView,
   assertCellView,
@@ -77,7 +77,7 @@ export type ToMatchAcrossRenderersOptions = Omit<import("./compare.ts").CrossRen
  * ```
  */
 export const termlessMatchers = {
-  // ── Text Matchers (RegionView) ──
+  // ── Text Matchers (Region) ──
 
   toContainText(received: unknown, text: string) {
     assertRegionView(received, "toContainText")
@@ -145,18 +145,18 @@ export const termlessMatchers = {
   },
 
   /** @deprecated Use toHaveAttrs({ fg: color }) */
-  toHaveFg(received: unknown, color: string | RGB) {
+  toHaveFg(received: unknown, color: string | Color) {
     assertCellView(received, "toHaveFg")
     return toMatcherResult(assertHasFg(received, color))
   },
 
   /** @deprecated Use toHaveAttrs({ bg: color }) */
-  toHaveBg(received: unknown, color: string | RGB) {
+  toHaveBg(received: unknown, color: string | Color) {
     assertCellView(received, "toHaveBg")
     return toMatcherResult(assertHasBg(received, color))
   },
 
-  // ── Terminal Matchers (TerminalReadable) ──
+  // ── Terminal Matchers (Terminal) ──
 
   /** Assert multiple cursor properties at once. */
   toHaveCursor(received: unknown, props: CursorProps) {

@@ -10,7 +10,7 @@
  *   expect.addSnapshotSerializer(svgTerminalSerializer)
  */
 
-import type { TerminalReadable, SvgScreenshotOptions } from "../../../src/terminal/types.ts"
+import type { Terminal, SvgScreenshotOptions } from "../../../src/terminal/types.ts"
 import { screenshotSvg } from "../../../src/render/svg.ts"
 
 // =============================================================================
@@ -20,14 +20,14 @@ import { screenshotSvg } from "../../../src/render/svg.ts"
 /** Marker interface for objects that should be serialized as SVG terminal snapshots. */
 export interface SvgTerminalSnapshotMarker {
   __svgTerminalSnapshot: true
-  terminal: TerminalReadable
+  terminal: Terminal
   name?: string
   options?: SvgScreenshotOptions
 }
 
-/** Wrap a TerminalReadable for SVG snapshot serialization. */
+/** Wrap a Terminal for SVG snapshot serialization. */
 export function svgTerminalSnapshot(
-  terminal: TerminalReadable,
+  terminal: Terminal,
   options?: SvgScreenshotOptions & { name?: string },
 ): SvgTerminalSnapshotMarker {
   const { name, ...svgOptions } = options ?? {}

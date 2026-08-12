@@ -8,11 +8,11 @@
 import { describe, test, expect } from "vitest"
 import type {
   CellView,
-  CursorState,
-  TerminalReadable,
+  Cursor,
+  Terminal,
   TerminalMode,
   ScrollbackState,
-  RegionView,
+  Region,
   Cell,
   UnderlineStyle,
 } from "../src/terminal/types.ts"
@@ -51,7 +51,7 @@ import {
 // Mock Factories
 // =============================================================================
 
-function mockRegion(lines: string[]): RegionView {
+function mockRegion(lines: string[]): Region {
   const text = lines.join("\n")
   return {
     getText: () => text,
@@ -85,13 +85,13 @@ function mockCell(overrides: Partial<CellView> = {}): CellView {
 
 interface MockTerminalOptions {
   lines?: string[]
-  cursor?: Partial<CursorState>
+  cursor?: Partial<Cursor>
   modes?: Partial<Record<TerminalMode, boolean>>
   title?: string
   scrollback?: Partial<ScrollbackState>
 }
 
-function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable {
+function createMockTerminal(options: MockTerminalOptions = {}): Terminal {
   const { lines = [""], cursor = {}, modes = {}, title = "", scrollback = {} } = options
 
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
@@ -119,7 +119,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     return row
   })
 
-  const cursorState: CursorState = {
+  const cursorState: Cursor = {
     x: cursor.x ?? 0,
     y: cursor.y ?? 0,
     col: cursor.x ?? 0,
@@ -198,7 +198,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     getRows(): Cell[][] {
       return grid
     },
-    getCursor(): CursorState {
+    getCursor(): Cursor {
       return cursorState
     },
     getMode(mode: TerminalMode): boolean {
@@ -218,7 +218,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 // =============================================================================
 
 describe("type guards", () => {
-  test("isRegionView identifies valid RegionView", () => {
+  test("isRegionView identifies valid Region", () => {
     const region = mockRegion(["Hello"])
     expect(isRegionView(region)).toBe(true)
   })
@@ -234,17 +234,17 @@ describe("type guards", () => {
     expect(isCellView(cell)).toBe(true)
   })
 
-  test("isCellView rejects RegionView", () => {
+  test("isCellView rejects Region", () => {
     const region = mockRegion(["Hello"])
     expect(isCellView(region)).toBe(false)
   })
 
-  test("isTerminalReadable identifies valid TerminalReadable", () => {
+  test("isTerminalReadable identifies valid Terminal", () => {
     const term = createMockTerminal()
     expect(isTerminalReadable(term)).toBe(true)
   })
 
-  test("isTerminalReadable rejects RegionView", () => {
+  test("isTerminalReadable rejects Region", () => {
     const region = mockRegion(["Hello"])
     expect(isTerminalReadable(region)).toBe(false)
   })
@@ -255,13 +255,13 @@ describe("type guards", () => {
 // =============================================================================
 
 describe("type assert functions", () => {
-  test("assertRegionView throws helpful error for TerminalReadable", () => {
+  test("assertRegionView throws helpful error for Terminal", () => {
     const term = createMockTerminal()
     expect(() => assertRegionView(term, "toContainText")).toThrow(/region/i)
   })
 
   test("assertRegionView throws generic error for wrong type", () => {
-    expect(() => assertRegionView("string", "toContainText")).toThrow(/RegionView/)
+    expect(() => assertRegionView("string", "toContainText")).toThrow(/Region/)
   })
 
   test("assertCellView throws helpful error for wrong type", () => {
@@ -269,7 +269,7 @@ describe("type assert functions", () => {
   })
 
   test("assertTerminalReadable throws helpful error for wrong type", () => {
-    expect(() => assertTerminalReadable("string", "toHaveCursorAt")).toThrow(/TerminalReadable/)
+    expect(() => assertTerminalReadable("string", "toHaveCursorAt")).toThrow(/Terminal/)
   })
 })
 

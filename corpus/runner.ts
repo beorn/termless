@@ -2,7 +2,7 @@
 // cross-suite contract this file enforces).
 //
 // The runner is deliberately backend-agnostic: it knows TerminalBackend +
-// TerminalReadable and NOTHING about any specific engine, so the same case
+// Terminal and NOTHING about any specific engine, so the same case
 // runs against vterm, xterm.js, ghostty, vt100, … and a mismatch is evidence
 // about the ENGINE, not about the harness. Consumed by
 // tests/corpus-conformance.test.ts; Hab restore tests and the terminfo.dev

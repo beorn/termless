@@ -162,7 +162,7 @@ describe("vtermGuest — render path", () => {
     }
 
     // Same bytes without passthrough prove the mutation actually took effect: the
-    // resolved color IS the mutated RGB, not vterm's built-in red (#800000).
+    // resolved color IS the mutated Color, not vterm's built-in red (#800000).
     const resolved = await mount({ cols: 8, rows: 2 })
     try {
       resolved.feedAnsi("\x1b]4;1;#123456\x07\x1b[31mR\x1b[0m")

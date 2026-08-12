@@ -1,9 +1,9 @@
 import { describe, test, expect } from "vitest"
 import { screenshotSvg, rgbToHex, rgbToString } from "../../src/render/svg.ts"
 import type {
-  TerminalReadable,
+  Terminal,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
   ScrollbackState,
@@ -33,13 +33,13 @@ function defaultCell(char = " "): Cell {
 }
 
 interface MockOptions {
-  cursor?: Partial<CursorState>
+  cursor?: Partial<Cursor>
   cellOverrides?: Record<string, Partial<Cell>> // "row,col" -> overrides
 }
 
-/** Create a mock TerminalReadable from lines of text. */
-function createMockReadable(lines: string[], opts?: MockOptions): TerminalReadable {
-  const cursorDefaults: CursorState = {
+/** Create a mock Terminal from lines of text. */
+function createMockReadable(lines: string[], opts?: MockOptions): Terminal {
+  const cursorDefaults: Cursor = {
     x: 0,
     y: 0,
     col: 0,
@@ -47,7 +47,7 @@ function createMockReadable(lines: string[], opts?: MockOptions): TerminalReadab
     visible: false,
     style: "block" as CursorStyle,
   }
-  const cursor: CursorState = { ...cursorDefaults, ...opts?.cursor }
+  const cursor: Cursor = { ...cursorDefaults, ...opts?.cursor }
   const overrides = opts?.cellOverrides ?? {}
 
   const cellLines: Cell[][] = lines.map((line, row) => {

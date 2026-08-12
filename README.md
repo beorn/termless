@@ -140,7 +140,7 @@ term.lastRow() // last screen row
 Then assert using the appropriate matchers for each view type:
 
 ```typescript
-// Text matchers work on RegionView (screen, scrollback, buffer, viewport, row, range)
+// Text matchers work on Region (screen, scrollback, buffer, viewport, row, range)
 expect(term.screen).toContainText("Hello")
 expect(term.row(0)).toHaveText("Title")
 expect(term.screen).toMatchLines(["Line 1", "Line 2"])
@@ -161,7 +161,7 @@ await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
 
 ## Matchers Reference
 
-### Text Matchers (on RegionView / RowView)
+### Text Matchers (on Region / Row)
 
 | Matcher                 | Description                                              |
 | ----------------------- | -------------------------------------------------------- |
@@ -169,7 +169,7 @@ await expect(term.out).toContainOutput("\x1b_G", { timeout: 5000 })
 | `toHaveText(text)`      | Region text matches exactly (trimmed)                    |
 | `toMatchLines(lines[])` | Lines match expected array (trailing whitespace trimmed) |
 
-### Raw Output Matchers (on OutputView)
+### Raw Output Matchers (on RawOutput)
 
 Use `term.out` when you need the literal output stream before terminal parsing, such as Kitty graphics APC packets, OSC clipboard/title sequences, CSI mode toggles, or other protocols that may leave no visible cells.
 
@@ -197,7 +197,7 @@ term.out.clear() // useful before asserting cleanup/delete protocol output
 | `toHaveFg(color)`         | Foreground color (`"#rrggbb"` or `{ r, g, b }`)                                               |
 | `toHaveBg(color)`         | Background color (`"#rrggbb"` or `{ r, g, b }`)                                               |
 
-### Terminal Matchers (on TerminalReadable)
+### Terminal Matchers (on Terminal)
 
 | Matcher                      | Description                                      |
 | ---------------------------- | ------------------------------------------------ |

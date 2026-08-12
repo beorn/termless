@@ -11,7 +11,7 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
   ScrollbackState,
@@ -206,7 +206,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return parts.join("\n")
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const s = ensureScreen()
     const pos = s.getCursorPosition()
     return {

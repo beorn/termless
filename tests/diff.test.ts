@@ -1,13 +1,13 @@
 /**
  * Tests for diffBuffers() -- cell-by-cell terminal buffer comparison.
  *
- * Uses mock TerminalReadable instances to verify diff detection for text,
+ * Uses mock Terminal instances to verify diff detection for text,
  * color, and style changes across buffers of same and different sizes.
  */
 
 import { describe, test, expect } from "vitest"
 import { diffBuffers } from "../src/terminal/diff.ts"
-import type { Cell, CursorState, ScrollbackState, TerminalMode, TerminalReadable } from "../src/terminal/types.ts"
+import type { Cell, Cursor, ScrollbackState, TerminalMode, Terminal } from "../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Terminal Factory
@@ -36,7 +36,7 @@ interface MockOptions {
   cells?: Map<string, Partial<Cell>>
 }
 
-function createMockTerminal(options: MockOptions = {}): TerminalReadable {
+function createMockTerminal(options: MockOptions = {}): Terminal {
   const { lines = [""], cells = new Map() } = options
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
 
@@ -58,7 +58,7 @@ function createMockTerminal(options: MockOptions = {}): TerminalReadable {
     getLines: () => grid,
     getRow: (row) => grid[row] ?? [],
     getRows: () => grid,
-    getCursor: (): CursorState => ({ x: 0, y: 0, col: 0, row: 0, visible: true, style: "block" }),
+    getCursor: (): Cursor => ({ x: 0, y: 0, col: 0, row: 0, visible: true, style: "block" }),
     getMode: (_mode: TerminalMode) => false,
     getTitle: () => "",
     getScrollback: (): ScrollbackState => ({

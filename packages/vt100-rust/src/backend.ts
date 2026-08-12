@@ -16,11 +16,11 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
@@ -114,8 +114,8 @@ export function loadVt100RustNative(): NativeModule {
 // ===============================================================
 
 function convertNapiCell(cell: NapiCell): Cell {
-  const fg: RGB | null = cell.fgIsDefault ? null : { r: cell.fgR, g: cell.fgG, b: cell.fgB }
-  const bg: RGB | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
+  const fg: Color | null = cell.fgIsDefault ? null : { r: cell.fgR, g: cell.fgG, b: cell.fgB }
+  const bg: Color | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
 
   return {
     char: cell.text,
@@ -298,7 +298,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     return result
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const t = ensureTerm()
     const cursor = t.getCursor()
     return {
@@ -307,7 +307,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
       x: cursor.x,
       y: cursor.y,
       visible: cursor.visible,
-      style: (cursor.style as CursorState["style"]) ?? "block",
+      style: (cursor.style as Cursor["style"]) ?? "block",
     }
   }
 

@@ -1,32 +1,32 @@
 /**
  * Tests for @termless/test custom Vitest matchers — composable view API.
  *
- * Matchers operate on views (RegionView, CellView, RowView) and
- * TerminalReadable, not flat (row, col) arguments. Tests use lightweight
+ * Matchers operate on views (Region, CellView, Row) and
+ * Terminal, not flat (row, col) arguments. Tests use lightweight
  * mock factories — no real backend needed.
  */
 
 import { describe, test, expect } from "vitest"
 import "../src/matchers.ts" // Auto-register matchers
 import type {
-  TerminalReadable,
+  Terminal,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
   ScrollbackState,
-  RGB,
+  Color,
   UnderlineStyle,
-  RegionView,
+  Region,
   CellView,
-  RowView,
+  Row,
 } from "../../../src/terminal/types.ts"
 
 // =============================================================================
 // Mock Factories
 // =============================================================================
 
-function mockRegion(lines: string[]): RegionView {
+function mockRegion(lines: string[]): Region {
   const text = lines.join("\n")
   return {
     getText: () => text,
@@ -58,7 +58,7 @@ function mockCell(overrides: Partial<CellView> = {}): CellView {
   }
 }
 
-function mockRow(text: string, row = 0): RowView {
+function mockRow(text: string, row = 0): Row {
   const cells: Cell[] = [...text].map((ch) => ({
     char: ch,
     fg: null,
@@ -88,13 +88,13 @@ function mockRow(text: string, row = 0): RowView {
 
 interface MockTerminalOptions {
   lines?: string[]
-  cursor?: Partial<CursorState>
+  cursor?: Partial<Cursor>
   modes?: Partial<Record<TerminalMode, boolean>>
   title?: string
   scrollback?: Partial<ScrollbackState>
 }
 
-function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable {
+function createMockTerminal(options: MockTerminalOptions = {}): Terminal {
   const { lines = [""], cursor = {}, modes = {}, title = "", scrollback = {} } = options
 
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
@@ -122,7 +122,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     return row
   })
 
-  const cursorState: CursorState = {
+  const cursorState: Cursor = {
     col: cursor.x ?? 0,
     row: cursor.y ?? 0,
     x: cursor.x ?? 0,
@@ -201,7 +201,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
     getRows(): Cell[][] {
       return grid
     },
-    getCursor(): CursorState {
+    getCursor(): Cursor {
       return cursorState
     },
     getMode(mode: TerminalMode): boolean {
@@ -217,7 +217,7 @@ function createMockTerminal(options: MockTerminalOptions = {}): TerminalReadable
 }
 
 // =============================================================================
-// Text Matchers (RegionView / RowView)
+// Text Matchers (Region / Row)
 // =============================================================================
 
 describe("text matchers", () => {
@@ -243,7 +243,7 @@ describe("text matchers", () => {
     expect(() => expect(region).not.toContainText("Hello")).toThrow()
   })
 
-  test("toContainText works on RowView", () => {
+  test("toContainText works on Row", () => {
     const row = mockRow("Hello World")
     expect(row).toContainText("Hello")
     expect(row).not.toContainText("Goodbye")
@@ -264,7 +264,7 @@ describe("text matchers", () => {
     expect(region).not.toHaveText("Hello")
   })
 
-  test("toHaveText works on RowView", () => {
+  test("toHaveText works on Row", () => {
     const row = mockRow("Hello World")
     expect(row).toHaveText("Hello World")
     expect(row).not.toHaveText("Hello")
@@ -413,7 +413,7 @@ describe("style matchers", () => {
 })
 
 // =============================================================================
-// Cursor Matchers (TerminalReadable)
+// Cursor Matchers (Terminal)
 // =============================================================================
 
 describe("cursor matchers", () => {
@@ -469,7 +469,7 @@ describe("cursor matchers", () => {
 })
 
 // =============================================================================
-// Terminal Mode Matchers (TerminalReadable)
+// Terminal Mode Matchers (Terminal)
 // =============================================================================
 
 describe("terminal mode matchers", () => {
@@ -510,7 +510,7 @@ describe("terminal mode matchers", () => {
 })
 
 // =============================================================================
-// Title Matcher (TerminalReadable)
+// Title Matcher (Terminal)
 // =============================================================================
 
 describe("title matcher", () => {
@@ -531,7 +531,7 @@ describe("title matcher", () => {
 })
 
 // =============================================================================
-// Scrollback Matchers (TerminalReadable)
+// Scrollback Matchers (Terminal)
 // =============================================================================
 
 describe("scrollback matchers", () => {
@@ -574,7 +574,7 @@ describe("scrollback matchers", () => {
 })
 
 // =============================================================================
-// Snapshot Matchers (TerminalReadable)
+// Snapshot Matchers (Terminal)
 // =============================================================================
 
 describe("snapshot matchers", () => {
@@ -613,12 +613,12 @@ describe("error handling", () => {
     expect(() => expect("not a region").toContainText("foo")).toThrow()
   })
 
-  test("text matcher on TerminalReadable gives helpful region error", () => {
+  test("text matcher on Terminal gives helpful region error", () => {
     const term = createMockTerminal({ lines: ["Hello"] })
     expect(() => expect(term).toContainText("Hello")).toThrow(/region/i)
   })
 
-  test("cell matcher on RegionView gives helpful cell error", () => {
+  test("cell matcher on Region gives helpful cell error", () => {
     const region = mockRegion(["Hello"])
     expect(() => expect(region).toBeBold()).toThrow(/cell/i)
   })

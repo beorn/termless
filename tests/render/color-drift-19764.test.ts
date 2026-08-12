@@ -18,10 +18,10 @@ import { createXtermBackend } from "../../packages/xtermjs/src/backend.ts"
 import { screenshotSvg } from "../../src/render/svg.ts"
 import type {
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
-  TerminalReadable,
+  Terminal,
   ScrollbackState,
   UnderlineStyle,
 } from "../../src/terminal/types.ts"
@@ -51,9 +51,9 @@ function defaultCell(char = " "): Cell {
 }
 
 /** A one-row mock readable: chars "GRD" with the given fg colors. */
-function mockRow(fgs: Cell["fg"][], chars = "GRD"): TerminalReadable {
+function mockRow(fgs: Cell["fg"][], chars = "GRD"): Terminal {
   const cells: Cell[] = [...chars].map((ch, i) => ({ ...defaultCell(ch), fg: fgs[i] ?? null }))
-  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
+  const cursor: Cursor = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
   return {
     getText: () => chars,
     getTextRange: () => chars,
@@ -73,7 +73,7 @@ function mockRow(fgs: Cell["fg"][], chars = "GRD"): TerminalReadable {
       totalRows: 1,
       screenRows: 1,
     }),
-  } as TerminalReadable
+  } as Terminal
 }
 
 describe("19764 truecolor screenshot color drift", () => {

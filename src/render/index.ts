@@ -21,7 +21,7 @@
  * canvas/DOM target plugs in here without the three domain objects moving.
  */
 
-import type { TerminalReadable } from "../terminal/types.ts"
+import type { Terminal } from "../terminal/types.ts"
 
 export { screenshotSvg, rgbToHex, rgbToString } from "./svg.ts"
 export { screenshotPng } from "./png.ts"
@@ -31,14 +31,14 @@ export type { PngScreenshotOptions } from "./png.ts"
  * A **vector** Renderer strategy: a synchronous `buffer → SVG string`
  * rasterizer. {@link screenshotSvg} is the built-in implementation.
  */
-export type VectorRenderer<O = unknown> = (terminal: TerminalReadable, options?: O) => string
+export type VectorRenderer<O = unknown> = (terminal: Terminal, options?: O) => string
 
 /**
  * A **raster** Renderer strategy: an async `buffer → PNG bytes` rasterizer.
  * Both {@link screenshotPng} and `@termless/ghostty`'s `renderTerminalPng`
  * conform to this shape.
  */
-export type RasterRenderer<O = unknown> = (terminal: TerminalReadable, options?: O) => Promise<Uint8Array>
+export type RasterRenderer<O = unknown> = (terminal: Terminal, options?: O) => Promise<Uint8Array>
 
 /**
  * The Renderer strategy in either form. `record` and `view` accept a

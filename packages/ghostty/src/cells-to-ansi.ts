@@ -1,7 +1,7 @@
 /**
  * Pure cells → ANSI serializer. No browser globals, no native deps.
  *
- * Given a snapshot of a `TerminalReadable`'s cell grid, produce ANSI bytes that —
+ * Given a snapshot of a `Terminal`'s cell grid, produce ANSI bytes that —
  * when fed to a fresh terminal — produce the same visible state. The inverse of
  * "feed bytes → parse → cells".
  *
@@ -13,16 +13,16 @@
  * scroll history, or original SGR sequencing — just the final visible grid.
  */
 
-import type { Cell, CursorState, RGB, TerminalReadable } from "../../../src/terminal/types.ts"
+import type { Cell, Cursor, Color, Terminal } from "../../../src/terminal/types.ts"
 
-function rgbToSgr(role: "fg" | "bg", color: RGB): string {
+function rgbToSgr(role: "fg" | "bg", color: Color): string {
   const code = role === "fg" ? 38 : 48
   return `${code};2;${color.r};${color.g};${color.b}`
 }
 
 interface SgrState {
-  fg: RGB | null
-  bg: RGB | null
+  fg: Color | null
+  bg: Color | null
   bold: boolean
   dim: boolean
   italic: boolean
@@ -58,7 +58,7 @@ function sgrFor(cell: Cell): SgrState {
   }
 }
 
-function rgbEqual(a: RGB | null, b: RGB | null): boolean {
+function rgbEqual(a: Color | null, b: Color | null): boolean {
   if (a === b) return true
   if (!a || !b) return false
   return a.r === b.r && a.g === b.g && a.b === b.b
@@ -118,7 +118,7 @@ function nonDefault(s: SgrState): boolean {
 }
 
 /**
- * Serialize a TerminalReadable's cell grid back to ANSI escape sequences.
+ * Serialize a Terminal's cell grid back to ANSI escape sequences.
  *
  * The output begins with a deterministic preamble:
  *   \x1b[H     — cursor home (1,1)
@@ -133,13 +133,13 @@ function nonDefault(s: SgrState): boolean {
  * After the cells are emitted, the cursor is repositioned via CSI H so callers
  * that re-enable the cursor see it where the source terminal had it.
  */
-export function cellsToAnsi(terminal: TerminalReadable, opts: { rows?: number; cols?: number } = {}): string {
+export function cellsToAnsi(terminal: Terminal, opts: { rows?: number; cols?: number } = {}): string {
   const lines = terminal.getLines()
   const rowCount = opts.rows ?? lines.length
   // Use only the last `rowCount` rows to match a screen-shaped render.
   const screenRows = lines.slice(Math.max(0, lines.length - rowCount))
   const colCount = opts.cols ?? screenRows[0]?.length ?? 0
-  const cursor: CursorState | null = (() => {
+  const cursor: Cursor | null = (() => {
     try {
       return terminal.getCursor()
     } catch {

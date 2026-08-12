@@ -85,9 +85,6 @@ export function createRegion(readable: Terminal, startRow: number, endRow: numbe
   return createLazyRegion(readable, () => [startRow, endRow])
 }
 
-/** @deprecated Renamed to {@link createRegion}. */
-export const createRegionView = createRegion
-
 // ── Row ──
 
 /** Create a {@link Row} for an absolute row position. screenRow is the display row number. */
@@ -113,9 +110,6 @@ export function createRow(readable: Terminal, absRow: number, screenRow: number)
     },
   }
 }
-
-/** @deprecated Renamed to {@link createRow}. */
-export const createRowView = createRow
 
 // ── Specialized Region Views ──
 

@@ -13,14 +13,14 @@ import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import type {
   Cell,
   CellView,
-  CursorState,
+  Cursor,
   KeyDescriptor,
   ScrollbackState,
   TerminalBackend,
   TerminalCapabilities,
   TerminalMode,
   TerminalOptions,
-  RGB,
+  Color,
 } from "../src/terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -162,7 +162,7 @@ function createMockBackend(): TerminalBackend {
       return Array.from({ length: rows }, (_, row) => Array.from({ length: cols }, (_, col) => cellAt(row, col)))
     },
 
-    getCursor(): CursorState {
+    getCursor(): Cursor {
       return { x: cursorX, y: cursorY, col: cursorX, row: cursorY, visible: true, style: "block" }
     },
 
@@ -712,7 +712,7 @@ describe("createTerminal", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("region selectors", () => {
-  test("screen returns a RegionView with screen text", () => {
+  test("screen returns a Region with screen text", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 3 })
     term.feed("Row A\nRow B\nRow C")
@@ -739,7 +739,7 @@ describe("region selectors", () => {
     term.close()
   })
 
-  test("row returns a RowView for screen row", () => {
+  test("row returns a Row for screen row", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 5 })
     term.feed("Line A\nLine B\nLine C")
@@ -810,7 +810,7 @@ describe("region selectors", () => {
     term.close()
   })
 
-  test("viewport returns a RegionView with scrolled content", () => {
+  test("viewport returns a Region with scrolled content", () => {
     // Use real xterm backend so viewport can differ from screen
     const term = createTerminal({
       backend: createXtermBackend(),
@@ -847,7 +847,7 @@ describe("region selectors", () => {
     term.close()
   })
 
-  test("range returns a RegionView for rectangular selection", () => {
+  test("range returns a Region for rectangular selection", () => {
     const backend = createMockBackend()
     const term = createTerminal({ backend, cols: 20, rows: 5 })
     term.feed("ABCDEFGHIJ\nKLMNOPQRST\nUVWXYZ0123")

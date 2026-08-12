@@ -12,7 +12,7 @@
  * rasterization only, so the binding ports the fixed-pitch grid walk (per-cell
  * fg/bg, wide-char advance) — see `native/src/lib.rs`. termless already owns
  * the cell grid (it feeds both canvas and resvg), so the public entry point
- * here is {@link renderCells}: a {@link TerminalReadable} in, RGBA out.
+ * here is {@link renderCells}: a {@link Terminal} in, RGBA out.
  *
  * The native `.node` binary must be built first (phase 1 ships macOS-arm64;
  * cross-platform prebuilds are a later phase):
@@ -23,7 +23,7 @@
 import { requireNativeAddon } from "./load-native.ts"
 import { bundledFontFiles } from "../../../src/render/fonts.ts"
 import { readFileSync, existsSync } from "node:fs"
-import type { TerminalReadable, Cell, RGB } from "../../../src/terminal/types.ts"
+import type { Terminal, Cell, Color } from "../../../src/terminal/types.ts"
 
 // ===========================================================================
 // Native module
@@ -269,7 +269,7 @@ const DEFAULT_CELL_WIDTH = 9.6
 const DEFAULT_FONT_SIZE_RATIO = 17 / 20
 const DEFAULT_BASELINE_RATIO = 0.835
 
-function packRgb(c: RGB | null): number {
+function packRgb(c: Color | null): number {
   if (!c) return -1
   return ((c.r & 0xff) << 16) | ((c.g & 0xff) << 8) | (c.b & 0xff)
 }
@@ -321,9 +321,9 @@ export interface RenderCellsOptions {
  *
  * This is the high-fidelity path: the cell grid is fed straight to swash
  * (no SVG round-trip), so color-emoji glyphs composite their native color
- * bitmaps. Mirrors how `screenshotSvg` reads a {@link TerminalReadable}.
+ * bitmaps. Mirrors how `screenshotSvg` reads a {@link Terminal}.
  */
-export function renderCells(terminal: TerminalReadable, opts: RenderCellsOptions = {}): SwashBitmap {
+export function renderCells(terminal: Terminal, opts: RenderCellsOptions = {}): SwashBitmap {
   const lines = terminal.getLines()
   const rows = lines.length
   const cols = lines.reduce((m, line) => Math.max(m, line.length), 0)

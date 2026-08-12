@@ -6,7 +6,7 @@
  * @resvg/resvg-js is not installed.
  */
 
-import type { TerminalReadable, SvgScreenshotOptions } from "../terminal/types.ts"
+import type { Terminal, SvgScreenshotOptions } from "../terminal/types.ts"
 import { screenshotSvg } from "./svg.ts"
 import { bundledFontFiles } from "./fonts.ts"
 
@@ -34,7 +34,7 @@ async function loadResvg() {
  * Requires `@resvg/resvg-js` as an optional dependency:
  *   bun add -d @resvg/resvg-js
  */
-export async function screenshotPng(terminal: TerminalReadable, options?: PngScreenshotOptions): Promise<Uint8Array> {
+export async function screenshotPng(terminal: Terminal, options?: PngScreenshotOptions): Promise<Uint8Array> {
   const svg = screenshotSvg(terminal, options)
   const scale = options?.scale ?? 2
 

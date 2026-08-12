@@ -27,11 +27,11 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
@@ -51,8 +51,8 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
 
   // libvterm reports colors with a type byte:
   // 0 = default, 1 = indexed, 2 = RGB
-  const fg: RGB | null = raw.fgType === 2 ? { r: raw.fgR, g: raw.fgG, b: raw.fgB } : null
-  const bg: RGB | null = raw.bgType === 2 ? { r: raw.bgR, g: raw.bgG, b: raw.bgB } : null
+  const fg: Color | null = raw.fgType === 2 ? { r: raw.fgR, g: raw.fgG, b: raw.fgB } : null
+  const bg: Color | null = raw.bgType === 2 ? { r: raw.bgR, g: raw.bgG, b: raw.bgB } : null
 
   return {
     char: raw.chars,
@@ -333,7 +333,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     return result
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const m = ensureInit()
 
     // VTermPos is { int row; int col; } = 8 bytes

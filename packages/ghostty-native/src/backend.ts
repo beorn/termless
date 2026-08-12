@@ -13,12 +13,12 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
@@ -167,8 +167,8 @@ const CURSOR_STYLE_MAP: Record<number, CursorStyle> = {
 function convertNativeCell(nc: NativeCell): Cell {
   return {
     char: nc.text,
-    fg: nc.fg_r >= 0 ? ({ r: nc.fg_r, g: nc.fg_g, b: nc.fg_b } as RGB) : null,
-    bg: nc.bg_r >= 0 ? ({ r: nc.bg_r, g: nc.bg_g, b: nc.bg_b } as RGB) : null,
+    fg: nc.fg_r >= 0 ? ({ r: nc.fg_r, g: nc.fg_g, b: nc.fg_b } as Color) : null,
+    bg: nc.bg_r >= 0 ? ({ r: nc.bg_r, g: nc.bg_g, b: nc.bg_b } as Color) : null,
     bold: nc.bold,
     dim: nc.faint,
     italic: nc.italic,
@@ -362,7 +362,7 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     }
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const native = loadGhosttyNative()
     const nc = native.getCursor(ensureHandle())
     return {

@@ -13,12 +13,12 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
-  RGB,
+  Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 
@@ -115,8 +115,8 @@ export function loadAlacrittyNative(): NativeModule {
 function convertNativeCell(nc: NativeCell): Cell {
   return {
     char: nc.text,
-    fg: nc.fg ? ({ r: nc.fg[0]!, g: nc.fg[1]!, b: nc.fg[2]! } as RGB) : null,
-    bg: nc.bg ? ({ r: nc.bg[0]!, g: nc.bg[1]!, b: nc.bg[2]! } as RGB) : null,
+    fg: nc.fg ? ({ r: nc.fg[0]!, g: nc.fg[1]!, b: nc.fg[2]! } as Color) : null,
+    bg: nc.bg ? ({ r: nc.bg[0]!, g: nc.bg[1]!, b: nc.bg[2]! } as Color) : null,
     bold: nc.bold,
     dim: nc.faint,
     italic: nc.italic,
@@ -301,7 +301,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     }
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     const t = ensureTerm()
     const nc = t.getCursor()
     return {

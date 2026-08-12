@@ -89,4 +89,4 @@ TypeScript (backend.ts)
               └── wezterm VT parser
 ```
 
-The native module exposes a `WeztermTerminal` class via napi-rs that wraps the Rust `Terminal` struct. The TypeScript layer converts between napi types and the Termless `Cell`/`CursorState`/`ScrollbackState` types.
+The native module exposes a `WeztermTerminal` class via napi-rs that wraps the Rust `Terminal` struct. The TypeScript layer converts between napi types and the Termless `Cell`/`Cursor`/`ScrollbackState` types.

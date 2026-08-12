@@ -120,22 +120,19 @@ A cell holds one character with attributes:
 
 ## Migration: §9 naming (2026-07)
 
-Every old name below still works as a deprecated alias; prefer the new spelling.
+The full renamed vocabulary is `Terminal` (read contract, was `TerminalReadable`), `TestTerminal` (harness), `Region` / `Row` (was `RegionView` / `RowView`), `Color` (was `RGB`), `Cursor` `{col,row}` (was `CursorState` `{x,y}`), `RawOutput` (was `OutputView`), and `TextMatch` `{text,row,col,cells}` (was `TextPosition`). Those old type names are gone — they were pure aliases with no behavior of their own, so there was nothing to keep working.
 
-| Old (deprecated)                                | New                                        | Notes                                                  |
-| ----------------------------------------------- | ------------------------------------------ | ------------------------------------------------------ |
-| `TerminalReadable`                              | `Terminal`                                 | The read contract                                      |
-| `Terminal` (harness)                            | `TestTerminal`                             | Extends `Terminal`                                     |
-| `RegionView` / `RowView`                        | `Region` / `Row`                           |                                                        |
-| `CellView`                                      | `Cell`                                     | Accessors return `Cell`; position comes from the query |
-| `CursorState` `{x,y}`                           | `Cursor` `{col,row}`                       |                                                        |
-| `RGB`                                           | `Color` `{r,g,b,index?}`                   |                                                        |
-| `OutputView` / `term.out`                       | `RawOutput` / `term.output`                |                                                        |
-| `TextPosition`                                  | `TextMatch` `{text,row,col,cells}`         |                                                        |
-| `getLine` / `getLines(): Cell[][]`              | `getRow` / `getRows`                       | row = cells (text lines keep `getLines`)               |
-| `viewportOffset` / `totalLines` / `screenLines` | `viewportTop` / `totalRows` / `screenRows` |                                                        |
-| `find` / `findAll`                              | `findText` / `findAllText`                 | return `TextMatch`                                     |
-| `MouseOptions.button: 0\|1\|2`                  | `"left"\|"middle"\|"right"`                | numbers still accepted                                 |
-| `UnderlineStyle: false`                         | `"none"`                                   | `false` still accepted                                 |
+A smaller set of old **fields and methods** still works as a deprecated back-compat mirror, because dropping them would change runtime behavior for any caller still using the old shape, not just its name:
+
+| Old (deprecated)                                | New                                        | Notes                                                                                                                            |
+| ----------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `CellView`                                      | `Cell`                                     | Accessors return `Cell`; position comes from the query. `cell()`/`cellAt()` still populate the extra `row`/`col` for back-compat |
+| `Cursor.x` / `Cursor.y`                         | `Cursor.col` / `Cursor.row`                | Kept required during the migration window                                                                                        |
+| `term.out`                                      | `term.output`                              |                                                                                                                                  |
+| `getLine` / `getLines(): Cell[][]`              | `getRow` / `getRows`                       | row = cells (text lines keep `getLines`)                                                                                         |
+| `viewportOffset` / `totalLines` / `screenLines` | `viewportTop` / `totalRows` / `screenRows` | Kept required during the migration window                                                                                        |
+| `find` / `findAll`                              | `findText` / `findAllText`                 | return `TextMatch`                                                                                                               |
+| `MouseOptions.button: 0\|1\|2`                  | `"left"\|"middle"\|"right"`                | numbers still accepted                                                                                                           |
+| `UnderlineStyle: false`                         | `"none"`                                   | `false` still accepted                                                                                                           |
 
 Kept unchanged: `waitFor`; `Region.getText()`/`getLines(): string[]`; the `buffer`/`screen`/`viewport`/`scrollback` regions; `Recording` `commands`/`io`.

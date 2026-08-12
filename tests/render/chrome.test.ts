@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest"
 import { chromeOptions, isChromeStyle, CHROME_STYLES } from "../../src/render/chrome.ts"
 import { screenshotSvg } from "../../src/render/svg.ts"
-import type { TerminalReadable, Cell, CursorState, CursorStyle, UnderlineStyle } from "../../src/terminal/types.ts"
+import type { Terminal, Cell, Cursor, CursorStyle, UnderlineStyle } from "../../src/terminal/types.ts"
 
 // ── Minimal mock terminal ──
 
@@ -25,8 +25,8 @@ function cell(char = " "): Cell {
   }
 }
 
-function mockTerm(lines: string[]): TerminalReadable {
-  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
+function mockTerm(lines: string[]): Terminal {
+  const cursor: Cursor = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" as CursorStyle }
   const cellLines = lines.map((l) => [...l].map((c) => cell(c)))
   return {
     getText: () => lines.join("\n"),

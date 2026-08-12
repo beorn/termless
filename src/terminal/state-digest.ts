@@ -1,7 +1,7 @@
 /**
  * Terminal state digest — one comparison vocabulary for "same terminal state".
  *
- * {@link terminalStateDigest} reads any {@link TerminalReadable} and returns a
+ * {@link terminalStateDigest} reads any {@link Terminal} and returns a
  * plain, serializable snapshot of everything that defines the terminal's
  * observable state: geometry, cursor, title, modes, and the visible grid as
  * text lines plus a per-row style signature. {@link diffTerminalStates} turns
@@ -10,7 +10,7 @@
  * This is the engine-neutral form of the restore-equivalence oracle's ad-hoc
  * digest (cursor / active buffer / margins / attrs / modes + text): instead of
  * reaching into one emulator's snapshot internals, it reads through the shared
- * {@link TerminalReadable} contract, so the SAME "are these two terminals in the
+ * {@link Terminal} contract, so the SAME "are these two terminals in the
  * same state?" assertion works across every backend and across a live terminal
  * vs. a rehydrated one.
  *
@@ -27,11 +27,11 @@
  * terminals cell-by-cell (grid only). The state digest is broader (cursor,
  * modes, title, geometry) and serializable, but row-granular for the grid — it
  * answers "same whole-terminal state?" where `diffBuffers` answers "which cells
- * moved?". They compose over the same {@link TerminalReadable} contract; neither
+ * moved?". They compose over the same {@link Terminal} contract; neither
  * replaces the other.
  */
 
-import type { Cell, CursorStyle, RGB, TerminalMode, TerminalReadable } from "./types.ts"
+import type { Cell, CursorStyle, Color, TerminalMode, Terminal } from "./types.ts"
 
 // =============================================================================
 // Types
@@ -153,13 +153,10 @@ void _allModesCovered
  * Capture a terminal's observable state as a plain, serializable digest.
  *
  * The grid captured is the **screen** (the visible live grid), derived as the
- * last `screenLines` rows of {@link TerminalReadable.getLines} — robust whether
+ * last `screenLines` rows of {@link Terminal.getLines} — robust whether
  * or not a backend includes scrollback in `getLines()`.
  */
-export function terminalStateDigest(
-  term: TerminalReadable,
-  opts: TerminalStateDigestOptions = {},
-): TerminalStateDigest {
+export function terminalStateDigest(term: Terminal, opts: TerminalStateDigestOptions = {}): TerminalStateDigest {
   const trim = opts.trimTrailingBlanks ?? true
 
   const scrollback = term.getScrollback()
@@ -237,7 +234,7 @@ function cellStyleToken(cell: Cell): string {
   return parts.join(";")
 }
 
-function hex(c: RGB): string {
+function hex(c: Color): string {
   return `#${byteHex(c.r)}${byteHex(c.g)}${byteHex(c.b)}`
 }
 

@@ -33,7 +33,7 @@ import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   KeyDescriptor,
   TerminalMode,
   ScrollbackState,
@@ -520,7 +520,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
     return dataBackend.getLines()
   }
 
-  function getCursor(): CursorState {
+  function getCursor(): Cursor {
     return dataBackend.getCursor()
   }
 

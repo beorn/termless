@@ -45,9 +45,6 @@ export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" |
  */
 export type Color = { r: number; g: number; b: number; index?: number }
 
-/** @deprecated Renamed to {@link Color}. */
-export type RGB = Color
-
 // ── Cursor ──
 
 export interface Cursor {
@@ -64,9 +61,6 @@ export interface Cursor {
   /** @deprecated Renamed to {@link Cursor.row}. Kept required during the migration window. */
   y: number
 }
-
-/** @deprecated Renamed to {@link Cursor}; `x`/`y` renamed to `col`/`row`. */
-export type CursorState = Cursor
 
 export type CursorStyle = "block" | "underline" | "beam"
 
@@ -153,9 +147,6 @@ export interface Region {
   containsText(text: string): boolean
 }
 
-/** @deprecated Renamed to {@link Region}. */
-export type RegionView = Region
-
 /**
  * Raw terminal output stream captured before emulator parsing.
  *
@@ -168,9 +159,6 @@ export interface RawOutput {
   containsOutput(text: string): boolean
   clear(): void
 }
-
-/** @deprecated Renamed to {@link RawOutput}. */
-export type OutputView = RawOutput
 
 /**
  * A positioned cell — a {@link Cell} plus the `row`/`col` where it lives.
@@ -192,9 +180,6 @@ export interface Row extends Region {
   readonly cells: Cell[]
   cellAt(col: number): Cell
 }
-
-/** @deprecated Renamed to {@link Row}. */
-export type RowView = Row
 
 // ═══════════════════════════════════════════════════════
 // Terminal — shared read contract for backends (THE contract)
@@ -235,9 +220,6 @@ export interface Terminal {
   getTitle(): string
   getScrollback(): ScrollbackState
 }
-
-/** @deprecated Renamed to {@link Terminal} (the read contract). */
-export type TerminalReadable = Terminal
 
 // ═══════════════════════════════════════════════════════
 // TerminalBackend — all backends MUST implement this
@@ -357,9 +339,6 @@ export interface TextMatch {
   col: number
   cells: Cell[]
 }
-
-/** @deprecated Renamed to {@link TextMatch}; queries now return a match object with `cells`. */
-export type TextPosition = TextMatch
 
 /** Modifier keys for mouse events. */
 export interface MouseModifiers {
@@ -594,9 +573,9 @@ export interface MouseEncodingExtension {
 }
 
 export interface ColorPaletteExtension {
-  setColorPalette(entries: Partial<Record<number, RGB>>): void
-  setDefaultFg(color: RGB): void
-  setDefaultBg(color: RGB): void
+  setColorPalette(entries: Partial<Record<number, Color>>): void
+  setDefaultFg(color: Color): void
+  setDefaultBg(color: Color): void
 }
 
 export interface DirtyTrackingExtension {

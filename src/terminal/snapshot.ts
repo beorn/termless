@@ -5,17 +5,17 @@
  * record an animation you must *freeze* each frame: deep-copy the cell grid +
  * cursor at capture time, then render the frozen copies afterwards. A
  * {@link TerminalSnapshot} is that frozen copy, and {@link snapshotReadable}
- * wraps one as a {@link TerminalReadable} so any renderer — `screenshotSvg`,
+ * wraps one as a {@link Terminal} so any renderer — `screenshotSvg`,
  * swash's `renderCells`, `renderTerminalPng` — can paint it long after the
  * source terminal has closed.
  */
 
-import type { Cell, CursorState, TestTerminal, TerminalReadable } from "./types.ts"
+import type { Cell, Cursor, TestTerminal, Terminal } from "./types.ts"
 
 /** A frozen copy of a terminal's visible cell grid + cursor. */
 export interface TerminalSnapshot {
   grid: Cell[][]
-  cursor: CursorState
+  cursor: Cursor
   cols: number
   rows: number
   title: string
@@ -42,7 +42,7 @@ const BLANK_CELL: Cell = {
 /** Deep-copy a terminal's current visible state into a {@link TerminalSnapshot}. */
 export function snapshotTerminal(term: TestTerminal): TerminalSnapshot {
   const grid = term.getRows().map((row) => row.map((cell) => ({ ...cell })))
-  let cursor: CursorState
+  let cursor: Cursor
   try {
     cursor = term.getCursor()
   } catch {
@@ -58,11 +58,11 @@ export function snapshotTerminal(term: TestTerminal): TerminalSnapshot {
 }
 
 /**
- * Wrap a {@link TerminalSnapshot} as a {@link TerminalReadable}. The snapshot
+ * Wrap a {@link TerminalSnapshot} as a {@link Terminal}. The snapshot
  * is a frozen copy, so this view is stable even after the source terminal has
  * closed — which is exactly what frame-by-frame rendering needs.
  */
-export function snapshotReadable(snap: TerminalSnapshot): TerminalReadable {
+export function snapshotReadable(snap: TerminalSnapshot): Terminal {
   const cellAt = (row: number, col: number): Cell => snap.grid[row]?.[col] ?? BLANK_CELL
   return {
     getText: () => snap.grid.map((row) => row.map((c) => c.char || " ").join("")).join("\n"),
@@ -84,5 +84,5 @@ export function snapshotReadable(snap: TerminalSnapshot): TerminalReadable {
     getScrollback: () => ({ lines: [], total: 0 }),
     cols: snap.cols,
     rows: snap.rows,
-  } as unknown as TerminalReadable
+  } as unknown as Terminal
 }

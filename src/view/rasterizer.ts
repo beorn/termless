@@ -39,7 +39,7 @@ import { join } from "node:path"
 export type RendererKind = "canvas" | "resvg" | "swash" | "browser" | "auto"
 
 /** A terminal whose cell grid a {@link Rasterizer} can read directly. */
-export type CellGridSource = import("../terminal/types.ts").TerminalReadable
+export type CellGridSource = import("../terminal/types.ts").Terminal
 
 /** A rasterized RGBA bitmap. */
 export interface RasterBitmap {

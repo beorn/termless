@@ -21,7 +21,7 @@
  *
  *   - {@link renderTerminalPng} — terminal snapshot path. Wraps
  *     {@link cellsToAnsi} + {@link renderAnsiPng}. Useful when the source state
- *     lives in an existing TerminalReadable (xterm.js, vterm, etc.) and you
+ *     lives in an existing Terminal (xterm.js, vterm, etc.) and you
  *     want a visual of that state through Ghostty's renderer.
  *
  * DOM shims are applied lazily on the first call (module-scoped, idempotent)
@@ -36,7 +36,7 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { resolveGhosttyWebWasm } from "./load-native.ts"
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas"
-import type { TerminalReadable } from "../../../src/terminal/types.ts"
+import type { Terminal } from "../../../src/terminal/types.ts"
 import {
   BUNDLED_FONTS,
   bundledFontsDir,
@@ -631,7 +631,7 @@ export async function renderAnsiPng(
 }
 
 /**
- * Render an in-memory TerminalReadable to a PNG via ghostty-web. Wraps
+ * Render an in-memory Terminal to a PNG via ghostty-web. Wraps
  * {@link cellsToAnsi} + {@link renderAnsiPng}.
  *
  * Useful when the source state lives in a terminal backed by a different
@@ -644,12 +644,12 @@ export async function renderAnsiPng(
  * terminal and pass them to {@link renderAnsiPng} directly.
  */
 export async function renderTerminalPng(
-  terminal: TerminalReadable,
+  terminal: Terminal,
   opts: RenderOptions & { returnMeta: true },
 ): Promise<{ png: Uint8Array; meta: RenderMeta }>
-export async function renderTerminalPng(terminal: TerminalReadable, opts?: RenderOptions): Promise<Uint8Array>
+export async function renderTerminalPng(terminal: Terminal, opts?: RenderOptions): Promise<Uint8Array>
 export async function renderTerminalPng(
-  terminal: TerminalReadable,
+  terminal: Terminal,
   opts: RenderOptions = {},
 ): Promise<Uint8Array | { png: Uint8Array; meta: RenderMeta }> {
   const cols = opts.cols ?? inferCols(terminal) ?? 100
@@ -663,7 +663,7 @@ export async function renderTerminalPng(
 
 // ── Inference helpers ──
 
-function inferCols(terminal: TerminalReadable): number | null {
+function inferCols(terminal: Terminal): number | null {
   try {
     const lines = terminal.getLines()
     if (lines.length === 0) return null
@@ -673,7 +673,7 @@ function inferCols(terminal: TerminalReadable): number | null {
   }
 }
 
-function inferRows(terminal: TerminalReadable): number | null {
+function inferRows(terminal: Terminal): number | null {
   let lineCount: number
   try {
     lineCount = terminal.getLines().length

@@ -38,7 +38,7 @@ import { screenshotPng } from "../../src/render/png.ts"
 import { createGif } from "../../src/view/gif.ts"
 import { screenshotSvg } from "../../src/render/svg.ts"
 import { bundledFontFiles } from "../../src/render/fonts.ts"
-import type { Cell, CursorState, TerminalReadable } from "../../src/terminal/types.ts"
+import type { Cell, Cursor, Terminal } from "../../src/terminal/types.ts"
 
 const SCALE = 2
 const CELL_W = 9.6
@@ -106,14 +106,14 @@ function cell(char: string, overrides: Partial<Cell> = {}): Cell {
   }
 }
 
-/** Build a single-row TerminalReadable from a list of cells. */
-function readableFromCells(cells: Cell[]): TerminalReadable {
-  const cursor: CursorState = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" }
+/** Build a single-row Terminal from a list of cells. */
+function readableFromCells(cells: Cell[]): Terminal {
+  const cursor: Cursor = { x: 0, y: 0, col: 0, row: 0, visible: false, style: "block" }
   return {
     getLines: () => [cells],
     getRows: () => [cells],
     getCursor: () => cursor,
-  } as unknown as TerminalReadable
+  } as unknown as Terminal
 }
 
 /** Decode PNG bytes into a flat RGBA pixel view via @napi-rs/canvas. */

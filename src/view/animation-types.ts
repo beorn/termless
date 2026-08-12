@@ -1,4 +1,4 @@
-import type { TerminalReadable } from "../terminal/types.ts"
+import type { Terminal } from "../terminal/types.ts"
 
 export interface FrameLayerOffset {
   x: number
@@ -7,7 +7,7 @@ export interface FrameLayerOffset {
 
 export interface CellsFrameLayer {
   kind: "cells"
-  snapshot: TerminalReadable
+  snapshot: Terminal
   offset?: FrameLayerOffset
   fallbackSvg?: string
 }
@@ -56,7 +56,7 @@ export interface AnimationFrame {
    * `record` verb; lets a cell-native renderer (swash) rasterize the frame
    * directly instead of round-tripping through `svg`.
    */
-  snapshot?: TerminalReadable
+  snapshot?: Terminal
   /**
    * Renderer-agnostic visual layers ordered bottom-up. When omitted, the
    * legacy `{svg, snapshot}` shape is projected into layers by the encoder.

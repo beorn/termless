@@ -1,22 +1,14 @@
 /**
  * SVG screenshot renderer for termless.
  *
- * Converts a terminal cell grid (TerminalReadable) into an SVG string.
+ * Converts a terminal cell grid (Terminal) into an SVG string.
  * Pure function with no side effects — suitable for snapshots, docs, and debugging.
  *
  * Supports VHS-style visual polish: padding, border radius, window bar
  * (macOS traffic light dots), margin, and margin fill color.
  */
 
-import type {
-  TerminalReadable,
-  SvgScreenshotOptions,
-  SvgTheme,
-  Cell,
-  RGB,
-  CursorState,
-  WindowBar,
-} from "../terminal/types.ts"
+import type { Terminal, SvgScreenshotOptions, SvgTheme, Cell, Color, Cursor, WindowBar } from "../terminal/types.ts"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
@@ -68,14 +60,14 @@ const DEFAULT_THEME: Required<Pick<SvgTheme, "foreground" | "background" | "curs
 
 // ── Color helpers ──
 
-export function rgbToHex(color: RGB): string {
+export function rgbToHex(color: Color): string {
   const r = color.r.toString(16).padStart(2, "0")
   const g = color.g.toString(16).padStart(2, "0")
   const b = color.b.toString(16).padStart(2, "0")
   return `#${r}${g}${b}`
 }
 
-export function rgbToString(color: RGB | null, fallback: string): string {
+export function rgbToString(color: Color | null, fallback: string): string {
   return color ? rgbToHex(color) : fallback
 }
 
@@ -447,7 +439,7 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
 
 // ── Cursor rendering ──
 
-function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null {
+function renderCursor(cursor: Cursor, opts: ResolvedOptions): string | null {
   if (!cursor.visible) return null
 
   const cx = cursor.col * opts.cellWidth
@@ -472,7 +464,7 @@ function renderCursor(cursor: CursorState, opts: ResolvedOptions): string | null
  * Parse a `#rrggbb` hex string into an RGB triple. Returns null for any
  * non-hex input (named colors, `transparent`, etc.) so callers can fall back.
  */
-function parseHex(color: string): RGB | null {
+function parseHex(color: string): Color | null {
   const m = /^#([0-9a-fA-F]{6})$/.exec(color.trim())
   if (!m) return null
   const n = parseInt(m[1]!, 16)
@@ -480,7 +472,7 @@ function parseHex(color: string): RGB | null {
 }
 
 /** Relative luminance (0..1) of an RGB color, per the sRGB perceptual weights. */
-function luminance(c: RGB): number {
+function luminance(c: Color): number {
   return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255
 }
 
@@ -612,7 +604,7 @@ function renderWindowBar(
 
 // ── Main renderer ──
 
-export function screenshotSvg(terminal: TerminalReadable, options?: SvgScreenshotOptions): string {
+export function screenshotSvg(terminal: Terminal, options?: SvgScreenshotOptions): string {
   const opts = resolveOptions(options)
   const {
     cellWidth,

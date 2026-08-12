@@ -8,12 +8,12 @@
 import { describe, test, expect } from "vitest"
 import { terminalSerializer, terminalSnapshot } from "../src/serializer.ts"
 import type {
-  TerminalReadable,
+  Terminal,
   Cell,
-  CursorState,
+  Cursor,
   ScrollbackState,
   TerminalMode,
-  RGB,
+  Color,
   UnderlineStyle,
 } from "../../../src/terminal/types.ts"
 
@@ -43,11 +43,11 @@ function createMockTerminal(
   options: {
     lines?: string[]
     cells?: Map<string, Partial<Cell>>
-    cursor?: Partial<CursorState>
+    cursor?: Partial<Cursor>
     modes?: Partial<Record<TerminalMode, boolean>>
     title?: string
   } = {},
-): TerminalReadable {
+): Terminal {
   const { lines = [""], cells = new Map(), cursor = {}, modes = {} } = options
 
   const maxCols = Math.max(...lines.map((l) => l.length), 1)
@@ -66,7 +66,7 @@ function createMockTerminal(
     }
   }
 
-  const cursorState: CursorState = {
+  const cursorState: Cursor = {
     col: cursor.x ?? 0,
     row: cursor.y ?? 0,
     x: cursor.x ?? 0,

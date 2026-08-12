@@ -1,10 +1,10 @@
 /**
  * Custom Vitest matchers for terminal testing.
  *
- * Composable matchers that work with region selectors (RegionView, CellView)
- * and terminal-level queries (TerminalReadable). The composable pattern is:
+ * Composable matchers that work with region selectors (Region, CellView)
+ * and terminal-level queries (Terminal). The composable pattern is:
  *
- *   expect(term.screen).toContainText("Hello")     // RegionView text matcher
+ *   expect(term.screen).toContainText("Hello")     // Region text matcher
  *   expect(term.cell(0, 0)).toBeBold()              // CellView style matcher
  *   expect(term).toHaveCursorAt(5, 10)              // Terminal matcher
  *
@@ -23,9 +23,9 @@ import { expect } from "vitest"
 import * as Vitest from "vitest"
 import type { MatcherState } from "vitest"
 import type {
-  TerminalReadable,
+  Terminal,
   CursorStyle,
-  RGB,
+  Color,
   TerminalMode,
   UnderlineStyle,
   SvgScreenshotOptions,
@@ -120,7 +120,7 @@ const RETRY_INTERVAL = 50
  *   expect(x).toContainText("y")                    // sync, throws immediately
  *   await expect(x).toContainText("y", { timeout })  // async, polls until pass
  *
- * RegionView is a lazy getter that re-reads the backend on every getText() call,
+ * Region is a lazy getter that re-reads the backend on every getText() call,
  * so re-invoking the assertion picks up terminal changes automatically.
  */
 function maybeRetry(
@@ -164,12 +164,12 @@ interface RetryOptions {
 declare module "@vitest/expect" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   interface Matchers<T = any> {
-    // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
+    // Text (Region) — pass { timeout } for Playwright-style auto-retry
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
     toMatchLines(lines: string[], options?: RetryOptions): void
 
-    // Raw output (OutputView) — pass { timeout } for Playwright-style auto-retry
+    // Raw output (RawOutput) — pass { timeout } for Playwright-style auto-retry
     toContainOutput(text: string, options?: RetryOptions): void
 
     // Cell Style — composable (CellView)
@@ -191,14 +191,14 @@ declare module "@vitest/expect" {
     /** @deprecated Use toHaveAttrs({ underline: true }) or toHaveAttrs({ underline: "curly" }) */
     toHaveUnderline(style?: UnderlineStyle): void
     /** @deprecated Use toHaveAttrs({ fg: color }) */
-    toHaveFg(color: string | RGB): void
+    toHaveFg(color: string | Color): void
     /** @deprecated Use toHaveAttrs({ bg: color }) */
-    toHaveBg(color: string | RGB): void
+    toHaveBg(color: string | Color): void
 
-    // Cursor — composable (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    // Cursor — composable (Terminal) — pass { timeout } for Playwright-style auto-retry
     toHaveCursor(props: CursorProps, options?: RetryOptions): void
 
-    // Cursor — individual (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    // Cursor — individual (Terminal) — pass { timeout } for Playwright-style auto-retry
     /** @deprecated Use toHaveCursor({ x, y }) */
     toHaveCursorAt(x: number, y: number, options?: RetryOptions): void
     /** @deprecated Use toHaveCursor({ style }) */
@@ -215,7 +215,7 @@ declare module "@vitest/expect" {
     // Clipboard (Terminal)
     toHaveClipboardText(text: string): void
 
-    // Snapshot (TerminalReadable)
+    // Snapshot (Terminal)
     toMatchTerminalSnapshot(options?: { name?: string }): void
     toMatchSvgSnapshot(options?: { name?: string; theme?: SvgTheme }): void
   }
@@ -226,12 +226,12 @@ declare module "@vitest/expect" {
 declare module "vitest" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   interface Matchers<T = any> {
-    // Text (RegionView) — pass { timeout } for Playwright-style auto-retry
+    // Text (Region) — pass { timeout } for Playwright-style auto-retry
     toContainText(text: string, options?: RetryOptions): void
     toHaveText(text: string, options?: RetryOptions): void
     toMatchLines(lines: string[], options?: RetryOptions): void
 
-    // Raw output (OutputView) — pass { timeout } for Playwright-style auto-retry
+    // Raw output (RawOutput) — pass { timeout } for Playwright-style auto-retry
     toContainOutput(text: string, options?: RetryOptions): void
 
     // Cell Style — composable (CellView)
@@ -253,14 +253,14 @@ declare module "vitest" {
     /** @deprecated Use toHaveAttrs({ underline: true }) or toHaveAttrs({ underline: "curly" }) */
     toHaveUnderline(style?: UnderlineStyle): void
     /** @deprecated Use toHaveAttrs({ fg: color }) */
-    toHaveFg(color: string | RGB): void
+    toHaveFg(color: string | Color): void
     /** @deprecated Use toHaveAttrs({ bg: color }) */
-    toHaveBg(color: string | RGB): void
+    toHaveBg(color: string | Color): void
 
-    // Cursor — composable (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    // Cursor — composable (Terminal) — pass { timeout } for Playwright-style auto-retry
     toHaveCursor(props: CursorProps, options?: RetryOptions): void
 
-    // Cursor — individual (TerminalReadable) — pass { timeout } for Playwright-style auto-retry
+    // Cursor — individual (Terminal) — pass { timeout } for Playwright-style auto-retry
     /** @deprecated Use toHaveCursor({ x, y }) */
     toHaveCursorAt(x: number, y: number, options?: RetryOptions): void
     /** @deprecated Use toHaveCursor({ style }) */
@@ -277,7 +277,7 @@ declare module "vitest" {
     // Clipboard (Terminal)
     toHaveClipboardText(text: string): void
 
-    // Snapshot (TerminalReadable)
+    // Snapshot (Terminal)
     toMatchTerminalSnapshot(options?: { name?: string }): void
     toMatchSvgSnapshot(options?: { name?: string; theme?: SvgTheme }): void
   }
@@ -288,7 +288,7 @@ declare module "vitest" {
 // =============================================================================
 
 /** Format terminal state as a human-readable snapshot string. */
-function formatTerminalSnapshot(term: TerminalReadable): string {
+function formatTerminalSnapshot(term: Terminal): string {
   const lines = term.getLines()
   const cursor = term.getCursor()
   const altScreen = term.getMode("altScreen")
@@ -315,7 +315,7 @@ function formatTerminalSnapshot(term: TerminalReadable): string {
 // =============================================================================
 
 export const terminalMatchers = {
-  // ── Text Matchers (RegionView) ──
+  // ── Text Matchers (Region) ──
 
   /** Assert region contains the given text as a substring. Auto-retries when { timeout } is passed. */
   toContainText(received: unknown, text: string, options?: RetryOptions) {
@@ -335,7 +335,7 @@ export const terminalMatchers = {
     return maybeRetry(() => assertMatchesLines(received, expectedLines), options?.timeout)
   },
 
-  // ── Raw Output Matchers (OutputView) ──
+  // ── Raw Output Matchers (RawOutput) ──
 
   /** Assert raw terminal output contains the given protocol/text bytes. Auto-retries when { timeout } is passed. */
   toContainOutput(received: unknown, text: string, options?: RetryOptions) {
@@ -394,18 +394,18 @@ export const terminalMatchers = {
   },
 
   /** @deprecated Use toHaveAttrs({ fg: color }) */
-  toHaveFg(received: unknown, color: string | RGB) {
+  toHaveFg(received: unknown, color: string | Color) {
     assertCellView(received, "toHaveFg")
     return toMatcherResult(assertHasFg(received, color))
   },
 
   /** @deprecated Use toHaveAttrs({ bg: color }) */
-  toHaveBg(received: unknown, color: string | RGB) {
+  toHaveBg(received: unknown, color: string | Color) {
     assertCellView(received, "toHaveBg")
     return toMatcherResult(assertHasBg(received, color))
   },
 
-  // ── Terminal Matchers (TerminalReadable) ──
+  // ── Terminal Matchers (Terminal) ──
 
   /** Assert multiple cursor properties at once. Auto-retries when { timeout } is passed. */
   toHaveCursor(received: unknown, props: CursorProps, options?: RetryOptions) {
@@ -472,7 +472,7 @@ export const terminalMatchers = {
     return toMatcherResult(assertClipboardText(writes, text))
   },
 
-  // ── Snapshot Matchers (TerminalReadable, vitest-only) ──
+  // ── Snapshot Matchers (Terminal, vitest-only) ──
 
   /** Match terminal content against a snapshot. */
   toMatchTerminalSnapshot(this: MatcherState, received: unknown, options?: { name?: string }) {

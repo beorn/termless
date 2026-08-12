@@ -1,11 +1,11 @@
 /**
  * Visual diff between two terminal buffers.
  *
- * Compares two TerminalReadable instances cell-by-cell and produces a
+ * Compares two Terminal instances cell-by-cell and produces a
  * structured diff result plus a human-readable formatted string.
  */
 
-import type { Cell, RGB, TerminalReadable, UnderlineStyle } from "./types.ts"
+import type { Cell, Color, Terminal, UnderlineStyle } from "./types.ts"
 
 // =============================================================================
 // Types
@@ -22,8 +22,8 @@ export interface CellDiff {
 /** Compact representation of a cell's visible properties. */
 export interface CellSummary {
   char: string
-  fg: RGB | null
-  bg: RGB | null
+  fg: Color | null
+  bg: Color | null
   bold: boolean
   italic: boolean
   underline: UnderlineStyle
@@ -74,13 +74,13 @@ function cellsEqual(a: Cell, b: Cell): boolean {
   )
 }
 
-function rgbEqual(a: RGB | null, b: RGB | null): boolean {
+function rgbEqual(a: Color | null, b: Color | null): boolean {
   if (a === b) return true
   if (a === null || b === null) return false
   return a.r === b.r && a.g === b.g && a.b === b.b
 }
 
-function formatRgb(color: RGB | null): string {
+function formatRgb(color: Color | null): string {
   if (!color) return "default"
   return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
 }
@@ -137,7 +137,7 @@ function describeCellDiff(diff: CellDiff): string {
  * }
  * ```
  */
-export function diffBuffers(a: TerminalReadable, b: TerminalReadable): DiffResult {
+export function diffBuffers(a: Terminal, b: Terminal): DiffResult {
   const linesA = a.getRows()
   const linesB = b.getRows()
   const maxRows = Math.max(linesA.length, linesB.length)
