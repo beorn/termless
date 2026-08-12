@@ -49,23 +49,23 @@ it to one or more output files. Alias: `termless rec`.
 value picks the mode; there is no separate format flag and no separate
 screenshot flag.
 
-| Invocation                             | Output                                                            |
-| -------------------------------------- | ----------------------------------------------------------------- |
-| `termless record -- <cmd>` (no `-o`)   | `out.gif` — a single file in the cwd                              |
+| Invocation                             | Output                                                             |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `termless record -- <cmd>` (no `-o`)   | `out.gif` — a single file in the cwd                               |
 | `termless record -o demos/ -- <cmd>`   | `demos/` folder — `out.ttyz` · `out.gif` · `out.cast` · `out.tape` |
-| `termless record -o a.gif -o b.cast`   | exactly `a.gif` + `b.cast` (`-o` is repeatable)                   |
-| `termless record -o shot.png -- <cmd>` | a single still PNG                                                |
-| `termless record` (no command)         | shows a help gate, then records a live `$SHELL` on Enter          |
+| `termless record -o a.gif -o b.cast`   | exactly `a.gif` + `b.cast` (`-o` is repeatable)                    |
+| `termless record -o shot.png -- <cmd>` | a single still PNG                                                 |
+| `termless record` (no command)         | shows a help gate, then records a live `$SHELL` on Enter           |
 
 The `-o` extension picks the format; the format decides whether a renderer
 is involved:
 
-| Extension              | Format                    | Renderer                          |
-| ---------------------- | ------------------------- | --------------------------------- |
-| `.gif` `.apng`         | raster animation          | the renderer — `auto` (see below) |
-| `.png`                 | raster still              | the renderer — `auto` (see below) |
-| `.svg`                 | vector still/animation    | none (vector)                     |
-| `.html`                | scrubbable browser viewer | none server-side                  |
+| Extension                      | Format                    | Renderer                          |
+| ------------------------------ | ------------------------- | --------------------------------- |
+| `.gif` `.apng`                 | raster animation          | the renderer — `auto` (see below) |
+| `.png`                         | raster still              | the renderer — `auto` (see below) |
+| `.svg`                         | vector still/animation    | none (vector)                     |
+| `.html`                        | scrubbable browser viewer | none server-side                  |
 | `.ttyz` `.tty` `.tape` `.cast` | recording data            | none                              |
 
 ### Renderers

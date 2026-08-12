@@ -60,33 +60,36 @@ valid `.tty` bundle with zero artifact churn.)
 
 ```jsonc
 {
-  "ttyVersion": 1,           // format version of this manifest schema
-  "recordingVersion": 1,     // Recording model version
-  "cols": 80,                // terminal columns at recording start
-  "rows": 24,                // terminal rows at recording start
+  "ttyVersion": 1, // format version of this manifest schema
+  "recordingVersion": 1, // Recording model version
+  "cols": 80, // terminal columns at recording start
+  "rows": 24, // terminal rows at recording start
   "durationMicros": 5200000, // total duration, integer µs
-  "reproducible": true,      // frames projection regenerable from io?
+  "reproducible": true, // frames projection regenerable from io?
   "originWallMs": 1754620000000, // OPTIONAL: wall-clock ms of µs-origin 0
-  "fingerprint": { /* RendererFingerprint */ }, // OPTIONAL, frames-bearing only
+  "fingerprint": {
+    /* RendererFingerprint */
+  }, // OPTIONAL, frames-bearing only
 
   // Sealed members. Every listed member is complete and immutable.
   "members": [
     { "path": "io.jsonl", "type": "io", "encoding": "jsonl" },
-    { "path": "io/00000000000000000000-00000000000000012345.hts",
-      "type": "io", "encoding": "hts1",
-      "micros": [0, 3100000] },      // OPTIONAL: time range covered, µs
-    { "path": "facts/00000000000000000000-00000000000000000456.jsonl",
-      "type": "facts", "encoding": "jsonl" },
+    {
+      "path": "io/00000000000000000000-00000000000000012345.hts",
+      "type": "io",
+      "encoding": "hts1",
+      "micros": [0, 3100000],
+    }, // OPTIONAL: time range covered, µs
+    { "path": "facts/00000000000000000000-00000000000000000456.jsonl", "type": "facts", "encoding": "jsonl" },
     { "path": "commands.jsonl", "type": "commands", "encoding": "jsonl" },
     { "path": "frames/index.jsonl", "type": "frames", "encoding": "trace-index" },
-    { "path": "checkpoints/00000000000000012345.json",
-      "type": "checkpoint", "encoding": "json" }
+    { "path": "checkpoints/00000000000000012345.json", "type": "checkpoint", "encoding": "json" },
   ],
 
   // The ONE open segment of a LIVE bundle. Absent in a sealed bundle —
   // sealing rotates the tail into `members`. Tail-follow readers poll this
   // file; its bytes are append-only between manifest rewrites.
-  "tail": { "path": "io/current", "type": "io", "encoding": "hts1" }
+  "tail": { "path": "io/current", "type": "io", "encoding": "hts1" },
 }
 ```
 
@@ -107,14 +110,14 @@ valid `.tty` bundle with zero artifact churn.)
 
 ### Member types
 
-| type         | carries                                   | → Recording        |
-| ------------ | ----------------------------------------- | ------------------ |
-| `io`         | direction-tagged raw byte events          | `io` track         |
-| `commands`   | timed intent (keys, resize, sleeps)       | `commands` track   |
-| `frames`     | rendered frame index + rasters            | `frames` projection |
-| `facts`      | session fact events (annotation source)   | *not loaded* — exposed to annotation/windowed readers |
-| `habcp`      | the habitat's control-plane journal (NDJSON rows; tail + sealed segments) | *not loaded* — opaque; hab-side readers own row semantics |
-| `checkpoint` | serialized terminal state at an offset    | *not loaded* — seek keyframes for players and reattach |
+| type         | carries                                                                   | → Recording                                               |
+| ------------ | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `io`         | direction-tagged raw byte events                                          | `io` track                                                |
+| `commands`   | timed intent (keys, resize, sleeps)                                       | `commands` track                                          |
+| `frames`     | rendered frame index + rasters                                            | `frames` projection                                       |
+| `facts`      | session fact events (annotation source)                                   | _not loaded_ — exposed to annotation/windowed readers     |
+| `habcp`      | the habitat's control-plane journal (NDJSON rows; tail + sealed segments) | _not loaded_ — opaque; hab-side readers own row semantics |
+| `checkpoint` | serialized terminal state at an offset                                    | _not loaded_ — seek keyframes for players and reattach    |
 
 `facts` and `checkpoint` members are first-class bundle members that the
 Recording model deliberately does not carry: facts are the annotation source
@@ -133,13 +136,13 @@ is the one declared mutable member — consumers read it to EOF.
 
 ### Member encodings
 
-| encoding      | member types     | wire shape                                        |
-| ------------- | ---------------- | ------------------------------------------------- |
-| `jsonl`       | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
-| `hts1`        | io               | the binary journal framing (below); wall-ms `at`, rebased on read |
-| `trace-index` | frames           | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it |
-| `json`        | checkpoint       | one JSON document                                 |
-| `zstd-seekable` | *reserved*     | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip |
+| encoding        | member types               | wire shape                                                                                                         |
+| --------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `jsonl`         | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
+| `hts1`          | io                         | the binary journal framing (below); wall-ms `at`, rebased on read                                                  |
+| `trace-index`   | frames                     | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it                                                   |
+| `json`          | checkpoint                 | one JSON document                                                                                                  |
+| `zstd-seekable` | _reserved_                 | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip  |
 
 ### The `hts1` io encoding
 
@@ -210,7 +213,7 @@ const { recording, manifest, skipped } = readBundle("session.tty")
 import { writeRecording, packRecording, unpackRecording } from "@termless/core"
 
 writeRecording("out.ttyz", recording) // Recording → sealed .ttyz
-writeRecording("out.tty", recording)  // Recording → at-rest .tty bundle
+writeRecording("out.tty", recording) // Recording → at-rest .tty bundle
 packRecording("live.tty", "out.ttyz") // seal a bundle (rotates the tail)
 unpackRecording("in.ttyz", "work.tty") // unseal to a bundle
 ```

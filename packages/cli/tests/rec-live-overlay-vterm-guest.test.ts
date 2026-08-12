@@ -29,10 +29,7 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { describe, expect, test } from "vitest"
 
-const overlaySource = readFileSync(
-  fileURLToPath(new URL("../src/rec-live-overlay.tsx", import.meta.url)),
-  "utf8",
-)
+const overlaySource = readFileSync(fileURLToPath(new URL("../src/rec-live-overlay.tsx", import.meta.url)), "utf8")
 
 /** Import specifiers only — a mention inside a comment is not a dependency. */
 function importedModules(source: string): string[] {

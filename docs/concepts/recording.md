@@ -102,10 +102,10 @@ Everything you do with a Recording is one of the [four verbs](./overview):
 A Recording serializes to and from three on-disk formats. Formats are
 _encodings_ — see the [Formats reference](../reference/formats/) for full specs.
 
-| Format      | Role                                                                                         |
-| ----------- | -------------------------------------------------------------------------------------------- |
-| **`.tape`** | charm/VHS interop. A _compiler_ input — `.tape` → commands track. Round-trip is lossy.       |
-| **`.cast`** | asciinema interop. A symmetric _codec_ — `.cast` ⇄ io track, lossless.                       |
+| Format             | Role                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **`.tape`**        | charm/VHS interop. A _compiler_ input — `.tape` → commands track. Round-trip is lossy.                                     |
+| **`.cast`**        | asciinema interop. A symmetric _codec_ — `.cast` ⇄ io track, lossless.                                                     |
 | **`.tty`/`.ttyz`** | termless's own native format — a live bundle directory sealed into a single-file archive, carrying every track losslessly. |
 
 `.tape` is special: it is a _scenario compiler_, not a symmetric codec. `Type "hi"`
