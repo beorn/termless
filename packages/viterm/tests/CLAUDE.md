@@ -4,28 +4,28 @@
 
 ## What to Test Here
 
-- **Text matchers (RegionView)**: `toContainText`, `toHaveText`, `toMatchLines`
-- **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeFaint`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + RGB)
-- **Terminal matchers (TerminalReadable)**: `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`, `toMatchTerminalSnapshot`
-- **Matcher edge cases**: `.not` negation, wrong-type error handling (passing TerminalReadable to a RegionView matcher, passing string/null/plain object)
-- **Fixtures**: `createTestTerminal()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach. `createTestTerminalByName()` resolves by name (async). Old names (`createTerminalFixture`, `createTerminalFixtureAsync`) kept as deprecated aliases.
+- **Text matchers (Region)**: `toContainText`, `toHaveText`, `toMatchLines`
+- **Cell style matchers (CellView)**: `toBeBold`, `toBeItalic`, `toBeFaint`, `toBeStrikethrough`, `toBeInverse`, `toBeWide`, `toHaveUnderline` (with style), `toHaveFg`/`toHaveBg` (hex + Color)
+- **Terminal matchers (Terminal)**: `toHaveCursorAt`/`toHaveCursorVisible`/`toHaveCursorHidden`/`toHaveCursorStyle`, `toBeInMode`, `toHaveTitle`, `toHaveScrollbackLines`/`toBeAtBottomOfScrollback`, `toMatchTerminalSnapshot`
+- **Matcher edge cases**: `.not` negation, wrong-type error handling (passing Terminal to a Region matcher, passing string/null/plain object)
+- **Fixtures**: `createTestTerminal()` returns valid Terminal interface, delegates to backend, accepts string and Uint8Array feed, auto-cleanup via afterEach. `createTestTerminalByName()` resolves by name (async).
 - **Serializer**: `terminalSnapshot()` marker creation, `terminalSerializer.test()` identification, `serialize()` output format (header, dimensions, cursor, line numbers, separator, style annotations, altScreen mode, custom name, hidden cursor)
 
 ## What NOT to Test Here
 
-- Actual terminal rendering -- matchers test against mock `TerminalReadable` / `RegionView` / `CellView`, not real backends
+- Actual terminal rendering -- matchers test against a mock `Terminal` / `Region` / `CellView`, not real backends
 - xterm.js or Ghostty backend behavior -- that's their own test directories
 - Full-stack integration -- that's the root `tests/` directory
 
 ## Helpers
 
-- `createMockTerminal()` (in each test file): factory for mock `TerminalReadable` with lines, cell overrides, cursor, modes, title, and scrollback options
+- `createMockTerminal()` (in each test file): factory for a mock `Terminal` with lines, cell overrides, cursor, modes, title, and scrollback options
 - `createMockBackend()` (in `fixture.test.ts`): minimal `TerminalBackend` for fixture tests
 
 ## Patterns
 
 ```typescript
-// Text matcher tests use mock RegionView
+// Text matcher tests use a mock Region
 const region = {
   getText: () => "Hello World",
   getLines: () => ["Hello World"],
@@ -34,7 +34,7 @@ const region = {
 expect(region).toContainText("Hello")
 expect(region).toHaveText("Hello World")
 
-// Cell style matcher tests use mock CellView
+// Cell style matcher tests use a mock CellView
 const cell = {
   text: "H",
   row: 0,
@@ -52,7 +52,7 @@ const cell = {
 expect(cell).toBeBold()
 expect(cell).toHaveFg("#ff0000")
 
-// Terminal matchers use mock TerminalReadable
+// Terminal matchers use a mock Terminal
 const term = createMockTerminal({
   lines: ["Hello World"],
   cursor: { x: 5, y: 0, visible: true, style: "block" },

@@ -8,7 +8,7 @@ description: Write tests once and run them against multiple terminal emulator ba
 Termless separates the test API from the terminal emulator. Write tests once, run them against any backend.
 
 ::: tip Single-backend testing
-If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTestTerminal } from "@termless/test"` -- it handles the backend automatically. (`createTerminalFixture` still works as a deprecated alias.)
+If you only need the default xterm.js backend, you don't need any of this. Just use `import { createTestTerminal } from "@termless/test"` -- it handles the backend automatically.
 :::
 
 ## Getting Started

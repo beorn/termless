@@ -1,17 +1,17 @@
 /**
  * Tests for the terminal fixture factory.
  *
- * Verifies that createTerminalFixture returns a working Terminal and
+ * Verifies that createTestTerminal returns a working Terminal and
  * that cleanup is properly wired via afterEach.
  */
 
 import { describe, test, expect } from "vitest"
-import { createTerminalFixture } from "../src/fixture.ts"
+import { createTestTerminal } from "../src/fixture.ts"
 import type {
   TerminalBackend,
   TerminalOptions,
   Cell,
-  CursorState,
+  Cursor,
   CursorStyle,
   ScrollbackState,
   TerminalMode,
@@ -124,7 +124,7 @@ function createMockBackend(): TerminalBackend {
       return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ ...DEFAULT_CELL })))
     },
 
-    getCursor(): CursorState {
+    getCursor(): Cursor {
       return { col: 0, row: 0, x: 0, y: 0, visible: true, style: "block" }
     },
 
@@ -153,9 +153,9 @@ function createMockBackend(): TerminalBackend {
 // Tests
 // =============================================================================
 
-describe("createTerminalFixture", () => {
+describe("createTestTerminal", () => {
   test("returns a Terminal-like object", () => {
-    const term = createTerminalFixture({
+    const term = createTestTerminal({
       backend: createMockBackend(),
       cols: 80,
       rows: 24,
@@ -175,7 +175,7 @@ describe("createTerminalFixture", () => {
   })
 
   test("terminal has correct dimensions", () => {
-    const term = createTerminalFixture({
+    const term = createTestTerminal({
       backend: createMockBackend(),
       cols: 120,
       rows: 40,
@@ -185,7 +185,7 @@ describe("createTerminalFixture", () => {
   })
 
   test("terminal delegates to backend", () => {
-    const term = createTerminalFixture({
+    const term = createTestTerminal({
       backend: createMockBackend(),
       cols: 80,
       rows: 24,
@@ -199,7 +199,7 @@ describe("createTerminalFixture", () => {
   })
 
   test("feed accepts string data", () => {
-    const term = createTerminalFixture({
+    const term = createTestTerminal({
       backend: createMockBackend(),
       cols: 80,
       rows: 24,
@@ -210,7 +210,7 @@ describe("createTerminalFixture", () => {
   })
 
   test("feed accepts Uint8Array data", () => {
-    const term = createTerminalFixture({
+    const term = createTestTerminal({
       backend: createMockBackend(),
       cols: 80,
       rows: 24,

@@ -69,9 +69,6 @@ export interface NamedTestTerminalOptions extends TestTerminalOptions {
   backendName: string
 }
 
-/** @deprecated Use SyncTestTerminalOptions or NamedTestTerminalOptions */
-export type TerminalFixtureOptions = SyncTestTerminalOptions
-
 // ═══════════════════════════════════════════════════════
 // Fixture lifecycle
 // ═══════════════════════════════════════════════════════
@@ -122,12 +119,6 @@ export async function createTestTerminalByName(options: NamedTestTerminalOptions
   activeFixtures.push(terminal)
   return terminal
 }
-
-// Backward compatibility aliases
-/** @deprecated Use createTestTerminal */
-export const createTerminalFixture = createTestTerminal
-/** @deprecated Use createTestTerminalByName */
-export const createTerminalFixtureAsync = createTestTerminalByName
 
 // ═══════════════════════════════════════════════════════
 // Cross-backend testing helpers

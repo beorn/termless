@@ -37,10 +37,6 @@ const ghostty = await initGhostty()
 const term = createTestTerminal({ backend: createGhosttyBackend(undefined, ghostty) })
 ```
 
-::: details Deprecated aliases
-`createTerminalFixture` and `createTerminalFixtureAsync` still work as deprecated aliases for `createTestTerminal` and `createTestTerminalByName` respectively.
-:::
-
 ## Locators: Region Selectors
 
 Termless uses terminal-region locators: first choose **where** to look, then choose **what** to assert. This is the terminal equivalent of a Playwright locator, but it points at terminal buffers, rows, cells, and ranges instead of DOM elements.
