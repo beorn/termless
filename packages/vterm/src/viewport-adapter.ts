@@ -26,7 +26,7 @@
  *     convention (negative = older) by negating the delta.
  */
 
-import { createVtermScreen, type CellColor, type ScreenCell, type VtermScreen } from "vterm.js"
+import { createVtermScreen, type Color, type ScreenCell, type VtermScreen } from "vterm.js"
 
 import type {
   Cell,
@@ -89,7 +89,7 @@ export interface VtermGuestOptions {
    * instead of resolving them to a fixed standard-palette RGB. Default `false`.
    *
    * vterm.js resolves each indexed SGR (`31`, `91`, `38;5;N`, …) to its palette
-   * RGB but keeps the ORIGIN index on the resolved color (`CellColor.index`).
+   * RGB but keeps the ORIGIN index on the resolved color (`Color.index`).
    * This guest reads that provenance directly (via the snapshot, which carries
    * the index that `getCell`/`getLine` strip): an indexed color becomes
    * `ansi256(N)` so the outer terminal owns the palette, a color with no index
@@ -117,8 +117,8 @@ interface VtermIslandHandleOptions extends VtermGuestOptions {
 
 // ── Color conversion ───────────────────────────────────────────────────
 
-/** Hex string for a vterm CellColor (matches silvery's `string | null` Cell color shape). */
-function rgbHex(c: CellColor): string {
+/** Hex string for a vterm Color (matches silvery's `string | null` Cell color shape). */
+function rgbHex(c: Color): string {
   const v = (c.r << 16) | (c.g << 8) | c.b
   return "#" + v.toString(16).padStart(6, "0")
 }
@@ -128,11 +128,11 @@ function rgbHex(c: CellColor): string {
  * mode a color carrying a palette-origin index (from an indexed SGR: `31`, `91`,
  * `38;5;N`, …) is emitted as an `ansi256(N)` token so the outer terminal owns
  * the palette; a color with no index is genuine truecolor and stays exact RGB
- * hex. The index is vterm's own parse-time provenance (`CellColor.index`), so an
+ * hex. The index is vterm's own parse-time provenance (`Color.index`), so an
  * OSC 4 palette mutation moves the resolved RGB but not the token — the index
  * survives, and no RGB coincidence can misclassify a truecolor cell.
  */
-function cellColor(c: CellColor | null, passthrough: boolean): string | null {
+function cellColor(c: Color | null, passthrough: boolean): string | null {
   if (c === null) return null
   if (passthrough && c.index !== undefined) return `ansi256(${c.index})`
   return rgbHex(c)
@@ -189,7 +189,7 @@ function convertRow(row: readonly ScreenCell[], cols: number, passthrough: boole
  * Read the current viewport into an immutable {@link CellBuffer}.
  *
  * Fast path (non-passthrough): read viewport rows through vterm's absolute-row
- * contract. The accessor strips palette-origin `CellColor.index`, which is fine
+ * contract. The accessor strips palette-origin `Color.index`, which is fine
  * when colors resolve straight to RGB anyway.
  *
  * Snapshot path (scrolled OR palette passthrough): vterm's row accessors ignore
@@ -539,8 +539,8 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       },
       get cursor() {
         if (!screen) return null
-        const pos = screen.getCursorPosition()
-        return { row: pos.y, col: pos.x, style: cursorStyle() }
+        const pos = screen.getCursor()
+        return { row: pos.row, col: pos.col, style: cursorStyle() }
       },
       get cursorVisible() {
         return screen !== null && screen.getCursorVisible()

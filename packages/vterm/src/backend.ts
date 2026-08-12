@@ -208,12 +208,12 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function getCursor(): Cursor {
     const s = ensureScreen()
-    const pos = s.getCursorPosition()
+    const pos = s.getCursor()
     return {
-      col: pos.x,
-      row: pos.y,
-      x: pos.x,
-      y: pos.y,
+      col: pos.col,
+      row: pos.row,
+      x: pos.col,
+      y: pos.row,
       visible: s.getCursorVisible(),
       style: mapCursorShape(s.getCursorShape()),
     }
