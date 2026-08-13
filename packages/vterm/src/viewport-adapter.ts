@@ -115,6 +115,27 @@ interface VtermIslandHandleOptions extends VtermGuestOptions {
   onTitle?: (title: string) => void
 }
 
+/**
+ * Project emulator replies through the capabilities of the cell-only Island
+ * guest. vterm.js can parse Kitty/Sixel, but this adapter exposes only a
+ * {@link CellBuffer}; until it has a pixel side-channel, positively advertising
+ * either protocol makes a child emit graphics that the host silently drops.
+ */
+function cellGuestResponse(data: string): string | null {
+  // Kitty graphics query response (APC G). No response means unsupported, which
+  // is the protocol's capability-negotiation contract.
+  if (/^\x1b_G.*\x1b\\$/u.test(data)) return null
+
+  // DA1 attribute 4 advertises Sixel. Keep every other emulator-owned device
+  // attribute while removing only the capability this guest cannot project.
+  const primaryDeviceAttributes = /^\x1b\[\?([\d;]+)c$/u.exec(data)
+  if (!primaryDeviceAttributes) return data
+  const attributes = (primaryDeviceAttributes[1] ?? "")
+    .split(";")
+    .filter((attribute) => attribute !== "4")
+  return `\x1b[?${attributes.join(";")}c`
+}
+
 // ── Color conversion ───────────────────────────────────────────────────
 
 /** Hex string for a vterm Color (matches silvery's `string | null` Cell color shape). */
@@ -322,7 +343,10 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     scrollbackLimit: opts.scrollback ?? 0,
     // The emulator's own DA1/DA2/DSR/color-query answers go back to the child as
     // if typed — the same round-trip a real terminal performs.
-    onResponse: (data: string) => writeToChild(data),
+    onResponse: (data: string) => {
+      const projected = cellGuestResponse(data)
+      if (projected !== null) writeToChild(projected)
+    },
   })
 
   // Cache the projected viewport and consume vterm's absolute dirty rows. A

@@ -355,6 +355,23 @@ describe("vtermGuest — child wiring + lifecycle", () => {
     }
   })
 
+  test("cell-only guest does not advertise Kitty or Sixel graphics it cannot project", async () => {
+    const { child, writes } = fakeChild()
+    const handle = await mount({ cols: 10, rows: 3, child })
+    try {
+      handle.feedAnsi("\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\")
+      expect(writes.join("")).not.toContain("_Gi=31;OK")
+
+      writes.length = 0
+      handle.feedAnsi("\x1b[c")
+      const primaryDeviceAttributes = writes.find((write) => write.startsWith("\x1b[?"))
+      expect(primaryDeviceAttributes).toBeDefined()
+      expect(primaryDeviceAttributes).not.toMatch(/(?:^|;)4(?:;|c)/u)
+    } finally {
+      handle.dispose()
+    }
+  })
+
   test("stdout data pipes into the screen", async () => {
     const listeners: ((chunk: Uint8Array | string) => void)[] = []
     const child: VtermGuestChild = {
