@@ -130,9 +130,7 @@ function cellGuestResponse(data: string): string | null {
   // attribute while removing only the capability this guest cannot project.
   const primaryDeviceAttributes = /^\x1b\[\?([\d;]+)c$/u.exec(data)
   if (!primaryDeviceAttributes) return data
-  const attributes = (primaryDeviceAttributes[1] ?? "")
-    .split(";")
-    .filter((attribute) => attribute !== "4")
+  const attributes = (primaryDeviceAttributes[1] ?? "").split(";").filter((attribute) => attribute !== "4")
   return `\x1b[?${attributes.join(";")}c`
 }
 
