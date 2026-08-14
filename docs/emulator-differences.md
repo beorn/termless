@@ -43,7 +43,7 @@ Six divergences are known and asserted. In four of them vterm reports what the t
 | D6  | Narrowing reflow at `scrollback: 0` | truncates the row, drops the overflow  | rewraps downward, content preserved       | **vterm**   |
 
 \* Real terminals disagree on D1 too; single non-ZWJ emoji agree across both.
-\*\* The Silvery `Cell` vocabulary has no hyperlink slot, so on D2 **the link itself is dropped by both backends.** Only the underline decoration differs. This one bites anything that renders links -- see below.
+\*\* Both guest adapters carry the same hyperlink target in Silvery's `Cell` vocabulary. Only the presentation differs: xterm.js adds an underline, while vterm preserves the link without forcing one. This one bites anything that relies on underline alone to signal a link -- see below.
 
 **So the answer to "why vterm" is not performance or dependency count.** It is that a UI which draws a bar cursor, hides the cursor, uses a dotted underline, or narrows a pane with no scrollback gets the truth from vterm and a flattened approximation from xterm.js. Three of those four are ordinary things for a terminal UI to do.
 
@@ -52,9 +52,9 @@ Six divergences are known and asserted. In four of them vterm reports what the t
 They interact in a way that is easy to miss:
 
 - **D5** means a decoration such as a dotted underline survives on vterm and silently becomes a plain underline on xterm.js. A design that distinguishes two kinds of text _by underline style alone_ stops distinguishing them on the reference backend.
-- **D2** means the hyperlink target is dropped by **both** backends. Retiring xterm.js fixes D5 and does nothing for D2.
+- **D2** means both backends preserve the hyperlink target, while only xterm.js adds an underline. Retiring xterm.js fixes D5 but also removes that incidental link decoration.
 
-The practical consequence: if a design needs links to be both visually distinct and actually resolvable, D5 is a rendering-path question and D2 is a `Cell`-vocabulary question. Solving the first does not touch the second.
+The practical consequence: links are resolvable through either guest adapter, but visual distinction remains a rendering-policy question. D5 governs which underline styles survive the adapter; D2 records that a link cannot rely on an emulator-added underline for its presentation.
 
 #### Which seam D5 actually applies to
 
