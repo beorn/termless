@@ -30,6 +30,7 @@
  */
 
 import type { Command } from "@silvery/commander"
+import { createLogger } from "loggily"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
@@ -41,6 +42,7 @@ import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
 import { createFrameGate } from "./frame-gate.ts"
 import { snapshotTerminal, snapshotReadable } from "../../../src/terminal/snapshot.ts"
 import { CHROME_STYLES, isChromeStyle, chromeOptions, type ChromeStyle } from "../../../src/render/chrome.ts"
+import { createOsc8PassthroughGate } from "../../../src/terminal/escape-scans.ts"
 import type { SvgScreenshotOptions } from "../../../src/terminal/types.ts"
 
 const parseNum = (v: string) => parseInt(v, 10)
@@ -594,6 +596,45 @@ async function interactiveRecord(
   // persistent decoder with { stream: true } buffers the partial sequence
   // until the next chunk completes it.
   const ptyDecoder = new TextDecoder()
+  const routePtyOutput = (data: Uint8Array): void => {
+    const text = ptyDecoder.decode(data, { stream: true })
+    // Record output event for asciicast
+    outputEvents.push({ time: Date.now() - startTime, data: text })
+    // Feed into headless terminal for image capture
+    headlessTerminal.feed(text)
+    // Mouse-mode mirroring: snoop PTY output for `\x1b[?1000h/?1002h/
+    // ?1003h/?1006h/?1015h` (and their `l` disable variants). The
+    // recorded program enables mouse mode when it expects mouse events;
+    // we mirror exactly those enables/disables to the HOST terminal so
+    // the host emits mouse bytes only when the recorded program wants
+    // them. Without this, the host either: (a) never sees mouse events
+    // (no enable) or (b) always emits them, turning trackpad motion
+    // into raw text that flows into non-mouse-aware shells.
+    if (liveView) {
+      const mouseSeqs = text.match(/\x1b\[\?(?:1000|1002|1003|1005|1006|1015)[hl]/g)
+      if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
+    }
+    // Live preview routing: when the chrome overlay is mounted, feed the
+    // PTY bytes into the overlay's xtermGuest (silvery's <Island>
+    // renders them inside the chrome). The headlessTerminal also still
+    // receives the bytes above (for the asciicast/screenshot capture
+    // pipeline — orthogonal consumer). `--live-chrome none` keeps the
+    // historical raw-stdout-pipe behavior after the OSC 8 envelope gate.
+    if (liveView) {
+      liveView.feed(text)
+    } else {
+      process.stdout.write(data)
+    }
+  }
+  const osc8Log = useOverlay ? null : createLogger("termless:record:osc8")
+  const rawOsc8Gate = useOverlay
+    ? null
+    : createOsc8PassthroughGate({
+        onData: routePtyOutput,
+        onDrop(reason) {
+          osc8Log?.debug?.("dropped malformed OSC 8 from raw passthrough", { reason })
+        },
+      })
   const pty = spawnPty({
     command: cmd,
     cols: gridCols,
@@ -606,34 +647,8 @@ async function interactiveRecord(
     // recorded PTY on exit.
     env: recordingChildEnv(),
     onData: (data: Uint8Array) => {
-      const text = ptyDecoder.decode(data, { stream: true })
-      // Record output event for asciicast
-      outputEvents.push({ time: Date.now() - startTime, data: text })
-      // Feed into headless terminal for image capture
-      headlessTerminal.feed(text)
-      // Mouse-mode mirroring: snoop PTY output for `\x1b[?1000h/?1002h/
-      // ?1003h/?1006h/?1015h` (and their `l` disable variants). The
-      // recorded program enables mouse mode when it expects mouse events;
-      // we mirror exactly those enables/disables to the HOST terminal so
-      // the host emits mouse bytes only when the recorded program wants
-      // them. Without this, the host either: (a) never sees mouse events
-      // (no enable) or (b) always emits them, turning trackpad motion
-      // into raw text that flows into non-mouse-aware shells.
-      if (liveView) {
-        const mouseSeqs = text.match(/\x1b\[\?(?:1000|1002|1003|1005|1006|1015)[hl]/g)
-        if (mouseSeqs) process.stdout.write(mouseSeqs.join(""))
-      }
-      // Live preview routing: when the chrome overlay is mounted, feed the
-      // PTY bytes into the overlay's xtermGuest (silvery's <Island>
-      // renders them inside the chrome). The headlessTerminal also still
-      // receives the bytes above (for the asciicast/screenshot capture
-      // pipeline — orthogonal consumer). `--live-chrome none` keeps the
-      // historical raw-stdout-pipe behavior — byte-identical to pre-change.
-      if (liveView) {
-        liveView.feed(text)
-      } else {
-        process.stdout.write(data)
-      }
+      if (rawOsc8Gate) rawOsc8Gate.push(data)
+      else routePtyOutput(data)
     },
   })
 
@@ -769,6 +784,7 @@ async function interactiveRecord(
         }
       }, 100)
     })
+    rawOsc8Gate?.end()
 
     // Capture final frame if the headless terminal changed since the last
     // tick — but skip the post-exit screen: a TUI that exits restores the
