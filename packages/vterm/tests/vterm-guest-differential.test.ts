@@ -16,8 +16,8 @@
  *       wide grapheme cell; xterm-unicode11 renders each sub-emoji as its own
  *       wide cell. Real terminals disagree here too; single non-ZWJ emoji agree.
  *   D2  OSC 8 hyperlink presentation — xterm auto-underlines linked cells;
- *       vterm stores the link (cell.url) without forcing underline. The silvery
- *       Cell vocab has no hyperlink slot, so the link itself is dropped by BOTH.
+ *       vterm stores the link (cell.url) without forcing underline. Both carry
+ *       the same URI through the silvery boundary cell.
  *   D3  DECSCUSR cursor shape — vterm reports the real shape (underline/bar);
  *       the xterm adapter hardcodes "block". vterm is the faithful one.
  *   D4  DECTCEM cursor visibility — vterm reports real hide/show; the xterm
@@ -93,7 +93,11 @@ function attrsKey(c: Cell): string {
     .join(",")
 }
 function cellKey(c: Cell): string {
-  return `${JSON.stringify(c.char)}|${c.fg}|${c.bg}|${c.wide}|${c.continuation}|${attrsKey(c)}`
+  return `${JSON.stringify(c.char)}|${c.fg}|${c.bg}|${c.wide}|${c.continuation}|${cellHyperlink(c) ?? ""}|${attrsKey(c)}`
+}
+
+function cellHyperlink(c: Cell): string | undefined {
+  return c.hyperlink
 }
 
 function diffCells(x: CellBuffer, v: CellBuffer): CellDiff[] {
@@ -202,7 +206,7 @@ describe("vtermGuest ⇔ xtermGuest — expected divergences (conformance seed)"
     }
   })
 
-  test("D2: OSC 8 hyperlink — xterm auto-underlines linked cells; vterm does not; link dropped by both", async () => {
+  test("D2: OSC 8 hyperlink — both carry the URI; xterm alone auto-underlines", async () => {
     const p = await pair(20, 2)
     try {
       await feedBoth(p, "\x1b]8;;http://x.com\x1b\\link\x1b]8;;\x1b\\")
@@ -212,8 +216,11 @@ describe("vtermGuest ⇔ xtermGuest — expected divergences (conformance seed)"
       // ...but xterm applies underline decoration, vterm does not.
       expect(p.x.output.buffer.getCell(0, 0).attrs.underline).toBe(true)
       expect(p.v.output.buffer.getCell(0, 0).attrs.underline).toBeUndefined()
-      // Neither surfaces the URL — the silvery Cell has no hyperlink field.
-      expect("url" in p.v.output.buffer.getCell(0, 0)).toBe(false)
+      // Both adapters carry the emulator-owned URI through the boundary.
+      expect(cellHyperlink(p.x.output.buffer.getCell(0, 0))).toBe("http://x.com")
+      expect(cellHyperlink(p.v.output.buffer.getCell(0, 0))).toBe("http://x.com")
+      expect(cellHyperlink(p.x.output.buffer.getCell(4, 0))).toBeUndefined()
+      expect(cellHyperlink(p.v.output.buffer.getCell(4, 0))).toBeUndefined()
     } finally {
       p.dispose()
     }

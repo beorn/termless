@@ -22,6 +22,7 @@ export interface Cell {
   fg: string | null
   bg: string | null
   attrs: CellAttrs
+  hyperlink?: string
   wide: boolean
   continuation: boolean
 }

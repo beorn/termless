@@ -52,6 +52,24 @@ const { Terminal } = xtermPkg
 type XTerminal = InstanceType<typeof Terminal>
 type XtermDataChunk = Buffer | Uint8Array | string
 
+interface XtermInternalBufferCell extends IBufferCell {
+  readonly extended?: { readonly urlId?: number }
+}
+
+interface XtermInternalCore {
+  readonly _writeBuffer: { writeSync(data: string): void }
+  readonly _oscLinkService?: {
+    getLinkData(linkId: number): { uri: string } | undefined
+  }
+}
+
+// xterm-headless parses OSC 8 into a private cell urlId + link service, but its
+// public IBufferCell omits both. Keep that pinned-version dependency behind one
+// named adapter; D2 exercises the exact shape and failures stay loud.
+function xtermCore(term: XTerminal): XtermInternalCore {
+  return (term as unknown as { _core: XtermInternalCore })._core
+}
+
 /** Minimal PTY-child shape — duck-typed so the adapter doesn't depend on a specific spawn library. */
 export interface XtermGuestChild {
   stdout?: {
@@ -216,7 +234,7 @@ function paletteColor(index: number, passthrough: boolean): string | null {
 }
 
 /** Convert an xterm IBufferCell into a silvery Cell. */
-function convertCell(c: IBufferCell | undefined, palettePassthrough: boolean): Cell {
+function convertCell(c: IBufferCell | undefined, palettePassthrough: boolean, term: XTerminal): Cell {
   if (!c) return BLANK_CELL
 
   const width = c.getWidth()
@@ -244,12 +262,26 @@ function convertCell(c: IBufferCell | undefined, palettePassthrough: boolean): C
   // CellAttrs (silvery treats them as out of scope for the v1 cell vocab).
   // Drop them at the boundary rather than smuggle private fields through.
 
+  const linkId = (c as XtermInternalBufferCell).extended?.urlId
+  let hyperlink: string | undefined
+  if (linkId) {
+    const linkService = xtermCore(term)._oscLinkService
+    if (!linkService) {
+      throw new Error("xterm OSC 8 cell has a link id but no link service")
+    }
+    hyperlink = linkService.getLinkData(linkId)?.uri
+    if (!hyperlink) {
+      throw new Error(`xterm OSC 8 link id ${linkId} has no URI`)
+    }
+  }
+
   const chars = c.getChars()
   return {
     char: continuation ? "" : chars === "" ? " " : chars,
     fg,
     bg,
     attrs,
+    hyperlink,
     wide,
     continuation,
   }
@@ -270,7 +302,7 @@ function snapshotBuffer(term: XTerminal, palettePassthrough: boolean): CellBuffe
   for (let row = 0; row < rows; row++) {
     const line = buf.getLine(row + viewportY)
     for (let col = 0; col < cols; col++) {
-      cells[row * cols + col] = convertCell(line?.getCell(col), palettePassthrough)
+      cells[row * cols + col] = convertCell(line?.getCell(col), palettePassthrough, term)
     }
   }
   return {
@@ -288,7 +320,7 @@ function snapshotBuffer(term: XTerminal, palettePassthrough: boolean): CellBuffe
 // is required so snapshots reflect the bytes just fed. Same trick the
 // termless backend uses for tests.
 function writeSync(t: XTerminal, data: string): void {
-  ;(t as unknown as { _core: { _writeBuffer: { writeSync(d: string): void } } })._core._writeBuffer.writeSync(data)
+  xtermCore(t)._writeBuffer.writeSync(data)
 }
 
 function createXtermTerminal(opts: { cols: number; rows: number; scrollback?: number }): XTerminal {

@@ -189,13 +189,13 @@ function convertRow(row: readonly ScreenCell[], cols: number, passthrough: boole
     }
     if (sc.strikethrough) attrs.strikethrough = true
     if (sc.inverse) attrs.inverse = true
-    // overline / blink / hidden and OSC 8 `url` have no slot in silvery's v1 Cell
-    // vocab — dropped at the boundary (xterm drops blink/hidden the same way).
+    // overline / blink / hidden have no slot in silvery's Cell vocabulary.
     out[col] = {
       char: continuation ? "" : sc.char === "" ? " " : sc.char,
       fg: cellColor(sc.fg, passthrough),
       bg: cellColor(sc.bg, passthrough),
       attrs,
+      hyperlink: sc.url ?? undefined,
       wide: sc.wide,
       continuation,
     }
