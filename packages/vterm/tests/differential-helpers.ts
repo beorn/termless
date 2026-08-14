@@ -32,7 +32,7 @@ function attrsKey(c: Cell): string {
 }
 
 export function cellKey(c: Cell): string {
-  return `${JSON.stringify(c.char)}|${c.fg}|${c.bg}|${c.wide}|${c.continuation}|${attrsKey(c)}`
+  return `${JSON.stringify(c.char)}|${c.fg}|${c.bg}|${c.wide}|${c.continuation}|${c.hyperlink ?? ""}|${attrsKey(c)}`
 }
 
 export type CellDiff = { row: number; col: number; xterm: string; vterm: string }
