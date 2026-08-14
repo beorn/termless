@@ -110,6 +110,13 @@ describe("OSC 8 passthrough gate", () => {
     expect(result.drops).toEqual([])
   })
 
+  test.each(["before\x1b", "before\x1b]"])("preserves an incomplete non-OSC-8 prefix at EOF: %j", (input) => {
+    const result = routeThroughOsc8Gate(input, { oneByteChunks: true })
+
+    expect(result.raw).toBe(input)
+    expect(result.drops).toEqual([])
+  })
+
   test.each([
     {
       name: "missing URI separator",

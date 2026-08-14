@@ -247,7 +247,9 @@ export function createOsc8PassthroughGate(options: Osc8PassthroughGateOptions): 
     end(): void {
       if (ended) return
       ended = true
-      if (mode === "params" || mode === "uri" || (mode === "prefix" && pending.length >= 3)) {
+      if (mode === "prefix" && pending.length < 3) {
+        options.onData(Uint8Array.from(pending))
+      } else if (mode === "params" || mode === "uri" || mode === "prefix") {
         options.onDrop("unterminated")
       }
       reset()
