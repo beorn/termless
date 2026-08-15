@@ -27,6 +27,10 @@ const catalog = {
 
 const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url))
 
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
 describe("resolveBackendNames", () => {
   it("leaves unspecified backend selection to the player default", () => {
     expect(resolveBackendNames(undefined, catalog)).toBeUndefined()
@@ -82,11 +86,12 @@ describe("comparison output helpers", () => {
 
 it("documents native source precedence at the CLI help door", () => {
   const result = spawnSync("bun", [cli, "play", "--help"], { encoding: "utf8" })
+  const stdout = stripAnsi(result.stdout)
 
   expect(result.status, result.stderr).toBe(0)
-  expect(result.stdout).toContain("--source <track>")
-  expect(result.stdout).toContain("auto prefers non-empty commands, then discloses io fallback")
-  expect(result.stdout).toContain("termless play --source=io demo.tty")
+  expect(stdout).toContain("--source <track>")
+  expect(stdout).toContain("auto prefers non-empty commands, then discloses io fallback")
+  expect(stdout).toContain("termless play --source=io demo.tty")
 })
 
 describe("native Recording playback source", () => {
