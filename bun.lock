@@ -173,7 +173,7 @@
       "name": "@termless/vterm",
       "version": "0.8.4",
       "dependencies": {
-        "vterm.js": "^0.5.1",
+        "vterm.js": "^0.6.0",
       },
       "devDependencies": {
         "@termless/xtermjs": "workspace:*",
@@ -1485,7 +1485,7 @@
 
     "vt220.js": ["vt220.js@0.1.3", "", {}, "sha512-EfRvpPguNw0vQr0ye/nFNdUEZLTOLMh4kfFNMHHGRKxj8SQa+x1fNva1JcbY37gUS+fOzfP28jyt8/dcv7Q3qw=="],
 
-    "vterm.js": ["vterm.js@0.5.1", "", {}, "sha512-Zsf5A8MRMLrLN38MT+3BS7t9Ccuk4LHAC0o/gwSNQtVPBp+hbHcGNhxrctxWH/Q8AiWlr1BUAI48kfMdOnUArw=="],
+    "vterm.js": ["vterm.js@0.6.0", "", {}, "sha512-p0tPGV9PWT4kKYRaX8J/X1pBjZYODc8+DQJnCcbQ7WtYA03/YlyGOrZXskOH2WJHpNs6Dwh7BVb+c1Z+qll9lA=="],
 
     "vue": ["vue@3.5.40", "", { "dependencies": { "@vue/compiler-dom": "3.5.40", "@vue/compiler-sfc": "3.5.40", "@vue/runtime-dom": "3.5.40", "@vue/server-renderer": "3.5.40", "@vue/shared": "3.5.40" }, "peerDependencies": { "typescript": "*" }, "optionalPeers": ["typescript"] }, "sha512-+8PJ4SJXdn/cHGImF4CKdxlWHIN5Dkt7DoufRREM6h6uVCx2m7QxgcEQmmzyOK8A9mcafg7sFbJFYsdFVubTig=="],
 

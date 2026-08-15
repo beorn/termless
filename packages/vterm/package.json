@@ -41,7 +41,7 @@
     }
   },
   "dependencies": {
-    "vterm.js": "^0.5.1"
+    "vterm.js": "^0.6.0"
   },
   "devDependencies": {
     "@termless/xtermjs": "workspace:*"
