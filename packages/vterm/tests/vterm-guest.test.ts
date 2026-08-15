@@ -10,7 +10,7 @@
  *   structural mirror of @termless/xtermjs's xtermGuest.
  */
 
-import { describe, expect, test } from "vitest"
+import { describe, expect, test, vi } from "vitest"
 import {
   vtermGuest,
   type VtermGuestChild,
@@ -19,10 +19,11 @@ import {
 } from "../src/viewport-adapter.ts"
 import type { IslandContext, IslandSignal } from "../src/silvery-compat.ts"
 
-function ctx(cols: number, rows: number): IslandContext {
+function ctx(cols: number, rows: number, artifactCapabilities?: IslandContext["artifactCapabilities"]): IslandContext {
   return {
     cols,
     rows,
+    ...(artifactCapabilities ? { artifactCapabilities } : {}),
     emit: (_signal: IslandSignal) => {},
     requestResize: () => {},
     execOSC: () => Promise.resolve(),
@@ -34,6 +35,14 @@ function ctx(cols: number, rows: number): IslandContext {
 async function mount(opts: Partial<VtermGuestOptions> & { cols: number; rows: number }): Promise<VtermGuestHandle> {
   const guest = vtermGuest({ ...opts })
   return (await guest.init(ctx(opts.cols, opts.rows))) as VtermGuestHandle
+}
+
+async function mountWithArtifacts(
+  opts: Partial<VtermGuestOptions> & { cols: number; rows: number },
+  terminalSequences: { kittyGraphics: boolean; sixel: boolean },
+): Promise<VtermGuestHandle> {
+  const guest = vtermGuest({ ...opts })
+  return (await guest.init(ctx(opts.cols, opts.rows, { terminalSequences }))) as VtermGuestHandle
 }
 
 /** Read a viewport row as trimmed text. */
@@ -369,6 +378,85 @@ describe("vtermGuest — child wiring + lifecycle", () => {
       expect(primaryDeviceAttributes).not.toMatch(/(?:^|;)4(?:;|c)/u)
     } finally {
       handle.dispose()
+    }
+  })
+
+  test("advertises and drains anchored Kitty/Sixel packets only with an attached capable projector", async () => {
+    const { child, writes } = fakeChild()
+    const handle = await mountWithArtifacts({ cols: 10, rows: 4, child }, { kittyGraphics: true, sixel: true })
+    try {
+      handle.feedAnsi("\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\")
+      expect(writes.join("")).toContain("_Gi=31;OK")
+      expect(handle.output.artifacts?.drain()).toEqual([])
+
+      writes.length = 0
+      handle.feedAnsi("\x1b[c")
+      expect(writes.find((write) => write.startsWith("\x1b[?"))).toMatch(/(?:^|;)4(?:;|c)/u)
+
+      handle.feedAnsi("\x1b[3;5H\x1b_Gf=100,a=T;AAAA\x1b\\\x1bPq~\x1b\\")
+      expect(handle.output.artifacts?.drain()).toEqual([
+        {
+          kind: "terminal-sequence",
+          protocol: "kitty",
+          sequence: "\x1b_Gf=100,a=T;AAAA\x1b\\",
+          row: 2,
+          col: 4,
+        },
+        {
+          kind: "terminal-sequence",
+          protocol: "sixel",
+          sequence: "\x1bPq~\x1b\\",
+          row: 2,
+          col: 4,
+        },
+      ])
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  test("drops over-budget graphics loudly without acknowledging or retaining payload", async () => {
+    const { child, writes } = fakeChild()
+    const dropped = vi.spyOn(console, "error").mockImplementation(() => {})
+    const handle = await mountWithArtifacts(
+      { cols: 10, rows: 3, child, maxGraphicsPayloadLength: 8 },
+      { kittyGraphics: true, sixel: true },
+    )
+    try {
+      handle.feedAnsi("\x1b_Ga=q,i=1;AAAA\x1b\\\x1bPq12345678\x1b\\")
+
+      expect(writes).toEqual([])
+      expect(handle.output.artifacts?.drain()).toEqual([])
+      expect(dropped).toHaveBeenCalledWith("[termless/vterm] dropped APC payload: received 13 code units, limit 8")
+      expect(dropped).toHaveBeenCalledWith("[termless/vterm] dropped DCS payload: received 9 code units, limit 8")
+    } finally {
+      handle.dispose()
+      dropped.mockRestore()
+    }
+  })
+
+  test("bounds pending artifacts when a capable consumer has not drained yet", async () => {
+    const dropped = vi.spyOn(console, "error").mockImplementation(() => {})
+    const handle = await mountWithArtifacts(
+      { cols: 10, rows: 3, maxGraphicsPayloadLength: 30 },
+      { kittyGraphics: true, sixel: false },
+    )
+    try {
+      handle.feedAnsi("\x1b_Gf=1,a=T;AAAA\x1b\\\x1b_Gf=1,a=T;BBBB\x1b\\")
+
+      expect(handle.output.artifacts?.drain()).toEqual([
+        {
+          kind: "terminal-sequence",
+          protocol: "kitty",
+          sequence: "\x1b_Gf=1,a=T;AAAA\x1b\\",
+          row: 0,
+          col: 0,
+        },
+      ])
+      expect(dropped).toHaveBeenCalledWith("[termless/vterm] dropped kitty artifact: pending 34 code units, limit 30")
+    } finally {
+      handle.dispose()
+      dropped.mockRestore()
     }
   })
 

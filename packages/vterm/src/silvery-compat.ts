@@ -69,6 +69,27 @@ export interface IslandCapabilities {
   palette?: boolean
 }
 
+export interface IslandArtifactCapabilities {
+  readonly terminalSequences: {
+    readonly kittyGraphics: boolean
+    readonly sixel: boolean
+  }
+}
+
+export type IslandOutputArtifact = {
+  readonly kind: "terminal-sequence"
+  readonly protocol: "kitty" | "sixel"
+  readonly sequence: string
+  readonly row: number
+  readonly col: number
+  readonly zIndex?: number
+}
+
+export interface IslandOutputArtifactOwner {
+  subscribe(listener: () => void): () => void
+  drain(): readonly IslandOutputArtifact[]
+}
+
 export interface IslandProtocolModes {
   altScreen?: boolean
   bracketedPaste?: boolean
@@ -86,6 +107,7 @@ export type IslandSignal =
 export interface IslandContext {
   readonly cols: number
   readonly rows: number
+  readonly artifactCapabilities?: IslandArtifactCapabilities
   emit(signal: IslandSignal): void
   requestResize(cols: number, rows: number): void
   execOSC(command: string): Promise<string | void>
@@ -130,6 +152,7 @@ export interface IslandOutputOwner {
   readonly buffer: CellBuffer
   readonly cursor: { row: number; col: number; style: ViewportCursorStyle } | null
   readonly cursorVisible: boolean
+  readonly artifacts?: IslandOutputArtifactOwner
   subscribe(listener: () => void): () => void
   writeCells(dirtyRects: readonly ViewportRect[], buffer: CellBuffer): void
   invalidateAll(): void

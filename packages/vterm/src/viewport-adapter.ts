@@ -26,18 +26,27 @@
  *     convention (negative = older) by negating the delta.
  */
 
-import { createVtermScreen, type Color, type ScreenCell, type VtermScreen } from "vterm.js"
+import {
+  createVtermScreen,
+  DEFAULT_MAX_STRING_SEQUENCE_LENGTH,
+  type Color,
+  type ParserEvent,
+  type ScreenCell,
+  type VtermScreen,
+} from "vterm.js"
 
 import type {
   Cell,
   CellAttrs,
   CellBuffer,
   IslandContext,
+  IslandArtifactCapabilities,
   IslandGuest,
   IslandHandle,
   IslandInputEvent,
   IslandKeyEvent,
   IslandMouseEvent,
+  IslandOutputArtifact,
   IslandProtocolModes,
   ViewportCursorStyle,
 } from "./silvery-compat.ts"
@@ -82,6 +91,8 @@ export interface VtermGuestOptions {
    * pressure without dropping bytes (vterm parses every chunk synchronously).
    */
   outputCoalesceMs?: number
+  /** Maximum retained payload and pending artifact budget. Default: 16 MiB. */
+  maxGraphicsPayloadLength?: number
   /** Protocol modes the PTY guest asks the host to enable while focused. */
   modes?: IslandProtocolModes
   /**
@@ -113,6 +124,7 @@ export interface VtermGuestHandle extends IslandHandle {
 
 interface VtermIslandHandleOptions extends VtermGuestOptions {
   onTitle?: (title: string) => void
+  artifactCapabilities?: IslandArtifactCapabilities
 }
 
 /**
@@ -121,17 +133,35 @@ interface VtermIslandHandleOptions extends VtermGuestOptions {
  * {@link CellBuffer}; until it has a pixel side-channel, positively advertising
  * either protocol makes a child emit graphics that the host silently drops.
  */
-function cellGuestResponse(data: string): string | null {
+function cellGuestResponse(data: string, artifactCapabilities: IslandArtifactCapabilities | undefined): string | null {
   // Kitty graphics query response (APC G). No response means unsupported, which
   // is the protocol's capability-negotiation contract.
-  if (/^\x1b_G.*\x1b\\$/u.test(data)) return null
+  if (/^\x1b_G.*\x1b\\$/u.test(data)) {
+    return artifactCapabilities?.terminalSequences.kittyGraphics === true ? data : null
+  }
 
   // DA1 attribute 4 advertises Sixel. Keep every other emulator-owned device
   // attribute while removing only the capability this guest cannot project.
   const primaryDeviceAttributes = /^\x1b\[\?([\d;]+)c$/u.exec(data)
   if (!primaryDeviceAttributes) return data
-  const attributes = (primaryDeviceAttributes[1] ?? "").split(";").filter((attribute) => attribute !== "4")
+  const attributes = (primaryDeviceAttributes[1] ?? "")
+    .split(";")
+    .filter((attribute) => attribute !== "4" || artifactCapabilities?.terminalSequences.sixel === true)
   return `\x1b[?${attributes.join(";")}c`
+}
+
+function kittyAction(data: string): string | undefined {
+  if (!data.startsWith("G")) return undefined
+  const separator = data.indexOf(";")
+  const params = (separator >= 0 ? data.slice(1, separator) : data.slice(1)).split(",")
+  for (const param of params) {
+    if (param.startsWith("a=")) return param.slice(2)
+  }
+  return undefined
+}
+
+function isSixelPayload(data: string): boolean {
+  return /^(?:\d*(?:;\d*)*)q/su.test(data)
 }
 
 // ── Color conversion ───────────────────────────────────────────────────
@@ -321,11 +351,66 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
 
   const sizeListeners = new Set<(size: { cols: number; rows: number }) => void>()
   const outputListeners = new Set<() => void>()
+  const artifactListeners = new Set<() => void>()
   const modeListeners = new Set<(modes: IslandProtocolModes) => void>()
   const keyListeners = new Set<(event: IslandKeyEvent) => void>()
   const mouseListeners = new Set<(event: IslandMouseEvent) => void>()
   const pasteListeners = new Set<(text: string) => void>()
   const inputEventListeners = new Set<(event: IslandInputEvent) => void>()
+  const maxGraphicsPayloadLength = opts.maxGraphicsPayloadLength ?? DEFAULT_MAX_STRING_SEQUENCE_LENGTH
+  const artifactCapabilities = opts.artifactCapabilities
+  let pendingArtifacts: IslandOutputArtifact[] = []
+  let pendingArtifactLength = 0
+
+  function notifyArtifacts(): void {
+    for (const listener of artifactListeners) listener()
+  }
+
+  function queueArtifact(artifact: IslandOutputArtifact): void {
+    const nextLength = pendingArtifactLength + artifact.sequence.length
+    if (nextLength > maxGraphicsPayloadLength) {
+      console.error(
+        `[termless/vterm] dropped ${artifact.protocol} artifact: pending ${nextLength} code units, limit ${maxGraphicsPayloadLength}`,
+      )
+      return
+    }
+    pendingArtifacts.push(artifact)
+    pendingArtifactLength = nextLength
+    notifyArtifacts()
+  }
+
+  function onParserEvent(event: ParserEvent): void {
+    if (event.kind === "string-overflow") {
+      console.error(
+        `[termless/vterm] dropped ${event.sequence.toUpperCase()} payload: received ${event.receivedLength} code units, limit ${event.maxLength}`,
+      )
+      return
+    }
+    if (
+      event.kind === "apc" &&
+      artifactCapabilities?.terminalSequences.kittyGraphics === true &&
+      kittyAction(event.data) !== "q"
+    ) {
+      if (!event.data.startsWith("G")) return
+      queueArtifact({
+        kind: "terminal-sequence",
+        protocol: "kitty",
+        sequence: `\x1b_${event.data}\x1b\\`,
+        row: event.row,
+        col: event.col,
+      })
+      return
+    }
+    if (event.kind === "dcs" && artifactCapabilities?.terminalSequences.sixel === true && isSixelPayload(event.data)) {
+      queueArtifact({
+        kind: "terminal-sequence",
+        protocol: "sixel",
+        sequence: `\x1bP${event.data}\x1b\\`,
+        row: event.row,
+        col: event.col,
+      })
+    }
+  }
 
   function writeToChild(data: string): void {
     if (opts.child?.write) {
@@ -339,13 +424,15 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     cols,
     rows,
     scrollbackLimit: opts.scrollback ?? 0,
+    maxStringSequenceLength: maxGraphicsPayloadLength,
     // The emulator's own DA1/DA2/DSR/color-query answers go back to the child as
     // if typed — the same round-trip a real terminal performs.
     onResponse: (data: string) => {
-      const projected = cellGuestResponse(data)
+      const projected = cellGuestResponse(data, artifactCapabilities)
       if (projected !== null) writeToChild(projected)
     },
   })
+  const unsubscribeArtifacts = screen.tapParser(onParserEvent)
 
   // Cache the projected viewport and consume vterm's absolute dirty rows. A
   // structural scroll/resize still rebuilds the viewport, while ordinary writes
@@ -567,6 +654,22 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       get cursorVisible() {
         return screen !== null && screen.getCursorVisible()
       },
+      ...(artifactCapabilities
+        ? {
+            artifacts: {
+              subscribe(listener: () => void): () => void {
+                artifactListeners.add(listener)
+                return () => artifactListeners.delete(listener)
+              },
+              drain(): readonly IslandOutputArtifact[] {
+                const drained = pendingArtifacts
+                pendingArtifacts = []
+                pendingArtifactLength = 0
+                return drained
+              },
+            },
+          }
+        : {}),
       subscribe(listener) {
         outputListeners.add(listener)
         return () => outputListeners.delete(listener)
@@ -642,8 +745,12 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       unsubscribeStreamResize?.()
       unsubscribeModes()
       unsubscribeTitle()
+      unsubscribeArtifacts()
       sizeListeners.clear()
       outputListeners.clear()
+      artifactListeners.clear()
+      pendingArtifacts = []
+      pendingArtifactLength = 0
       modeListeners.clear()
       keyListeners.clear()
       mouseListeners.clear()
@@ -676,7 +783,12 @@ export function vtermGuest(opts: VtermGuestOptions): IslandGuest {
   return {
     capabilities: { input: true, modes: true, resize: true },
     init(ctx: IslandContext): Promise<IslandHandle> {
-      const handle = createVtermIslandHandle({ ...opts, cols: ctx.cols, rows: ctx.rows })
+      const handle = createVtermIslandHandle({
+        ...opts,
+        cols: ctx.cols,
+        rows: ctx.rows,
+        ...(ctx.artifactCapabilities ? { artifactCapabilities: ctx.artifactCapabilities } : {}),
+      })
       ctx.abortSignal.addEventListener("abort", () => void handle.dispose(), { once: true })
       ctx.emit({ type: "ready" })
       return Promise.resolve(handle)
