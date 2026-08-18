@@ -1,4 +1,4 @@
-# vendor-kit: links@a3a922f4fa46 — generated; edit km/packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
+# vendor-kit: links@dfc7193fb26e — generated; edit km/packages/km-infra/vendor-kit/templates/links.yml in km, then re-sync
 name: links
 
 # Per-PR + weekly link checking via lychee. The cheapest fast-feedback layer
@@ -11,15 +11,6 @@ name: links
 # red, zero real dead links). Cron minutes are staggered per repo via the
 # manifest var for the same reason. --max-retries absorbs transient
 # external 5xx (one-off 503s).
-#
-# Hardening (2026-07-06, 20887): some external sites (e.g. asciinema.org)
-# consistently time out from GitHub Actions egress IPs while resolving fine
-# from other networks — --max-retries can't fix a host that only stalls for
-# datacenter ASNs. `linksExtraExcludes` (manifest var, per-repo) is a
-# `--exclude` block for such CI-hostile hosts; use it instead of loosening
-# `--accept` or dropping the link from docs. Keep exclusions narrow (exact
-# host/path, not a broad prefix) so real breakage on the same site still
-# fails the check.
 
 on:
   pull_request:
@@ -50,6 +41,10 @@ jobs:
           # files use GLOB form ('CHANGELOG*.md') — lychee URL-interprets a
           # literal arg naming a missing file (http://changelog.md/ …), while
           # an unmatched glob is skipped.
+          # archive.org 503s under load; the mirror is the fallback for an
+          # already-dead original, so checking it is non-signal — ruled @cto
+          # 2026-08-18. (A '#' inside `args: |` would reach lychee as an
+          # argument, which is why this reason lives up here.)
           args: |
             --max-concurrency 24
             --max-retries 2
@@ -58,8 +53,8 @@ jobs:
             --accept '200..=204,206,301,302,303,307,308,401,403,429'
             --exclude '^(mailto|tel|javascript):'
             --exclude '^file:'
+            --exclude '^https://web\.archive\.org/'
             --exclude 'github\.com/.*/(compare|releases/tag)/v0\.0\.1'
-            --exclude '^https://asciinema\.org/?$'
             README.md
             'CHANGELOG*.md'
             'CLAUDE*.md'
