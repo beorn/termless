@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest"
 import { spawnSync } from "node:child_process"
+import { join } from "node:path"
 
 describe("@termless/test package import", () => {
   test("does not require an active Vitest suite", () => {
@@ -8,7 +9,7 @@ describe("@termless/test package import", () => {
     delete env.VITEST_MODE
 
     const result = spawnSync("bun", ["--eval", 'await import("./packages/viterm/src/fixture.ts")'], {
-      cwd: process.cwd(),
+      cwd: join(import.meta.dirname, "../../.."),
       encoding: "utf8",
       env,
     })
