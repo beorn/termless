@@ -10,11 +10,11 @@
  *
  * ## Why this is a behavioural test and not a source assertion
  *
- * The sibling guest-seam guards (`rec-live-overlay-vterm-guest.test.ts`,
- * `tools/inhab-watch-vterm-guest.test.ts`) pin an IMPORT, because there the two
- * guests are drop-in and nothing observable distinguishes them. Here the
- * opposite is true: the backends are distinguishable at runtime, so the
- * stronger assertion is available and is the one worth making. A source grep
+ * The surviving guest-seam guard, `rec-live-overlay-vterm-guest.test.ts`, pins
+ * an IMPORT because its two guests are drop-in and nothing observable
+ * distinguishes them. Here the opposite is true: the backends are
+ * distinguishable at runtime, so the stronger assertion is available and is
+ * the one worth making. A source grep
  * for `"vterm"` would also pass if the string moved into a comment.
  *
  * ## Choosing a discriminator, and one that was rejected
