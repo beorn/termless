@@ -68,9 +68,9 @@ export interface Cursor {
   visible: boolean | null
   /** Cursor shape. `null` if the backend doesn't know. */
   style: CursorStyle | null
-  /** @deprecated Renamed to {@link Cursor.col}. Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link Cursor.col}. Kept required during the migration window. */
   x: number
-  /** @deprecated Renamed to {@link Cursor.row}. Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link Cursor.row}. Kept required during the migration window. */
   y: number
 }
 
