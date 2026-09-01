@@ -53,7 +53,7 @@ function createLazyRegion(readable: Terminal, resolveRange: () => [start: number
 /**
  * Create a positioned cell (a {@link Cell} plus its `row`/`col`).
  *
- * @deprecated The positioned-cell concept is folded into {@link Cell}; this
+ * @deprecated REMOVING in unterm phase A4 — the positioned-cell concept is folded into {@link Cell}; this
  * remains so `cell()`/`cellAt()` can still carry position during the migration.
  */
 export function createCellView(cell: Cell, row: number, col: number): CellView {

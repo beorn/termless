@@ -137,12 +137,12 @@ export function createTerminal(options: TerminalCreateOptions): TestTerminal {
     return backend.getRows()
   }
 
-  /** @deprecated Renamed to {@link getRow}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link getRow}. */
   function getLine(row: number): Cell[] {
     return backend.getRow(row)
   }
 
-  /** @deprecated Renamed to {@link getRows}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link getRows}. */
   function getLines(): Cell[][] {
     return backend.getRows()
   }
@@ -326,7 +326,7 @@ export function createTerminal(options: TerminalCreateOptions): TestTerminal {
 
   // ── Waiting ──
 
-  /** @deprecated Use `await expect(term.screen).toContainText("text", { timeout })` instead. */
+  /** @deprecated REMOVING in unterm phase A4 — use `await expect(term.screen).toContainText("text", { timeout })` instead. */
   async function waitFor(text: string, timeout = DEFAULT_WAIT_TIMEOUT): Promise<void> {
     const start = Date.now()
     while (Date.now() - start < timeout) {
@@ -397,12 +397,12 @@ export function createTerminal(options: TerminalCreateOptions): TestTerminal {
     return results
   }
 
-  /** @deprecated Renamed to {@link findText}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link findText}. */
   function find(text: string): TextMatch | null {
     return findText(text)
   }
 
-  /** @deprecated Renamed to {@link findAllText}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link findAllText}. */
   function findAll(pattern: RegExp): TextMatch[] {
     return findAllText(pattern)
   }

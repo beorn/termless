@@ -52,11 +52,11 @@ export interface ScrollbackState {
    * (rows `totalRows - screenRows` through `totalRows - 1`).
    */
   screenRows: number
-  /** @deprecated Renamed to {@link ScrollbackState.viewportTop}. Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link ScrollbackState.viewportTop}. Kept required during the migration window. */
   viewportOffset: number
-  /** @deprecated Renamed to {@link ScrollbackState.totalRows}. Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link ScrollbackState.totalRows}. Kept required during the migration window. */
   totalLines: number
-  /** @deprecated Renamed to {@link ScrollbackState.screenRows}. Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link ScrollbackState.screenRows}. Kept required during the migration window. */
   screenLines: number
 }
 
@@ -120,7 +120,7 @@ export interface RawOutput {
 /**
  * A positioned cell — a {@link Cell} plus the `row`/`col` where it lives.
  *
- * @deprecated The `CellView` concept is folded into {@link Cell}: positioned
+ * @deprecated REMOVING in unterm phase A4 — the `CellView` concept is folded into {@link Cell}: positioned
  * accessors (`cell(row, col)`, `cellAt(col)`) return `Cell`, and where a caller
  * needs the position it is supplied by the query (the accessor arguments, or a
  * {@link TextMatch}). This alias remains for the migration window; the extra
@@ -175,9 +175,9 @@ export interface Terminal {
   getRow(row: number): Cell[]
   /** Get every row as a cell array (entire buffer: scrollback + screen). */
   getRows(): Cell[][]
-  /** @deprecated Renamed to {@link Terminal.getRow} (row = cells). Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link Terminal.getRow} (row = cells). Kept required during the migration window. */
   getLine(row: number): Cell[]
-  /** @deprecated Renamed to {@link Terminal.getRows} (row = cells). Kept required during the migration window. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link Terminal.getRows} (row = cells). Kept required during the migration window. */
   getLines(): Cell[][]
   getCursor(): Cursor
   getMode(mode: TerminalMode): boolean
@@ -355,7 +355,7 @@ export interface TestTerminal extends Terminal {
   readonly buffer: Region
   readonly viewport: Region
   readonly output: RawOutput
-  /** @deprecated Renamed to {@link TestTerminal.output}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link TestTerminal.output}. */
   readonly out: RawOutput
   row(n: number): Row
   cell(row: number, col: number): Cell
@@ -390,9 +390,9 @@ export interface TestTerminal extends Terminal {
   // Search
   findText(text: string): TextMatch | null
   findAllText(pattern: RegExp): TextMatch[]
-  /** @deprecated Renamed to {@link TestTerminal.findText}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link TestTerminal.findText}. */
   find(text: string): TextMatch | null
-  /** @deprecated Renamed to {@link TestTerminal.findAllText}. */
+  /** @deprecated REMOVING in unterm phase A4 — renamed to {@link TestTerminal.findAllText}. */
   findAll(pattern: RegExp): TextMatch[]
 
   // Screenshot
