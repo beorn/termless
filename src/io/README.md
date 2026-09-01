@@ -15,12 +15,12 @@ emu.getText()
 
 ## The four primitives
 
-| primitive | one line | file |
-|---|---|---|
-| `Session` | a live terminal you talk to — spawned, attached, wrapped, or replayed; `events()` is THE primitive, `output`/`input`/`control` are filtered views of it | `session.ts` |
-| `Event` | everything that happens: `{ at, type: "output" \| "input" \| "control" \| "mark" \| "exit", … }` — full words in code, letters only in codecs | `event.ts` |
-| `Emulator` | eats Events and shows you the picture: `apply(e)`, `getText()`, `getCell()`, cursor, modes, size | `emulator.ts` |
-| `Recording` | a header plus the Events, saved; one vocabulary, several containers | `recording.ts` |
+| primitive   | one line                                                                                                                                                | file           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `Session`   | a live terminal you talk to — spawned, attached, wrapped, or replayed; `events()` is THE primitive, `output`/`input`/`control` are filtered views of it | `session.ts`   |
+| `Event`     | everything that happens: `{ at, type: "output" \| "input" \| "control" \| "mark" \| "exit", … }` — full words in code, letters only in codecs           | `event.ts`     |
+| `Emulator`  | eats Events and shows you the picture: `apply(e)`, `getText()`, `getCell()`, cursor, modes, size                                                        | `emulator.ts`  |
+| `Recording` | a header plus the Events, saved; one vocabulary, several containers                                                                                     | `recording.ts` |
 
 `Source = AsyncIterable<Event>` and `Sink = { apply(e) }` are aliases, not concepts. `pipe(source, ...sinks)` awaits each `apply` — backpressure is the pull side doing its job. `toReadable()` / `fromReadable()` bridge to Web Streams for fan-out and platform interop (`pipe.ts`). The picture types (`Cell`, `Color`, `Cursor`, …) and the `Micros` timebase live here too, because `Emulator.getCell` returns a `Cell` (`picture.ts`, `time.ts`).
 
