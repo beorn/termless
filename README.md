@@ -4,6 +4,8 @@ Headless terminal testing library. Like Playwright, but for terminal apps.
 
 Terminal apps are hard to test because the terminal is a black box — you can see text on screen but can't programmatically inspect colors, cursor position, scrollback history, terminal modes, or cell attributes. Termless opens up the entire terminal buffer for structured testing, and runs the same tests against multiple terminal emulators to catch cross-terminal compatibility issues.
 
+Two audiences use termless. Most people are here to **test a TUI app** — that's the Playwright-for-terminals pitch above, and it stays the headline. A second, growing audience builds **terminal emulators** and uses termless's differential conformance corpus to grade a new backend against the field; see [Conformance corpus](#conformance-corpus).
+
 Built alongside [silvery](https://silvery.dev), a React TUI framework, but works with any terminal app.
 
 ![Termless rendered terminal screenshot](docs/public/screenshots/build-pipeline.svg)
@@ -343,6 +345,18 @@ All backends are tested for conformance via `cross-backend.test.ts` — text ren
 ```bash
 bun vitest run tests/cross-backend.test.ts
 ```
+
+## Conformance corpus
+
+Testing *your* app across backends (above) asks whether your output holds steady. The conformance corpus asks the opposite question: is the **backend itself** correct? The differential runner takes cases mined from other engines' own test suites and runs each one against every registered backend, diffing the resulting terminal state — a divergence is either a bug or a documented, ledgered gap.
+
+Today that's two borrowed suites, both MIT: [Ghostty](https://github.com/ghostty-org/ghostty)'s inline Zig unit tests (24 mechanically-converted cases) and [neovim's libvterm](https://github.com/neovim/libvterm) reference test suite (128 cases). License policy is strict: only MIT/Apache/BSD-family suites get mirrored into `raw/`; a GPL suite (kitty, esctest, VTE) is never vendored and never line-ported into a case — the only legal paths are a side-by-side oracle backend or clean-room re-authoring from the spec.
+
+Engine gaps are data, not red tests. `known-gaps.json` maps `<backend>::<suite>::<case>` to a reason, and the ledger ratchets both ways: an un-ledgered failure fails the build (regression or new case), and a ledgered gap that starts passing *also* fails, until someone removes the entry.
+
+**Grading your own backend:** implement `TerminalBackend`, add a `[name, factory]` entry next to the existing ones in `tests/corpus-conformance.test.ts`, and run the corpus test. A consumable entry point via `@termless/test` — so grading a backend doesn't require patching termless's own test file — is planned, no date yet.
+
+The full contract (case schema, suite directory shape, growth triggers) is [`corpus/README.md`](corpus/README.md); the narrative version is on the [docs site](https://termless.dev/advanced/conformance-corpus).
 
 ## Packages
 
