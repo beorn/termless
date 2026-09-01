@@ -1,3 +1,6 @@
+import type { Cell, Color, Cursor, Mode } from "../io/picture.ts"
+import type { SpawnOptions as IoSpawnOptions } from "../io/session.ts"
+
 // ═══════════════════════════════════════════════════════
 // Core Types
 // ═══════════════════════════════════════════════════════
@@ -8,76 +11,23 @@ export interface TerminalOptions {
   scrollbackLimit?: number
 }
 
-// ── Cell ──
+// ── The readable picture — declared in io, re-exported here ──
+//
+// `Cell`, `Color`, `UnderlineStyle`, `Cursor` and `CursorStyle` are the shapes
+// an Emulator exposes, so they are declared in `src/io/picture.ts` (which
+// depends on nothing) and re-exported here. There is exactly one declaration of
+// each in the package; every existing import path keeps working.
 
-export interface Cell {
-  char: string
-  fg: Color | null
-  bg: Color | null
-  bold: boolean
-  dim: boolean
-  italic: boolean
-  underline: UnderlineStyle
-  underlineColor: Color | null
-  strikethrough: boolean
-  inverse: boolean
-  blink: boolean
-  hidden: boolean
-  wide: boolean
-  continuation: boolean
-  hyperlink: string | null
-}
-
-/**
- * Underline rendering style. `"none"` means no underline.
- *
- * `false` is the **deprecated** legacy spelling of `"none"`; it remains an
- * accepted value at boundaries so existing backends keep compiling during the
- * schema-major migration. New code should read/write `"none"`.
- */
-export type UnderlineStyle = "none" | "single" | "double" | "curly" | "dotted" | "dashed" | false
-
-/**
- * A terminal color. `r`/`g`/`b` are always present (0–255); `index` optionally
- * preserves the origin palette slot (0–255) when the color came from an indexed
- * palette entry. Painters read `r`/`g`/`b` unconditionally; only identity-aware
- * code touches `index`.
- */
-export type Color = { r: number; g: number; b: number; index?: number }
-
-// ── Cursor ──
-
-export interface Cursor {
-  /** Cursor column (0-based). */
-  col: number
-  /** Cursor row (0-based). */
-  row: number
-  /** Whether the cursor is visible. `null` if the backend doesn't know. */
-  visible: boolean | null
-  /** Cursor shape. `null` if the backend doesn't know. */
-  style: CursorStyle | null
-  /** @deprecated Renamed to {@link Cursor.col}. Kept required during the migration window. */
-  x: number
-  /** @deprecated Renamed to {@link Cursor.row}. Kept required during the migration window. */
-  y: number
-}
-
-export type CursorStyle = "block" | "underline" | "beam"
+export type { Cell, Color, Cursor, CursorStyle, UnderlineStyle } from "../io/picture.ts"
 
 // ── Modes ──
 
-export type TerminalMode =
-  | "altScreen"
-  | "cursorVisible"
-  | "bracketedPaste"
-  | "applicationCursor"
-  | "applicationKeypad"
-  | "autoWrap"
-  | "mouseTracking"
-  | "focusTracking"
-  | "originMode"
-  | "insertMode"
-  | "reverseVideo"
+/**
+ * @deprecated REMOVING in unterm phase A4 — renamed to `Mode`
+ * (`@termless/core/io`). A true alias: same union, full-word member names
+ * unchanged.
+ */
+export type TerminalMode = Mode
 
 // ── Scrollback ──
 
@@ -155,6 +105,13 @@ export interface Region {
  */
 export interface RawOutput {
   getText(): string
+  /**
+   * @deprecated REMOVING in unterm phase A4 — a chunk row is an `output`
+   * Event. Read `session.output` (or filter `session.events()` on
+   * `type === "output"`) from `@termless/core/io`. Not a true alias: a chunk is
+   * a bare decoded string, an `OutputEvent` is `{at, type, data}` with the
+   * timestamp and the byte payload the chunk list throws away.
+   */
   getChunks(): readonly string[]
   containsOutput(text: string): boolean
   clear(): void
@@ -195,6 +152,13 @@ export interface Row extends Region {
  * **Coordinate system**: All row parameters use **absolute buffer rows**.
  * Row 0 is the first row in scrollback history. The screen occupies the
  * last `screenRows` rows (from `totalRows - screenRows` to `totalRows - 1`).
+ *
+ * @deprecated REMOVING in unterm phase A4 — the read half of `Emulator`
+ * (`@termless/core/io`), where the readable picture lives on the emulator
+ * itself. Not a true alias: `Emulator` spells the cursor, modes and size as
+ * properties (`cursor`, `modes`, `size`) rather than accessors
+ * (`getCursor()`, `getMode(m)`, `getScrollback()`). Adapt with
+ * `emulatorFromBackend()` in `terminal/io-compat.ts`.
  */
 export interface Terminal {
   /** Get all buffer text (scrollback + screen) as a newline-joined string. */
@@ -263,6 +227,17 @@ export interface ScreenshotOptions {
   renderer?: "canvas" | "resvg" | "swash" | "browser" | "auto"
 }
 
+/**
+ * Every backend implements this: the {@link Terminal} read contract plus
+ * lifecycle, the byte feed, resize, key encoding and capabilities.
+ *
+ * @deprecated REMOVING in unterm phase A4 — replaced by `Emulator`
+ * (`@termless/core/io`), which collapses `feed`/`resize`/`reset` into a single
+ * `apply(event)` door. Not a true alias: `Emulator` has no `init`/`destroy`
+ * lifecycle, no `encodeKey`, and no `capabilities` — those either move to the
+ * factory that builds the emulator or to the parts around it. Adapt an
+ * existing backend with `emulatorFromBackend()` in `terminal/io-compat.ts`.
+ */
 export interface TerminalBackend extends Terminal {
   readonly name: string
 
@@ -323,11 +298,16 @@ export interface TerminalCreateOptions {
   onAfterWrite?: (data: Uint8Array) => void
 }
 
-export interface SpawnOptions {
-  command: string[]
-  env?: Record<string, string>
-  cwd?: string
-}
+/**
+ * What `TestTerminal.spawn()` needs to start a program — the size comes from
+ * the terminal it is spawned into, so it is the io `SpawnOptions` minus
+ * `size`.
+ *
+ * @deprecated REMOVING in unterm phase A4 — use `SpawnOptions` from
+ * `@termless/core/io` and pass `size` explicitly. A true alias: the shape is
+ * derived from the io type, not restated.
+ */
+export type SpawnOptions = Omit<IoSpawnOptions, "size">
 
 /**
  * A text search match: the matched `text`, its `row`/`col` in the buffer, and

@@ -36,7 +36,8 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./io": "./src/io/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -45,6 +46,11 @@
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs",
         "default": "./dist/index.mjs"
+      },
+      "./io": {
+        "types": "./dist/io/index.d.mts",
+        "import": "./dist/io/index.mjs",
+        "default": "./dist/io/index.mjs"
       }
     }
   },
@@ -113,7 +119,8 @@
       "eager": true
     },
     "entry": [
-      "src/index.ts"
+      "src/index.ts",
+      "src/io/index.ts"
     ],
     "format": "esm"
   },

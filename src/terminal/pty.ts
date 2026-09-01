@@ -7,9 +7,22 @@
  */
 
 import { spawnPortablePty, type PortablePtyProcess } from "./spawn.ts"
+import type { Size } from "../io/picture.ts"
+import type { SpawnOptions } from "../io/session.ts"
 
 // ── Types ──
 
+/**
+ * A handle on a running PTY.
+ *
+ * @deprecated REMOVING in unterm phase A4 — replaced by `Session`
+ * (`@termless/core/io`). Not a true alias, and the difference is the point:
+ * `Session` reads its output through `events()` instead of the `onData`
+ * callback below, spells writes as `input.write`, resize as
+ * `control.resize`, and replaces the `alive`/`exitInfo` string pair with
+ * `exited: Promise<Exit>` plus an `exit` Event a recording sink can finalize
+ * on.
+ */
 export interface PtyHandle {
   /** Write raw data to the PTY (forwarded to the child process stdin). */
   write(data: string): void
@@ -23,35 +36,37 @@ export interface PtyHandle {
   close(): Promise<void>
 }
 
-export interface PtySpawnOptions {
-  /** Command to execute as [program, ...args]. Spawned directly without a shell. */
-  command: string[]
-  /** Additional environment variables (merged with process.env). */
-  env?: Record<string, string>
-  /** Working directory for the child process. */
-  cwd?: string
-  /** Terminal columns. */
-  cols: number
-  /** Terminal rows. */
-  rows: number
-  /** Callback invoked when the child process writes output data. */
-  onData: (data: Uint8Array) => void
-}
+/**
+ * The pre-`events()` output door: everything a spawned Session needs, with the
+ * size flattened to `cols`/`rows` and output delivered by callback.
+ *
+ * @deprecated REMOVING in unterm phase A4 — use `SpawnOptions` from
+ * `@termless/core/io` and read output from `Session.events()`. A true alias
+ * for the option half: the shape is derived from the io type rather than
+ * restated. Only `onData` is additive, and it is exactly what `events()`
+ * replaces.
+ */
+export type PtySpawnOptions = Omit<SpawnOptions, "size"> &
+  Size & {
+    /** Callback invoked when the child process writes output data. */
+    onData: (data: Uint8Array) => void
+  }
 
-export interface PtyShellOptions {
-  /** Shell command string to execute via `bash -c`. Use when you need shell features (pipes, globbing, etc.). */
-  shellCommand: string
-  /** Additional environment variables (merged with process.env). */
-  env?: Record<string, string>
-  /** Working directory for the child process. */
-  cwd?: string
-  /** Terminal columns. */
-  cols: number
-  /** Terminal rows. */
-  rows: number
-  /** Callback invoked when the child process writes output data. */
-  onData: (data: Uint8Array) => void
-}
+/**
+ * As {@link PtySpawnOptions}, but the program is a shell command string run
+ * via `bash -c` rather than a direct argv.
+ *
+ * @deprecated REMOVING in unterm phase A4 — use `SpawnOptions` from
+ * `@termless/core/io`. A true alias for the shared half: derived from the io
+ * type with `command` swapped for `shellCommand`.
+ */
+export type PtyShellOptions = Omit<SpawnOptions, "size" | "command"> &
+  Size & {
+    /** Shell command string to execute via `bash -c`. Use when you need shell features (pipes, globbing, etc.). */
+    shellCommand: string
+    /** Callback invoked when the child process writes output data. */
+    onData: (data: Uint8Array) => void
+  }
 
 // ── Implementation ──
 

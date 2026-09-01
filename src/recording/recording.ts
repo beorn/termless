@@ -34,52 +34,16 @@
 // =============================================================================
 // Timebase — integer microseconds, single monotonic clock
 // =============================================================================
+//
+// The timebase is declared in `src/io/time.ts` (which depends on nothing) and
+// re-exported here. There is exactly one `Micros` brand in the package; every
+// existing import of `Micros` / `micros` / `secondsToMicros` / `millisToMicros`
+// from this module keeps working.
 
-/**
- * A timestamp on a Recording's monotonic clock.
- *
- * **Integer microseconds** relative to recording start. This is a branded
- * `number`: the brand exists only at the type level (it is erased at runtime)
- * and forces every timestamp to pass through {@link micros} or
- * {@link secondsToMicros} / {@link millisToMicros}, so a stray float can never
- * be assigned where the model expects µs.
- */
-export type Micros = number & { readonly __brand: "Micros" }
+export type { Micros } from "../io/time.ts"
+export { micros, millisToMicros, secondsToMicros } from "../io/time.ts"
 
-/**
- * Brand a raw integer as a {@link Micros} timestamp.
- *
- * Throws if the value is not a non-negative integer — the model never carries
- * a float timestamp, and this is the choke point that enforces it.
- */
-export function micros(value: number): Micros {
-  if (!Number.isInteger(value)) {
-    throw new Error(`Recording timestamps must be integer microseconds, got: ${value}`)
-  }
-  if (value < 0) {
-    throw new Error(`Recording timestamps must be non-negative, got: ${value}`)
-  }
-  return value as Micros
-}
-
-/**
- * Normalize an asciicast-style float-second timestamp to integer µs.
- *
- * asciicast v2 records `time` as a float in seconds; this is the import
- * normalizer that converts it to the Recording model's integer-µs timebase.
- * Rounds to the nearest microsecond — there is no float left afterwards.
- */
-export function secondsToMicros(seconds: number): Micros {
-  return micros(Math.round(seconds * 1_000_000))
-}
-
-/**
- * Normalize a millisecond timestamp (e.g. legacy `recording.ts` events,
- * `.tape` `Sleep` durations) to integer µs.
- */
-export function millisToMicros(ms: number): Micros {
-  return micros(Math.round(ms * 1_000))
-}
+import type { Micros } from "../io/time.ts"
 
 // =============================================================================
 // Renderer fingerprint — what a frame projection was rendered against
@@ -147,6 +111,10 @@ export type Command =
  *
  * Mirrors asciicast v2's `i` / `o` event discriminator. The `io` track is
  * direction-blind without this tag, so every event MUST carry it.
+ *
+ * @deprecated REMOVING in unterm phase A4 — an Event's own `type` says which
+ * direction it went (`"output"` / `"input"`), so the separate direction tag
+ * disappears. See `Event` in `@termless/core/io`.
  */
 export type IoDirection = "in" | "out"
 
@@ -156,6 +124,13 @@ export type IoDirection = "in" | "out"
  * `io` is the *observed truth*: re-feeding it to the parser reproduces the
  * session byte-exactly. `at` is on the recording's monotonic µs clock;
  * `direction` is mandatory.
+ *
+ * @deprecated REMOVING in unterm phase A4 — replaced by `Event`
+ * (`@termless/core/io`), one union covering output, input, control, mark and
+ * exit rather than bytes only. Not a true alias: `Event` discriminates on
+ * `type` instead of carrying a separate `direction`, and its `data` is
+ * `Uint8Array` rather than a decoded string. Convert with `eventFromIoEvent`
+ * / `ioEventFromEvent` in `recording/io-compat.ts`.
  */
 export interface IoEvent {
   /** Position on the recording's monotonic µs clock. */

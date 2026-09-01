@@ -1,3 +1,18 @@
+// ── The io primitives — Session, Event, Emulator, Recording, pipe ──
+//
+// They live at `@termless/core/io` (src/io/), a module that depends on
+// nothing. They are deliberately NOT folded into this barrel: it already
+// exports a different `Recording` (the multi-track model the codecs read), and
+// a bare `Event` here would shadow the DOM global for every consumer. Both
+// resolve when the Recording models converge.
+//
+//   import { pipe, type Event, type Session, type Emulator } from "@termless/core/io"
+//
+// The adapters from the shapes below onto those primitives are exported here,
+// because they belong to the legacy side of the seam:
+export { emulatorFromBackend } from "./terminal/io-compat.ts"
+export { eventFromIoEvent, ioEventFromEvent } from "./recording/io-compat.ts"
+
 export type {
   Cell,
   CellView,
