@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Backward Tab",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 220,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\t   \t       \t        \t\u001b[I\u001b[2I\u001b[Z",
+      "expectedCursor": {
+        "row": 0,
+        "col": 56
+      }
+    },
+    {
+      "input": "\u001b[2Z",
+      "expectedCursor": {
+        "row": 0,
+        "col": 40
+      }
+    }
+  ]
+}

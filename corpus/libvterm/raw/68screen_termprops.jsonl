@@ -1,0 +1,2 @@
+{"name":"Cursor visibility","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?25h\"","settermprop 1 true","PUSH \"\\e[?25l\"","settermprop 1 false"]}
+{"name":"Title","sourceLine":15,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]2;Here is my title\\a\"","settermprop 4 [\"Here is my title\"]"]}

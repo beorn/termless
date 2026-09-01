@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/21state_tabstops.test",
+  "name": "HTS",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 12,
+  "license": "MIT",
+  "input": "\tX\tX\u001b[5G\u001bH\u001b[G\tX",
+  "expectedCursor": {
+    "row": 0,
+    "col": 5
+  }
+}

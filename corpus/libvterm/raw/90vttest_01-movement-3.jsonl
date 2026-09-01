@@ -1,0 +1,1 @@
+{"name":"Output","sourceLine":16,"cols":80,"rows":25,"license":"MIT","lines":["$SEQ 0 2: ?screen_row \\# = \"A B C D E F G H I\"","?screen_row  3 = \"A B C D E F G H I \"","?cursor = 3,18"]}

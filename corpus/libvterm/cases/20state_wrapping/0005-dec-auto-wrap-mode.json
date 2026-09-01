@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "DEC Auto Wrap Mode",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 35,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[?7l\u001b[75GDDDDDD",
+      "expectedCursor": {
+        "row": 0,
+        "col": 79
+      }
+    },
+    {
+      "input": "D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 79
+      }
+    }
+  ]
+}

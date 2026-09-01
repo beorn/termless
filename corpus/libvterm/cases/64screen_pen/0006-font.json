@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Font",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 26,
+  "license": "MIT",
+  "input": "A\u001b[1mB\u001b[3mC\u001b[4mD\u001b[mE\u001b[11mF\u001b[m",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 5,
+      "text": "F"
+    }
+  ]
+}

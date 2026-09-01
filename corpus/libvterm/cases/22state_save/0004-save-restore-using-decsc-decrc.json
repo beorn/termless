@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/22state_save.test",
+  "name": "Save/restore using DECSC/DECRC",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 37,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[2;2H\u001b[1m\u001b[?1048h\u001b[5;5H\u001b[4 q\u001b[22;4m\u001b[?1048l\u001b[2;2H\u001b7",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[5;5H",
+      "expectedCursor": {
+        "row": 4,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b8",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    }
+  ]
+}

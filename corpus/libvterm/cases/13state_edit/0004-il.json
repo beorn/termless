@@ -1,0 +1,38 @@
+{
+  "suite": "libvterm/13state_edit.test",
+  "name": "IL",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 71,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "A\r\nC",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[L",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    },
+    {
+      "input": "\rB",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    }
+  ]
+}

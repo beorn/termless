@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/62screen_damage.test",
+  "name": "Merge scroll*2 with damage",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 140,
+  "license": "MIT",
+  "input": "\u001b[25H\r\nABCDE\b\b\b\u001b[2P\r\n",
+  "expectedCells": [
+    {
+      "row": 23,
+      "col": 0,
+      "text": "A"
+    },
+    {
+      "row": 23,
+      "col": 1,
+      "text": "B"
+    },
+    {
+      "row": 23,
+      "col": 2,
+      "text": "E"
+    },
+    {
+      "row": 23,
+      "col": 3,
+      "text": " "
+    }
+  ]
+}

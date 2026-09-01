@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/12state_scroll.test",
+  "name": "DECSTBM resets cursor position",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 156,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[S\u001b[2S\u001b[T\u001b[2T\u001b[5;5H",
+      "expectedCursor": {
+        "row": 4,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b[r",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

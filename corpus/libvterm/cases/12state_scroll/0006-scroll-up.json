@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/12state_scroll.test",
+  "name": "Scroll Up",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 92,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[S\u001b[2S\u001b[100S\u001b[T",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[2T",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

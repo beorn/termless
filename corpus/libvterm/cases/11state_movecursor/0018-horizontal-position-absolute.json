@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Horizontal Position Absolute",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 168,
+  "license": "MIT",
+  "input": "\u001b[5`",
+  "expectedCursor": {
+    "row": 0,
+    "col": 4
+  }
+}

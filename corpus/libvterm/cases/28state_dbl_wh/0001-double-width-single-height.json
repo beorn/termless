@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/28state_dbl_wh.test",
+  "name": "Double Width, Single Height",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 14,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b#6Hello",
+      "expectedCursor": {
+        "row": 0,
+        "col": 5
+      }
+    },
+    {
+      "input": "\u001b[40GAB",
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "suite": "libvterm/15state_mode.test",
+  "name": "DEC origin mode",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 44,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[5;15r\u001b[H",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[3;3H",
+      "expectedCursor": {
+        "row": 2,
+        "col": 2
+      }
+    },
+    {
+      "input": "\u001b[?6h\u001b[H",
+      "expectedCursor": {
+        "row": 4,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[3;3H",
+      "expectedCursor": {
+        "row": 6,
+        "col": 2
+      }
+    }
+  ]
+}

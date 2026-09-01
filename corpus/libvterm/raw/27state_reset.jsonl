@@ -1,0 +1,4 @@
+{"name":"RIS homes cursor","sourceLine":6,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[5;5H\"","?cursor = 4,4","WANTSTATE +m","PUSH \"\\ec\"","?cursor = 0,0","WANTSTATE -m"]}
+{"name":"RIS cancels scrolling region","sourceLine":14,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[5;10r\"","WANTSTATE +s","PUSH \"\\ec\\e[25H\\n\"","scrollrect 0..25,0..80 => +1,+0","WANTSTATE -s"]}
+{"name":"RIS erases screen","sourceLine":21,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"ABCDE\"","WANTSTATE +e","PUSH \"\\ec\"","erase 0..25,0..80","WANTSTATE -e"]}
+{"name":"RIS clears tabstops","sourceLine":28,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[5G\\eH\\e[G\\t\"","?cursor = 0,4","PUSH \"\\ec\\t\"","?cursor = 0,8"]}

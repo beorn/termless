@@ -1,0 +1,3 @@
+{"name":"Spillover text marks continuation on second line","sourceLine":7,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"A\"x100","PUSH \"\\r\\n\"","?lineinfo 0 =","?lineinfo 1 = cont"]}
+{"name":"CRLF in column 80 does not mark continuation","sourceLine":14,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"B\"x80","PUSH \"\\r\\n\"","PUSH \"B\"x20","PUSH \"\\r\\n\"","?lineinfo 0 =","?lineinfo 1 ="]}
+{"name":"EL cancels continuation of following line","sourceLine":23,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"D\"x100","?lineinfo 1 = cont","PUSH \"\\eM\\e[79G\\e[K\"","?lineinfo 1 ="]}

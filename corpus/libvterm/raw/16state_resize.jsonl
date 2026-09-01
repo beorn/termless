@@ -1,0 +1,5 @@
+{"name":"Placement","sourceLine":4,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"AB\\e[79GCDE\"","putglyph 0x41 1 0,0","putglyph 0x42 1 0,1","putglyph 0x43 1 0,78","putglyph 0x44 1 0,79","putglyph 0x45 1 1,0"]}
+{"name":"Resize","sourceLine":13,"cols":80,"rows":25,"license":"MIT","lines":["RESET","RESIZE 27,85","PUSH \"AB\\e[79GCDE\"","putglyph 0x41 1 0,0","putglyph 0x42 1 0,1","putglyph 0x43 1 0,78","putglyph 0x44 1 0,79","putglyph 0x45 1 0,80","?cursor = 0,81"]}
+{"name":"Resize without reset","sourceLine":24,"cols":80,"rows":25,"license":"MIT","lines":["RESIZE 28,90","?cursor = 0,81","PUSH \"FGHI\"","putglyph 0x46 1 0,81","putglyph 0x47 1 0,82","putglyph 0x48 1 0,83","putglyph 0x49 1 0,84","?cursor = 0,85"]}
+{"name":"Resize shrink moves cursor","sourceLine":34,"cols":80,"rows":25,"license":"MIT","lines":["RESIZE 25,80","?cursor = 0,79"]}
+{"name":"Resize grow doesn't cancel phantom","sourceLine":38,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\e[79GAB\"","putglyph 0x41 1 0,78","putglyph 0x42 1 0,79","?cursor = 0,79","RESIZE 30,100","?cursor = 0,80","PUSH \"C\"","putglyph 0x43 1 0,80","?cursor = 0,81"]}

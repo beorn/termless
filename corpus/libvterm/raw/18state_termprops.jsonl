@@ -1,0 +1,5 @@
+{"name":"Cursor visibility","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?25h\"","settermprop 1 true","PUSH \"\\e[?25\\$p\"","output \"\\e[?25;1\\$y\"","PUSH \"\\e[?25l\"","settermprop 1 false","PUSH \"\\e[?25\\$p\"","output \"\\e[?25;2\\$y\""]}
+{"name":"Cursor blink","sourceLine":19,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?12h\"","settermprop 2 true","PUSH \"\\e[?12\\$p\"","output \"\\e[?12;1\\$y\"","PUSH \"\\e[?12l\"","settermprop 2 false","PUSH \"\\e[?12\\$p\"","output \"\\e[?12;2\\$y\""]}
+{"name":"Cursor shape","sourceLine":29,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3 q\"","settermprop 2 true","settermprop 7 2"]}
+{"name":"Title","sourceLine":34,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]2;Here is my title\\a\"","settermprop 4 [\"Here is my title\"]"]}
+{"name":"Title split write","sourceLine":38,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]2;Here is\"","settermprop 4 [\"Here is\"","PUSH \" another title\\a\"","settermprop 4 \" another title\"]"]}

@@ -1,0 +1,38 @@
+{
+  "suite": "libvterm/13state_edit.test",
+  "name": "ECH",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 54,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "ABC\u001b[2D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[X",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[3X",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "79th Column",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 5,
+  "license": "MIT",
+  "input": "\u001b[75GAAAAA",
+  "expectedCursor": {
+    "row": 0,
+    "col": 79
+  }
+}

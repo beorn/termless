@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Horizontal Position Backward",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 176,
+  "license": "MIT",
+  "input": "\u001b[5`\u001b[3a\u001b[3j",
+  "expectedCursor": {
+    "row": 0,
+    "col": 4
+  }
+}

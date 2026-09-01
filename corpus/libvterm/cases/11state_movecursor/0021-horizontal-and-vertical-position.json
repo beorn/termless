@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Horizontal and Vertical Position",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 180,
+  "license": "MIT",
+  "input": "\u001b[5`\u001b[3a\u001b[3j\u001b[3;3f",
+  "expectedCursor": {
+    "row": 2,
+    "col": 2
+  }
+}

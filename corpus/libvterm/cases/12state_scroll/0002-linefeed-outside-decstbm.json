@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/12state_scroll.test",
+  "name": "Linefeed outside DECSTBM",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 36,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[1;10r\n\n\n\n\n\n\n\n\n\n\u001b[20H",
+      "expectedCursor": {
+        "row": 19,
+        "col": 0
+      }
+    },
+    {
+      "input": "\n",
+      "expectedCursor": {
+        "row": 20,
+        "col": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Reverse Index",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 50,
+  "license": "MIT",
+  "input": "ABC\u001bD\u001bM",
+  "expectedCursor": {
+    "row": 0,
+    "col": 3
+  }
+}

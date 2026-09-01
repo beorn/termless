@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Forward",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 59,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[B",
+      "expectedCursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[3B",
+      "expectedCursor": {
+        "row": 4,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[0B",
+      "expectedCursor": {
+        "row": 5,
+        "col": 0
+      }
+    }
+  ]
+}

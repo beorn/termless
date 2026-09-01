@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Linefeed",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 17,
+  "license": "MIT",
+  "input": "ABC\b\t\r\n",
+  "expectedCursor": {
+    "row": 1,
+    "col": 0
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/22state_save.test",
+  "name": "Restore",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 28,
+  "license": "MIT",
+  "input": "\u001b[2;2H\u001b[1m\u001b[?1048h\u001b[5;5H\u001b[4 q\u001b[22;4m\u001b[?1048l",
+  "expectedCursor": {
+    "row": 1,
+    "col": 1
+  }
+}

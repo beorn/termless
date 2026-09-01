@@ -1,0 +1,12 @@
+{"name":"DA","sourceLine":4,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\e[c\"","output \"\\e[?1;2c\""]}
+{"name":"XTVERSION","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\e[>q\"","output \"\\eP>|libvterm(0.3)\\e\\\\\""]}
+{"name":"DSR","sourceLine":14,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\e[5n\"","output \"\\e[0n\""]}
+{"name":"CPR","sourceLine":19,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[6n\"","output \"\\e[1;1R\"","PUSH \"\\e[10;10H\\e[6n\"","output \"\\e[10;10R\""]}
+{"name":"DECCPR","sourceLine":25,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?6n\"","output \"\\e[?10;10R\""]}
+{"name":"DECRQSS on DECSCUSR","sourceLine":29,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3 q\"","PUSH \"\\eP\\$q q\\e\\\\\"","output \"\\eP1\\$r3 q\\e\\\\\""]}
+{"name":"DECRQSS on SGR","sourceLine":34,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[1;5;7m\"","PUSH \"\\eP\\$qm\\e\\\\\"","output \"\\eP1\\$r1;5;7m\\e\\\\\""]}
+{"name":"DECRQSS on SGR ANSI colours","sourceLine":39,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[0;31;42m\"","PUSH \"\\eP\\$qm\\e\\\\\"","output \"\\eP1\\$r31;42m\\e\\\\\""]}
+{"name":"DECRQSS on SGR ANSI hi-bright colours","sourceLine":44,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[0;93;104m\"","PUSH \"\\eP\\$qm\\e\\\\\"","output \"\\eP1\\$r93;104m\\e\\\\\""]}
+{"name":"DECRQSS on SGR 256-palette colours","sourceLine":49,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[0;38:5:56;48:5:78m\"","PUSH \"\\eP\\$qm\\e\\\\\"","output \"\\eP1\\$r38:5:56;48:5:78m\\e\\\\\""]}
+{"name":"DECRQSS on SGR RGB8 colours","sourceLine":54,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[0;38:2:24:68:112;48:2:13:57:101m\"","PUSH \"\\eP\\$qm\\e\\\\\"","output \"\\eP1\\$r38:2:24:68:112;48:2:13:57:101m\\e\\\\\""]}
+{"name":"S8C1T on DSR","sourceLine":59,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e G\"","PUSH \"\\e[5n\"","output \"\\x{9b}0n\"","PUSH \"\\e F\""]}

@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "Line Wraparound",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 20,
+  "license": "MIT",
+  "input": "\u001b[75GAAAAAAB",
+  "expectedCursor": {
+    "row": 1,
+    "col": 1
+  }
+}

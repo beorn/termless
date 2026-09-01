@@ -68,6 +68,17 @@ Engine gaps are DATA, not red tests: `known-gaps.json` maps `<backend>::<suite>:
 
 ## Suites
 
-| Suite      | Upstream                       | License | raw/? | Strategy           |
-| ---------- | ------------------------------ | ------- | ----- | ------------------ |
-| `ghostty/` | github.com/ghostty-org/ghostty | MIT     | yes   | vendor-and-convert |
+| Suite       | Upstream                       | License | raw/? | Strategy           |
+| ----------- | ------------------------------ | ------- | ----- | ------------------ |
+| `ghostty/`  | github.com/ghostty-org/ghostty | MIT     | yes   | vendor-and-convert |
+| `libvterm/` | github.com/neovim/libvterm     | MIT     | yes   | vendor-and-convert |
+
+Evaluated and REJECTED on licence, so nobody re-opens the question: **esctest /
+esctest2** (GPL-2.0, verified in `ThomasDickey/esctest2/LICENSE`) — vendoring
+and line-by-line translation are both barred by the rules above; only an
+external-oracle backend or clean-room re-authoring would be legal. **vttest**
+is MIT but interactive and human-judged, with no machine-readable
+expectations — its scenarios reach us anyway through libvterm's MIT
+`t/90vttest_*.test` files. Also legal but lower value: **alacritty's `vte`**
+(MIT/Apache-2.0, one expectation-free demo stream) and **wezterm** (MIT,
+executable-only Rust tests that would have to be ported by hand).

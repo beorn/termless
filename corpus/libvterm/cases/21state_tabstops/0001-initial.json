@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/21state_tabstops.test",
+  "name": "Initial",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 4,
+  "license": "MIT",
+  "input": "\tX\tX",
+  "expectedCursor": {
+    "row": 0,
+    "col": 17
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/13state_edit.test",
+  "name": "EL 0",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 164,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "ABCDE\u001b[3D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 2
+      }
+    },
+    {
+      "input": "\u001b[0K",
+      "expectedCursor": {
+        "row": 0,
+        "col": 2
+      }
+    }
+  ]
+}

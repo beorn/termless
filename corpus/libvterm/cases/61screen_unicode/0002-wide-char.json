@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/61screen_unicode.test",
+  "name": "Wide char",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 14,
+  "license": "MIT",
+  "input": "0123\u001b[H０",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "０"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "80th column phantom linefeed phantom cancelled by explicit cursor move",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 62,
+  "license": "MIT",
+  "input": "\u001b[?7l\u001b[75GDDDDDDD\u001b[?7h\u001b[25;78HABCD\u001b[25;78HABC",
+  "expectedCursor": {
+    "row": 24,
+    "col": 79
+  }
+}

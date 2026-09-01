@@ -1,0 +1,26 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Super/subscript",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 38,
+  "license": "MIT",
+  "input": "A\u001b[1mB\u001b[3mC\u001b[4mD\u001b[mE\u001b[11mF\u001b[m\u001b[31mG\u001b[m\u001b[42mH\u001b[mx\u001b[74m0\u001b[73m2\u001b[m",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 8,
+      "text": "x"
+    },
+    {
+      "row": 0,
+      "col": 9,
+      "text": "0"
+    },
+    {
+      "row": 0,
+      "col": 10,
+      "text": "2"
+    }
+  ]
+}

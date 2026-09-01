@@ -1,0 +1,7 @@
+{"name":"Unrecognised control","sourceLine":5,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x03\"","control 03"]}
+{"name":"Unrecognised CSI","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?15;2z\"","csi 0x7a L=3f 15,2"]}
+{"name":"Unrecognised OSC","sourceLine":13,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]27;Something\\e\\\\\"","osc [27 \"Something\"]"]}
+{"name":"Unrecognised DCS","sourceLine":17,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePz123\\e\\\\\"","dcs [\"z123\"]"]}
+{"name":"Unrecognised APC","sourceLine":21,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e_z123\\e\\\\\"","apc [\"z123\"]"]}
+{"name":"Unrecognised PM","sourceLine":25,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e^z123\\e\\\\\"","pm [\"z123\"]"]}
+{"name":"Unrecognised SOS","sourceLine":29,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eXz123\\e\\\\\"","sos [\"z123\"]"]}

@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Reset",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 22,
+  "license": "MIT",
+  "input": "A\u001b[1mB\u001b[3mC\u001b[4mD\u001b[mE",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 4,
+      "text": "E"
+    }
+  ]
+}

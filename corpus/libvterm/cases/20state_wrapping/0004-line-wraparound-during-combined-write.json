@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "Line Wraparound during combined write",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 25,
+  "license": "MIT",
+  "input": "\u001b[75GAAAAAAB\u001b[78GBBBCC",
+  "expectedCursor": {
+    "row": 2,
+    "col": 2
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Position",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 123,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[B\u001b[3B\u001b[0B\u001b[C\u001b[3C\u001b[0C\u001b[A\u001b[3A\u001b[0A\u001b[D\u001b[3D\u001b[0D   \u001b[E   \u001b[2E\u001b[0E   \u001b[F   \u001b[2F\u001b[0F\n\u001b[20G\u001b[G\u001b[10;5H",
+      "expectedCursor": {
+        "row": 9,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b[8H",
+      "expectedCursor": {
+        "row": 7,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[H",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

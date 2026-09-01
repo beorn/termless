@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/12state_scroll.test",
+  "name": "SD/SU in DECSTBM+DECSLRM",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 111,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[?69h\u001b[3;10r\u001b[10;40s",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[3;10H",
+      "expectedCursor": {
+        "row": 2,
+        "col": 9
+      }
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"name":"Selective erase","sourceLine":4,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"A\\e[1\\\"qB\\e[\\\"qC\"","?screen_row 0 = \"ABC\"","PUSH \"\\e[G\\e[?J\"","?screen_row 0 = \" B\""]}
+{"name":"Non-selective erase","sourceLine":11,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"A\\e[1\\\"qB\\e[\\\"qC\"","?screen_row 0 = \"ABC\"","PUSH \"\\e[G\\e[J\"","?screen_row 0 = \"\""]}

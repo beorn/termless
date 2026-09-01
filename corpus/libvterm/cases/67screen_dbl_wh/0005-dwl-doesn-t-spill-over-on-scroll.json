@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/67screen_dbl_wh.test",
+  "name": "DWL doesn't spill over on scroll",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 34,
+  "license": "MIT",
+  "input": "\u001b[25H\u001b#6Final\r\n",
+  "expectedCells": [
+    {
+      "row": 23,
+      "col": 0,
+      "text": "F"
+    }
+  ]
+}

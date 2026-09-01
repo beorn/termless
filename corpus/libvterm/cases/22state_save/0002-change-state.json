@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/22state_save.test",
+  "name": "Change state",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 18,
+  "license": "MIT",
+  "input": "\u001b[2;2H\u001b[1m\u001b[?1048h\u001b[5;5H",
+  "expectedCursor": {
+    "row": 4,
+    "col": 4
+  }
+}

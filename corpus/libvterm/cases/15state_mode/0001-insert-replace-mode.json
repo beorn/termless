@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/15state_mode.test",
+  "name": "Insert/Replace Mode",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 5,
+  "license": "MIT",
+  "input": "",
+  "expectedCursor": {
+    "row": 0,
+    "col": 0
+  }
+}

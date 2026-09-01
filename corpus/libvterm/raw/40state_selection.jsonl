@@ -1,0 +1,16 @@
+{"name":"Set clipboard; final chunk len 4","sourceLine":5,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVsbG8s\\e\\\\\"","selection-set mask=0001 [\"Hello,\"]"]}
+{"name":"Set clipboard; final chunk len 3","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVsbG8sIHc=\\e\\\\\"","selection-set mask=0001 [\"Hello, w\"]"]}
+{"name":"Set clipboard; final chunk len 2","sourceLine":13,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVsbG8sIHdvcmxkCg==\\e\\\\\"","selection-set mask=0001 [\"Hello, world\\n\"]"]}
+{"name":"Set clipboard; split between chunks","sourceLine":17,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVs\"","selection-set mask=0001 [\"Hel\"","PUSH \"bG8s\\e\\\\\"","selection-set mask=0001 \"lo,\"]"]}
+{"name":"Set clipboard; split within chunk","sourceLine":23,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVsbG\"","selection-set mask=0001 [\"Hel\"","PUSH \"8s\\e\\\\\"","selection-set mask=0001 \"lo,\"]"]}
+{"name":"Set clipboard; empty first chunk","sourceLine":29,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;\"","PUSH \"SGVsbG8s\\e\\\\\"","selection-set mask=0001 [\"Hello,\"]"]}
+{"name":"Set clipboard; empty final chunk","sourceLine":34,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVsbG8s\"","selection-set mask=0001 [\"Hello,\"","PUSH \"\\e\\\\\"","selection-set mask=0001 ]"]}
+{"name":"Set clipboard; longer than buffer","sourceLine":40,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;\" . \"LS0t\"x10 . \"\\e\\\\\"","selection-set mask=0001 [\"-\"x15","selection-set mask=0001 \"-\"x15]"]}
+{"name":"Clear clipboard","sourceLine":45,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;\\e\\\\\"","selection-set mask=0001 []"]}
+{"name":"Set invalid data clears and ignores","sourceLine":49,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;SGVs*SGVsbG8s\\e\\\\\"","selection-set mask=0001 []"]}
+{"name":"Query clipboard","sourceLine":53,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;c;?\\e\\\\\"","selection-query mask=0001"]}
+{"name":"Send clipboard; final chunk len 4","sourceLine":57,"cols":80,"rows":25,"license":"MIT","lines":["SELECTION 1 [\"Hello,\"]","output \"\\e]52;c;\"","output \"SGVsbG8s\"","output \"\\e\\\\\""]}
+{"name":"Send clipboard; final chunk len 3","sourceLine":63,"cols":80,"rows":25,"license":"MIT","lines":["SELECTION 1 [\"Hello, w\"]","output \"\\e]52;c;\"","output \"SGVsbG8s\"","output \"IHc=\\e\\\\\""]}
+{"name":"Send clipboard; final chunk len 2","sourceLine":69,"cols":80,"rows":25,"license":"MIT","lines":["SELECTION 1 [\"Hello, world\\n\"]","output \"\\e]52;c;\"","output \"SGVsbG8sIHdvcmxk\"","output \"Cg==\\e\\\\\""]}
+{"name":"Send clipboard; split between chunks","sourceLine":75,"cols":80,"rows":25,"license":"MIT","lines":["SELECTION 1 [\"Hel\"","output \"\\e]52;c;\"","output \"SGVs\"","SELECTION 1  \"lo,\"]","output \"bG8s\"","output \"\\e\\\\\""]}
+{"name":"Send clipboard; split within chunk","sourceLine":83,"cols":80,"rows":25,"license":"MIT","lines":["SELECTION 1 [\"Hello\"","output \"\\e]52;c;\"","output \"SGVs\"","SELECTION 1 \",\"]","output \"bG8s\"","output \"\\e\\\\\""]}

@@ -1,0 +1,71 @@
+{
+  "suite": "libvterm/60screen_ascii.test",
+  "name": "Space padding",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 48,
+  "license": "MIT",
+  "input": "Hello\u001b[CWorld",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "H"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "text": "e"
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "text": "l"
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "text": "l"
+    },
+    {
+      "row": 0,
+      "col": 4,
+      "text": "o"
+    },
+    {
+      "row": 0,
+      "col": 5,
+      "text": " "
+    },
+    {
+      "row": 0,
+      "col": 6,
+      "text": "W"
+    },
+    {
+      "row": 0,
+      "col": 7,
+      "text": "o"
+    },
+    {
+      "row": 0,
+      "col": 8,
+      "text": "r"
+    },
+    {
+      "row": 0,
+      "col": 9,
+      "text": "l"
+    },
+    {
+      "row": 0,
+      "col": 10,
+      "text": "d"
+    },
+    {
+      "row": 0,
+      "col": 11,
+      "text": " "
+    }
+  ]
+}

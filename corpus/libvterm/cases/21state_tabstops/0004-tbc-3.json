@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/21state_tabstops.test",
+  "name": "TBC 3",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 25,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\tX\tX\u001b[5G\u001bH\u001b[G\tX\u001b[9G\u001b[g\u001b[G\tX\tX\u001b[3g\u001b[50G\u001bH\u001b[G",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\tX",
+      "expectedCursor": {
+        "row": 0,
+        "col": 50
+      }
+    }
+  ]
+}

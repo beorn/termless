@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/60screen_ascii.test",
+  "name": "Erase",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 30,
+  "license": "MIT",
+  "input": "ABCDE\u001b[H\u001b[K",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": " "
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Backspace cancels phantom",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 29,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "ABC\b\t\r\n\u001b[4;2H\b\b\u001b[4;80H",
+      "expectedCursor": {
+        "row": 3,
+        "col": 79
+      }
+    },
+    {
+      "input": "X",
+      "expectedCursor": {
+        "row": 3,
+        "col": 79
+      }
+    },
+    {
+      "input": "\b",
+      "expectedCursor": {
+        "row": 3,
+        "col": 78
+      }
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{"name":"Basic text","sourceLine":5,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"hello\"","text 0x68, 0x65, 0x6c, 0x6c, 0x6f"]}
+{"name":"C0","sourceLine":9,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x03\"","control 3","PUSH \"\\x1f\"","control 0x1f"]}
+{"name":"C1 8bit","sourceLine":16,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x83\"","control 0x83","PUSH \"\\x99\"","control 0x99"]}
+{"name":"C1 7bit","sourceLine":23,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e\\x43\"","control 0x83","PUSH \"\\e\\x59\"","control 0x99"]}
+{"name":"High bytes","sourceLine":30,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\xa0\\xcc\\xfe\"","text 0xa0, 0xcc, 0xfe"]}
+{"name":"Mixed","sourceLine":34,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"1\\n2\"","text 0x31","control 10","text 0x32"]}
+{"name":"Escape","sourceLine":40,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e=\"","escape \"=\""]}
+{"name":"Escape 2-byte","sourceLine":44,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e(X\"","escape \"(X\""]}
+{"name":"Split write Escape","sourceLine":48,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e(\"","PUSH \"Y\"","escape \"(Y\""]}
+{"name":"Escape cancels Escape, starts another","sourceLine":53,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e(\\e)Z\"","escape \")Z\""]}
+{"name":"CAN cancels Escape, returns to normal mode","sourceLine":57,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e(\\x{18}AB\"","text 0x41, 0x42"]}
+{"name":"C0 in Escape interrupts and continues","sourceLine":61,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e(\\nX\"","control 10","escape \"(X\""]}
+{"name":"CSI 0 args","sourceLine":66,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[a\"","csi 0x61 *"]}
+{"name":"CSI 1 arg","sourceLine":70,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[9b\"","csi 0x62 9"]}
+{"name":"CSI 2 args","sourceLine":74,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3;4c\"","csi 0x63 3,4"]}
+{"name":"CSI 1 arg 1 sub","sourceLine":78,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[1:2c\"","csi 0x63 1+,2"]}
+{"name":"CSI many digits","sourceLine":82,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[678d\"","csi 0x64 678"]}
+{"name":"CSI leading zero","sourceLine":86,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[007e\"","csi 0x65 7"]}
+{"name":"CSI qmark","sourceLine":90,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[?2;7f\"","csi 0x66 L=3f 2,7"]}
+{"name":"CSI greater","sourceLine":94,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[>c\"","csi 0x63 L=3e *"]}
+{"name":"CSI SP","sourceLine":98,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[12 q\"","csi 0x71 12 I=20"]}
+{"name":"Mixed CSI","sourceLine":102,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"A\\e[8mB\"","text 0x41","csi 0x6d 8","text 0x42"]}
+{"name":"Split write","sourceLine":108,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e\"","PUSH \"[a\"","csi 0x61 *","PUSH \"foo\\e[\"","text 0x66, 0x6f, 0x6f","PUSH \"4b\"","csi 0x62 4","PUSH \"\\e[12;\"","PUSH \"3c\"","csi 0x63 12,3"]}
+{"name":"Escape cancels CSI, starts Escape","sourceLine":120,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[123\\e9\"","escape \"9\""]}
+{"name":"CAN cancels CSI, returns to normal mode","sourceLine":124,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[12\\x{18}AB\"","text 0x41, 0x42"]}
+{"name":"C0 in Escape interrupts and continues","sourceLine":128,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[12\\n;3X\"","control 10","csi 0x58 12,3"]}
+{"name":"OSC BEL","sourceLine":133,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]1;Hello\\x07\"","osc [1 \"Hello\"]"]}
+{"name":"OSC ST (7bit)","sourceLine":137,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]1;Hello\\e\\\\\"","osc [1 \"Hello\"]"]}
+{"name":"OSC ST (8bit)","sourceLine":141,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{9d}1;Hello\\x9c\"","osc [1 \"Hello\"]"]}
+{"name":"OSC in parts","sourceLine":145,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]52;abc\"","osc [52 \"abc\"","PUSH \"def\"","osc \"def\"","PUSH \"ghi\\e\\\\\"","osc \"ghi\"]"]}
+{"name":"OSC BEL without semicolon","sourceLine":153,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]1234\\x07\"","osc [1234 ]"]}
+{"name":"OSC ST without semicolon","sourceLine":157,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]1234\\e\\\\\"","osc [1234 ]"]}
+{"name":"Escape cancels OSC, starts Escape","sourceLine":161,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]Something\\e9\"","escape \"9\""]}
+{"name":"CAN cancels OSC, returns to normal mode","sourceLine":165,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]12\\x{18}AB\"","text 0x41, 0x42"]}
+{"name":"C0 in OSC interrupts and continues","sourceLine":169,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e]2;\\nBye\\x07\"","osc [2 \"\"","control 10","osc \"Bye\"]"]}
+{"name":"DCS BEL","sourceLine":175,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePHello\\x07\"","dcs [\"Hello\"]"]}
+{"name":"DCS ST (7bit)","sourceLine":179,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePHello\\e\\\\\"","dcs [\"Hello\"]"]}
+{"name":"DCS ST (8bit)","sourceLine":183,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{90}Hello\\x9c\"","dcs [\"Hello\"]"]}
+{"name":"Split write of 7bit ST","sourceLine":187,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePABC\\e\"","dcs [\"ABC\"","PUSH \"\\\\\"","dcs ]"]}
+{"name":"Escape cancels DCS, starts Escape","sourceLine":193,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePSomething\\e9\"","escape \"9\""]}
+{"name":"CAN cancels DCS, returns to normal mode","sourceLine":197,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eP12\\x{18}AB\"","text 0x41, 0x42"]}
+{"name":"C0 in OSC interrupts and continues","sourceLine":201,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\ePBy\\ne\\x07\"","dcs [\"By\"","control 10","dcs \"e\"]"]}
+{"name":"APC BEL","sourceLine":207,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e_Hello\\x07\"","apc [\"Hello\"]"]}
+{"name":"APC ST (7bit)","sourceLine":211,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e_Hello\\e\\\\\"","apc [\"Hello\"]"]}
+{"name":"APC ST (8bit)","sourceLine":215,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{9f}Hello\\x9c\"","apc [\"Hello\"]"]}
+{"name":"PM BEL","sourceLine":219,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e^Hello\\x07\"","pm [\"Hello\"]"]}
+{"name":"PM ST (7bit)","sourceLine":223,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e^Hello\\e\\\\\"","pm [\"Hello\"]"]}
+{"name":"PM ST (8bit)","sourceLine":227,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{9e}Hello\\x9c\"","pm [\"Hello\"]"]}
+{"name":"SOS BEL","sourceLine":231,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eXHello\\x07\"","sos [\"Hello\"]"]}
+{"name":"SOS ST (7bit)","sourceLine":235,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eXHello\\e\\\\\"","sos [\"Hello\"]"]}
+{"name":"SOS ST (8bit)","sourceLine":239,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{98}Hello\\x9c\"","sos [\"Hello\"]"]}
+{"name":"SOS can contain any C0 or C1 code","sourceLine":243,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eXABC\\x01DEF\\e\\\\\"","sos [\"ABC\\x01DEF\"]","PUSH \"\\eXABC\\x99DEF\\e\\\\\"","sos [\"ABC\\x{99}DEF\"]"]}
+{"name":"NUL ignored","sourceLine":249,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{00}\""]}
+{"name":"NUL ignored within CSI","sourceLine":252,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[12\\x{00}3m\"","csi 0x6d 123"]}
+{"name":"DEL ignored","sourceLine":256,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\x{7f}\""]}
+{"name":"DEL ignored within CSI","sourceLine":259,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[12\\x{7f}3m\"","csi 0x6d 123"]}
+{"name":"DEL inside text\"","sourceLine":263,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"AB\\x{7f}C\"","text 0x41,0x42","text 0x43"]}

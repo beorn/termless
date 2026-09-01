@@ -1,0 +1,38 @@
+{
+  "suite": "libvterm/13state_edit.test",
+  "name": "ICH move+erase emuation",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 273,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "ACD\u001b[2D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[@",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    {
+      "input": "B",
+      "expectedCursor": {
+        "row": 0,
+        "col": 2
+      }
+    }
+  ]
+}

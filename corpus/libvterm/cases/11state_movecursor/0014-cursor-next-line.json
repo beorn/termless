@@ -1,0 +1,45 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Next Line",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 91,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[B\u001b[3B\u001b[0B\u001b[C\u001b[3C\u001b[0C\u001b[A\u001b[3A\u001b[0A\u001b[D\u001b[3D\u001b[0D   ",
+      "expectedCursor": {
+        "row": 0,
+        "col": 3
+      }
+    },
+    {
+      "input": "\u001b[E",
+      "expectedCursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    {
+      "input": "   ",
+      "expectedCursor": {
+        "row": 1,
+        "col": 3
+      }
+    },
+    {
+      "input": "\u001b[2E",
+      "expectedCursor": {
+        "row": 3,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[0E",
+      "expectedCursor": {
+        "row": 4,
+        "col": 0
+      }
+    }
+  ]
+}

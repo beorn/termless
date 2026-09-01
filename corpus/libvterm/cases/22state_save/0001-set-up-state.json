@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/22state_save.test",
+  "name": "Set up state",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 9,
+  "license": "MIT",
+  "input": "\u001b[2;2H",
+  "expectedCursor": {
+    "row": 1,
+    "col": 1
+  }
+}

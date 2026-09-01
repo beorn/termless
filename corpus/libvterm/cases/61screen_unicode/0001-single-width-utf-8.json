@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/61screen_unicode.test",
+  "name": "Single width UTF-8",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 5,
+  "license": "MIT",
+  "input": "Áé",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "Á"
+    }
+  ]
+}

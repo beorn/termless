@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/12state_scroll.test",
+  "name": "Reverse Index in DECSTBM",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 50,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[1;10r\n\n\n\n\n\n\n\n\n\n\u001b[20H\n\u001b[9;10r\u001b[10H\u001bM\u001bM\u001b[25H",
+      "expectedCursor": {
+        "row": 24,
+        "col": 0
+      }
+    },
+    {
+      "input": "\n",
+      "expectedCursor": {
+        "row": 24,
+        "col": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{"name":"Implicit","sourceLine":5,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"ABC\"","?cursor = 0,3"]}
+{"name":"Backspace","sourceLine":8,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\b\"","?cursor = 0,2"]}
+{"name":"Horizontal Tab","sourceLine":11,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\t\"","?cursor = 0,8"]}
+{"name":"Carriage Return","sourceLine":14,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\r\"","?cursor = 0,0"]}
+{"name":"Linefeed","sourceLine":17,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\n\"","?cursor = 1,0"]}
+{"name":"Backspace bounded by lefthand edge","sourceLine":21,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[4;2H\"","?cursor = 3,1","PUSH \"\\b\"","?cursor = 3,0","PUSH \"\\b\"","?cursor = 3,0"]}
+{"name":"Backspace cancels phantom","sourceLine":29,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[4;80H\"","?cursor = 3,79","PUSH \"X\"","?cursor = 3,79","PUSH \"\\b\"","?cursor = 3,78"]}
+{"name":"HT bounded by righthand edge","sourceLine":37,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[1;78H\"","?cursor = 0,77","PUSH \"\\t\"","?cursor = 0,79","PUSH \"\\t\"","?cursor = 0,79","RESET"]}
+{"name":"Index","sourceLine":47,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"ABC\\eD\"","?cursor = 1,3"]}
+{"name":"Reverse Index","sourceLine":50,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eM\"","?cursor = 0,3"]}
+{"name":"Newline","sourceLine":53,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\eE\"","?cursor = 1,0","RESET"]}
+{"name":"Cursor Forward","sourceLine":59,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[B\"","?cursor = 1,0","PUSH \"\\e[3B\"","?cursor = 4,0","PUSH \"\\e[0B\"","?cursor = 5,0"]}
+{"name":"Cursor Down","sourceLine":67,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[C\"","?cursor = 5,1","PUSH \"\\e[3C\"","?cursor = 5,4","PUSH \"\\e[0C\"","?cursor = 5,5"]}
+{"name":"Cursor Up","sourceLine":75,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[A\"","?cursor = 4,5","PUSH \"\\e[3A\"","?cursor = 1,5","PUSH \"\\e[0A\"","?cursor = 0,5"]}
+{"name":"Cursor Backward","sourceLine":83,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[D\"","?cursor = 0,4","PUSH \"\\e[3D\"","?cursor = 0,1","PUSH \"\\e[0D\"","?cursor = 0,0"]}
+{"name":"Cursor Next Line","sourceLine":91,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"   \"","?cursor = 0,3","PUSH \"\\e[E\"","?cursor = 1,0","PUSH \"   \"","?cursor = 1,3","PUSH \"\\e[2E\"","?cursor = 3,0","PUSH \"\\e[0E\"","?cursor = 4,0"]}
+{"name":"Cursor Previous Line","sourceLine":103,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"   \"","?cursor = 4,3","PUSH \"\\e[F\"","?cursor = 3,0","PUSH \"   \"","?cursor = 3,3","PUSH \"\\e[2F\"","?cursor = 1,0","PUSH \"\\e[0F\"","?cursor = 0,0"]}
+{"name":"Cursor Horizonal Absolute","sourceLine":115,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\n\"","?cursor = 1,0","PUSH \"\\e[20G\"","?cursor = 1,19","PUSH \"\\e[G\"","?cursor = 1,0"]}
+{"name":"Cursor Position","sourceLine":123,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[10;5H\"","?cursor = 9,4","PUSH \"\\e[8H\"","?cursor = 7,0","PUSH \"\\e[H\"","?cursor = 0,0"]}
+{"name":"Cursor Position cancels phantom","sourceLine":131,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[10;78H\"","?cursor = 9,77","PUSH \"ABC\"","?cursor = 9,79","PUSH \"\\e[10;80H\"","PUSH \"C\"","?cursor = 9,79","PUSH \"X\"","?cursor = 10,1","RESET"]}
+{"name":"Bounds Checking","sourceLine":144,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[A\"","?cursor = 0,0","PUSH \"\\e[D\"","?cursor = 0,0","PUSH \"\\e[25;80H\"","?cursor = 24,79","PUSH \"\\e[B\"","?cursor = 24,79","PUSH \"\\e[C\"","?cursor = 24,79","PUSH \"\\e[E\"","?cursor = 24,0","PUSH \"\\e[H\"","?cursor = 0,0","PUSH \"\\e[F\"","?cursor = 0,0","PUSH \"\\e[999G\"","?cursor = 0,79","PUSH \"\\e[99;99H\"","?cursor = 24,79","RESET"]}
+{"name":"Horizontal Position Absolute","sourceLine":168,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[5`\"","?cursor = 0,4"]}
+{"name":"Horizontal Position Relative","sourceLine":172,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3a\"","?cursor = 0,7"]}
+{"name":"Horizontal Position Backward","sourceLine":176,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3j\"","?cursor = 0,4"]}
+{"name":"Horizontal and Vertical Position","sourceLine":180,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[3;3f\"","?cursor = 2,2"]}
+{"name":"Vertical Position Absolute","sourceLine":184,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[5d\"","?cursor = 4,2"]}
+{"name":"Vertical Position Relative","sourceLine":188,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[2e\"","?cursor = 6,2"]}
+{"name":"Vertical Position Backward","sourceLine":192,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[2k\"","?cursor = 4,2","RESET"]}
+{"name":"Horizontal Tab","sourceLine":198,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\t\"","?cursor = 0,8","PUSH \"   \"","?cursor = 0,11","PUSH \"\\t\"","?cursor = 0,16","PUSH \"       \"","?cursor = 0,23","PUSH \"\\t\"","?cursor = 0,24","PUSH \"        \"","?cursor = 0,32","PUSH \"\\t\"","?cursor = 0,40"]}
+{"name":"Cursor Horizontal Tab","sourceLine":214,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[I\"","?cursor = 0,48","PUSH \"\\e[2I\"","?cursor = 0,64"]}
+{"name":"Cursor Backward Tab","sourceLine":220,"cols":80,"rows":25,"license":"MIT","lines":["PUSH \"\\e[Z\"","?cursor = 0,56","PUSH \"\\e[2Z\"","?cursor = 0,40"]}

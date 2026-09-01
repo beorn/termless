@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/15state_mode.test",
+  "name": "Origin mode with DECSLRM",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 67,
+  "license": "MIT",
+  "input": "\u001b[5;15r\u001b[H\u001b[3;3H\u001b[?6h\u001b[H\u001b[3;3H\u001b[?6h\u001b[?6$p\u001b[?6l\u001b[?6$p\u001b[?6h\u001b[?69h\u001b[20;60s\u001b[H",
+  "expectedCursor": {
+    "row": 4,
+    "col": 19
+  }
+}

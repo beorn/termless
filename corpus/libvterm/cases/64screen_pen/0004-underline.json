@@ -1,0 +1,21 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Underline",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 18,
+  "license": "MIT",
+  "input": "A\u001b[1mB\u001b[3mC\u001b[4mD",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 3,
+      "text": "D",
+      "attrs": [
+        "bold",
+        "underline",
+        "italic"
+      ]
+    }
+  ]
+}

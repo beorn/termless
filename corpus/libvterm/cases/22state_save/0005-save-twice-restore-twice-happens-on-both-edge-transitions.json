@@ -1,0 +1,38 @@
+{
+  "suite": "libvterm/22state_save.test",
+  "name": "Save twice, restore twice happens on both edge transitions",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 49,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[2;2H\u001b[1m\u001b[?1048h\u001b[5;5H\u001b[4 q\u001b[22;4m\u001b[?1048l\u001b[2;2H\u001b7\u001b[5;5H\u001b8\u001b[2;10H\u001b[?1048h\u001b[6;10H\u001b[?1048h\u001b[H",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[?1048l",
+      "expectedCursor": {
+        "row": 5,
+        "col": 9
+      }
+    },
+    {
+      "input": "\u001b[H",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[?1048l",
+      "expectedCursor": {
+        "row": 5,
+        "col": 9
+      }
+    }
+  ]
+}

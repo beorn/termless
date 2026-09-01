@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Plain",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 6,
+  "license": "MIT",
+  "input": "A",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "A"
+    }
+  ]
+}

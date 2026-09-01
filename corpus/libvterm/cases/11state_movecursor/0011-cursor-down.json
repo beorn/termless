@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Down",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 67,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[B\u001b[3B\u001b[0B\u001b[C",
+      "expectedCursor": {
+        "row": 5,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[3C",
+      "expectedCursor": {
+        "row": 5,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b[0C",
+      "expectedCursor": {
+        "row": 5,
+        "col": 5
+      }
+    }
+  ]
+}

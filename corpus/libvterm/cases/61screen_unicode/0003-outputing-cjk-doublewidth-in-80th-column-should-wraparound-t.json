@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/61screen_unicode.test",
+  "name": "Outputing CJK doublewidth in 80th column should wraparound to next line and not crash\"",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 43,
+  "license": "MIT",
+  "input": "\u001b[80G０",
+  "expectedCells": [
+    {
+      "row": 1,
+      "col": 0,
+      "text": "０"
+    }
+  ]
+}

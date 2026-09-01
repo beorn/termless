@@ -1,0 +1,45 @@
+{
+  "suite": "libvterm/13state_edit.test",
+  "name": "DL",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 102,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "A\r\nB\r\nB\r\nC",
+      "expectedCursor": {
+        "row": 3,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[2H",
+      "expectedCursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[M",
+      "expectedCursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[3M",
+      "expectedCursor": {
+        "row": 1,
+        "col": 0
+      }
+    }
+  ]
+}

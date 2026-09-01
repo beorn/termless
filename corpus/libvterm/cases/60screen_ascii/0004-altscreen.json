@@ -1,0 +1,65 @@
+{
+  "suite": "libvterm/60screen_ascii.test",
+  "name": "Altscreen",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 60,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "P",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "P"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": " "
+        }
+      ]
+    },
+    {
+      "input": "\u001b[?1049h",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": " "
+        }
+      ]
+    },
+    {
+      "input": "\u001b[2K\u001b[HA",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": " "
+        }
+      ]
+    },
+    {
+      "input": "\u001b[?1049l",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "P"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": " "
+        }
+      ]
+    }
+  ]
+}

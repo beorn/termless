@@ -1,0 +1,24 @@
+{
+  "suite": "libvterm/27state_reset.test",
+  "name": "RIS homes cursor",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 6,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[5;5H",
+      "expectedCursor": {
+        "row": 4,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001bc",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

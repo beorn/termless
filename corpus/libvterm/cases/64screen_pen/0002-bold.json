@@ -1,0 +1,19 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Bold",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 10,
+  "license": "MIT",
+  "input": "A\u001b[1mB",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 1,
+      "text": "B",
+      "attrs": [
+        "bold"
+      ]
+    }
+  ]
+}

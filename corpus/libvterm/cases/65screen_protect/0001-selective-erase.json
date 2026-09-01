@@ -1,0 +1,55 @@
+{
+  "suite": "libvterm/65screen_protect.test",
+  "name": "Selective erase",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 4,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "A\u001b[1\"qB\u001b[\"qC",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": " "
+        }
+      ]
+    },
+    {
+      "input": "\u001b[G\u001b[?J",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": " "
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": " "
+        }
+      ]
+    }
+  ]
+}

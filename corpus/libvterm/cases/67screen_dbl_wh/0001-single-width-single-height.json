@@ -1,0 +1,16 @@
+{
+  "suite": "libvterm/67screen_dbl_wh.test",
+  "name": "Single Width, Single Height",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 6,
+  "license": "MIT",
+  "input": "\u001b#5abcde",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "a"
+    }
+  ]
+}

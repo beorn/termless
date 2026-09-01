@@ -1,0 +1,146 @@
+{
+  "suite": "libvterm/90vttest_01-movement-4.test",
+  "name": "Output",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 34,
+  "license": "MIT",
+  "input": "",
+  "expectedCells": [
+    {
+      "row": 3,
+      "col": 0,
+      "text": "T"
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "text": "h"
+    },
+    {
+      "row": 3,
+      "col": 2,
+      "text": "i"
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "text": "s"
+    },
+    {
+      "row": 3,
+      "col": 4,
+      "text": " "
+    },
+    {
+      "row": 3,
+      "col": 5,
+      "text": "i"
+    },
+    {
+      "row": 3,
+      "col": 6,
+      "text": "s"
+    },
+    {
+      "row": 3,
+      "col": 7,
+      "text": " "
+    },
+    {
+      "row": 3,
+      "col": 8,
+      "text": "a"
+    },
+    {
+      "row": 3,
+      "col": 9,
+      "text": " "
+    },
+    {
+      "row": 3,
+      "col": 10,
+      "text": "c"
+    },
+    {
+      "row": 3,
+      "col": 11,
+      "text": "o"
+    },
+    {
+      "row": 3,
+      "col": 12,
+      "text": "r"
+    },
+    {
+      "row": 3,
+      "col": 13,
+      "text": "r"
+    },
+    {
+      "row": 3,
+      "col": 14,
+      "text": "e"
+    },
+    {
+      "row": 3,
+      "col": 15,
+      "text": "c"
+    },
+    {
+      "row": 3,
+      "col": 16,
+      "text": "t"
+    },
+    {
+      "row": 3,
+      "col": 17,
+      "text": " "
+    },
+    {
+      "row": 3,
+      "col": 18,
+      "text": "s"
+    },
+    {
+      "row": 3,
+      "col": 19,
+      "text": "e"
+    },
+    {
+      "row": 3,
+      "col": 20,
+      "text": "n"
+    },
+    {
+      "row": 3,
+      "col": 21,
+      "text": "t"
+    },
+    {
+      "row": 3,
+      "col": 22,
+      "text": "e"
+    },
+    {
+      "row": 3,
+      "col": 23,
+      "text": "n"
+    },
+    {
+      "row": 3,
+      "col": 24,
+      "text": "c"
+    },
+    {
+      "row": 3,
+      "col": 25,
+      "text": "e"
+    },
+    {
+      "row": 3,
+      "col": 26,
+      "text": " "
+    }
+  ]
+}

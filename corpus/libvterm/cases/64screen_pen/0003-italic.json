@@ -1,0 +1,20 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Italic",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 14,
+  "license": "MIT",
+  "input": "A\u001b[1mB\u001b[3mC",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 2,
+      "text": "C",
+      "attrs": [
+        "bold",
+        "italic"
+      ]
+    }
+  ]
+}

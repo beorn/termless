@@ -1,0 +1,9 @@
+{"name":"Low","sourceLine":5,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"ABC\"","putglyph 0x41 1 0,0","putglyph 0x42 1 0,1","putglyph 0x43 1 0,2"]}
+{"name":"UTF-8 1 char","sourceLine":12,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\xC3\\x81\\xC3\\xA9\"","putglyph 0xc1 1 0,0","putglyph 0xe9 1 0,1"]}
+{"name":"UTF-8 split writes","sourceLine":20,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\xC3\"","PUSH \"\\x81\"","putglyph 0xc1 1 0,0"]}
+{"name":"UTF-8 wide char","sourceLine":26,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\xEF\\xBC\\x90 \"","putglyph 0xff10 2 0,0","putglyph 0x20 1 0,2"]}
+{"name":"UTF-8 emoji wide char","sourceLine":33,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"\\xF0\\x9F\\x98\\x80 \"","putglyph 0x1f600 2 0,0","putglyph 0x20 1 0,2"]}
+{"name":"UTF-8 combining chars","sourceLine":40,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"e\\xCC\\x81Z\"","putglyph 0x65,0x301 1 0,0","putglyph 0x5a 1 0,1"]}
+{"name":"Combining across buffers","sourceLine":47,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"e\"","putglyph 0x65 1 0,0","PUSH \"\\xCC\\x81Z\"","putglyph 0x65,0x301 1 0,0","putglyph 0x5a 1 0,1"]}
+{"name":"Spare combining chars get truncated","sourceLine":55,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"e\" . \"\\xCC\\x81\" x 10","putglyph 0x65,0x301,0x301,0x301,0x301,0x301 1 0,0","RESET","PUSH \"e\"","putglyph 0x65 1 0,0","PUSH \"\\xCC\\x81\"","putglyph 0x65,0x301 1 0,0","PUSH \"\\xCC\\x82\"","putglyph 0x65,0x301,0x302 1 0,0"]}
+{"name":"DECSCA protected","sourceLine":69,"cols":80,"rows":25,"license":"MIT","lines":["RESET","PUSH \"A\\e[1\\\"qB\\e[2\\\"qC\"","putglyph 0x41 1 0,0","putglyph 0x42 1 0,1 prot","putglyph 0x43 1 0,2"]}

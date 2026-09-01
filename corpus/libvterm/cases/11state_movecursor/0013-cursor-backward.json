@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Cursor Backward",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 83,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[B\u001b[3B\u001b[0B\u001b[C\u001b[3C\u001b[0C\u001b[A\u001b[3A\u001b[0A\u001b[D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b[3D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    {
+      "input": "\u001b[0D",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

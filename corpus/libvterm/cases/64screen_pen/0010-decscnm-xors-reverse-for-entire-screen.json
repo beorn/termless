@@ -1,0 +1,33 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "DECSCNM xors reverse for entire screen",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 49,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "A\u001b[1mB\u001b[3mC\u001b[4mD\u001b[mE\u001b[11mF\u001b[m\u001b[31mG\u001b[m\u001b[42mH\u001b[mx\u001b[74m0\u001b[73m2\u001b[m\u001b[H\u001b[7;33;44m\u001b[KR\u001b[?5h",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "R"
+        }
+      ]
+    },
+    {
+      "input": "\u001b[?5$p\u001b[?5l",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "R",
+          "attrs": [
+            "inverse"
+          ]
+        }
+      ]
+    }
+  ]
+}

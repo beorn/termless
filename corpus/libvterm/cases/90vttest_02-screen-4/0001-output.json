@@ -1,0 +1,66 @@
+{
+  "suite": "libvterm/90vttest_02-screen-4.test",
+  "name": "Output",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 14,
+  "license": "MIT",
+  "input": "",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "T"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "text": "o"
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "text": "p"
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "text": " "
+    },
+    {
+      "row": 23,
+      "col": 0,
+      "text": "B"
+    },
+    {
+      "row": 23,
+      "col": 1,
+      "text": "o"
+    },
+    {
+      "row": 23,
+      "col": 2,
+      "text": "t"
+    },
+    {
+      "row": 23,
+      "col": 3,
+      "text": "t"
+    },
+    {
+      "row": 23,
+      "col": 4,
+      "text": "o"
+    },
+    {
+      "row": 23,
+      "col": 5,
+      "text": "m"
+    },
+    {
+      "row": 23,
+      "col": 6,
+      "text": " "
+    }
+  ]
+}

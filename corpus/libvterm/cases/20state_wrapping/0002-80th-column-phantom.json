@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/20state_wrapping.test",
+  "name": "80th Column Phantom",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 15,
+  "license": "MIT",
+  "input": "\u001b[75GAAAAAA",
+  "expectedCursor": {
+    "row": 0,
+    "col": 79
+  }
+}

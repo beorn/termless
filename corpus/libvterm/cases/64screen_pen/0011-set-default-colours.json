@@ -1,0 +1,21 @@
+{
+  "suite": "libvterm/64screen_pen.test",
+  "name": "Set default colours",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 61,
+  "license": "MIT",
+  "input": "ABC\u001b[31mDEF\u001b[m",
+  "expectedCells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "A"
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "text": "D"
+    }
+  ]
+}

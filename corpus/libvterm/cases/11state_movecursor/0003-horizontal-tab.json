@@ -1,0 +1,13 @@
+{
+  "suite": "libvterm/11state_movecursor.test",
+  "name": "Horizontal Tab",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 11,
+  "license": "MIT",
+  "input": "ABC\b\t",
+  "expectedCursor": {
+    "row": 0,
+    "col": 8
+  }
+}

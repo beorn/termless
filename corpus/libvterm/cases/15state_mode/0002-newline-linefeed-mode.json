@@ -1,0 +1,31 @@
+{
+  "suite": "libvterm/15state_mode.test",
+  "name": "Newline/Linefeed mode",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 34,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "input": "\u001b[5G\n",
+      "expectedCursor": {
+        "row": 1,
+        "col": 4
+      }
+    },
+    {
+      "input": "\u001b[20h\u001b[5G\n",
+      "expectedCursor": {
+        "row": 2,
+        "col": 0
+      }
+    }
+  ]
+}
