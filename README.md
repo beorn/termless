@@ -358,6 +358,54 @@ Engine gaps are data, not red tests. `known-gaps.json` maps `<backend>::<suite>:
 
 The full contract (case schema, suite directory shape, growth triggers) is [`corpus/README.md`](corpus/README.md); the narrative version is on the [docs site](https://termless.dev/advanced/conformance-corpus).
 
+## How it connects
+
+Termless is the **read** end of a terminal stack. One kind of thing arrives — timestamped bytes — and every feature above is a different question asked of the same fold of those bytes into a screen.
+
+```text
+bytes in     term.feed(…)  ·  term.spawn(…)  ·  a recording read off disk
+  ↓
+backend      one TerminalBackend folds bytes into cells, cursor, modes
+  ↓
+Terminal     the read contract — screen · scrollback · buffer · viewport · row · cell
+  ↓
+out          assert (matchers)  ·  render (SVG/PNG)  ·  re-emit (.tty, .cast, .tape)
+```
+
+Read each arrow as *hands bytes to*, never as *depends on*. Termless sits downstream of whatever produced the bytes and is never a dependency of it — see the runtime boundary note at the bottom of this file.
+
+**The three inlets are one inlet.** `term.feed()` in a unit test, `term.spawn()` against a real process, and a recording replayed off disk all arrive at the backend the same way: ordered byte writes, nothing else. A recording is exactly that sequence made durable — `IoEvent { at, direction, data }` on a monotonic microsecond clock. That is not a convenience; it is what lets an assertion you wrote against a live terminal run unchanged against a stored one, and the reverse.
+
+**An external recorder can hand you a session without a dependency edge.** `replayJournal(input, target)` folds a session journal into anything shaped like a terminal (`TestTerminal` and `TerminalBackend` both qualify), and its input types are **structural** — deliberately no import of the package that produced the journal. Producers convert their own journal into that shape; termless stays standalone. Same discipline as the `.tty` format itself: a shared wire contract, not a shared library.
+
+**Waiting for the screen to say something is a predicate over that fold.** Every text and terminal matcher takes `{ timeout }` and re-reads until it holds:
+
+```typescript
+await expect(term.screen).toContainText("ready>", { timeout: 15000 })
+```
+
+Because the fold is identical whether the frames arrive live or from a file, **a check like that can be unit-tested against a recording** — record the session once, then develop the predicate offline against fixed bytes instead of against a flaky live process.
+
+The ergonomic layer for *live* reads is **specified but not built**. [`docs/reference/formats/tty.md`](docs/reference/formats/tty.md) § "Session access" names the vocabulary a live reader conforms to — a widened frame element (`{ t_us, dir: "in" | "out" | "err" | "resize", data }`), an opaque read cursor, a `SessionClose` tombstone, and `follow: false | true` for halt-at-end versus park-past-end. `termless/session` is reserved for that reader and does not exist yet. Today, live reads are what you build yourself on `term.spawn()` and the timeout matchers.
+
+**The format is the boundary, so nothing needs our code to watch our recordings.** `.tty` (live bundle directory) and `.ttyz` (sealed ZIP archive) are one format in two encodings behind one encoding-blind reader; codecs go out to `.cast` (symmetric asciicast v2), `.tape`, and ttyrec (import-only). `termless play` reads one and renders it through an ordinary backend — no privileged path — and [`@termless/web-player`](packages/web-player) plays one in a browser. Anything that can read the format is a player.
+
+**Grading an engine is the same read again.** The [conformance corpus](#conformance-corpus) above drives every backend through the ordinary `TerminalBackend` seam — there is no test-only door into any emulator, so a passing grade is evidence about the code that ships.
+
+### Published shape, and the backend-arity rule
+
+The bare `termless` package is a re-export facade over `@termless/core` — nothing moved, and it adds no engine. What it adds is a name for each layer above, at its own subpath:
+
+| Subpath             | What it is                                                     |
+| ------------------- | -------------------------------------------------------------- |
+| `termless`          | the curated top — `createTerminal` and the common driving path |
+| `termless/contract` | `Terminal`, `TerminalBackend`, and the region view types       |
+| `termless/fmt`      | the `.tty` / `.ttyz` container — read/write, pack/unpack       |
+| `termless/rec`      | `Recording`, codecs, and journal replay                        |
+| `termless/backends` | backend selection by name — install, build, resolve            |
+
+The first four are engine-agnostic by construction: nothing in them can name, select, or install a specific terminal emulator. `termless/backends` is the **only** home of plurality, which makes the arity rule physical in the import path rather than a convention anyone has to remember — *if you never import `termless/backends`, you never have more than one engine.*
+
 ## Packages
 
 | Package                                     | Description                                                         |
