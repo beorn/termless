@@ -221,3 +221,68 @@ unpackRecording("in.ttyz", "work.tty") // unseal to a bundle
 Live capture (a writer appending to a bundle's tail) is the session runtime's
 job — termless defines the layout and reads it; the always-on writer conforms
 to it.
+
+## Session access — the live-read contract (spec; implementation follows)
+
+This section names the vocabulary a **live** session reader conforms to,
+unifying live and archived reads over one contract. It is the contract for
+readers, written ahead of the reader itself — `termless/session` (reserved,
+unbuilt) is where it lands. Nothing above this section changes; this adds a
+read-time vocabulary layered on top of the bundle/member model already
+specified.
+
+**Frame element** — the unit of a session's ordered timeline:
+
+```typescript
+{ t_us: number, dir: "in" | "out" | "err" | "resize", data: Uint8Array }
+```
+
+This is termless's `IoEvent` widened for live reads, not a second Frame type:
+`t_us` is the same integer-µs clock as `Recording`'s `Micros`, and `data` is
+the same raw bytes. It widens today's on-disk `IoEvent.direction` (`"in"` |
+`"out"` only, per [Member encodings](#member-encodings) above) by two tags:
+`"err"` splits stderr from stdout where a session's transport distinguishes
+them, and `"resize"` folds a size change into the same timeline element
+instead of a separate `commands` row. A fold from this element back to the
+`Terminal` read contract (see [TestTerminal](../../concepts/terminal) for the
+contract's live-session wrapper) is how selectors/matchers query a live seat
+and an archive with the same code.
+
+**Cursor** (opaque) — a position marker a live-read call returns and accepts
+back to resume from exactly that point. Unrelated to, and not to be confused
+with, the terminal-caret `Cursor` type (`{ col, row, visible, style }`)
+documented elsewhere in this package — same word, two different concepts, one
+about a read position in a byte stream and the other about where the emulator
+draws the caret. Callers must not construct or inspect a live-read `Cursor`;
+it round-trips opaque.
+
+**`SessionClose`** — the tombstone element a session's timeline ends with,
+written exactly once, the moment the session ends. It is the only way a
+reader learns "this stream will not grow further" — there is no other
+end-of-session signal.
+
+**`follow`** governs what a read does at the end of what is currently
+written:
+
+- `follow: false` halts there — at the tombstone if one is present, otherwise
+  at the current end of the written stream. A snapshot read, not a wait.
+- `follow: true` parks past the current end instead of returning: it does
+  **not** deliver EOF on a live (not-yet-closed) stream. It resumes the
+  instant more is appended, and only actually ends when the `SessionClose`
+  tombstone arrives.
+
+**Append-only segments** — the same append-only-tail discipline as the
+bundle's `tail` member above ([`manifest.json`](#manifestjson)), generalized
+to the live-read API: a segment is only ever grown, never rewritten in place,
+so a reader mid-read never observes bytes it already read change under it.
+
+**Rotation hands a new handle** — when a segment rotates (the same event as
+"Sealing = rotate the tail into members" above, or an equivalent live
+rotation), a reader following across the rotation is handed a **new** handle
+rather than being left to continue silently on the old one. A reader that
+does not ask for the new handle stops at the rotation boundary; it does not
+silently keep reading stale state.
+
+Refusals along this surface are permission-shaped (EACCES-like), not
+exceptions of convenience — a reader denied access is told so the same way a
+filesystem would, not with a bespoke error shape per caller.
