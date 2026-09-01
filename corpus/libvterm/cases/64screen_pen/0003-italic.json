@@ -11,10 +11,7 @@
       "row": 0,
       "col": 2,
       "text": "C",
-      "attrs": [
-        "bold",
-        "italic"
-      ]
+      "attrs": ["bold", "italic"]
     }
   ]
 }

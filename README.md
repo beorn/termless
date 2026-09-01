@@ -348,11 +348,11 @@ bun vitest run tests/cross-backend.test.ts
 
 ## Conformance corpus
 
-Testing *your* app across backends (above) asks whether your output holds steady. The conformance corpus asks the opposite question: is the **backend itself** correct? The differential runner takes cases mined from other engines' own test suites and runs each one against every registered backend, diffing the resulting terminal state — a divergence is either a bug or a documented, ledgered gap.
+Testing _your_ app across backends (above) asks whether your output holds steady. The conformance corpus asks the opposite question: is the **backend itself** correct? The differential runner takes cases mined from other engines' own test suites and runs each one against every registered backend, diffing the resulting terminal state — a divergence is either a bug or a documented, ledgered gap.
 
 Today that's two borrowed suites, both MIT: [Ghostty](https://github.com/ghostty-org/ghostty)'s inline Zig unit tests (24 mechanically-converted cases) and [neovim's libvterm](https://github.com/neovim/libvterm) reference test suite (128 cases). License policy is strict: only MIT/Apache/BSD-family suites get mirrored into `raw/`; a GPL suite (kitty, esctest, VTE) is never vendored and never line-ported into a case — the only legal paths are a side-by-side oracle backend or clean-room re-authoring from the spec.
 
-Engine gaps are data, not red tests. `known-gaps.json` maps `<backend>::<suite>::<case>` to a reason, and the ledger ratchets both ways: an un-ledgered failure fails the build (regression or new case), and a ledgered gap that starts passing *also* fails, until someone removes the entry.
+Engine gaps are data, not red tests. `known-gaps.json` maps `<backend>::<suite>::<case>` to a reason, and the ledger ratchets both ways: an un-ledgered failure fails the build (regression or new case), and a ledgered gap that starts passing _also_ fails, until someone removes the entry.
 
 **Grading your own backend:** implement `TerminalBackend`, add a `[name, factory]` entry next to the existing ones in `tests/corpus-conformance.test.ts`, and run the corpus test. A consumable entry point via `@termless/test` — so grading a backend doesn't require patching termless's own test file — is planned, no date yet.
 
@@ -372,7 +372,7 @@ Terminal     the read contract — screen · scrollback · buffer · viewport ·
 out          assert (matchers)  ·  render (SVG/PNG)  ·  re-emit (.tty, .cast, .tape)
 ```
 
-Read each arrow as *hands bytes to*, never as *depends on*. Termless sits downstream of whatever produced the bytes and is never a dependency of it — see the runtime boundary note at the bottom of this file.
+Read each arrow as _hands bytes to_, never as _depends on_. Termless sits downstream of whatever produced the bytes and is never a dependency of it — see the runtime boundary note at the bottom of this file.
 
 **The three inlets are one inlet.** `term.feed()` in a unit test, `term.spawn()` against a real process, and a recording replayed off disk all arrive at the backend the same way: ordered byte writes, nothing else. A recording is exactly that sequence made durable — `IoEvent { at, direction, data }` on a monotonic microsecond clock. That is not a convenience; it is what lets an assertion you wrote against a live terminal run unchanged against a stored one, and the reverse.
 
@@ -386,7 +386,7 @@ await expect(term.screen).toContainText("ready>", { timeout: 15000 })
 
 Because the fold is identical whether the frames arrive live or from a file, **a check like that can be unit-tested against a recording** — record the session once, then develop the predicate offline against fixed bytes instead of against a flaky live process.
 
-The ergonomic layer for *live* reads is **specified but not built**. [`docs/reference/formats/tty.md`](docs/reference/formats/tty.md) § "Session access" names the vocabulary a live reader conforms to — a widened frame element (`{ t_us, dir: "in" | "out" | "err" | "resize", data }`), an opaque read cursor, a `SessionClose` tombstone, and `follow: false | true` for halt-at-end versus park-past-end. `termless/session` is reserved for that reader and does not exist yet. Today, live reads are what you build yourself on `term.spawn()` and the timeout matchers.
+The ergonomic layer for _live_ reads is **specified but not built**. [`docs/reference/formats/tty.md`](docs/reference/formats/tty.md) § "Session access" names the vocabulary a live reader conforms to — a widened frame element (`{ t_us, dir: "in" | "out" | "err" | "resize", data }`), an opaque read cursor, a `SessionClose` tombstone, and `follow: false | true` for halt-at-end versus park-past-end. `termless/session` is reserved for that reader and does not exist yet. Today, live reads are what you build yourself on `term.spawn()` and the timeout matchers.
 
 **The format is the boundary, so nothing needs our code to watch our recordings.** `.tty` (live bundle directory) and `.ttyz` (sealed ZIP archive) are one format in two encodings behind one encoding-blind reader; codecs go out to `.cast` (symmetric asciicast v2), `.tape`, and ttyrec (import-only). `termless play` reads one and renders it through an ordinary backend — no privileged path — and [`@termless/web-player`](packages/web-player) plays one in a browser. Anything that can read the format is a player.
 
@@ -404,7 +404,7 @@ The bare `termless` package is a re-export facade over `@termless/core` — noth
 | `termless/rec`      | `Recording`, codecs, and journal replay                        |
 | `termless/backends` | backend selection by name — install, build, resolve            |
 
-The first four are engine-agnostic by construction: nothing in them can name, select, or install a specific terminal emulator. `termless/backends` is the **only** home of plurality, which makes the arity rule physical in the import path rather than a convention anyone has to remember — *if you never import `termless/backends`, you never have more than one engine.*
+The first four are engine-agnostic by construction: nothing in them can name, select, or install a specific terminal emulator. `termless/backends` is the **only** home of plurality, which makes the arity rule physical in the import path rather than a convention anyone has to remember — _if you never import `termless/backends`, you never have more than one engine._
 
 ## Packages
 

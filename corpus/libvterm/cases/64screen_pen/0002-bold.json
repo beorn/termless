@@ -11,9 +11,7 @@
       "row": 0,
       "col": 1,
       "text": "B",
-      "attrs": [
-        "bold"
-      ]
+      "attrs": ["bold"]
     }
   ]
 }

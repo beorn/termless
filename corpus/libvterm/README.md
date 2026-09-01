@@ -6,14 +6,14 @@ lineage has to an executable specification.
 
 ## Provenance
 
-| | |
-| --- | --- |
-| Upstream | <https://github.com/neovim/libvterm> |
+|               |                                                         |
+| ------------- | ------------------------------------------------------- |
+| Upstream      | <https://github.com/neovim/libvterm>                    |
 | Pinned commit | `934bc2fbf21800ac3458a499df8820ca5fb45fd3` (2025-11-21) |
-| Fetched | 2026-09-01 |
-| Source path | `t/*.test` (43 files) |
-| License | **MIT** |
-| Strategy | vendor-and-convert (`raw/` permitted — see below) |
+| Fetched       | 2026-09-01                                              |
+| Source path   | `t/*.test` (43 files)                                   |
+| License       | **MIT**                                                 |
+| Strategy      | vendor-and-convert (`raw/` permitted — see below)       |
 
 Upstream was **archived on 2026-06-19**; libvterm now lives inside the neovim
 tree. The corpus is therefore stable rather than moving, which is the good case
@@ -102,10 +102,10 @@ principle: **"three engines agree" is a fact about their shared ancestry, not
 an argument about correctness.** Where our consumers read vterm on both ends,
 matching a reference implementation's internal choice would be churn.
 
-| behavior | libvterm's family | vterm's family | ruling |
-| --- | --- | --- | --- |
-| cursor after a glyph fills the last column (deferred wrap) | on the last column + a pending-wrap flag — libvterm, ghostty | `col == cols`, one past the end — **vterm**, xterm.js, vt100 | vterm keeps its convention; the CORPUS is normalized to it |
-| cursor when a resize shrinks below it | clamped to the last column of the old row — libvterm, xterm.js, vt100 | followed through reflow onto the continuation row — **vterm** | vterm keeps its behavior; the case stays ledgered |
+| behavior                                                   | libvterm's family                                                     | vterm's family                                                | ruling                                                     |
+| ---------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| cursor after a glyph fills the last column (deferred wrap) | on the last column + a pending-wrap flag — libvterm, ghostty          | `col == cols`, one past the end — **vterm**, xterm.js, vt100  | vterm keeps its convention; the CORPUS is normalized to it |
+| cursor when a resize shrinks below it                      | clamped to the last column of the old row — libvterm, xterm.js, vt100 | followed through reflow onto the continuation row — **vterm** | vterm keeps its behavior; the case stays ledgered          |
 
 ### Resize shrink: following the cursor is the modern behavior
 
@@ -129,7 +129,7 @@ representation today, and changing a load-bearing convention to match a
 reference implementation's internal choice is churn, not a fix.
 
 So the corpus adapts to us: `extract.ts`'s `normalizeDeferredWrapCursor`
-translates the expectation, and only where the DSL *proves* the phantom — a
+translates the expectation, and only where the DSL _proves_ the phantom — a
 `putglyph` trace ending on the last column of the same row, with DECAWM on.
 
 The guard is the interesting part. `!DEC Auto Wrap Mode` also ends a glyph on

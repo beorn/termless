@@ -23,9 +23,7 @@
           "row": 0,
           "col": 0,
           "text": "R",
-          "attrs": [
-            "inverse"
-          ]
+          "attrs": ["inverse"]
         }
       ]
     }

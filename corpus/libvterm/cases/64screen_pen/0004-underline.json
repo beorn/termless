@@ -11,11 +11,7 @@
       "row": 0,
       "col": 3,
       "text": "D",
-      "attrs": [
-        "bold",
-        "underline",
-        "italic"
-      ]
+      "attrs": ["bold", "underline", "italic"]
     }
   ]
 }
