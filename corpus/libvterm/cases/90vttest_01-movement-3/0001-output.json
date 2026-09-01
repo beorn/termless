@@ -5,7 +5,7 @@
   "rows": 25,
   "sourceLine": 16,
   "license": "MIT",
-  "input": "",
+  "input": "A B C D E F G H I\r\nA\u001b[2\bCB\u001b[2\bCC\u001b[2\bCD\u001b[2\bCE\u001b[2\bCF\u001b[2\bCG\u001b[2\bCH\u001b[2\bCI\r\nA \u001b[\r2CB\u001b[\r4CC\u001b[\r6CD\u001b[\r8CE\u001b[\r10CF\u001b[\r12CG\u001b[\r14CH\u001b[\r16CI\r\nA \u001b[1\u000bAB \u001b[1\u000bAC \u001b[1\u000bAD \u001b[1\u000bAE \u001b[1\u000bAF \u001b[1\u000bAG \u001b[1\u000bAH \u001b[1\u000bAI \u001b[1\u000bA",
   "expectedCells": [
     {
       "row": 0,

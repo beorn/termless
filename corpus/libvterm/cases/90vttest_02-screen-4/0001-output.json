@@ -5,7 +5,7 @@
   "rows": 25,
   "sourceLine": 14,
   "license": "MIT",
-  "input": "",
+  "input": "\u001b[?6l\u001b[23;24r\u001b[24;1HBottom\u001b[1;1HTop",
   "expectedCells": [
     {
       "row": 0,

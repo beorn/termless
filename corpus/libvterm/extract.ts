@@ -444,10 +444,11 @@ interface Block {
 }
 
 /** Split one .test file into its `!Name` blocks plus the file-level size. */
-function parseFile(text: string): { cols: number; rows: number; blocks: Block[] } {
+function parseFile(text: string): { cols: number; rows: number; blocks: Block[]; preamble: string[] } {
   let cols = 80
   let rows = 25
   const blocks: Block[] = []
+  const preamble: string[] = []
   let current: Block | null = null
   const lines = text.split("\n")
   for (const [i, raw] of lines.entries()) {
@@ -459,18 +460,55 @@ function parseFile(text: string): { cols: number; rows: number; blocks: Block[] 
       continue
     }
     if (current === null) {
-      // Before the first case: a file-level RESIZE sets the default geometry
-      // (69screen_reflow runs 5x10 so its debug dumps stay small).
+      // Before the first case: a RESIZE sets the file's default geometry
+      // (69screen_reflow runs 5x10 so its debug dumps stay small). Everything
+      // else is PREAMBLE — session setup that runs before the first named
+      // block and is emphatically not decoration.
       const resize = /^RESIZE\s+(\d+),\s*(\d+)/.exec(line)
       if (resize !== null) {
         rows = Number(resize[1])
         cols = Number(resize[2])
+        continue
       }
+      preamble.push(line)
       continue
     }
     current.lines.push(line)
   }
-  return { cols, rows, blocks }
+  return { cols, rows, blocks, preamble }
+}
+
+/**
+ * Replay the preamble into the segment state.
+ *
+ * The vttest files are the reason this exists: they paint an entire screen
+ * with dozens of directives BEFORE their single `!Output` block, then assert
+ * the finished picture. Dropping that preamble produced eight cases that
+ * asserted a fully-drawn screen while feeding nothing — and because they then
+ * failed on ALL FOUR engines, they looked like a shared engine gap rather than
+ * the harness bug they were.
+ *
+ * A file-level RESIZE is deliberately NOT replayed here: it already set the
+ * geometry every case is initialized with, so replaying it as an action would
+ * resize a terminal that was born the right size.
+ */
+function seedPreamble(lines: readonly string[], state: SegmentState): void {
+  for (const line of expandLoops(lines)) {
+    if (line.startsWith("?")) continue
+    const directive = head(line)
+    if (directive === "RESET") {
+      state.actions = []
+      state.poisoned = false
+      continue
+    }
+    const push = pushTextOf(line)
+    if (push !== null) {
+      state.actions.push({ input: push })
+      continue
+    }
+    if (IGNORED_DIRECTIVES.has(directive)) continue
+    if (REJECTING_DIRECTIVES[directive] !== undefined) state.poisoned = true
+  }
 }
 
 /**
@@ -677,13 +715,14 @@ function main(): void {
       process.exit(1)
     }
     const stem = file.replace(/\.test$/, "")
-    const { cols, rows, blocks } = parseFile(readFileSync(path, "utf8"))
+    const { cols, rows, blocks, preamble } = parseFile(readFileSync(path, "utf8"))
     const suite = `libvterm/${file}`
 
     const rawRecords: RawRecord[] = []
     let n = 0
     let converted = 0
     const state: SegmentState = { actions: [], poisoned: false }
+    seedPreamble(preamble, state)
     for (const block of blocks) {
       stats.blocks++
       rawRecords.push({

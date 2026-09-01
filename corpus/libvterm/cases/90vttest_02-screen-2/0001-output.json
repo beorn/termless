@@ -5,7 +5,7 @@
   "rows": 25,
   "sourceLine": 25,
   "license": "MIT",
-  "input": "",
+  "input": "\u001b[2J\u001b[3g\u001b[1;1H\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[3C\u001bH\u001b[1;4H\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[0g\u001b[6C\u001b[1;7H\u001b[1g\u001b[2g\u001b[1;1H\t*\t*\t*\t*\t*\t*\t*\t*\t*\t*\t*\t*\t*\u001b[2;2H     *     *     *     *     *     *     *     *     *     *     *     *     *",
   "expectedCells": [
     {
       "row": 0,

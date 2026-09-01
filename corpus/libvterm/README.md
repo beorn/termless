@@ -79,8 +79,21 @@ tell that it was the CONVERTER rather than the engine was that xterm.js scored
 the same. A corpus can be confidently wrong, and a cross-engine spread that
 looks like consensus is the signal to distrust the harness first.
 
-The same class bit twice — see `unescape()` on why byte escapes are decoded as
-UTF-8 rather than character by character.
+**The same class has now bitten three times**, which is why it gets its own
+section:
+
+1. Blocks converted standalone, losing the session prefix (above).
+2. Byte escapes decoded character-by-character, so `\xC3\x81` re-encoded to
+   four bytes and `Á` reached the engine as `Ã` — see `unescape()`.
+3. The file PREAMBLE dropped. The vttest files paint an entire screen with
+   dozens of directives before their single `!Output` block; discarding those
+   left eight cases asserting a finished picture while feeding nothing — see
+   `seedPreamble()`.
+
+Every one of the three presented as an engine failure, and every fix raised
+ALL FOUR engines together. That is the discriminator: **a change that moves
+every engine is a harness change; a change that moves one is an engine
+change.** Check that before filing anything here as an engine gap.
 
 ## RULING: the deferred-wrap cursor is normalized, not "fixed"
 
