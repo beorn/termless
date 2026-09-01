@@ -19,6 +19,7 @@ export const PUBLISH_ORDER = [
   "packages/peekaboo",
   "packages/viterm",
   "packages/cli",
+  "packages/termless",
 ] as const
 
 interface PackageManifest {

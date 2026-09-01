@@ -1,0 +1,90 @@
+{
+  "name": "termless",
+  "version": "0.9.0",
+  "description": "Headless terminals: test, record, replay, and run sessions.",
+  "keywords": [
+    "ansi",
+    "headless",
+    "recording",
+    "replay",
+    "terminal",
+    "terminal-emulator",
+    "terminal-testing",
+    "testing",
+    "tui",
+    "tui-testing"
+  ],
+  "homepage": "https://termless.dev/",
+  "bugs": {
+    "url": "https://github.com/beorn/termless/issues"
+  },
+  "license": "MIT",
+  "author": "Beorn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beorn/termless.git",
+    "directory": "packages/termless"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fmt": "./src/fmt.ts",
+    "./rec": "./src/rec.ts",
+    "./contract": "./src/contract.ts",
+    "./backends": "./src/backends.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs",
+        "default": "./dist/index.mjs"
+      },
+      "./fmt": {
+        "types": "./dist/fmt.d.mts",
+        "import": "./dist/fmt.mjs",
+        "default": "./dist/fmt.mjs"
+      },
+      "./rec": {
+        "types": "./dist/rec.d.mts",
+        "import": "./dist/rec.mjs",
+        "default": "./dist/rec.mjs"
+      },
+      "./contract": {
+        "types": "./dist/contract.d.mts",
+        "import": "./dist/contract.mjs",
+        "default": "./dist/contract.mjs"
+      },
+      "./backends": {
+        "types": "./dist/backends.d.mts",
+        "import": "./dist/backends.mjs",
+        "default": "./dist/backends.mjs"
+      }
+    }
+  },
+  "dependencies": {
+    "@termless/core": "workspace:*"
+  },
+  "tsdown": {
+    "clean": true,
+    "dts": {
+      "eager": true
+    },
+    "entry": [
+      "src/index.ts",
+      "src/fmt.ts",
+      "src/rec.ts",
+      "src/contract.ts",
+      "src/backends.ts"
+    ],
+    "format": "esm"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=23.6.0"
+  }
+}

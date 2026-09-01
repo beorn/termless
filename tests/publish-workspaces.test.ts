@@ -25,6 +25,7 @@ describe("publish workspace inventory", () => {
       "@termless/peekaboo",
       "@termless/test",
       "@termless/cli",
+      "termless",
     ])
   })
 })
