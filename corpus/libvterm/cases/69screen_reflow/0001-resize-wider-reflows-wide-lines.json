@@ -1,0 +1,248 @@
+{
+  "suite": "libvterm/69screen_reflow.test",
+  "name": "Resize wider reflows wide lines",
+  "cols": 10,
+  "rows": 5,
+  "sourceLine": 9,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "AAAAAAAAAAAA",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": "A"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "text": "A"
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 1,
+        "col": 2
+      }
+    },
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 15
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 10,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 11,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 12,
+          "text": " "
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 0,
+        "col": 12
+      }
+    },
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 20
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 10,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 11,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 12,
+          "text": " "
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 0,
+        "col": 12
+      }
+    }
+  ]
+}

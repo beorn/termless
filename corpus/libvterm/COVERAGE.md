@@ -5,7 +5,7 @@ Pipeline health only: how much of the upstream DSL survived conversion, and
 why the rest did not. **Engine pass rates are NOT here** — they live in the
 conformance dashboard, per the corpus contract.
 
-**111 of 388 upstream blocks converted (28.6%).**
+**128 of 388 upstream blocks converted (33.0%).**
 
 ## Per source file
 
@@ -19,11 +19,11 @@ conformance dashboard, per the corpus contract.
 | `13state_edit.test` | 33 | 15 | 18 |
 | `14state_encoding.test` | 13 | 0 | 13 |
 | `15state_mode.test` | 8 | 6 | 2 |
-| `16state_resize.test` | 5 | 0 | 5 |
+| `16state_resize.test` | 5 | 4 | 1 |
 | `17state_mouse.test` | 23 | 0 | 23 |
 | `18state_termprops.test` | 5 | 0 | 5 |
 | `20state_wrapping.test` | 7 | 7 | 0 |
-| `21state_tabstops.test` | 5 | 4 | 1 |
+| `21state_tabstops.test` | 5 | 5 | 0 |
 | `22state_save.test` | 6 | 5 | 1 |
 | `25state_input.test` | 19 | 0 | 19 |
 | `26state_query.test` | 12 | 0 | 12 |
@@ -37,14 +37,14 @@ conformance dashboard, per the corpus contract.
 | `60screen_ascii.test` | 6 | 4 | 2 |
 | `61screen_unicode.test` | 6 | 3 | 3 |
 | `62screen_damage.test` | 16 | 1 | 15 |
-| `63screen_resize.test` | 8 | 0 | 8 |
+| `63screen_resize.test` | 8 | 8 | 0 |
 | `64screen_pen.test` | 12 | 11 | 1 |
 | `65screen_protect.test` | 2 | 2 | 0 |
 | `66screen_extent.test` | 1 | 0 | 1 |
 | `67screen_dbl_wh.test` | 5 | 5 | 0 |
 | `68screen_termprops.test` | 2 | 0 | 2 |
 | `69screen_pushline.test` | 2 | 0 | 2 |
-| `69screen_reflow.test` | 4 | 0 | 4 |
+| `69screen_reflow.test` | 4 | 4 | 0 |
 | `90vttest_01-movement-1.test` | 1 | 1 | 0 |
 | `90vttest_01-movement-2.test` | 1 | 1 | 0 |
 | `90vttest_01-movement-3.test` | 1 | 1 | 0 |
@@ -61,7 +61,6 @@ conformance dashboard, per the corpus contract.
 | ---: | --- |
 | 198 | no portable assertions |
 | 43 | input directive (asserts bytes sent upstream; no expectedOutput) |
-| 17 | mid-case RESIZE (no resize verb in schema v1 steps) |
 | 7 | mid-case RESET |
 | 7 | unreproducible prefix (earlier block in this RESET segment was not convertible) |
 | 5 | selection directive (no schema equivalent) |
@@ -85,15 +84,21 @@ but a converted case may assert less than upstream did.
 Cells whose attribute set was partially mapped (an unmappable libvterm letter
 such as `K`/`F`/`S`/`^`/`_` alongside mappable ones): 3.
 
-## Schema gaps this suite would close if lifted
+## Schema gaps
 
-- **A resize verb in `steps`.** The largest single rejection reason is
-  mid-case `RESIZE`, and it is concentrated in exactly the behavior we most
-  need covered: `63screen_resize.test`, `69screen_reflow.test`,
-  `16state_resize.test`, `21state_tabstops.test`. Reflow-on-resize is
-  where the soft-wrap codec invariant already fails in production.
-- **`expectedOutput`.** Everything the terminal writes BACK (cursor-position
-  reports, device attributes, mouse and key encodings) is unrepresentable, so
-  the whole request/response surface is currently untested by this corpus.
+- **`expectedOutput` is still missing.** Everything the terminal writes BACK
+  (cursor-position reports, device attributes, mouse and key encodings) is
+  unrepresentable, which is why every MOUSEBTN/INKEY/ENCIN block is rejected.
 - **A line-continuation expectation** (libvterm's `?lineinfo … = cont`), the
   soft-wrap flag itself.
+
+A resize verb WAS the largest gap; it landed with this suite, and every
+reflow-on-resize case now converts.
+
+## Deferred-wrap cursor normalization
+
+4 cursor expectation(s) were translated from libvterm's pending-wrap
+representation (cursor ON the last column) to ours (cursor at col == cols).
+See extract.ts `normalizeDeferredWrapCursor` for the ruling and its guards;
+it fires only where the DSL proves the phantom, so cases whose harness emits no
+`putglyph` traces, and DECAWM-off cases, are deliberately left alone.

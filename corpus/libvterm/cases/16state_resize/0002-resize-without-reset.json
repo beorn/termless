@@ -1,0 +1,34 @@
+{
+  "suite": "libvterm/16state_resize.test",
+  "name": "Resize without reset",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 24,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 27,
+        "cols": 85
+      }
+    },
+    {
+      "input": "AB\u001b[79GCDE",
+      "resize": {
+        "rows": 28,
+        "cols": 90
+      },
+      "expectedCursor": {
+        "row": 0,
+        "col": 81
+      }
+    },
+    {
+      "input": "FGHI",
+      "expectedCursor": {
+        "row": 0,
+        "col": 85
+      }
+    }
+  ]
+}

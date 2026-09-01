@@ -1,0 +1,117 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize shorter does not lose line with cursor",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 57,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "\u001b[24HLine 24\r\nLine 25\r\n",
+      "expectedCells": [
+        {
+          "row": 23,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 23,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 23,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 23,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 23,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 23,
+          "col": 5,
+          "text": "2"
+        },
+        {
+          "row": 23,
+          "col": 6,
+          "text": "5"
+        },
+        {
+          "row": 23,
+          "col": 7,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 24,
+        "col": 0
+      }
+    },
+    {
+      "resize": {
+        "rows": 24,
+        "cols": 80
+      },
+      "expectedCells": [
+        {
+          "row": 22,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 22,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 22,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 22,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 22,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 22,
+          "col": 5,
+          "text": "2"
+        },
+        {
+          "row": 22,
+          "col": 6,
+          "text": "5"
+        },
+        {
+          "row": 22,
+          "col": 7,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 23,
+        "col": 0
+      }
+    }
+  ]
+}

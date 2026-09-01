@@ -13,6 +13,7 @@
 // a silently ignored case.
 
 import { readFileSync, readdirSync, existsSync } from "node:fs"
+import { Buffer } from "node:buffer"
 import { join } from "node:path"
 import type { TerminalBackend, TerminalMode, Cell } from "../src/terminal/types.ts"
 
@@ -37,8 +38,21 @@ export interface CellExpectation {
   attrs?: string[]
 }
 
+/**
+ * One phase of a multi-phase case: an ACTION, plus what must be true after it.
+ *
+ * A step carries at least one action — bytes to feed, a resize, or both — and
+ * expectations are optional, because a resize is often a setup move whose
+ * effect is asserted by a LATER step. The case as a whole must still assert
+ * something.
+ *
+ * Order within one step is `input` first, then `resize`. That is the order the
+ * mined suites need ("write these bytes, now make the terminal narrower, now
+ * look at the reflow") and it is fixed so a converter never has to guess.
+ */
 export interface CaseStep extends CaseExpectations {
-  input: string
+  input?: string
+  resize?: { cols: number; rows: number }
 }
 
 export interface ConformanceCase extends CaseExpectations {
@@ -76,6 +90,7 @@ const CASE_FIELDS = new Set([
 
 const STEP_FIELDS = new Set([
   "input",
+  "resize",
   "expectedScreen",
   "expectedCursor",
   "expectedCells",
@@ -149,11 +164,22 @@ export function validateCase(raw: unknown, casePath: string): ConformanceCase {
       for (const key of Object.keys(stepObj)) {
         if (!STEP_FIELDS.has(key)) throw validationError(casePath, `steps[${i}]: unknown field "${key}"`)
       }
-      if (typeof stepObj.input !== "string") throw validationError(casePath, `steps[${i}]: missing string input`)
-      if (!hasExpectation(stepObj as CaseExpectations)) {
-        throw validationError(casePath, `steps[${i}]: at least one expectation required`)
+      if (stepObj.input !== undefined && typeof stepObj.input !== "string") {
+        throw validationError(casePath, `steps[${i}]: input must be a string`)
+      }
+      if (stepObj.resize !== undefined) validateResize(stepObj.resize, casePath, `steps[${i}]`)
+      // A step must DO something. Expectations are optional here (a resize is
+      // often setup for a later assertion), but a step that neither feeds nor
+      // resizes is a converter bug wearing a valid-looking shape.
+      if (stepObj.input === undefined && stepObj.resize === undefined) {
+        throw validationError(casePath, `steps[${i}]: needs an action (input and/or resize)`)
       }
       validateExpectations(stepObj as CaseExpectations, casePath, `steps[${i}]`)
+    }
+    // Relaxing the per-step expectation rule must not let a case assert
+    // NOTHING and pass forever.
+    if (!obj.steps.some((step) => hasExpectation(step as CaseExpectations))) {
+      throw validationError(casePath, "`steps` must contain at least one expectation")
     }
   } else if (!hasExpectation(obj as CaseExpectations)) {
     throw validationError(casePath, "at least one expectation required")
@@ -162,6 +188,17 @@ export function validateCase(raw: unknown, casePath: string): ConformanceCase {
   }
 
   return { ...(obj as unknown as Omit<ConformanceCase, "casePath">), casePath }
+}
+
+function validateResize(raw: unknown, casePath: string, where: string): void {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw validationError(casePath, `${where}: resize must be an object`)
+  }
+  const { cols, rows } = raw as { cols?: unknown; rows?: unknown }
+  const ok = (v: unknown): boolean => typeof v === "number" && Number.isInteger(v) && v > 0
+  if (!ok(cols) || !ok(rows)) {
+    throw validationError(casePath, `${where}: resize needs positive integer cols/rows`)
+  }
 }
 
 function validateExpectations(exp: CaseExpectations, casePath: string, where: string): void {
@@ -247,7 +284,7 @@ function viewportPlainString(backend: TerminalBackend, rows: number): string {
   for (let r = 0; r < rows; r++) {
     lines.push(
       backend
-        .getLine(top + r)
+        .getRow(top + r)
         .map((c: Cell) => c.char || " ")
         .join("")
         .replace(/\s+$/, ""),
@@ -262,11 +299,15 @@ function evaluateExpectations(
   exp: CaseExpectations,
   step: number | undefined,
   out: CaseMismatch[],
+  rows: number,
 ): void {
   const base = { suite: kase.suite, name: kase.name, backend: backend.name, ...(step !== undefined ? { step } : {}) }
   const top = viewportTop(backend)
   if (exp.expectedScreen !== undefined) {
-    const actual = viewportPlainString(backend, kase.rows)
+    // `rows` is the CURRENT viewport height, not kase.rows: a step that
+    // resizes changes how many rows the screen comparison may read, and using
+    // the case's initial height would read past the end after a shrink.
+    const actual = viewportPlainString(backend, rows)
     // Per-row trailing-blank trim must not use /\s+$/m: \s matches \n, so a
     // run of interior blank lines collapses to nothing and the case can never
     // assert vertical whitespace.
@@ -275,7 +316,7 @@ function evaluateExpectations(
   }
   if (exp.expectedCursor !== undefined) {
     const cursor = backend.getCursor()
-    const actual = { row: cursor.y, col: cursor.x }
+    const actual = { row: cursor.row, col: cursor.col }
     if (actual.row !== exp.expectedCursor.row || actual.col !== exp.expectedCursor.col) {
       out.push({ ...base, kind: "cursor", expected: exp.expectedCursor, actual })
     }
@@ -298,7 +339,11 @@ function evaluateExpectations(
     }
   }
   for (const [mode, want] of Object.entries(exp.expectedModes ?? {})) {
-    const actual = backend.getMode(MODE_MAP[mode]!)
+    const mapped = MODE_MAP[mode]
+    // validateExpectations rejects unmapped names at load time; this keeps the
+    // guarantee local instead of asserting it away.
+    if (mapped === undefined) throw new Error(`corpus runner: unmapped mode "${mode}"`)
+    const actual = backend.getMode(mapped)
     if (actual !== want) out.push({ ...base, kind: "mode", expected: { [mode]: want }, actual: { [mode]: actual } })
   }
   if (exp.expectedTitle !== undefined) {
@@ -314,20 +359,26 @@ function evaluateExpectations(
  * across the whole corpus without re-import ceremony.
  */
 export function runCaseOnBackend(backend: TerminalBackend, kase: ConformanceCase): CaseMismatch[] {
-  const encoder = new TextEncoder()
+  const encode = (text: string): Uint8Array => Buffer.from(text, "utf8")
   const mismatches: CaseMismatch[] = []
+  let rows = kase.rows
   if (kase.steps !== undefined) {
     for (const [i, step] of kase.steps.entries()) {
-      backend.feed(encoder.encode(step.input))
-      evaluateExpectations(backend, kase, step, i, mismatches)
+      // Fixed order: bytes, then geometry. See CaseStep.
+      if (step.input !== undefined) backend.feed(encode(step.input))
+      if (step.resize !== undefined) {
+        backend.resize(step.resize.cols, step.resize.rows)
+        rows = step.resize.rows
+      }
+      evaluateExpectations(backend, kase, step, i, mismatches, rows)
     }
     return mismatches
   }
   if (kase.htsRef !== undefined) {
     backend.feed(readFileSync(join(kase.casePath, "..", kase.htsRef)))
-  } else {
-    backend.feed(encoder.encode(kase.input!))
+  } else if (kase.input !== undefined) {
+    backend.feed(encode(kase.input))
   }
-  evaluateExpectations(backend, kase, kase, undefined, mismatches)
+  evaluateExpectations(backend, kase, kase, undefined, mismatches, rows)
   return mismatches
 }

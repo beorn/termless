@@ -1,0 +1,89 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize wider allows print in new area",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 15,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "AB\u001b[79GCD",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 78,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 79,
+          "text": "D"
+        }
+      ]
+    },
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 100
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 78,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 79,
+          "text": "D"
+        }
+      ]
+    },
+    {
+      "input": "E",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 78,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 79,
+          "text": "D"
+        },
+        {
+          "row": 0,
+          "col": 80,
+          "text": "E"
+        }
+      ]
+    }
+  ]
+}

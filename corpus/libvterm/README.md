@@ -82,6 +82,34 @@ looks like consensus is the signal to distrust the harness first.
 The same class bit twice — see `unescape()` on why byte escapes are decoded as
 UTF-8 rather than character by character.
 
+## RULING: the deferred-wrap cursor is normalized, not "fixed"
+
+**Do not open this as a vterm bug.** When a glyph lands on the final column
+with autowrap on, the terminal owes a wrap it has not performed yet, and the
+two families represent that moment differently:
+
+| representation | engines |
+| --- | --- |
+| cursor stays ON the last column, plus a pending-wrap flag | libvterm, ghostty |
+| cursor sits at `col == cols`, one past the end | **vterm**, xterm.js, vt100 |
+
+Neither is wrong. Operator ruling (2026-09-01): **vterm keeps its convention.**
+Our snapshot codec, hab attach, and every downstream consumer read that
+representation today, and changing a load-bearing convention to match a
+reference implementation's internal choice is churn, not a fix.
+
+So the corpus adapts to us: `extract.ts`'s `normalizeDeferredWrapCursor`
+translates the expectation, and only where the DSL *proves* the phantom — a
+`putglyph` trace ending on the last column of the same row, with DECAWM on.
+
+The guard is the interesting part. `!DEC Auto Wrap Mode` also ends a glyph on
+the last column, but with autowrap OFF there is no pending wrap: the cursor
+genuinely belongs on the last column, and our engines reporting `cols` there is
+a **real divergence**. Normalizing it would have masked a live bug behind a
+representation difference, so that case stays red and ledgered. Likewise
+`11state_movecursor` emits no `putglyph` traces, so nothing there is
+normalized — silence beats a confident guess.
+
 ## What converts, and what does not
 
 `COVERAGE.md` is generated and carries the current numbers. In summary, cases

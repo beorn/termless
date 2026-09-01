@@ -1,0 +1,23 @@
+{
+  "suite": "libvterm/21state_tabstops.test",
+  "name": "Tabstops after resize",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 32,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 30,
+        "cols": 100
+      }
+    },
+    {
+      "input": "\tX\tX\tX\tX\tX\tX\tX\tX\tX\tX\tX\tX",
+      "expectedCursor": {
+        "row": 0,
+        "col": 97
+      }
+    }
+  ]
+}

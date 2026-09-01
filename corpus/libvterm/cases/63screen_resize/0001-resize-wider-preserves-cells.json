@@ -1,0 +1,69 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize wider preserves cells",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 5,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "AB\r\nCD",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": "C"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "text": "D"
+        }
+      ]
+    },
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 100
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": "C"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "text": "D"
+        }
+      ]
+    }
+  ]
+}

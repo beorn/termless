@@ -8,6 +8,6 @@
   "input": "\u001b[75GAAAAAA",
   "expectedCursor": {
     "row": 0,
-    "col": 79
+    "col": 80
   }
 }

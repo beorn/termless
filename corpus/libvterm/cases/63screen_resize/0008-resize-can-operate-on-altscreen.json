@@ -1,0 +1,145 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize can operate on altscreen",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 109,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "Main screen\u001b[?1049h\u001b[HAlt screen",
+      "resize": {
+        "rows": 30,
+        "cols": 80
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "l"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "t"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": " "
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "s"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "c"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "r"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "e"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "e"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": "n"
+        },
+        {
+          "row": 0,
+          "col": 10,
+          "text": " "
+        }
+      ]
+    },
+    {
+      "input": "\u001b[?1049l",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "M"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "a"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "i"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "n"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "s"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "c"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "r"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "e"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": "e"
+        },
+        {
+          "row": 0,
+          "col": 10,
+          "text": "n"
+        },
+        {
+          "row": 0,
+          "col": 11,
+          "text": " "
+        }
+      ]
+    }
+  ]
+}

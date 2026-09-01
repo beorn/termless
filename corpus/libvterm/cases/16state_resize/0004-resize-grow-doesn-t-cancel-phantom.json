@@ -1,0 +1,34 @@
+{
+  "suite": "libvterm/16state_resize.test",
+  "name": "Resize grow doesn't cancel phantom",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 38,
+  "license": "MIT",
+  "steps": [
+    {
+      "input": "\u001b[79GAB",
+      "expectedCursor": {
+        "row": 0,
+        "col": 80
+      }
+    },
+    {
+      "resize": {
+        "rows": 30,
+        "cols": 100
+      },
+      "expectedCursor": {
+        "row": 0,
+        "col": 80
+      }
+    },
+    {
+      "input": "C",
+      "expectedCursor": {
+        "row": 0,
+        "col": 81
+      }
+    }
+  ]
+}

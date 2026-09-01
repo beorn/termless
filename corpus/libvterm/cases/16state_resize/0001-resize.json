@@ -1,0 +1,23 @@
+{
+  "suite": "libvterm/16state_resize.test",
+  "name": "Resize",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 13,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 27,
+        "cols": 85
+      }
+    },
+    {
+      "input": "AB\u001b[79GCDE",
+      "expectedCursor": {
+        "row": 0,
+        "col": 81
+      }
+    }
+  ]
+}

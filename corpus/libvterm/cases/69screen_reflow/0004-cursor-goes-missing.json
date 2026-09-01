@@ -1,0 +1,33 @@
+{
+  "suite": "libvterm/69screen_reflow.test",
+  "name": "Cursor goes missing",
+  "cols": 10,
+  "rows": 5,
+  "sourceLine": 81,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 5
+      }
+    },
+    {
+      "resize": {
+        "rows": 3,
+        "cols": 1
+      }
+    },
+    {
+      "input": "\u001b[2;1Habc\r\n\u001b[H",
+      "resize": {
+        "rows": 1,
+        "cols": 1
+      },
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

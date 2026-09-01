@@ -8,6 +8,6 @@
   "input": "\u001b[?7l\u001b[75GDDDDDDD\u001b[?7h\u001b[25;78HABC",
   "expectedCursor": {
     "row": 24,
-    "col": 79
+    "col": 80
   }
 }

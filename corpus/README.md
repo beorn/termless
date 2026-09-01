@@ -47,7 +47,26 @@ Expectation vocabulary (any combination):
 - `expectedCells` (array of `{ row, col, text?, fg?, bg?, attrs? }`) — sparse styled-cell asserts; `attrs` is a subset of `bold|italic|underline|inverse|dim|strikethrough`.
 - `expectedModes` (object, mode name → boolean) — e.g. `{ "DECAWM": true }`.
 - `expectedTitle` (string).
-- `steps` (array of `{ input, ...expectations }`) — multi-phase cases (feed, assert, feed, assert); when present, top-level input/expectations are disallowed.
+- `steps` (array of `{ input?, resize?, ...expectations }`) — multi-phase cases (feed, assert, feed, assert); when present, top-level input/expectations are disallowed.
+
+A step carries at least one ACTION and any number of expectations:
+
+- `input` (string) — bytes to feed at this phase.
+- `resize` (`{ cols, rows }`, positive integers) — resize the terminal at this phase.
+
+**Order within one step is `input` first, then `resize`** — "write these bytes,
+now make the terminal narrower, now look at the reflow". It is fixed so a
+converter never has to guess, and so a pending input merged into a later step
+cannot silently end up applied after that step's resize.
+
+Expectations are OPTIONAL per step, because a resize is frequently setup whose
+effect a later step asserts; the case as a whole must still assert something,
+and a step that neither feeds nor resizes is rejected. `expectedScreen` after a
+resize reads the CURRENT viewport height, not the case's initial `rows`.
+
+Resize is what makes reflow and rewrap testable at all — the behavior where a
+terminal's hardest bugs live, and where our own soft-wrap codec invariant has
+already failed in production.
 
 Converters that need a new expectation kind extend THIS section first (with a runner-side validator) — per-suite ad-hoc fields are the drift this contract forbids.
 

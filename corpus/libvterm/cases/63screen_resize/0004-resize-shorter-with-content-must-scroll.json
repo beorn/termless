@@ -1,0 +1,142 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize shorter with content must scroll",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 39,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "Top\u001b[25HLine 25\u001b[15H",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "T"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "o"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "p"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": " "
+        },
+        {
+          "row": 24,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 24,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 24,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 24,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 24,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 24,
+          "col": 5,
+          "text": "2"
+        },
+        {
+          "row": 24,
+          "col": 6,
+          "text": "5"
+        },
+        {
+          "row": 24,
+          "col": 7,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 14,
+        "col": 0
+      }
+    },
+    {
+      "resize": {
+        "rows": 20,
+        "cols": 80
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": " "
+        },
+        {
+          "row": 19,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 19,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 19,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 19,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 19,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 19,
+          "col": 5,
+          "text": "2"
+        },
+        {
+          "row": 19,
+          "col": 6,
+          "text": "5"
+        },
+        {
+          "row": 19,
+          "col": 7,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 9,
+        "col": 0
+      }
+    }
+  ]
+}

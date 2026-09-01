@@ -1,0 +1,207 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize taller attempts to pop scrollback",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 88,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "Line 1\u001b[25HBottom\u001b[15H",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "1"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": " "
+        },
+        {
+          "row": 24,
+          "col": 0,
+          "text": "B"
+        },
+        {
+          "row": 24,
+          "col": 1,
+          "text": "o"
+        },
+        {
+          "row": 24,
+          "col": 2,
+          "text": "t"
+        },
+        {
+          "row": 24,
+          "col": 3,
+          "text": "t"
+        },
+        {
+          "row": 24,
+          "col": 4,
+          "text": "o"
+        },
+        {
+          "row": 24,
+          "col": 5,
+          "text": "m"
+        },
+        {
+          "row": 24,
+          "col": 6,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 14,
+        "col": 0
+      }
+    },
+    {
+      "resize": {
+        "rows": 30,
+        "cols": 80
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "D"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "E"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": " "
+        },
+        {
+          "row": 5,
+          "col": 0,
+          "text": "L"
+        },
+        {
+          "row": 5,
+          "col": 1,
+          "text": "i"
+        },
+        {
+          "row": 5,
+          "col": 2,
+          "text": "n"
+        },
+        {
+          "row": 5,
+          "col": 3,
+          "text": "e"
+        },
+        {
+          "row": 5,
+          "col": 4,
+          "text": " "
+        },
+        {
+          "row": 5,
+          "col": 5,
+          "text": "1"
+        },
+        {
+          "row": 5,
+          "col": 6,
+          "text": " "
+        },
+        {
+          "row": 29,
+          "col": 0,
+          "text": "B"
+        },
+        {
+          "row": 29,
+          "col": 1,
+          "text": "o"
+        },
+        {
+          "row": 29,
+          "col": 2,
+          "text": "t"
+        },
+        {
+          "row": 29,
+          "col": 3,
+          "text": "t"
+        },
+        {
+          "row": 29,
+          "col": 4,
+          "text": "o"
+        },
+        {
+          "row": 29,
+          "col": 5,
+          "text": "m"
+        },
+        {
+          "row": 29,
+          "col": 6,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 19,
+        "col": 0
+      }
+    }
+  ]
+}

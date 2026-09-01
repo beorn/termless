@@ -1,0 +1,33 @@
+{
+  "suite": "libvterm/63screen_resize.test",
+  "name": "Resize shorter does not send the cursor to a negative row",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 72,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      }
+    },
+    {
+      "input": "\u001b[24HLine 24\r\nLine 25\u001b[H",
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    {
+      "resize": {
+        "rows": 20,
+        "cols": 80
+      },
+      "expectedCursor": {
+        "row": 0,
+        "col": 0
+      }
+    }
+  ]
+}

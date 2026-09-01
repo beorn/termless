@@ -34,10 +34,6 @@
 // What is deliberately NOT converted (each is counted in COVERAGE.md)
 // ---------------------------------------------------------------------------
 //
-// - Mid-case `RESIZE`: schema v1's `steps` carry `input` + expectations and
-//   have no resize verb, so a case that resizes mid-flight cannot be
-//   expressed. This is the single biggest gap and it lands squarely on
-//   reflow/rewrap — see COVERAGE.md § Schema gaps.
 // - Input-generating directives (MOUSEBTN/MOUSEMOVE/INCHAR/INKEY/ENCIN/PASTE/
 //   FOCUS/SELECTION): these assert bytes the terminal sends BACK upstream, via
 //   `output` traces. Schema v1 has no `expectedOutput`.
@@ -102,7 +98,6 @@ const IGNORED_DIRECTIVES = new Set([
 
 /** Directives whose behavior schema v1 cannot express — the case is rejected. */
 const REJECTING_DIRECTIVES: Record<string, string> = {
-  RESIZE: "mid-case RESIZE (no resize verb in schema v1 steps)",
   MOUSEBTN: "input directive (asserts bytes sent upstream; no expectedOutput)",
   MOUSEMOVE: "input directive (asserts bytes sent upstream; no expectedOutput)",
   INCHAR: "input directive (asserts bytes sent upstream; no expectedOutput)",
@@ -123,10 +118,6 @@ interface Expectations {
   expectedCursor?: { row: number; col: number }
   expectedCells?: CellExpectation[]
 }
-interface Step {
-  input: string
-  exp: Expectations
-}
 interface RawRecord {
   name: string
   sourceLine: number
@@ -142,6 +133,7 @@ const stats = {
   rejected: new Map<string, number>(),
   droppedAssertions: new Map<string, number>(),
   attrsPartial: 0,
+  phantomNormalized: 0,
 }
 
 const bump = (m: Map<string, number>, k: string): void => {
@@ -208,6 +200,16 @@ function pushTextOf(line: string): string | null {
   return null
 }
 
+/** `putglyph 0x41 1 0,79` — codepoint, width, row, col. */
+const PUTGLYPH_RE = /^putglyph\s+0x[0-9a-fA-F]+\s+(\d+)\s+(\d+),(\d+)/
+
+/** DECAWM toggles anywhere in a chunk of fed bytes; the last one wins. */
+function trackAutoWrap(input: string, current: boolean): boolean {
+  let state = current
+  for (const m of input.matchAll(/\x1b\[\?7([lh])/g)) state = m[1] === "h"
+  return state
+}
+
 const ASCII_RE = /^[\x20-\x7e]*$/
 const CURSOR_RE = /^\?cursor\s*=\s*(\d+),(\d+)/
 const ROW_RE = /^\?screen_row\s+(\d+)\s*=\s*(.*)$/
@@ -254,11 +256,55 @@ function decodeAttrs(codes: string): { attrs: string[]; dropped: boolean } {
   return { attrs, dropped }
 }
 
+/**
+ * Terminal facts the cursor rule needs, tracked from the DSL as we walk a block.
+ */
+interface QueryContext {
+  cols: number
+  /** DECAWM, toggled by `\e[?7l` / `\e[?7h` in the input stream. */
+  autoWrap: boolean
+  /** Last glyph libvterm reported placing, and the column it ends on. */
+  lastGlyph: { row: number; endCol: number } | null
+}
+
+/**
+ * RULING (operator, 2026-09-01): vterm KEEPS its deferred-wrap convention;
+ * this is normalized converter-side instead.
+ *
+ * When a glyph lands on the final column with autowrap on, the terminal owes a
+ * wrap it has not performed yet. libvterm represents that as "cursor still ON
+ * the last column, plus a pending-wrap flag"; vterm, xterm.js and vt100 all
+ * represent it as "cursor at col == cols", one past the end. ghostty sits with
+ * libvterm. Neither is wrong — but our snapshot codec, hab attach and every
+ * downstream consumer read OUR representation, so the corpus adapts to us.
+ *
+ * The rule is deliberately narrow, and only fires where the DSL PROVES the
+ * phantom: libvterm must have reported a glyph ending on the last column of
+ * the same row, and autowrap must be on. `!DEC Auto Wrap Mode` is exactly why
+ * the autowrap guard exists — it also ends a glyph on the last column, but
+ * with DECAWM off there is no pending wrap, the cursor genuinely belongs on
+ * the last column, and normalizing it would MASK a real divergence rather than
+ * translate a representation.
+ *
+ * Where the phantom cannot be proven (files whose harness config emits no
+ * `putglyph` traces, e.g. 11state_movecursor), nothing is normalized and the
+ * case stays ledgered. Silence beats a confident guess.
+ */
+function normalizeDeferredWrapCursor(row: number, col: number, ctx: QueryContext): number {
+  if (col !== ctx.cols - 1 || !ctx.autoWrap) return col
+  const glyph = ctx.lastGlyph
+  if (glyph === null || glyph.row !== row || glyph.endCol !== ctx.cols - 1) return col
+  stats.phantomNormalized++
+  return ctx.cols
+}
+
 /** Merge one `?` query into the accumulating expectations; false if unusable. */
-function applyQuery(line: string, exp: Expectations, cols: number): boolean {
+function applyQuery(line: string, exp: Expectations, ctx: QueryContext): boolean {
+  const cols = ctx.cols
   const cursor = CURSOR_RE.exec(line)
   if (cursor !== null) {
-    exp.expectedCursor = { row: Number(group(cursor, 1)), col: Number(group(cursor, 2)) }
+    const row = Number(group(cursor, 1))
+    exp.expectedCursor = { row, col: normalizeDeferredWrapCursor(row, Number(group(cursor, 2)), ctx) }
     return true
   }
 
@@ -444,10 +490,41 @@ function parseFile(text: string): { cols: number; rows: number; blocks: Block[] 
  * rather than both engines.
  */
 interface SegmentState {
-  /** Every byte pushed since the last RESET — the case's reproducible prefix. */
-  prefix: string
+  /** Every action replayed since the last RESET — the case's reproducible prefix. */
+  actions: Action[]
   /** Set when a block used a directive we cannot reproduce; see poison below. */
   poisoned: boolean
+}
+
+/** One thing done to the terminal, in order. */
+type Action = { input: string } | { resize: { cols: number; rows: number } }
+
+/**
+ * Pack an ordered action list into schema steps, honouring the contract's
+ * fixed within-step order (input first, then resize).
+ *
+ * A run of consecutive inputs coalesces into one string; a resize closes the
+ * step it lands in, because anything after it must be applied afterwards and
+ * the schema has no way to say "input, resize, input" inside a single step.
+ */
+function packActions(actions: readonly Action[]): { input?: string; resize?: { cols: number; rows: number } }[] {
+  const out: { input?: string; resize?: { cols: number; rows: number } }[] = []
+  let cur: { input?: string; resize?: { cols: number; rows: number } } = {}
+  const flush = (): void => {
+    if (cur.input !== undefined || cur.resize !== undefined) out.push(cur)
+    cur = {}
+  }
+  for (const action of actions) {
+    if ("input" in action) {
+      if (cur.resize !== undefined) flush()
+      cur.input = (cur.input ?? "") + action.input
+    } else {
+      if (cur.resize !== undefined) flush()
+      cur.resize = action.resize
+    }
+  }
+  flush()
+  return out
 }
 
 function convertBlock(
@@ -457,32 +534,58 @@ function convertBlock(
   suite: string,
   state: SegmentState,
 ): Record<string, unknown> | null {
-  const steps: Step[] = []
-  let pendingInput = state.prefix
+  const phases: { actions: Action[]; exp: Expectations }[] = []
+  let pending: Action[] = [...state.actions]
   let exp: Expectations = {}
-  let localPushes = ""
+  const localActions: Action[] = []
   let rejection: string | null = null
   let poisons = false
+  // Geometry tracked across the segment so screen_row conversions know the
+  // CURRENT width — a row query after RESIZE 5,15 asserts against 15 columns.
+  let liveCols = cols
+  // DECAWM and the last reported glyph — the two facts the deferred-wrap
+  // cursor rule needs. Seeded from the segment prefix so a mode set in an
+  // earlier block is still in force here.
+  let autoWrap = true
+  for (const action of pending) if ("input" in action) autoWrap = trackAutoWrap(action.input, autoWrap)
+  let lastGlyph: { row: number; endCol: number } | null = null
+
+  const addAction = (action: Action): void => {
+    if (hasExp(exp)) {
+      phases.push({ actions: pending, exp })
+      pending = []
+      exp = {}
+    }
+    pending.push(action)
+    localActions.push(action)
+  }
 
   for (const line of expandLoops(block.lines)) {
     if (line.startsWith("?")) {
-      applyQuery(line, exp, cols)
+      applyQuery(line, exp, { cols: liveCols, autoWrap, lastGlyph })
       continue
     }
     const directive = head(line)
     if (directive === "RESET") {
       // Clears the session. Assertions already gathered describe the PRE-reset
-      // stream, and schema v1 has no reset verb to separate them, so a reset
-      // that lands mid-block ends the block's convertibility — but the state
-      // reset itself is honoured for everything downstream.
-      state.prefix = ""
+      // stream, and there is no reset verb, so a reset that lands mid-block
+      // ends the block's convertibility — but the reset is honoured downstream.
+      state.actions = []
       state.poisoned = false
-      localPushes = ""
-      if (steps.length > 0 || hasExp(exp)) {
+      localActions.length = 0
+      if (phases.length > 0 || hasExp(exp)) {
         bump(stats.rejected, "mid-case RESET")
         return null
       }
-      pendingInput = ""
+      pending = []
+      liveCols = cols
+      continue
+    }
+    const resize = /^RESIZE\s+(\d+),\s*(\d+)/.exec(line)
+    if (resize !== null) {
+      const next = { rows: Number(group(resize, 1)), cols: Number(group(resize, 2)) }
+      addAction({ resize: next })
+      liveCols = next.cols
       continue
     }
     const reject = REJECTING_DIRECTIVES[directive]
@@ -493,13 +596,18 @@ function convertBlock(
     }
     const push = pushTextOf(line)
     if (push !== null) {
-      if (hasExp(exp)) {
-        steps.push({ input: pendingInput, exp })
-        pendingInput = ""
-        exp = {}
+      addAction({ input: push })
+      autoWrap = trackAutoWrap(push, autoWrap)
+      // A new write opens a new phase; glyph traces below describe THIS write.
+      lastGlyph = null
+      continue
+    }
+    const glyph = PUTGLYPH_RE.exec(line)
+    if (glyph !== null) {
+      lastGlyph = {
+        row: Number(group(glyph, 2)),
+        endCol: Number(group(glyph, 3)) + Math.max(1, Number(group(glyph, 1))) - 1,
       }
-      pendingInput += push
-      localPushes += push
       continue
     }
     if (IGNORED_DIRECTIVES.has(directive)) continue
@@ -510,11 +618,11 @@ function convertBlock(
       poisons = true
     }
   }
-  if (hasExp(exp)) steps.push({ input: pendingInput, exp })
+  if (hasExp(exp)) phases.push({ actions: pending, exp })
 
-  // The block's own bytes join the segment prefix whether or not the block
-  // itself converted — a block we skip still moved the terminal.
-  state.prefix += localPushes
+  // The block's own actions join the segment whether or not the block itself
+  // converted — a block we skip still moved the terminal.
+  state.actions = [...state.actions, ...localActions]
   if (poisons) state.poisoned = true
 
   if (rejection !== null) {
@@ -528,16 +636,30 @@ function convertBlock(
     bump(stats.rejected, "unreproducible prefix (earlier block in this RESET segment was not convertible)")
     return null
   }
-  if (steps.length === 0) {
+  if (phases.length === 0) {
     bump(stats.rejected, "no portable assertions")
     return null
   }
 
   const where = `${suite}:${block.sourceLine} ${block.name}`
   const base = { suite, name: block.name, cols, rows, sourceLine: block.sourceLine, license: LICENSE }
+
+  const steps: Record<string, unknown>[] = []
+  for (const phase of phases) {
+    const packed = packActions(phase.actions)
+    // A phase with no actions at all still needs one to hang its assertions
+    // on (assertions immediately after `!Name` on a fresh segment).
+    if (packed.length === 0) packed.push({ input: "" })
+    for (const [i, action] of packed.entries()) {
+      steps.push(i === packed.length - 1 ? { ...action, ...finalize(phase.exp, where) } : { ...action })
+    }
+  }
+
   const only = steps[0]
-  if (steps.length === 1 && only !== undefined) return { ...base, input: only.input, ...finalize(only.exp, where) }
-  return { ...base, steps: steps.map((s) => ({ input: s.input, ...finalize(s.exp, where) })) }
+  if (steps.length === 1 && only !== undefined && only.resize === undefined) {
+    return { ...base, ...only }
+  }
+  return { ...base, steps }
 }
 
 function main(): void {
@@ -561,7 +683,7 @@ function main(): void {
     const rawRecords: RawRecord[] = []
     let n = 0
     let converted = 0
-    const state: SegmentState = { prefix: "", poisoned: false }
+    const state: SegmentState = { actions: [], poisoned: false }
     for (const block of blocks) {
       stats.blocks++
       rawRecords.push({
@@ -642,18 +764,24 @@ ${dropRows}
 Cells whose attribute set was partially mapped (an unmappable libvterm letter
 such as \`K\`/\`F\`/\`S\`/\`^\`/\`_\` alongside mappable ones): ${stats.attrsPartial}.
 
-## Schema gaps this suite would close if lifted
+## Schema gaps
 
-- **A resize verb in \`steps\`.** The largest single rejection reason is
-  mid-case \`RESIZE\`, and it is concentrated in exactly the behavior we most
-  need covered: \`63screen_resize.test\`, \`69screen_reflow.test\`,
-  \`16state_resize.test\`, \`21state_tabstops.test\`. Reflow-on-resize is
-  where the soft-wrap codec invariant already fails in production.
-- **\`expectedOutput\`.** Everything the terminal writes BACK (cursor-position
-  reports, device attributes, mouse and key encodings) is unrepresentable, so
-  the whole request/response surface is currently untested by this corpus.
+- **\`expectedOutput\` is still missing.** Everything the terminal writes BACK
+  (cursor-position reports, device attributes, mouse and key encodings) is
+  unrepresentable, which is why every MOUSEBTN/INKEY/ENCIN block is rejected.
 - **A line-continuation expectation** (libvterm's \`?lineinfo … = cont\`), the
   soft-wrap flag itself.
+
+A resize verb WAS the largest gap; it landed with this suite, and every
+reflow-on-resize case now converts.
+
+## Deferred-wrap cursor normalization
+
+${stats.phantomNormalized} cursor expectation(s) were translated from libvterm's pending-wrap
+representation (cursor ON the last column) to ours (cursor at col == cols).
+See extract.ts \`normalizeDeferredWrapCursor\` for the ruling and its guards;
+it fires only where the DSL proves the phantom, so cases whose harness emits no
+\`putglyph\` traces, and DECAWM-off cases, are deliberately left alone.
 `,
     "utf8",
   )

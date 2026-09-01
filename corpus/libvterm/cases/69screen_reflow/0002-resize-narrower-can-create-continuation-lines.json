@@ -1,0 +1,204 @@
+{
+  "suite": "libvterm/69screen_reflow.test",
+  "name": "Resize narrower can create continuation lines",
+  "cols": 10,
+  "rows": 5,
+  "sourceLine": 27,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 10
+      }
+    },
+    {
+      "input": "ABCDEFGHI",
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "D"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "E"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "F"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "G"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "H"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "text": "I"
+        },
+        {
+          "row": 0,
+          "col": 9,
+          "text": " "
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 0,
+        "col": 9
+      }
+    },
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 8
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "D"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "E"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "F"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "text": "G"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "text": "H"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": "I"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 1,
+        "col": 1
+      }
+    },
+    {
+      "resize": {
+        "rows": 5,
+        "cols": 6
+      },
+      "expectedCells": [
+        {
+          "row": 0,
+          "col": 0,
+          "text": "A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "text": "B"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "text": "C"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "text": "D"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "text": "E"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "text": "F"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "text": "G"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "text": "H"
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "text": "I"
+        },
+        {
+          "row": 1,
+          "col": 3,
+          "text": " "
+        }
+      ],
+      "expectedCursor": {
+        "row": 1,
+        "col": 3
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "suite": "libvterm/16state_resize.test",
+  "name": "Resize shrink moves cursor",
+  "cols": 80,
+  "rows": 25,
+  "sourceLine": 34,
+  "license": "MIT",
+  "steps": [
+    {
+      "resize": {
+        "rows": 27,
+        "cols": 85
+      }
+    },
+    {
+      "input": "AB\u001b[79GCDE",
+      "resize": {
+        "rows": 28,
+        "cols": 90
+      }
+    },
+    {
+      "input": "FGHI",
+      "resize": {
+        "rows": 25,
+        "cols": 80
+      },
+      "expectedCursor": {
+        "row": 0,
+        "col": 79
+      }
+    }
+  ]
+}
