@@ -95,18 +95,35 @@ ALL FOUR engines together. That is the discriminator: **a change that moves
 every engine is a harness change; a change that moves one is an engine
 change.** Check that before filing anything here as an engine gap.
 
-## RULING: the deferred-wrap cursor is normalized, not "fixed"
+## RULINGS: two deliberate divergences — do NOT open these as vterm bugs
 
-**Do not open this as a vterm bug.** When a glyph lands on the final column
-with autowrap on, the terminal owes a wrap it has not performed yet, and the
-two families represent that moment differently:
+Both were ruled by the operator on 2026-09-01, and both come down to the same
+principle: **"three engines agree" is a fact about their shared ancestry, not
+an argument about correctness.** Where our consumers read vterm on both ends,
+matching a reference implementation's internal choice would be churn.
 
-| representation | engines |
-| --- | --- |
-| cursor stays ON the last column, plus a pending-wrap flag | libvterm, ghostty |
-| cursor sits at `col == cols`, one past the end | **vterm**, xterm.js, vt100 |
+| behavior | libvterm's family | vterm's family | ruling |
+| --- | --- | --- | --- |
+| cursor after a glyph fills the last column (deferred wrap) | on the last column + a pending-wrap flag — libvterm, ghostty | `col == cols`, one past the end — **vterm**, xterm.js, vt100 | vterm keeps its convention; the CORPUS is normalized to it |
+| cursor when a resize shrinks below it | clamped to the last column of the old row — libvterm, xterm.js, vt100 | followed through reflow onto the continuation row — **vterm** | vterm keeps its behavior; the case stays ledgered |
 
-Neither is wrong. Operator ruling (2026-09-01): **vterm keeps its convention.**
+### Resize shrink: following the cursor is the modern behavior
+
+`16state_resize :: Resize shrink moves cursor` is a genuine BEHAVIORAL
+divergence rather than a representational one, and vterm's side is the
+defensible one: following the cursor through reflow is what a reflowing
+terminal does, while clamping is the pre-reflow legacy the other three
+inherit. Our consumers read vterm at both ends — record and replay — so there
+is no internal drift to correct. Revisit **only** if the herdr oracle later
+shows this exact case producing real production drift.
+
+### Deferred wrap: normalized converter-side, not "fixed"
+
+When a glyph lands on the final column with autowrap on, the terminal owes a
+wrap it has not performed yet, and the two families represent that moment
+differently (see the table above).
+
+Neither is wrong. **vterm keeps its convention.**
 Our snapshot codec, hab attach, and every downstream consumer read that
 representation today, and changing a load-bearing convention to match a
 reference implementation's internal choice is churn, not a fix.
