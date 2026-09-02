@@ -37,8 +37,19 @@ export interface InputEvent {
   data: Bytes
 }
 
+/**
+ * Set only by loaders that reconstruct an event from other evidence — e.g. a
+ * `control` event synthesized from checkpoint geometry deltas rather than a
+ * captured resize (the unterm phase A3 ruling on synthesized control
+ * events). Absent (never `false`) on anything the
+ * source actually captured, so a consumer can't mistake a reconstruction for
+ * a capture. `output`, `input` and `exit` are always captured and never
+ * carry it.
+ */
+type Derived = { derived?: true }
+
 /** The terminal was resized. */
-export interface ResizeControlEvent {
+export interface ResizeControlEvent extends Derived {
   at: Micros
   type: "control"
   control: "resize"
@@ -46,7 +57,7 @@ export interface ResizeControlEvent {
 }
 
 /** A terminal mode was turned on or off. */
-export interface ModeControlEvent {
+export interface ModeControlEvent extends Derived {
   at: Micros
   type: "control"
   control: "mode"
@@ -55,7 +66,7 @@ export interface ModeControlEvent {
 }
 
 /** A signal was delivered to the program (`"SIGINT"`, `"SIGWINCH"`, …). */
-export interface SignalControlEvent {
+export interface SignalControlEvent extends Derived {
   at: Micros
   type: "control"
   control: "signal"
@@ -75,7 +86,7 @@ export type ControlEvent = ResizeControlEvent | ModeControlEvent | SignalControl
  * A boundary worth naming — a turn end, an OSC 133 prompt, a chapter in a
  * recording. `name` is optional: an unnamed mark is still a seekable position.
  */
-export interface MarkEvent {
+export interface MarkEvent extends Derived {
   at: Micros
   type: "mark"
   name?: string

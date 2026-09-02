@@ -1,10 +1,11 @@
 // ── The io primitives — Session, Event, Emulator, Recording, pipe ──
 //
 // They live at `@termless/core/io` (src/io/), a module that depends on
-// nothing. They are deliberately NOT folded into this barrel: it already
-// exports a different `Recording` (the multi-track model the codecs read), and
-// a bare `Event` here would shadow the DOM global for every consumer. Both
-// resolve when the Recording models converge.
+// nothing. They are deliberately NOT folded into this barrel: this barrel's
+// own `Recording` export is the multi-track container — named `Trace` at its
+// source (`recording/recording.ts`) and kept here only as `Trace`'s
+// `@deprecated` alias until unterm phase A4a — and a bare `Event` here would
+// shadow the DOM global for every consumer.
 //
 //   import { pipe, type Event, type Session, type Emulator } from "@termless/core/io"
 //
@@ -140,10 +141,20 @@ export type {
   RowDiff,
 } from "./terminal/state-digest.ts"
 
-// The unified captured-session model — the canonical Recording type.
-export { createRecording, trackAuthority, micros, secondsToMicros, millisToMicros } from "./recording/recording.ts"
+// The unified captured-session model — the canonical Trace type (a multi-
+// track container: commands / io / frames). `Recording` below is `Trace`'s
+// deprecated alias, kept transparent through unterm phase A4a.
+export {
+  createTrace,
+  createRecording, // @deprecated — renamed to createTrace; alias removed at unterm phase A4a
+  trackAuthority,
+  micros,
+  secondsToMicros,
+  millisToMicros,
+} from "./recording/recording.ts"
 export type {
-  Recording,
+  Trace,
+  Recording, // @deprecated — renamed to Trace; alias removed at unterm phase A4a
   Command,
   IoEvent,
   IoDirection,
@@ -153,8 +164,19 @@ export type {
   RendererFingerprint,
   RecordingProvenance,
   TrackAuthority,
-  CreateRecordingInput,
+  CreateTraceInput,
+  CreateRecordingInput, // @deprecated — renamed to CreateTraceInput; alias removed at unterm phase A4a
 } from "./recording/recording.ts"
+// Trace ⇄ io-Recording bridges (unterm phase A3 legacy-side scaffolding):
+// build a Recording from a Trace's io track, or decompose one back into a
+// Trace. Deprecated alongside the Recording/CreateRecordingInput aliases
+// above — removed at phase A4a, once there is no second container to bridge.
+export { recordingFromTrace, traceFromRecording } from "./recording/trace-bridges.ts"
+export type {
+  DroppedEventTally,
+  TraceFromRecordingExtras,
+  TraceFromRecordingResult,
+} from "./recording/trace-bridges.ts"
 // Visual-state snapshotting — buffer change detection for the `record` verb.
 export { snapshotVisualState } from "./recording/visual-snapshot.ts"
 

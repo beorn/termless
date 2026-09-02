@@ -1,7 +1,7 @@
 /**
- * The in-memory Recording model — termless's unified captured-session type.
+ * The in-memory Trace model — termless's multi-track captured-session type.
  *
- * A **Recording** is a captured terminal session: a timeline carrying two
+ * A **Trace** is a captured terminal session: a timeline carrying two
  * **source tracks** and one **projection**.
  *
  *  - `commands` — a *source track* of timed high-level instructions (key
@@ -23,12 +23,22 @@
  * single monotonic clock. Never a float. asciicast's float-second timestamps
  * are normalized to integer µs on import (see {@link secondsToMicros}).
  *
- * This is `recording/recording.ts` — THE canonical captured-session model.
- * The legacy fragmented artifacts (the old `recording.ts`, `asciicast/convert`)
- * were purged in Phase 6A; this `Recording` type owns the concept. The format
- * codecs live alongside it: `asciicast/recording-codec.ts` (the `.cast` codec),
- * `tape/compile.ts` (the `.tape` compiler), `native/tty-format.ts`
- * (`.tty`/`.ttyz`), `ttyrec/recording-codec.ts` (`ttyrec` import).
+ * Why `Trace`, not `Recording`: the unterm design settles on "one event
+ * vocabulary, several containers" — `Recording` now names
+ * the single-track container, a header plus the Events (`@termless/core/io`,
+ * `src/io/recording.ts`). This type is the *other* container over the same
+ * event vocabulary: several source tracks plus a projection. Two structs
+ * answering to one name was the bug unterm phase A3 fixes; `Recording` stays
+ * exported below as a `@deprecated` alias of `Trace` through phase A4a, when
+ * the alias is deleted and the root barrel's `Recording` becomes the io shape.
+ *
+ * This is `recording/recording.ts` — the canonical multi-track captured-
+ * session model. The legacy fragmented artifacts (the old `recording.ts`,
+ * `asciicast/convert`) were purged in Phase 6A; this `Trace` type owns the
+ * concept. The format codecs live alongside it: `asciicast/recording-codec.ts`
+ * (the `.cast` codec), `tape/compile.ts` (the `.tape` compiler),
+ * `native/tty-format.ts` (`.tty`/`.ttyz`), `ttyrec/recording-codec.ts`
+ * (`ttyrec` import).
  */
 
 // =============================================================================
@@ -248,11 +258,11 @@ export interface Frame {
 }
 
 // =============================================================================
-// Recording — two source tracks + one projection
+// Trace — two source tracks + one projection
 // =============================================================================
 
 /**
- * Provenance about whether a Recording's frames projection can be regenerated.
+ * Provenance about whether a Trace's frames projection can be regenerated.
  *
  * Some sessions (custom renderers, non-deterministic programs) cannot
  * regenerate `frames` from `io`. When `reproducible` is `false`, the `frames`
@@ -273,18 +283,24 @@ export interface RecordingProvenance {
  * A captured terminal session — two source tracks and one projection on a
  * single monotonic µs timeline.
  *
- * A Recording is **valid with any non-empty subset of members**:
+ * Named `Trace`, not `Recording`: the unterm design settles on "one event
+ * vocabulary, several containers" — `Recording` is
+ * the single-track container (a header plus the Events, `@termless/core/io`);
+ * `Trace` is this package's other container over the same vocabulary: several
+ * tracks plus a projection. See the file header above for the full story.
+ *
+ * A Trace is **valid with any non-empty subset of members**:
  *
  *  - `commands` only — a hand-authored tape (intent, no observed output).
  *  - `commands` + `io` — a live record.
  *  - `commands` + `io` + `frames` — a *trace*.
  *  - `io` only — a decoded `.cast`.
  *
- * Use {@link createRecording} to construct one (it validates the non-empty
+ * Use {@link createTrace} to construct one (it validates the non-empty
  * invariant) and {@link trackAuthority} to ask which track is authoritative.
  */
-export interface Recording {
-  /** Recording model version. */
+export interface Trace {
+  /** Trace model version. */
   version: 1
   /** Terminal dimensions at recording start. */
   cols: number
@@ -312,7 +328,15 @@ export interface Recording {
 }
 
 /**
- * The track authority of a Recording — which track, if any, is the
+ * @deprecated Renamed to {@link Trace}. `Recording` now names the single-track
+ * io container (`@termless/core/io`, `src/io/recording.ts`); this alias keeps
+ * every existing import of the multi-track shape working until unterm phase
+ * A4a deletes it and the root barrel's `Recording` becomes the io shape.
+ */
+export type Recording = Trace
+
+/**
+ * The track authority of a Trace — which track, if any, is the
  * authoritative answer for a given question.
  *
  *  - `observation` — the authoritative *observed truth*: `"io"` when an io
@@ -332,8 +356,8 @@ export interface TrackAuthority {
 // Construction + accessors
 // =============================================================================
 
-/** Input to {@link createRecording} — at least one track member is required. */
-export interface CreateRecordingInput {
+/** Input to {@link createTrace} — at least one track member is required. */
+export interface CreateTraceInput {
   cols: number
   rows: number
   durationMicros: Micros
@@ -345,12 +369,18 @@ export interface CreateRecordingInput {
 }
 
 /**
- * Construct a {@link Recording}, enforcing the non-empty-subset invariant.
+ * @deprecated Renamed to {@link CreateTraceInput}. Kept as a transparent
+ * alias through unterm phase A4a.
+ */
+export type CreateRecordingInput = CreateTraceInput
+
+/**
+ * Construct a {@link Trace}, enforcing the non-empty-subset invariant.
  *
- * Throws when none of `commands` / `io` / `frames` is present — a Recording
+ * Throws when none of `commands` / `io` / `frames` is present — a Trace
  * with no tracks is not a recording.
  */
-export function createRecording(input: CreateRecordingInput): Recording {
+export function createTrace(input: CreateTraceInput): Trace {
   const hasCommands = input.commands !== undefined && input.commands.length > 0
   const hasIo = input.io !== undefined && input.io.length > 0
   const hasFrames = input.frames !== undefined && input.frames.length > 0
@@ -370,15 +400,25 @@ export function createRecording(input: CreateRecordingInput): Recording {
 }
 
 /**
- * Report the {@link TrackAuthority} of a Recording.
+ * @deprecated Renamed to {@link createTrace}. Kept as a transparent alias —
+ * same input shape, same validation, same error text — through unterm phase
+ * A4a, when this wrapper and the deprecated `Recording` alias are deleted
+ * together.
+ */
+export function createRecording(input: CreateRecordingInput): Recording {
+  return createTrace(input)
+}
+
+/**
+ * Report the {@link TrackAuthority} of a Trace.
  *
  * Encodes the track-authority rule: `io` is the authoritative observation,
  * `commands` is the authoritative intent. A track is authoritative only when
  * it is present and non-empty.
  */
-export function trackAuthority(recording: Recording): TrackAuthority {
-  const hasIo = recording.io !== undefined && recording.io.length > 0
-  const hasCommands = recording.commands !== undefined && recording.commands.length > 0
+export function trackAuthority(trace: Trace): TrackAuthority {
+  const hasIo = trace.io !== undefined && trace.io.length > 0
+  const hasCommands = trace.commands !== undefined && trace.commands.length > 0
   return {
     observation: hasIo ? "io" : null,
     intent: hasCommands ? "commands" : null,
