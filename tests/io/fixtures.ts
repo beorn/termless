@@ -104,6 +104,10 @@ export function fakeEmulator(size: Size = FIXTURE_SIZE): FakeEmulator {
       continuation: false,
       hyperlink: null,
     }),
+    // The fake keeps no history: its buffer is the screen.
+    get scrollback() {
+      return 0
+    },
     get cursor() {
       return { col: 0, row: 0, visible: true, style: "block" as const, x: 0, y: 0 }
     },

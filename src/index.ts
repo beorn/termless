@@ -109,7 +109,18 @@ export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } f
 export { parseKey, keyToAnsi } from "./terminal/key-mapping.ts"
 export { encodeKeyToAnsi } from "./terminal/key-encoding.ts"
 export { scanMouseDecset, scanMouseDecsetTracking, scanWindowOpQueries } from "./terminal/escape-scans.ts"
-export { createCellView, createRegion, createRow } from "./terminal/views.ts"
+export {
+  createBufferView,
+  createCellView,
+  createRangeView,
+  createRegion,
+  createRow,
+  createScreenView,
+  createScrollbackView,
+  createViewportView,
+  type PictureReadable,
+  type ViewReadable,
+} from "./terminal/views.ts"
 export { termlessMatchers } from "./jest-matchers.ts"
 export type { AssertionResult, CellAttrs, CursorProps } from "./assertions.ts"
 

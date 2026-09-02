@@ -84,6 +84,11 @@ export function emulatorFromBackend(backend: TerminalBackend, size: Size): Emula
       return backend.getCell(row, col)
     },
 
+    get scrollback(): number {
+      const s = backend.getScrollback()
+      return s.totalRows - s.screenRows
+    },
+
     get cursor(): Cursor {
       return backend.getCursor()
     },

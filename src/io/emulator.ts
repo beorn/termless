@@ -31,6 +31,15 @@ export interface Emulator {
   /** A single cell, by absolute buffer row and column. */
   getCell(row: number, col: number): Cell
 
+  /**
+   * Rows of history above the screen. The screen occupies buffer rows
+   * `[scrollback, scrollback + size.rows)`, so this is what turns
+   * {@link Emulator.getCell}'s absolute row into a screen row and back — the
+   * extent the region views need to split the picture. `0` on the alternate
+   * screen, which keeps no history.
+   */
+  readonly scrollback: number
+
   /** Where the cursor is, and what it looks like. */
   readonly cursor: Cursor
 

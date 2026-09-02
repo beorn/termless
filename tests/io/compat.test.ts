@@ -31,6 +31,23 @@ describe("emulatorFromBackend", () => {
     expect(emulator.getCell(0, 0).char).toBe("h")
     expect(emulator.cursor.col).toBe("hello world".length)
     expect(emulator.size).toEqual(FIXTURE_SIZE)
+    expect(emulator.scrollback).toBe(0)
+
+    backend.destroy()
+  })
+
+  test("scrollback mirrors the backend's history rows, so absolute rows map to the screen", async () => {
+    const backend = createXtermBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const emulator = emulatorFromBackend(backend, { cols: 80, rows: 24 })
+
+    const thirtyLines = Array.from({ length: 30 }, (_, i) => `row ${i + 1}`).join("\r\n")
+    await emulator.apply({ at: micros(1), type: "output", data: bytes(thirtyLines) })
+
+    const s = backend.getScrollback()
+    expect(emulator.scrollback).toBe(s.totalRows - s.screenRows)
+    expect(emulator.scrollback).toBe(6)
+    expect(emulator.getCell(emulator.scrollback, 4).char).toBe("7")
 
     backend.destroy()
   })
