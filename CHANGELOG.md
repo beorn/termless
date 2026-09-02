@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+## 0.9.0 - 2026-09-01
+
+### Added
+
+- **The io module — the unterm primitives** (`@termless/core`): `Session`, `Event`/`OutputEvent`, `Emulator`, `Recording` and `pipe`, on a microsecond clock (`micros()`), are the vocabulary the rest of the package is being re-expressed in; `emulatorFromBackend()` adapts any `TerminalBackend`. See `src/io/README.md`.
+- **Views over the Emulator** — `Emulator` carries its `scrollback` extent, and `createScreenView` / `createScrollbackView` / `createBufferView` / `createRangeView` / `createViewportView` read a `PictureReadable` (an Emulator) as well as the legacy `Terminal`; all five are exported from the root barrel.
+- **io conformance seed** — `tests/io/conformance.test.ts` replays one event stream through the vterm and xterm.js emulators and compares screen, cursor, scrollback and, on a styled resize, every cell by painted RGB (`Color.index` is engine identity, never part of a verdict).
+- **Conformance corpus** — the libvterm suite (MIT), a `resize` step verb that converts the reflow cases, and a gap ledger that names its engine: `vtermEngineIdentity()` and the `_engine` header fail the suite when a different vterm.js resolves than the one the rows were graded against.
+- **`.tty` / `.ttyz` — one recording format, two encodings.** `.tty` is the live bundle directory (a manifest plus typed, declaratively-pathed members); `.ttyz` is the sealed, reproducible ZIP of the same members. `readRecording` accepts either and no consumer can tell which it was handed. The `hts1` io encoding decodes the session writer's binary journal natively, and a ttyrec import codec rides along. `docs/reference/formats/tty.md` is the normative reference and now also carries the live-read (session access) contract.
+- **CLI recordings** — native recordings replay by track authority, recording bundles are canonical, and a native-source flag on another format is refused.
+- **OSC 8 hyperlinks** — emulator-owned link URIs are carried through both the xterm and vterm guest cell adapters (fail-loud on an unresolvable link id); `termless` validates OSC 8 raw passthrough.
+- **`@termless/vterm` projects nested terminal graphics**, and no longer advertises graphics it does not project.
+- **`snapshotView()`** wraps a vterm-family `EngineSnapshot` as a `Terminal` read view, so region selectors and matchers run over a frozen snapshot exactly as over a live backend (a type-only dependency; core still imports no engine).
+- **`termless` umbrella package** (the bare name, 0.9.0) — Effect-style subpaths `.`, `./contract`, `./fmt`, `./rec` and `./backends`; every subpath is a thin re-export of `@termless/core`, and only `./backends` knows more than one engine.
+
+### Changed
+
+- **`@termless/vterm` follows vterm.js 0.7.0** (`^0.7.0`), which retires seven gap-ledger rows: two scroll cases, Newline/Linefeed mode, DEC Auto Wrap, double-width/height rows, resize-shorter, and protected areas.
+- **CLI sessions default to vterm**, the production engine, instead of the retired xterm.js reference, and an unknown backend name is refused instead of silently substituted. `@termless/peekaboo` and the `termless rec` live overlay run the production engine and shell guest on the data path.
+- Phase A4 of the io migration is named on the deprecated 07-09 read-API names and on the `Cursor.x`/`Cursor.y` markers.
+
+### Fixed
+
+- **`@termless/cli` installs from a fresh clone again** — `silvery` `^0.16.6` → `^0.21.0` (the older bundle imported an undeclared `@silvery/ag-react` under Bun's export condition) and `loggily` `^0.4.0` → `^0.10.2` (the older range resolved to a package shipping TypeScript source); the root workspace now links the pure backends (`@termless/vt100`, `vt220`, `vterm`, `xtermjs`) so a standalone checkout resolves them by name.
+- **`@termless/ghostty` bounds native canvas allocations.**
+- **Cross-platform perceptual hashes** in the compare tools.
+- **The terminal preserves unrelated escape prefixes**, and the corpus runner replays a file's preamble into segment state.
+- CLI: the `termless` bin entry is committed executable, and the cursor probe keeps its nullable types.
+
+### Removed
+
+- **`.rec`** — deleted, not aliased (zero shipped artifacts existed); a frame trace becomes a valid `.tty` bundle by gaining a manifest, which the tracer now writes.
+- The §9-naming pure type aliases in `@termless/core` and `@termless/vterm`, and `@termless/test`'s `createTerminalFixture` aliases.
+
+## 0.7.0 – 0.8.4 - 2026-04-09 → 2026-07-27
+
+The entries below shipped across the 0.7.0 through 0.8.4 tags; they were listed under Unreleased until the 0.9.0 entry was written.
+
 ### Changed
 
 - **`termless rec` default live chrome restored to centered `macos`** — the live overlay now mounts recorded PTY output through silvery `<Island guest={xtermGuest}>`, so the old compositing-leak class is isolated at the island boundary instead of patched by disabling chrome. Bare `termless rec` shows the centered REC chrome again; concrete `--chrome macos|windows` styles also set the live style; `--live-chrome none` remains the explicit raw-stdout passthrough.
