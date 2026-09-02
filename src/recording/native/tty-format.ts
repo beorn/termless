@@ -45,6 +45,9 @@ import {
   millisToMicros,
 } from "../recording.ts"
 import { buildZip, parseZip, type ZipEntry } from "./zip-archive.ts"
+import { eventFromIoEvent } from "../io-compat.ts"
+import type { Event } from "../../io/event.ts"
+import type { Recording as IoRecording, RecordingHeader as IoRecordingHeader } from "../../io/recording.ts"
 
 /** The `.tty` format version written into every `manifest.json`. */
 export const TTY_FORMAT_VERSION = 1
@@ -463,36 +466,47 @@ function zipSource(entries: ZipEntry[]): BundleSource {
 }
 
 /**
+ * Open a `.tty` bundle directory or `.ttyz` sealed archive and parse its
+ * manifest — shared by every reading door (`readBundle` and `loadBundle`
+ * alike). `doorName` names the calling door in error messages (`readRecording`
+ * for the Trace-shaped doors, `loadRecording` for the io-shaped ones) so each
+ * door's errors read as its own, even though the dispatch is one
+ * implementation.
+ */
+function bundleSourceOf(path: string, doorName: string): { manifest: TtyManifest; source: BundleSource } {
+  if (!existsSync(path)) {
+    throw new Error(`${doorName}: ${path} does not exist`)
+  }
+  if (statSync(path).isFile()) {
+    const entries = parseZip(new Uint8Array(readFileSync(path)))
+    const source = zipSource(entries)
+    if (!source.has(MANIFEST_FILE)) {
+      throw new Error(`${doorName}: ${path} is not a .ttyz recording (no manifest.json entry)`)
+    }
+    return { manifest: parseManifest(source.bytesOf(MANIFEST_FILE), path), source }
+  }
+  const manifestPath = join(path, MANIFEST_FILE)
+  if (!existsSync(manifestPath)) {
+    throw new Error(
+      `${doorName}: ${path} is not a .tty bundle — it has no manifest.json. ` +
+        `A legacy frame-trace directory becomes a valid bundle by adding a manifest that declares its index.jsonl as a frames member.`,
+    )
+  }
+  const source = dirSource(path)
+  return { manifest: parseManifest(source.bytesOf(MANIFEST_FILE), manifestPath), source }
+}
+
+/**
  * Read a `.tty`/`.ttyz` recording with its manifest and skip tally — the
  * manifest-aware door for annotation, windowed, and player consumers.
  * Accepts both encodings; identical Recording from either.
+ *
+ * @deprecated The Trace-shaped door — {@link loadBundle} is the io-shaped
+ * equivalent. Unchanged until unterm phase A4a, when the root barrel's
+ * `Recording` flips to the io shape and this door is removed.
  */
 export function readBundle(path: string, options: ReadBundleOptions = {}): ReadBundleResult {
-  if (!existsSync(path)) {
-    throw new Error(`readRecording: ${path} does not exist`)
-  }
-
-  let manifest: TtyManifest
-  let source: BundleSource
-  if (statSync(path).isFile()) {
-    const entries = parseZip(new Uint8Array(readFileSync(path)))
-    source = zipSource(entries)
-    if (!source.has(MANIFEST_FILE)) {
-      throw new Error(`readRecording: ${path} is not a .ttyz recording (no manifest.json entry)`)
-    }
-    manifest = parseManifest(source.bytesOf(MANIFEST_FILE), path)
-  } else {
-    const manifestPath = join(path, MANIFEST_FILE)
-    if (!existsSync(manifestPath)) {
-      throw new Error(
-        `readRecording: ${path} is not a .tty bundle — it has no manifest.json. ` +
-          `A legacy frame-trace directory becomes a valid bundle by adding a manifest that declares its index.jsonl as a frames member.`,
-      )
-    }
-    source = dirSource(path)
-    manifest = parseManifest(source.bytesOf(MANIFEST_FILE), manifestPath)
-  }
-
+  const { manifest, source } = bundleSourceOf(path, "readRecording")
   const tracks = loadMembers(manifest, source, options.backendFallback)
   return { recording: recordingOf(manifest, tracks), manifest, skipped: tracks.skipped }
 }
@@ -502,9 +516,234 @@ export function readBundle(path: string, options: ReadBundleOptions = {}): ReadB
  * bundle directory or a sealed `.ttyz` archive, nothing else, and produces an
  * identical {@link Recording} from either. Nothing about the result names the
  * encoding it came from.
+ *
+ * @deprecated The Trace-shaped door — {@link loadRecording} is the io-shaped
+ * equivalent. Unchanged until unterm phase A4a, when the root barrel's
+ * `Recording` flips to the io shape and this door is removed.
  */
 export function readRecording(path: string): Recording {
   return readBundle(path).recording
+}
+
+// =============================================================================
+// The io-shaped door — loadBundle / loadRecording (unterm phase A3, slice 5)
+// =============================================================================
+//
+// readBundle/readRecording above return the Trace-shaped Recording
+// (`../recording.ts`, `@deprecated` alias of `Trace`): commands + io + frames
+// tracks, `IoEvent` rows decoded to strings. loadBundle/loadRecording below
+// return the io-shaped Recording (`Event[]`, raw bytes, `@termless/core/io`)
+// per the unterm A3 D5 ruling: a new name now; `readRecording` itself flips
+// to this shape at phase A4a, when the Trace alias is deleted.
+//
+// Member → Event mapping (normative doc: docs/reference/formats/tty.md,
+// "Loading as an io Recording"):
+//  - io member, hts1 encoding: output/input frames become Events carrying
+//    the RAW payload bytes as `data` (no UTF-8 round trip — the Trace door's
+//    decode is the lossy step this door removes); a resize frame becomes a
+//    CAPTURED `control`/`resize` event — no `derived` flag, since it is
+//    exactly what the source recorded, the same frame the Trace door reads
+//    into its `commands` track, just typed as this vocabulary's `control`
+//    member instead. `at` rebased from wall-ms exactly as `rebase()` does
+//    for the Trace door, same corruption error. lifecycle/truncation frames
+//    have no Event form (same as the Trace door, which also only tallies
+//    them) — tallied here too, never silently dropped.
+//  - io member, jsonl encoding: each row through `eventFromIoEvent`.
+//  - commands / frames / facts / habcp / checkpoint members: not loaded —
+//    tallied by path, the same treatment `readBundle` gives them today.
+//    Checkpoint-derived marks and reconstructed resize deltas are NOT part
+//    of this slice: the only real producer of a checkpoint member is the hab
+//    side (`TerminalCheckpoint { reason, at, throughOffset, snapshot }`,
+//    `snapshot` a vterm.js-owned shape), and this format's own doc leaves a
+//    checkpoint's content unspecified — a reader for an invented shape would
+//    be fiction. That reader is a later slice, against the real producer.
+
+/** Member paths {@link loadBundle} did not load into the io Recording, plus hts1 frame kinds with no Event form — tallied, never a silent drop. */
+export interface TtyLoadSkipped {
+  /** `commands` member paths — the io Event union has no commands track. */
+  commands: string[]
+  /** `frames` member paths — frames are a Trace-only projection. */
+  frames: string[]
+  /** `facts` member paths — the annotation source, never a Recording track. */
+  facts: string[]
+  /** `habcp` member paths — opaque by ruling; hab-side readers own the row schema. */
+  habcp: string[]
+  /** `checkpoint` member paths — this door doesn't read a checkpoint's content yet (see the section docstring above); a later slice turns these into derived marks/resizes against the real producer's shape. */
+  checkpoint: string[]
+  /** hts1 frames of kind `lifecycle` in a loaded io member — no Event form, same as the Trace door. */
+  lifecycle: number
+  /** hts1 frames of kind `truncation` in a loaded io member — no Event form, same as the Trace door. */
+  truncation: number
+}
+
+/** The manifest-aware io-shaped read result — {@link loadBundle}. */
+export interface LoadBundleResult {
+  recording: IoRecording
+  manifest: TtyManifest
+  skipped: TtyLoadSkipped
+}
+
+function emptySkipped(): TtyLoadSkipped {
+  return { commands: [], frames: [], facts: [], habcp: [], checkpoint: [], lifecycle: 0, truncation: 0 }
+}
+
+/** Every member of a bundle, sealed members plus a live tail if present — the same set {@link loadMembers} iterates. */
+function everyMember(manifest: TtyManifest): Array<TtyMember | TtyTail> {
+  return [...manifest.members, ...(manifest.tail !== undefined ? [manifest.tail] : [])]
+}
+
+function describeMembers(members: Array<TtyMember | TtyTail>): string {
+  return members.map((m) => `${m.path} (${m.type})`).join(", ") || "no members"
+}
+
+interface LoadedIoEvents {
+  events: Event[]
+  skipped: TtyLoadSkipped
+  sawHts1: boolean
+  originWallMs: number | undefined
+}
+
+/** Load every member into the io Event union — the loop {@link loadMembers} runs for the Trace shape, adapted for `Event[]` output. */
+function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEvents {
+  const events: Event[] = []
+  const skipped = emptySkipped()
+  let originWallMs = manifest.originWallMs
+  let sawHts1 = false
+
+  for (const member of everyMember(manifest)) {
+    if (!source.has(member.path)) {
+      throw new Error(`loadRecording: manifest names member "${member.path}" but the bundle has no such file`)
+    }
+    if (
+      member.type === "commands" ||
+      member.type === "frames" ||
+      member.type === "facts" ||
+      member.type === "habcp" ||
+      member.type === "checkpoint"
+    ) {
+      skipped[member.type].push(member.path)
+      continue
+    }
+    // member.type is "io" from here — every other type is skipped above.
+    switch (member.encoding) {
+      case "jsonl": {
+        const rows = utf8.decode(source.bytesOf(member.path))
+        for (const row of parseJsonl<IoEvent>(rows)) {
+          events.push(eventFromIoEvent(row))
+        }
+        break
+      }
+      case "hts1": {
+        const frames1 = decodeHtsFrames(source.bytesOf(member.path), member.path)
+        if (originWallMs === undefined && frames1.length > 0) originWallMs = frames1[0]!.header.at
+        for (const f of frames1) {
+          switch (f.header.kind) {
+            case "output":
+              events.push({
+                at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
+                type: "output",
+                data: f.payload,
+              })
+              break
+            case "input":
+              events.push({
+                at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
+                type: "input",
+                data: f.payload,
+              })
+              break
+            case "resize": {
+              const size = f.header.size
+              if (size === undefined) {
+                throw new Error(`loadRecording: hts1 resize frame missing size in member "${member.path}"`)
+              }
+              // A captured resize — the source recorded it, so unlike a
+              // checkpoint-reconstructed delta this carries no `derived`.
+              events.push({
+                at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
+                type: "control",
+                control: "resize",
+                size: { cols: size.cols, rows: size.rows },
+              })
+              break
+            }
+            case "lifecycle":
+              skipped.lifecycle += 1
+              break
+            case "truncation":
+              skipped.truncation += 1
+              break
+          }
+        }
+        sawHts1 = true
+        break
+      }
+      case "zstd-seekable":
+        throw new Error(
+          `loadRecording: member "${member.path}" declares the reserved zstd-seekable encoding, which is not yet implemented — refusing to skip it`,
+        )
+      case "trace-index":
+      case "json":
+        throw new Error(
+          `loadRecording: member "${member.path}" declares type "io" with "${member.encoding}" encoding — no such io encoding`,
+        )
+      default:
+        throw new Error(
+          `loadRecording: member "${member.path}" declares unknown encoding "${String((member as TtyMember).encoding)}"`,
+        )
+    }
+  }
+
+  events.sort((a, b) => a.at - b.at)
+  return { events, skipped, sawHts1, originWallMs }
+}
+
+/**
+ * Read a `.tty`/`.ttyz` recording as the io-shaped {@link IoRecording} — the
+ * manifest-aware door. See the section docstring above for the member →
+ * Event mapping. Unlike {@link readBundle} it takes no options: the only
+ * option that door has (`backendFallback`) stamps synthesized frame
+ * fingerprints, and this door never loads frames — an accepted-but-inert
+ * option would be a silent no-op.
+ *
+ * @throws {Error} when the bundle yields no events at all (e.g. a
+ * frames-only, commands-only, or checkpoints-only bundle) — naming the
+ * members it has, since the io shape has nothing else to say about it.
+ */
+export function loadBundle(path: string): LoadBundleResult {
+  const { manifest, source } = bundleSourceOf(path, "loadRecording")
+  const { events, skipped, sawHts1, originWallMs } = loadIoEvents(manifest, source)
+
+  if (events.length === 0) {
+    throw new Error(
+      `loadRecording: ${path} produced no events for the io Recording — it has only: ${describeMembers(everyMember(manifest))}`,
+    )
+  }
+
+  // sourceResolution is decided by the io members alone: "ms" when any
+  // loaded io member is hts1, "us" otherwise. Every event above came from an
+  // io member (hts1 or jsonl — checkpoints are tallied, not loaded), so a
+  // non-empty `events` guarantees one of the two was loaded.
+  const sourceResolution: "us" | "ms" = sawHts1 ? "ms" : "us"
+
+  const header: IoRecordingHeader = {
+    version: 1,
+    size: { cols: manifest.cols > 0 ? manifest.cols : 0, rows: manifest.rows > 0 ? manifest.rows : 0 },
+    duration: manifest.durationMicros > 0 ? micros(manifest.durationMicros) : events[events.length - 1]!.at,
+    sourceResolution,
+    ...(originWallMs !== undefined ? { timestamp: originWallMs } : {}),
+  }
+  return { recording: { header, events }, manifest, skipped }
+}
+
+/**
+ * Read a recording as the io-shaped {@link IoRecording} — the encoding-blind
+ * door. Accepts a live `.tty` bundle directory or a sealed `.ttyz` archive,
+ * nothing else — the io-shaped counterpart of {@link readRecording}: same
+ * input contract, `Event[]` output.
+ */
+export function loadRecording(path: string): IoRecording {
+  return loadBundle(path).recording
 }
 
 // =============================================================================

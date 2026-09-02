@@ -76,8 +76,10 @@ export type { WriteVisualTraceOptions } from "./recording/write-visual-trace.ts"
 // The `.tty`/`.ttyz` recording format: one format, two encodings — the live
 // bundle directory and the sealed archive — read by one encoding-blind reader.
 export {
-  readRecording,
-  readBundle,
+  readRecording, // @deprecated — the Trace-shaped door; loadRecording is the io-shaped one (flips at unterm phase A4a)
+  readBundle, // @deprecated — as above; loadBundle is the io-shaped door
+  loadRecording,
+  loadBundle,
   writeRecording,
   packRecording,
   unpackRecording,
@@ -87,6 +89,8 @@ export {
 } from "./recording/native/tty-format.ts"
 export type {
   TtyManifest,
+  LoadBundleResult,
+  TtyLoadSkipped,
   TtyMember,
   TtyMemberType,
   TtyMemberEncoding,

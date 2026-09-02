@@ -134,6 +134,55 @@ every row semantic are defined hab-side; see the habitat's own `habcp.md`
 specification. A `habcp` member naming the journal's live tail (`habcp.log`)
 is the one declared mutable member — consumers read it to EOF.
 
+### Loading as an io Recording
+
+The table above is the **Trace-shaped** door (`readBundle`/`readRecording`,
+`recording/recording.ts`'s commands + io + frames tracks). `loadBundle` /
+`loadRecording` (`recording/native/tty-format.ts`) load the same manifest
+into the **io-shaped** Recording instead — a header plus `Event[]`
+(`@termless/core/io`) — minted under a new name in unterm phase A3 slice 5;
+`readRecording` itself takes over this shape at phase A4a, when the Trace
+alias is deleted (the two names coincide from that point on).
+
+| member                                               | → io Event                                                                                                                                   |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `io`, `hts1` encoding — `output`/`input`             | one Event per frame, the **raw payload bytes** as `data` — no UTF-8 decode                                                                   |
+| `io`, `hts1` encoding — `resize`                     | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track |
+| `io`, `hts1` encoding — `lifecycle`/`truncation`     | no Event form (same as the Trace door) — tallied                                                                                             |
+| `io`, `jsonl` encoding                               | each row through `eventFromIoEvent`                                                                                                          |
+| `commands`, `frames`, `facts`, `habcp`, `checkpoint` | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                               |
+
+Checkpoint members are not loaded in this slice: the only real producer of a
+checkpoint member is the hab side (`TerminalCheckpoint { reason, at,
+throughOffset, snapshot }`, `snapshot` a vterm.js-owned shape carrying the
+geometry), and this format's own doc leaves a checkpoint's on-disk content
+unspecified — a reader for an invented shape would be fiction. Turning
+checkpoints into derived marks and reconstructed resize deltas (`@cto`
+ruling Q1: reconstruction is marked, capture is not) is a later slice's work,
+against that real producer's shape.
+
+**The `derived` rule**: `output`/`input` events never carry `derived` — they
+are always a byte-for-byte capture, hts1 or jsonl. A captured hts1 `resize`
+frame _also_ carries no `derived` — it happened, exactly as recorded, same as
+`output`/`input`. `derived: true` is reserved for events this door
+_reconstructs_ from other evidence rather than reads directly off the wire;
+none exist yet (checkpoint-derived marks/resizes land in the later slice
+above).
+
+**The `sourceResolution` rule** (unterm A3 ruling: declared, never assumed):
+`"ms"` when any loaded `io` member is `hts1`; `"us"` otherwise. Every event
+this door produces comes from an `io` member (hts1 or jsonl — a checkpoint
+member is tallied, never loaded), so a bundle with events always has one to
+decide from; a bundle with none throws the same "no events" error below.
+
+**What is tallied** — `TtyLoadSkipped`: the `commands` / `frames` / `facts` /
+`habcp` / `checkpoint` member paths not loaded at all, plus `lifecycle` /
+`truncation` counts for hts1 frames with no Event form. Never a silent drop.
+
+A bundle that yields no events at all (frames-only, commands-only,
+checkpoints-only) throws, naming the members it has — the io shape has
+nothing to say about it.
+
 ### Member encodings
 
 | encoding        | member types               | wire shape                                                                                                         |
