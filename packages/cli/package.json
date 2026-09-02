@@ -52,7 +52,7 @@
     "@silvery/commander": "^0.18.2",
     "loggily": "^0.4.0",
     "react": "^19.0.0",
-    "silvery": "^0.16.6",
+    "silvery": "^0.21.0",
     "zod": "^3.24.0"
   },
   "peerDependencies": {
