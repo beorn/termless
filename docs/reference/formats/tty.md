@@ -144,13 +144,13 @@ into the **io-shaped** Recording instead — a header plus `Event[]`
 `readRecording` itself takes over this shape at phase A4a, when the Trace
 alias is deleted (the two names coincide from that point on).
 
-| member                                           | → io Event                                                                                                                                           |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `io`, `hts1` encoding — `output`/`input`         | one Event per frame, the **raw payload bytes** as `data` — no UTF-8 decode                                                                           |
-| `io`, `hts1` encoding — `resize`                 | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track         |
-| `io`, `hts1` encoding — `lifecycle`/`truncation` | no Event form (same as the Trace door) — tallied                                                                                                     |
-| `io`, `jsonl` encoding                           | each row through `eventFromIoEvent`                                                                                                                  |
-| `commands`, `frames`, `facts`, `habcp`           | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                                       |
+| member                                           | → io Event                                                                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `io`, `hts1` encoding — `output`/`input`         | one Event per frame, the **raw payload bytes** as `data` — no UTF-8 decode                                                                          |
+| `io`, `hts1` encoding — `resize`                 | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track        |
+| `io`, `hts1` encoding — `lifecycle`/`truncation` | no Event form (same as the Trace door) — tallied                                                                                                    |
+| `io`, `jsonl` encoding                           | each row through `eventFromIoEvent`                                                                                                                 |
+| `commands`, `frames`, `facts`, `habcp`           | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                                      |
 | `checkpoint`                                     | **loaded**: a derived `mark` per record, plus a derived `control`/`resize` on a geometry change — see [Checkpoint member](#checkpoint-member) below |
 
 Checkpoint members are loaded (unterm A3 slice 5b) — see
@@ -241,7 +241,7 @@ member's own records.
 | `jsonl`         | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
 | `hts1`          | io                         | the binary journal framing (below); wall-ms `at`, rebased on read                                                  |
 | `trace-index`   | frames                     | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it                                                   |
-| `json`          | checkpoint                 | one JSON document — a record or an array of records, see [Checkpoint member](#checkpoint-member) above            |
+| `json`          | checkpoint                 | one JSON document — a record or an array of records, see [Checkpoint member](#checkpoint-member) above             |
 | `zstd-seekable` | _reserved_                 | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip  |
 
 ### The `hts1` io encoding
