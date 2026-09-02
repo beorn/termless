@@ -86,7 +86,7 @@
     "@types/react": "^19.2.14",
     "@vitest/expect": "^4.1.10",
     "@vue/server-renderer": "^3.5.39",
-    "loggily": "^0.4.0",
+    "loggily": "^0.10.2",
     "oxfmt": "0.38.0",
     "silvery": "^0.4.2",
     "tsdown": "^0.22.5",

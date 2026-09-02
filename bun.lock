@@ -21,7 +21,7 @@
         "@types/react": "^19.2.14",
         "@vitest/expect": "^4.1.10",
         "@vue/server-renderer": "^3.5.39",
-        "loggily": "^0.4.0",
+        "loggily": "^0.10.2",
         "oxfmt": "0.38.0",
         "silvery": "^0.4.2",
         "tsdown": "^0.22.5",
@@ -68,7 +68,7 @@
         "@modelcontextprotocol/sdk": "^1.12.1",
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.18.2",
-        "loggily": "^0.4.0",
+        "loggily": "^0.10.2",
         "react": "^19.0.0",
         "silvery": "^0.21.0",
         "zod": "^3.24.0",
@@ -1168,7 +1168,7 @@
 
     "linkify-it": ["linkify-it@5.0.2", "", { "dependencies": { "uc.micro": "^2.0.0" } }, "sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q=="],
 
-    "loggily": ["loggily@0.4.2", "", {}, "sha512-fJek6yyxUXxtZmhVXWMnKprzNgAGIawR8xZ/qF5la2BdGgiS738vYYr8+LfrOovoWzGI5a1YdKwfdy5ocDUWmA=="],
+    "loggily": ["loggily@0.10.2", "", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0" }, "optionalPeers": ["@opentelemetry/api"] }, "sha512-c4ihogdduRDl/k3EwBTKL6iryWDt+MO3OBeGiHNQErCeiAVcF076Yw6i1/agltL0Ap4PuaQtZzKslTdi9Cxzgg=="],
 
     "longest-streak": ["longest-streak@3.1.0", "", {}, "sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g=="],
 
@@ -1540,13 +1540,9 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
+    "@termless/cli/@termless/core": ["@termless/core@root:", {}],
+
     "@termless/cli/silvery": ["silvery@0.21.1", "", { "dependencies": { "@chenglou/pretext": "^0.0.7", "@silvery/color": "0.21.0", "@silvery/commander": "0.21.0", "@termless/core": "^0.8.1", "css-select": "^7.0.0", "css-what": "^8.0.0", "flexily": "0.7.3", "loggily": "^0.10.2", "react-reconciler": "^0.33.0", "slice-ansi": "^8.0.0", "string-width": "^8.2.0" }, "peerDependencies": { "@termless/ghostty": "^0.8.2", "@termless/ghostty-native": "^0.8.1", "@termless/test": "^0.8.1", "@termless/xtermjs": "^0.8.1", "playwright": ">=1.40.0", "react": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@termless/ghostty", "@termless/ghostty-native", "@termless/test", "@termless/xtermjs", "playwright"] }, "sha512-SJUf7XIg2i5K4nl+F8/53k/lXbt0AGdOdDDE4I2Pe+Ng41yL78xR3kZpITzT1dR3TiX+KCMacso/aEY2Q30RKw=="],
-
-    "@termless/vt100/@termless/core": ["@termless/core@root:", {}],
-
-    "@termless/vt220/@termless/core": ["@termless/core@root:", {}],
-
-    "@termless/vterm/@termless/core": ["@termless/core@root:", {}],
 
     "@termless/xtermjs/@termless/core": ["@termless/core@root:", {}],
 
@@ -1590,9 +1586,11 @@
 
     "@napi-rs/wasm-tools-wasm32-wasi/@emnapi/core/@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w=="],
 
+    "@termless/cli/@termless/core/silvery": ["silvery@0.4.3", "", { "dependencies": { "chalk": "^5.6.2", "loggily": "github:beorn/loggily", "react-reconciler": "^0.33.0", "slice-ansi": "^8.0.0", "string-width": "^8.2.0", "zustand": "^5.0.11" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-KE73UL7oSumbVQPNlMQeVgi7cqR657Gvnfqpxnt3MSIrhAPA6ljtYGEIRp9anes7KhpK6YagXlwn9aE/HIy/dg=="],
+
     "@termless/cli/silvery/@silvery/commander": ["@silvery/commander@0.21.0", "", { "dependencies": { "@silvery/ansi": "0.21.0", "commander": ">=13.0.0", "zod": ">=3.0.0" } }, "sha512-Y4cWmpaP/+KjZSAEbDezmzcM5i0jzWOCnqMSyN14aJE+sJB8scQjRLifP0DmR9tXA7sH2L+yH2dWf4f4FomAtA=="],
 
-    "@termless/cli/silvery/loggily": ["loggily@0.10.2", "", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0" }, "optionalPeers": ["@opentelemetry/api"] }, "sha512-c4ihogdduRDl/k3EwBTKL6iryWDt+MO3OBeGiHNQErCeiAVcF076Yw6i1/agltL0Ap4PuaQtZzKslTdi9Cxzgg=="],
+    "@termless/cli/silvery/@termless/core": ["@termless/core@root:", {}],
 
     "cliui/string-width/is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
@@ -1611,6 +1609,8 @@
     "yargs/string-width/is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
     "yargs/string-width/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
+
+    "@termless/cli/@termless/core/silvery/loggily": ["loggily@github:beorn/loggily#7045f84", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0" }, "optionalPeers": ["@opentelemetry/api"] }, "beorn-loggily-7045f84", "sha512-+XbWW1wmJd2xqOzNEIKTq/0lecPwG7Z6pxj3KY2tKRdvoeFHW5ebbEQaU3b9zGCABs1jswizUFCjDkBz+2Y8hw=="],
 
     "@termless/cli/silvery/@silvery/commander/@silvery/ansi": ["@silvery/ansi@0.21.0", "", { "dependencies": { "@silvery/color": "0.21.0", "string-width": "^8.2.0" } }, "sha512-UwGg3IUWDFd+QCz89Ek8piSDGbAwEDBeXM0Z4viuBnlGuBkEdb1XHuXQhbUHdOi2uD2bWdfQr0UuY2zyMiMvUw=="],
 

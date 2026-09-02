@@ -50,7 +50,7 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@resvg/resvg-js": "^2.6.0",
     "@silvery/commander": "^0.18.2",
-    "loggily": "^0.4.0",
+    "loggily": "^0.10.2",
     "react": "^19.0.0",
     "silvery": "^0.21.0",
     "zod": "^3.24.0"
