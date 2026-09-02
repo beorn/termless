@@ -1,28 +1,41 @@
 /**
- * `.cast` ⇄ `Recording` codec — symmetric, lossless on the `io` track.
+ * `.cast` ⇄ `Recording` codec — the deprecated `Trace`-shaped door.
  *
- * asciicast v2 is a stream of direction-tagged byte events (`o` = output,
- * `i` = input, `m` = marker). That maps **directly** onto the in-memory
- * {@link Recording} model's `io` source track — design doc §4 names `.cast`
- * the one *symmetric codec* (unlike `.tape`, which is a lossy compiler).
+ * @deprecated REPLACED by the io-shaped pair in `./io-codec.ts`
+ * (`readAsciicast`/`writeAsciicast`), which speaks the full io {@link Event}
+ * vocabulary (`output`/`input`/`control`/`mark`/`exit`) rather than only the
+ * `io` track's direction-tagged bytes. {@link decodeAsciicast} and
+ * {@link encodeAsciicast} are now thin wrappers composing that pair with the
+ * Trace bridges (`../trace-bridges.ts`), kept only so every existing caller
+ * of this `Trace`-shaped signature keeps working through unterm phase A4a.
  *
- *  - {@link decodeAsciicast}: `.cast` → a `Recording` with an `io` track.
- *  - {@link encodeAsciicast}: a `Recording`'s `io` track → `.cast` text.
+ *  - {@link decodeAsciicast}: `.cast` → a `Recording` (= `Trace`) with an
+ *    `io` track — `traceFromRecording(readAsciicast(cast)).trace`.
+ *  - {@link encodeAsciicast}: a `Recording`'s `io` track → `.cast` text —
+ *    `writeAsciicast(recordingFromTrace(recording), options).text`.
  *
- * Timebase normalization — asciicast records `time` as a **float in
- * seconds**. The Recording model's clock is **integer microseconds**. Decode
- * routes every timestamp through {@link secondsToMicros}; encode divides back
- * to float seconds. The decode direction is the canonical one — once a `.cast`
- * is decoded, there is no float left in the model.
- *
- * Marker (`m`) events have no `io`-track representation (they are neither
- * input nor output bytes). {@link decodeAsciicast} drops them; a caller that
- * needs markers should read them from {@link parseAsciicast} directly.
+ * What composing through `Trace` still loses, now measured precisely against
+ * the lossless io-shaped pair rather than assumed: `traceFromRecording` has
+ * no `io`-track row shape for `control` or `mark` (`../io-compat.ts`), so on
+ * this deprecated door **both markers and resizes are dropped** on decode —
+ * counted in `traceFromRecording`'s internal tally, but that tally has no
+ * home on this function's `Recording`-shaped return, so a caller here still
+ * can't see it (use `readAsciicast` + `traceFromRecording` directly for that).
+ * That is the same fossil as before for markers, and a *new*, more accurate
+ * one for resizes: pre-A3 this door miscategorized an `"r"` event as
+ * directional input; now it drops it cleanly instead, alongside markers,
+ * rather than mis-filing it. `Trace` also has no header fields for
+ * `timestamp`/`title`/`env`/`theme`, so those are lost on decode exactly as
+ * before (`title`/`timestamp` restorable via {@link EncodeAsciicastOptions}
+ * at encode time; `env`/`theme` are not restorable through this door at all).
+ * See `tests/asciicast/fixtures/README.md` for the measured detail.
  */
 
-import { type Recording, type IoEvent, createRecording, micros, secondsToMicros } from "../recording.ts"
+import { recordingFromTrace, traceFromRecording } from "../trace-bridges.ts"
+import { readAsciicast, writeAsciicast } from "./io-codec.ts"
 import { parseAsciicast } from "./reader.ts"
-import type { AsciicastHeader, AsciicastRecording } from "./types.ts"
+import type { Recording } from "../recording.ts"
+import type { AsciicastRecording } from "./types.ts"
 
 /** Options for {@link encodeAsciicast}. */
 export interface EncodeAsciicastOptions {
@@ -33,32 +46,21 @@ export interface EncodeAsciicastOptions {
 }
 
 /**
- * Decode an {@link AsciicastRecording} into a {@link Recording} carrying an
- * `io` source track.
+ * @deprecated Use {@link "./io-codec.ts" | readAsciicast} — this wrapper
+ * composes it with `traceFromRecording` (`../trace-bridges.ts`) for callers
+ * still on the `Trace`-shaped `Recording`. Every `output`/`input` event
+ * becomes a direction-tagged `IoEvent`; `mark` and `control` events (which
+ * includes the `"r"` resize code, unterm phase A3) have no `io`-track row
+ * shape and are dropped — see this file's header for the full account.
  *
- * Every `o`/`i` event becomes a direction-tagged {@link IoEvent}; the float
- * `time` is normalized to integer µs. Marker (`m`) events are dropped — they
- * are not byte I/O. The result has no `commands` or `frames` track: a decoded
- * `.cast` is observed-truth only.
+ * @throws {Error} when every event is `mark`/`control`/`exit` and none
+ * survive into the `io` track (`traceFromRecording`'s "no survivors" guard) —
+ * the same failure as before (a `.cast` with no byte events can't populate an
+ * `io` track), reachable by a wider set of inputs now that resize is also a
+ * non-surviving type, not just marker.
  */
 export function decodeAsciicast(cast: AsciicastRecording): Recording {
-  const io: IoEvent[] = []
-  let maxAt = 0
-  for (const event of cast.events) {
-    if (event.type === "m") continue // markers carry no io bytes
-    const at = secondsToMicros(event.time)
-    if (at > maxAt) maxAt = at
-    io.push({ at, direction: event.type === "o" ? "out" : "in", data: event.data })
-  }
-  // Header `duration` (float seconds) is authoritative when present; else use
-  // the last event's timestamp.
-  const durationMicros = cast.header.duration !== undefined ? secondsToMicros(cast.header.duration) : micros(maxAt)
-  return createRecording({
-    cols: cast.header.width,
-    rows: cast.header.height,
-    durationMicros,
-    io,
-  })
+  return traceFromRecording(readAsciicast(cast)).trace
 }
 
 /** Convenience: parse `.cast` text and decode it into a {@link Recording}. */
@@ -67,33 +69,16 @@ export function decodeAsciicastSource(content: string): Recording {
 }
 
 /**
- * Encode a {@link Recording}'s `io` track back into asciicast v2 text.
+ * @deprecated Use {@link "./io-codec.ts" | writeAsciicast} — this wrapper
+ * composes it with `recordingFromTrace` (`../trace-bridges.ts`) for callers
+ * still on the `Trace`-shaped `Recording`.
  *
- * @throws {Error} when the recording has no `io` track — `.cast` is a
- *   serialization of observed bytes, and a recording with only `commands`
- *   (a hand-authored tape) has no byte stream to encode. Use the `.tape`
- *   codegen for an intent-only recording.
+ * @throws {Error} when the recording has no non-empty `io` track
+ * (`recordingFromTrace`'s guard) — `.cast` is a serialization of observed
+ * bytes, and a recording with only `commands` (a hand-authored tape) has no
+ * byte stream to encode. Use the `.tape` codegen for an intent-only
+ * recording.
  */
 export function encodeAsciicast(recording: Recording, options?: EncodeAsciicastOptions): string {
-  const io = recording.io
-  if (io === undefined || io.length === 0) {
-    throw new Error("encodeAsciicast: recording has no io track — nothing to encode as .cast")
-  }
-  const header: AsciicastHeader = {
-    version: 2,
-    width: recording.cols,
-    height: recording.rows,
-    duration: recording.durationMicros / 1_000_000,
-  }
-  if (options?.title !== undefined) header.title = options.title
-  if (options?.timestamp !== undefined) header.timestamp = options.timestamp
-
-  const lines: string[] = [JSON.stringify(header)]
-  for (const event of io) {
-    // Integer-µs → float seconds (the asciicast timebase).
-    const time = event.at / 1_000_000
-    const type = event.direction === "out" ? "o" : "i"
-    lines.push(JSON.stringify([time, type, event.data]))
-  }
-  return lines.join("\n") + "\n"
+  return writeAsciicast(recordingFromTrace(recording), options).text
 }

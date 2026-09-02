@@ -28,16 +28,19 @@ export interface AsciicastTheme {
   palette?: string
 }
 
-/** Event type discriminator. */
-export type AsciicastEventType = "o" | "i" | "m"
+/**
+ * Event type discriminator: `"o"` output, `"i"` input, `"m"` marker, `"r"`
+ * resize (unterm phase A3 — `data` is `"COLSxROWS"`, e.g. `"100x30"`).
+ */
+export type AsciicastEventType = "o" | "i" | "m" | "r"
 
 /** A single event in an asciicast recording. */
 export interface AsciicastEvent {
   /** Time in seconds (float) relative to recording start. */
   time: number
-  /** Event type: "o" = output, "i" = input, "m" = marker. */
+  /** Event type: "o" = output, "i" = input, "m" = marker, "r" = resize. */
   type: AsciicastEventType
-  /** Event data (terminal output, user input, or marker label). */
+  /** Event data: output/input bytes, a marker label, or "COLSxROWS" for a resize. */
   data: string
 }
 

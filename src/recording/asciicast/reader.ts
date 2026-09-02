@@ -19,11 +19,19 @@ export interface ReplayOptions {
 /**
  * Parse an asciicast v2 file from its string content.
  *
- * Handles both `\n` and `\r\n` line endings. Validates the header
- * version (must be 2) and parses event tuples.
+ * Handles both `\n` and `\r\n` line endings. Validates the header version
+ * (must be 2) and parses event tuples, checking each event's code against
+ * the known asciicast vocabulary (`"o"`/`"i"`/`"m"`/`"r"`) — this codec's job
+ * is fidelity to the format, not leniency; a caller that wants to tolerate or
+ * skip stray codes should filter the parsed events itself rather than rely on
+ * this parser to pass them through silently (unterm phase A3: before this
+ * change, an unrecognized code — including `"r"`, then unsupported — parsed
+ * through unvalidated and was later miscategorized by `decodeAsciicast`; see
+ * `tests/asciicast/fixtures/README.md`).
  *
  * @throws {Error} If the content is empty, the header is missing version 2,
- *   or an event line has an invalid format.
+ *   an event line has an invalid format, or an event's code is not one of
+ *   `"o"`, `"i"`, `"m"`, `"r"` — naming the line and the offending code.
  */
 export function parseAsciicast(content: string): AsciicastRecording {
   // Split on \n, handling \r\n by trimming \r from each line
@@ -51,7 +59,13 @@ export function parseAsciicast(content: string): AsciicastRecording {
       throw new Error(`Invalid event at line ${i + 1}: expected [time, type, data]`)
     }
 
-    const [time, type, data] = tuple as [number, AsciicastEventType, string]
+    const [time, rawType, data] = tuple as [number, string, string]
+    if (rawType !== "o" && rawType !== "i" && rawType !== "m" && rawType !== "r") {
+      throw new Error(
+        `Invalid event at line ${i + 1}: unknown event code ${JSON.stringify(rawType)} (expected "o", "i", "m", or "r")`,
+      )
+    }
+    const type: AsciicastEventType = rawType
     events.push({ time, type, data })
   }
 

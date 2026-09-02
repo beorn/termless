@@ -267,7 +267,18 @@ export { decodeTtyrec } from "./recording/ttyrec/recording-codec.ts"
 export type { DecodeTtyrecOptions } from "./recording/ttyrec/recording-codec.ts"
 export { createAsciicastWriter } from "./recording/asciicast/writer.ts"
 export type { AsciicastWriter } from "./recording/asciicast/writer.ts"
+// io-shaped .cast ⇄ Recording pair (unterm phase A3, slice 4) — total on
+// read, and the ONLY asciicast door that carries control (resize) events.
+export { readAsciicast, writeAsciicast } from "./recording/asciicast/io-codec.ts"
+export type {
+  AsciicastDroppedTally,
+  WriteAsciicastOptions,
+  WriteAsciicastResult,
+} from "./recording/asciicast/io-codec.ts"
 // Recording-domain adapter (Phase 2): .cast ⇄ Recording symmetric codec.
+// @deprecated decodeAsciicast/encodeAsciicast — use readAsciicast/writeAsciicast
+// above; these are now thin Trace-shaped wrappers over that pair (see
+// recording-codec.ts's file header for what composing through Trace loses).
 export { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "./recording/asciicast/recording-codec.ts"
 export type { EncodeAsciicastOptions } from "./recording/asciicast/recording-codec.ts"
 export type {
