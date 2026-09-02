@@ -22,6 +22,7 @@
 - **`@termless/vterm` follows vterm.js 0.7.0** (`^0.7.0`), which retires seven gap-ledger rows: two scroll cases, Newline/Linefeed mode, DEC Auto Wrap, double-width/height rows, resize-shorter, and protected areas.
 - **CLI sessions default to vterm**, the production engine, instead of the retired xterm.js reference, and an unknown backend name is refused instead of silently substituted. `@termless/peekaboo` and the `termless rec` live overlay run the production engine and shell guest on the data path.
 - Phase A4 of the io migration is named on the deprecated 07-09 read-API names and on the `Cursor.x`/`Cursor.y` markers.
+- **Node 24 is the floor for `@termless/cli` and the `termless` umbrella** — their `silvery` dependency (`^0.21.0`) ships `using` declarations and `AsyncDisposableStack`, which Node 23 cannot parse; the publishable-verify job runs Node 24 accordingly. `@termless/core` and the backends keep `>=23.6.0`. Bun is unaffected.
 
 ### Fixed
 
