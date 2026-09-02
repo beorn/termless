@@ -45,8 +45,8 @@ import {
   millisToMicros,
 } from "../recording.ts"
 import { buildZip, parseZip, type ZipEntry } from "./zip-archive.ts"
-import { eventFromIoEvent } from "../io-compat.ts"
-import type { Event } from "../../io/event.ts"
+import { eventFromIoEvent, ioEventFromEvent } from "../io-compat.ts"
+import { EVENT_TYPES, type Event, type InputEvent, type OutputEvent } from "../../io/event.ts"
 import type { Recording as IoRecording, RecordingHeader as IoRecordingHeader } from "../../io/recording.ts"
 
 /** The `.tty` format version written into every `manifest.json`. */
@@ -59,7 +59,7 @@ const MANIFEST_FILE = "manifest.json"
 // =============================================================================
 
 /** What a member carries — the dispatch key for the reader. */
-export type TtyMemberType = "io" | "commands" | "frames" | "facts" | "checkpoint" | "habcp"
+export type TtyMemberType = "io" | "commands" | "frames" | "facts" | "checkpoint" | "habcp" | "recording"
 
 /**
  * How a member's bytes are encoded. `zstd-seekable` is RESERVED for large
@@ -115,6 +115,14 @@ export interface TtyManifest {
   originWallMs?: number
   /** The renderer fingerprint of a frames-bearing recording. */
   fingerprint?: RendererFingerprint
+  /**
+   * The source's declared clock resolution (D10; `IoRecordingHeader.sourceResolution`
+   * verbatim), when the write that produced this manifest knew one — an io
+   * Recording's `writeRecording` overload sets it. Readers honor it when
+   * present; when absent they infer from encodings, same as before this
+   * field existed (see `loadBundle`'s `sourceResolution` rule).
+   */
+  sourceResolution?: "us" | "ms" | "s"
   /** The sealed members. Every listed member is complete and immutable. */
   members: TtyMember[]
   /** The ONE open segment of a live bundle. */
@@ -125,6 +133,14 @@ export interface TtyManifest {
 export interface TtySkipTally {
   lifecycle: number
   truncation: number
+  /**
+   * Rows of a `recording` member (D10) that `readBundle` could not place on
+   * the Trace-shaped `io`/`commands` tracks — every row but output/input
+   * (control, mark, exit), read through `ioEventFromEvent`'s own `null`
+   * verdict. One honest field rather than folding them into `lifecycle` /
+   * `truncation`, which they are not.
+   */
+  recordingNonIo: number
 }
 
 /** The manifest-aware read result — {@link readBundle}. */
@@ -276,7 +292,7 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
   let frames: Recording["frames"]
   let framesReproducible: boolean | undefined
   let framesDurationMicros: Micros | undefined
-  const skipped: TtySkipTally = { lifecycle: 0, truncation: 0 }
+  const skipped: TtySkipTally = { lifecycle: 0, truncation: 0, recordingNonIo: 0 }
 
   const loadable: Array<TtyMember | TtyTail> = [
     ...manifest.members,
@@ -298,6 +314,20 @@ function loadMembers(manifest: TtyManifest, source: BundleSource, backendFallbac
           io.push(...parseJsonl<IoEvent>(rows))
         } else if (member.type === "commands") {
           commands.push(...parseJsonl<Command>(rows))
+        } else if (member.type === "recording") {
+          // D10: a `recording` member's rows are Events, not `IoEvent`s.
+          // output/input have an `io`-track row (`ioEventFromEvent`);
+          // control/mark/exit do not — that gap is the same one
+          // `ioEventFromEvent`'s own docstring names, tallied here rather
+          // than silently dropped.
+          for (const row of parseRecordingRows(rows, member.path, "readRecording")) {
+            const ioEvent = ioEventFromEvent(eventFromEventRow(row))
+            if (ioEvent !== null) {
+              io.push(ioEvent)
+            } else {
+              skipped.recordingNonIo += 1
+            }
+          }
         } else if (member.type === "facts" || member.type === "habcp") {
           // Facts are the annotation source, not a Recording track — the
           // member is surfaced through the manifest, deliberately not loaded.
@@ -604,6 +634,96 @@ function describeMembers(members: Array<TtyMember | TtyTail>): string {
 }
 
 // =============================================================================
+// Event rows — the `recording` member's JSONL row shape (D10)
+// =============================================================================
+//
+// Normative: docs/reference/formats/tty.md, "Writing an io Recording". One
+// Event per line; output/input's raw bytes ride as base64 text so the row
+// stays plain JSON. Every other Event variant carries no byte payload at
+// all, so it rides verbatim — the row type is `Event` itself for those.
+
+/**
+ * One JSONL row of a `recording` member (D10) — an {@link Event}'s own
+ * fields, verbatim, except `output`/`input` whose raw bytes become base64
+ * text. Shared by both doors: `loadBundle` reads a row straight into an
+ * `Event`; `readBundle` reads the same row and folds it through
+ * `ioEventFromEvent` for its `io` track.
+ */
+export type TtyEventRow =
+  | { at: number; type: "output"; data: string }
+  | { at: number; type: "input"; data: string }
+  | Exclude<Event, OutputEvent | InputEvent>
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64")
+}
+
+function base64ToBytes(text: string): Uint8Array {
+  return new Uint8Array(Buffer.from(text, "base64"))
+}
+
+/** {@link Event} → {@link TtyEventRow}: output/input bytes become base64 text; every other variant carries no bytes and rides unchanged. */
+export function eventRowFromEvent(event: Event): TtyEventRow {
+  if (event.type === "output" || event.type === "input") {
+    return { at: event.at, type: event.type, data: bytesToBase64(event.data) }
+  }
+  return event
+}
+
+/**
+ * {@link TtyEventRow} → {@link Event}, the inverse of {@link eventRowFromEvent}.
+ * `at` is re-validated through `micros()` on every row — a parsed row is
+ * untrusted JSON until it passes through here.
+ */
+export function eventFromEventRow(row: TtyEventRow): Event {
+  const at = micros(row.at)
+  if (row.type === "output" || row.type === "input") {
+    return { at, type: row.type, data: base64ToBytes(row.data) }
+  }
+  return { ...row, at }
+}
+
+/**
+ * Parse a `recording` member's JSONL content — one {@link TtyEventRow} per
+ * non-blank line. Fails loud, naming the member and the 1-based line, on
+ * invalid JSON or a line whose `type` isn't one of {@link EVENT_TYPES}.
+ * Unlike {@link parseJsonl}'s tolerance for a torn trailing line (this
+ * format's append-tear case for a live-growing member), a `recording` member
+ * is written whole by {@link writeRecording} and never appended to live, so
+ * there is no tear here to tolerate — a malformed line is corruption.
+ * `doorName` names the calling door in the thrown message, matching
+ * {@link bundleSourceOf}'s own pattern for a helper shared by both doors.
+ */
+function parseRecordingRows(text: string, memberPath: string, doorName: string): TtyEventRow[] {
+  const rows: TtyEventRow[] = []
+  const lines = text.split("\n")
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim()
+    if (trimmed.length === 0) continue
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch {
+      throw new Error(`${doorName}: recording member "${memberPath}" line ${String(i + 1)} is not valid JSON`)
+    }
+    const type = typeof parsed === "object" && parsed !== null ? (parsed as { type?: unknown }).type : undefined
+    if (!EVENT_TYPES.includes(type as Event["type"])) {
+      throw new Error(`${doorName}: recording member "${memberPath}" line ${String(i + 1)} is not a valid event row`)
+    }
+    // output/input carry their bytes as base64 text — a row of either kind
+    // without a string `data` is corruption too, named here rather than
+    // surfacing as Buffer's own TypeError from `eventFromEventRow`.
+    if ((type === "output" || type === "input") && typeof (parsed as { data?: unknown }).data !== "string") {
+      throw new Error(
+        `${doorName}: recording member "${memberPath}" line ${String(i + 1)} is an ${type} row without string "data"`,
+      )
+    }
+    rows.push(parsed as TtyEventRow)
+  }
+  return rows
+}
+
+// =============================================================================
 // Checkpoint records — D7 (contract), D8 (marks), D9 (derived resizes)
 // =============================================================================
 //
@@ -830,6 +950,20 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
       checkpointMembers.push({ path: member.path, bytes: source.bytesOf(member.path) })
       continue
     }
+    if (member.type === "recording") {
+      // D10: always jsonl — a `recording` member declaring anything else is
+      // a manifest that doesn't match its own member's own written shape.
+      if (member.encoding !== "jsonl") {
+        throw new Error(
+          `loadRecording: member "${member.path}" declares type "recording" with "${member.encoding}" encoding — recording is always jsonl`,
+        )
+      }
+      const text = utf8.decode(source.bytesOf(member.path))
+      for (const row of parseRecordingRows(text, member.path, "loadRecording")) {
+        events.push(eventFromEventRow(row))
+      }
+      continue
+    }
     // member.type is "io" from here — every other type is handled above.
     switch (member.encoding) {
       case "jsonl": {
@@ -937,11 +1071,12 @@ export function loadBundle(path: string): LoadBundleResult {
     )
   }
 
-  // sourceResolution is decided by the io members alone: "ms" when any
-  // loaded io member is hts1, "us" otherwise. Every event above came from an
-  // io member (hts1 or jsonl — checkpoints are tallied, not loaded), so a
-  // non-empty `events` guarantees one of the two was loaded.
-  const sourceResolution: "us" | "ms" = sawHts1 ? "ms" : "us"
+  // D10: the manifest's own declaration wins when a writer set one (an io
+  // Recording's `writeRecording` overload states its header's
+  // sourceResolution honestly). Only a manifest that doesn't say falls back
+  // to inferring from encodings: "ms" when any loaded io member is hts1,
+  // "us" otherwise — unchanged from before this field existed.
+  const sourceResolution: "us" | "ms" | "s" = manifest.sourceResolution ?? (sawHts1 ? "ms" : "us")
 
   const header: IoRecordingHeader = {
     version: 1,
@@ -1010,6 +1145,55 @@ function serializeRecording(recording: Recording, pngSourceDir?: string): Map<st
   return files
 }
 
+/**
+ * Serialize an io {@link IoRecording} into the member map + manifest of an
+ * at-rest bundle — the D10 write-new door: one `recording` member, jsonl,
+ * one {@link TtyEventRow} per Event. None of the Trace door's
+ * `commands`/`io`/`frames` members apply here — an io Recording has none of
+ * those tracks, only a header and `Event[]`.
+ */
+function serializeIoRecording(recording: IoRecording): Map<string, Uint8Array> {
+  const encoder = new TextEncoder()
+  const files = new Map<string, Uint8Array>()
+
+  const rows = recording.events.map(eventRowFromEvent)
+  files.set("recording.jsonl", encoder.encode(toJsonl(rows)))
+
+  const duration =
+    recording.header.duration !== undefined
+      ? recording.header.duration
+      : recording.events.length > 0
+        ? recording.events[recording.events.length - 1]!.at
+        : 0
+
+  const manifest: TtyManifest = {
+    ttyVersion: TTY_FORMAT_VERSION,
+    recordingVersion: recording.header.version,
+    cols: recording.header.size.cols,
+    rows: recording.header.size.rows,
+    durationMicros: duration,
+    // No frames member is ever written for an io Recording — vacuously
+    // "reproducible from io" since there is no frames projection that could
+    // diverge from it.
+    reproducible: true,
+    ...(recording.header.timestamp !== undefined ? { originWallMs: recording.header.timestamp } : {}),
+    ...(recording.header.sourceResolution !== undefined ? { sourceResolution: recording.header.sourceResolution } : {}),
+    members: [{ path: "recording.jsonl", type: "recording", encoding: "jsonl" }],
+  }
+  files.set(MANIFEST_FILE, encoder.encode(JSON.stringify(manifest, null, 2) + "\n"))
+  return files
+}
+
+/**
+ * Discriminate the two {@link writeRecording} overloads. An io
+ * {@link IoRecording} has `header`/`events` at the top level; a Trace
+ * {@link Recording} has `version`/`cols`/… instead — the two shapes share no
+ * field name, so this structural check is unambiguous either way.
+ */
+function isIoRecording(recording: Recording | IoRecording): recording is IoRecording {
+  return "header" in recording && "events" in recording
+}
+
 /** The per-member compression rule of the sealed encoding: rasters are STORED, text DEFLATES. */
 function methodOf(path: string): 0 | 8 {
   return path.endsWith(".png") ? 0 : 8
@@ -1021,14 +1205,8 @@ function bundleToZip(files: Map<string, Uint8Array>): Uint8Array {
   return buildZip(entries)
 }
 
-/**
- * Write a {@link Recording} to `path` in the encoding the extension names:
- * `.ttyz` — one sealed archive file; `.tty` — an at-rest bundle directory.
- * Anything else refuses loudly — a write names its encoding; reads are the
- * blind side.
- */
-export function writeRecording(path: string, recording: Recording, options: WriteRecordingOptions = {}): void {
-  const files = serializeRecording(recording, options.pngSourceDir)
+/** Write a serialized bundle's files to `path`, `.ttyz` sealed or `.tty` live per the extension — shared by every {@link writeRecording} overload. */
+function writeBundleFiles(path: string, files: Map<string, Uint8Array>): void {
   if (isTtyzPath(path)) {
     mkdirSync(join(path, ".."), { recursive: true })
     writeFileSync(path, bundleToZip(files))
@@ -1047,6 +1225,33 @@ export function writeRecording(path: string, recording: Recording, options: Writ
   throw new Error(
     `writeRecording: ${path} names neither encoding — write a .tty bundle directory or a .ttyz sealed archive`,
   )
+}
+
+/**
+ * Write a recording to `path` in the encoding the extension names: `.ttyz` —
+ * one sealed archive file; `.tty` — an at-rest bundle directory. Anything
+ * else refuses loudly — a write names its encoding; reads are the blind
+ * side.
+ *
+ * Two overloads, one implementation. The Trace-shaped {@link Recording}
+ * overload writes `commands`/`io`/`frames` members exactly as before this
+ * slice — byte-identical output, unchanged. The io-shaped {@link IoRecording}
+ * overload (D10) writes one `recording` member instead. `options`
+ * (`pngSourceDir`) only ever means something for the Trace overload — an io
+ * Recording has no frames projection to copy rasters for, so that overload
+ * does not accept it rather than silently ignoring it.
+ */
+export function writeRecording(path: string, recording: Recording, options?: WriteRecordingOptions): void
+export function writeRecording(path: string, recording: IoRecording): void
+export function writeRecording(
+  path: string,
+  recording: Recording | IoRecording,
+  options: WriteRecordingOptions = {},
+): void {
+  const files = isIoRecording(recording)
+    ? serializeIoRecording(recording)
+    : serializeRecording(recording, options.pngSourceDir)
+  writeBundleFiles(path, files)
 }
 
 // =============================================================================

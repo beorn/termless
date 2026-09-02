@@ -351,7 +351,9 @@ describe("hts1 io members — the journal framing, decoded natively", () => {
       expect(recording.commands).toHaveLength(1)
       expect(recording.commands?.[0]).toEqual({ kind: "resize", at: micros(1_000_000), cols: 120, rows: 40 })
       // lifecycle + truncation carry no track — tallied, never silent.
-      expect(skipped).toEqual({ lifecycle: 1, truncation: 1 })
+      // recordingNonIo (D10, unterm A3 slice 5b part ii) is 0: this bundle
+      // has no `recording` member, only hts1.
+      expect(skipped).toEqual({ lifecycle: 1, truncation: 1, recordingNonIo: 0 })
       // readRecording (the blind door) returns the same Recording.
       expect(readRecording(bundle)).toEqual(recording)
     } finally {
@@ -383,7 +385,8 @@ describe("hts1 io members — the journal framing, decoded natively", () => {
       const { recording, skipped } = readBundle(bundle)
       // The final frame was the truncation marker — everything before survives.
       expect(recording.io).toHaveLength(3)
-      expect(skipped).toEqual({ lifecycle: 1, truncation: 0 })
+      // recordingNonIo (D10, unterm A3 slice 5b part ii) is 0: no `recording` member here.
+      expect(skipped).toEqual({ lifecycle: 1, truncation: 0, recordingNonIo: 0 })
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

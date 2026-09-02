@@ -67,6 +67,7 @@ valid `.tty` bundle with zero artifact churn.)
   "durationMicros": 5200000, // total duration, integer µs
   "reproducible": true, // frames projection regenerable from io?
   "originWallMs": 1754620000000, // OPTIONAL: wall-clock ms of µs-origin 0
+  "sourceResolution": "us", // OPTIONAL, write-new (D10): declared source clock resolution
   "fingerprint": {
     /* RendererFingerprint */
   }, // OPTIONAL, frames-bearing only
@@ -84,6 +85,7 @@ valid `.tty` bundle with zero artifact churn.)
     { "path": "commands.jsonl", "type": "commands", "encoding": "jsonl" },
     { "path": "frames/index.jsonl", "type": "frames", "encoding": "trace-index" },
     { "path": "checkpoints/00000000000000012345.json", "type": "checkpoint", "encoding": "json" },
+    { "path": "recording.jsonl", "type": "recording", "encoding": "jsonl" }, // write-new (D10): the io-Recording writer's alternative to io.jsonl
   ],
 
   // The ONE open segment of a LIVE bundle. Absent in a sealed bundle —
@@ -110,14 +112,15 @@ valid `.tty` bundle with zero artifact churn.)
 
 ### Member types
 
-| type         | carries                                                                   | → Recording                                               |
-| ------------ | ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `io`         | direction-tagged raw byte events                                          | `io` track                                                |
-| `commands`   | timed intent (keys, resize, sleeps)                                       | `commands` track                                          |
-| `frames`     | rendered frame index + rasters                                            | `frames` projection                                       |
-| `facts`      | session fact events (annotation source)                                   | _not loaded_ — exposed to annotation/windowed readers     |
-| `habcp`      | the habitat's control-plane journal (NDJSON rows; tail + sealed segments) | _not loaded_ — opaque; hab-side readers own row semantics |
-| `checkpoint` | serialized terminal state at an offset                                    | _not loaded_ — seek keyframes for players and reattach    |
+| type         | carries                                                                   | → Recording                                                                                |
+| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `io`         | direction-tagged raw byte events                                          | `io` track                                                                                 |
+| `commands`   | timed intent (keys, resize, sleeps)                                       | `commands` track                                                                           |
+| `frames`     | rendered frame index + rasters                                            | `frames` projection                                                                        |
+| `facts`      | session fact events (annotation source)                                   | _not loaded_ — exposed to annotation/windowed readers                                      |
+| `habcp`      | the habitat's control-plane journal (NDJSON rows; tail + sealed segments) | _not loaded_ — opaque; hab-side readers own row semantics                                  |
+| `checkpoint` | serialized terminal state at an offset                                    | _not loaded_ — seek keyframes for players and reattach                                     |
+| `recording`  | one `TtyEventRow` per line (D10, write-new — the io-shaped writer's door) | output/input → `io` track; `control`/`mark`/`exit` have no track here — tallied, see below |
 
 `facts` and `checkpoint` members are first-class bundle members that the
 Recording model deliberately does not carry: facts are the annotation source
@@ -133,6 +136,15 @@ layering law that keeps this format vterm-free). The session fact lane and
 every row semantic are defined hab-side; see the habitat's own `habcp.md`
 specification. A `habcp` member naming the journal's live tail (`habcp.log`)
 is the one declared mutable member — consumers read it to EOF.
+
+`recording` is the write-new (D10) alternative to `io`: the io-shaped
+writer's own member, one `TtyEventRow` per line covering the full Event
+vocabulary, not just bytes. The Trace door reads it too, through
+`ioEventFromEvent`: output/input land in the `io` track exactly as an `io`
+member's rows would; `control`/`mark`/`exit` rows have no Trace track to
+land in, so `readBundle` **tallies** them under `TtySkipTally.recordingNonIo`
+rather than dropping them silently. See
+[Writing an io Recording](#writing-an-io-recording) below.
 
 ### Loading as an io Recording
 
@@ -150,13 +162,18 @@ alias is deleted (the two names coincide from that point on).
 | `io`, `hts1` encoding — `resize`                 | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track        |
 | `io`, `hts1` encoding — `lifecycle`/`truncation` | no Event form (same as the Trace door) — tallied                                                                                                    |
 | `io`, `jsonl` encoding                           | each row through `eventFromIoEvent`                                                                                                                 |
+| `recording`, `jsonl` encoding                    | each row through `eventFromEventRow` (D10) — the inverse of `eventRowFromEvent`; output/input's base64 `data` decodes back to raw bytes             |
 | `commands`, `frames`, `facts`, `habcp`           | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                                      |
 | `checkpoint`                                     | **loaded**: a derived `mark` per record, plus a derived `control`/`resize` on a geometry change — see [Checkpoint member](#checkpoint-member) below |
 
 Checkpoint members are loaded (unterm A3 slice 5b) — see
 [Checkpoint member](#checkpoint-member) below for the record contract (D7)
 and the mark / derived-resize rules (D8, D9; `@cto` ruling Q1: reconstruction
-is marked, capture is not).
+is marked, capture is not). `recording` members are loaded natively too (D10)
+— see [Writing an io Recording](#writing-an-io-recording) below for the row
+contract; unlike a checkpoint's derived events, a `recording` member's rows
+carry `derived` (or not) exactly as its writer set it, since they are
+Events, not a reconstruction.
 
 **The `derived` rule**: `output`/`input` events never carry `derived` — they
 are always a byte-for-byte capture, hts1 or jsonl. A captured hts1 `resize`
@@ -167,9 +184,13 @@ a checkpoint record's `mark`, and the `control`/`resize` D9 sometimes
 synthesizes beside it — see [Checkpoint member](#checkpoint-member) below.
 
 **The `sourceResolution` rule** (unterm A3 ruling: declared, never assumed):
-`"ms"` when any loaded `io` member is `hts1`; `"us"` otherwise — decided by
-the `io` members alone, never by a checkpoint's derived `mark`/`control`
-Events. A bundle with no events at all throws; see below.
+the manifest's own `sourceResolution` field (D10) wins when a writer set one
+— an io Recording's `writeRecording` overload states its header's value
+honestly. Only a manifest that doesn't say falls back to inferring from
+encodings, unchanged from before this field existed: `"ms"` when any loaded
+`io` member is `hts1`, `"us"` otherwise — decided by the `io` members alone,
+never by a checkpoint's derived `mark`/`control` Events. A bundle with no
+events at all throws; see below.
 
 **What is tallied** — `TtyLoadSkipped`: the `commands` / `frames` / `facts` /
 `habcp` member paths not loaded at all, plus `lifecycle` / `truncation`
@@ -234,15 +255,56 @@ global timeline order — by `throughOffset` when present, else by rebased
 `at` — since the D9 geometry-tracking state spans all of them, not just one
 member's own records.
 
+### Writing an io Recording
+
+`writeRecording` gains a second overload (D10, unterm A3 slice 5b part ii)
+alongside the existing Trace-shaped one. Which one runs is decided by the
+shape of `recording`, not by an option:
+
+```typescript
+writeRecording("out.tty", ioRecording) // IoRecording (header + Event[]) -> one `recording` member
+writeRecording("out.tty", traceRecording) // Trace (commands/io/frames) -> unchanged from before this slice
+```
+
+- **`recording.jsonl`** (`type: "recording"`, `jsonl` encoding) — one
+  `TtyEventRow` per line: every Event's own fields, verbatim, via
+  `eventRowFromEvent`, except `output`/`input` whose raw bytes become base64
+  text so the row stays plain JSON. `control`, `mark`, and `exit` carry no
+  byte payload at all, so they ride unchanged — `TtyEventRow` is `Event`
+  itself for those three.
+- **Manifest fields** — `cols`/`rows` from the header's `size`;
+  `durationMicros` from the header's `duration`, else the last event's `at`
+  (`0` for an empty recording); `reproducible: true` unconditionally (an io
+  Recording never writes a `frames` member, so there is no projection that
+  could diverge from it). Two fields round-trip the header honestly, write-new
+  as of this slice: `originWallMs` from `header.timestamp` when present,
+  `sourceResolution` from `header.sourceResolution` when present. Both are
+  read back by `loadBundle` — see
+  [Loading as an io Recording](#loading-as-an-io-recording) above for the
+  `sourceResolution` priority rule.
+- **The Trace overload is unchanged** — same members, same manifest fields,
+  the same bytes it always wrote. The two overloads share one exported name
+  but not one options contract: `WriteRecordingOptions.pngSourceDir` (frame
+  rasters to copy) only ever means something for the Trace overload — an io
+  Recording has no frames projection to copy rasters for, so that overload's
+  signature does not accept the option at all, rather than silently ignoring
+  it if passed.
+- **Reading it back** — `loadBundle` reads a `recording` member natively,
+  each row through `eventFromEventRow` (the inverse of `eventRowFromEvent`).
+  `readBundle` (the deprecated Trace door) reads the same member through
+  `ioEventFromEvent`: output/input land in its `io` track; `control`/`mark`/
+  `exit` rows have no Trace track to land in, so they are tallied under
+  `TtySkipTally.recordingNonIo` — never a silent drop.
+
 ### Member encodings
 
-| encoding        | member types               | wire shape                                                                                                         |
-| --------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `jsonl`         | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
-| `hts1`          | io                         | the binary journal framing (below); wall-ms `at`, rebased on read                                                  |
-| `trace-index`   | frames                     | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it                                                   |
-| `json`          | checkpoint                 | one JSON document — a record or an array of records, see [Checkpoint member](#checkpoint-member) above             |
-| `zstd-seekable` | _reserved_                 | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip  |
+| encoding        | member types                          | wire shape                                                                                                                                                 |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jsonl`         | io, commands, facts, habcp, recording | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`, recording rows are `TtyEventRow` (D10); habcp rows are opaque here |
+| `hts1`          | io                                    | the binary journal framing (below); wall-ms `at`, rebased on read                                                                                          |
+| `trace-index`   | frames                                | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it                                                                                           |
+| `json`          | checkpoint                            | one JSON document — a record or an array of records, see [Checkpoint member](#checkpoint-member) above                                                     |
+| `zstd-seekable` | _reserved_                            | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip                                          |
 
 ### The `hts1` io encoding
 

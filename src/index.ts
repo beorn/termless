@@ -85,6 +85,8 @@ export {
   unpackRecording,
   isTtyPath,
   isTtyzPath,
+  eventRowFromEvent,
+  eventFromEventRow,
   TTY_FORMAT_VERSION,
 } from "./recording/native/tty-format.ts"
 export type {
@@ -96,6 +98,7 @@ export type {
   TtyMemberEncoding,
   TtyTail,
   TtyCheckpointRecord,
+  TtyEventRow,
   TtySkipTally,
   ReadBundleResult,
   WriteRecordingOptions,
