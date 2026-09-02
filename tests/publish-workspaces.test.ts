@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { describe, expect, test } from "vitest"
 import { validatePublishOrder } from "../scripts/publish-workspaces.ts"
@@ -27,5 +28,19 @@ describe("publish workspace inventory", () => {
       "@termless/cli",
       "termless",
     ])
+  })
+
+  test("links pure backend workspaces for standalone installs", async () => {
+    const root = resolve(import.meta.dirname, "..")
+    const manifest = JSON.parse(await readFile(resolve(root, "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>
+    }
+
+    expect(manifest.devDependencies).toMatchObject({
+      "@termless/vt100": "workspace:*",
+      "@termless/vt220": "workspace:*",
+      "@termless/vterm": "workspace:*",
+      "@termless/xtermjs": "workspace:*",
+    })
   })
 })
