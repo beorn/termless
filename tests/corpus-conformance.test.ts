@@ -17,10 +17,24 @@ import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import { createGhosttyBackend, initGhostty } from "../packages/ghostty/src/backend.ts"
 import { createVt100Backend } from "../packages/vt100/src/backend.ts"
 import { createVtermBackend } from "../packages/vterm/src/backend.ts"
+import { vtermEngineIdentity } from "../packages/vterm/src/engine-identity.ts"
 import type { TerminalBackend } from "../src/terminal/types.ts"
 import { loadAllCases, runCaseOnBackend, validateCase, type CaseMismatch } from "../corpus/runner.ts"
 
 const CORPUS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "corpus")
+
+/**
+ * The ledger's header row: the vterm.js the `vterm::` rows were graded
+ * against. vterm.js is the one engine that resolves differently per world
+ * (published package vs the hh workspace override), so the suite refuses to
+ * grade the ledger on a version it was not written for, and every vterm
+ * failure text names the package's real path so the world is visible in the red.
+ */
+const LEDGER_ENGINE_KEY = "_engine"
+const vtermEngine = vtermEngineIdentity()
+const engineNote: Record<string, string> = {
+  vterm: ` [engine ${vtermEngine.name}@${vtermEngine.version} from ${vtermEngine.location}]`,
+}
 
 let ghostty: Awaited<ReturnType<typeof initGhostty>>
 
@@ -49,6 +63,21 @@ describe("corpus differential conformance", () => {
     expect(cases.length).toBeGreaterThanOrEqual(14)
   })
 
+  test("the ledger names the vterm.js its vterm:: rows were graded against", () => {
+    const graded = knownGaps[LEDGER_ENGINE_KEY]
+    const resolved = `${vtermEngine.name}@${vtermEngine.version}`
+    expect(
+      graded,
+      `corpus/known-gaps.json has no "${LEDGER_ENGINE_KEY}" header — add "${LEDGER_ENGINE_KEY}": "${resolved}" ` +
+        `once the vterm:: rows are graded against it (resolved from ${vtermEngine.location})`,
+    ).toBeDefined()
+    expect(
+      graded,
+      `corpus/known-gaps.json was graded against ${graded}, but ${resolved} resolved from ${vtermEngine.location} — ` +
+        `re-grade the vterm:: rows on this engine and update "${LEDGER_ENGINE_KEY}"`,
+    ).toBe(resolved)
+  })
+
   for (const [name, factory] of backends) {
     describe(name, () => {
       for (const kase of cases) {
@@ -59,22 +88,23 @@ describe("corpus differential conformance", () => {
           active.push(backend)
           const mismatches = runCaseOnBackend(backend, kase)
           const ledgered = knownGaps[gapKey]
+          const note = engineNote[name] ?? ""
           if (ledgered !== undefined) {
             expect(
               mismatches.length,
-              `ledgered gap now PASSES — remove "${gapKey}" from corpus/known-gaps.json (was: ${ledgered})`,
+              `ledgered gap now PASSES — remove "${gapKey}" from corpus/known-gaps.json (was: ${ledgered})${note}`,
             ).toBeGreaterThan(0)
             return
           }
-          expect(mismatches, formatMismatches(mismatches)).toEqual([])
+          expect(mismatches, formatMismatches(mismatches, note)).toEqual([])
         })
       }
     })
   }
 })
 
-function formatMismatches(mismatches: CaseMismatch[]): string {
-  return mismatches.length === 0 ? "" : `state mismatches:\n${JSON.stringify(mismatches, null, 2)}`
+function formatMismatches(mismatches: CaseMismatch[], note: string): string {
+  return mismatches.length === 0 ? "" : `state mismatches${note}:\n${JSON.stringify(mismatches, null, 2)}`
 }
 
 // ---------------------------------------------------------------------------

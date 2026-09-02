@@ -1,4 +1,5 @@
 {
+  "_engine": "vterm.js@0.7.0",
   "ghostty::ghostty/stream_terminal.zig::window_title effect not called without callback": "ghostty-web's headless GhosttyTerminal exposes no title surface (no getTitle/onTitleChange; only the DOM-oriented Terminal wrapper has onTitleChange), so the backend's title tracking is init/reset-only. Upstream ghostty-web API gap — not fixable in the backend adapter.",
   "ghostty::libvterm/13state_edit.test::IL": "IL (insert line) within the scrolling region.",
   "ghostty::libvterm/16state_resize.test::Resize grow doesn't cancel phantom": "Resize semantics beyond reflow: scrolling content off on shrink, popping scrollback on grow, preserving the cursor's line, and resize while on the alternate screen.",

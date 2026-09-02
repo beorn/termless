@@ -78,6 +78,8 @@ Mode names in `expectedModes` are engine-agnostic DEC/xterm vocabulary (`DECAWM`
 
 Engine gaps are DATA, not red tests: `known-gaps.json` maps `<backend>::<suite>::<case name>` to a reason. The ledger ratchets both ways — an un-ledgered mismatch fails (regression or new case), and a ledgered case that starts passing also fails until the entry is removed. A ledger entry is a queue item: it either graduates to an implementation bead (engine gap) or documents a deliberate non-target (era-scoped engines like vt100).
 
+The ledger names its engine. vterm.js is the one backend engine that resolves differently per world — the published package in a fresh clone or CI, a workspace `file:` override inside the hh superproject — so the header row `_engine` records the `vterm.js@<version>` the `vterm::` rows were graded against, the suite fails when a different version resolves (re-grade, then update the header), and every vterm failure text names the package's real path on disk. A green run in one world can no longer pass for a fact about the other.
+
 `expectedScreen` comparison uses ghostty `plainString()` semantics (viewport text, trailing whitespace/rows trimmed) because the first corpus's expectations were mined against it; a future suite whose dumps differ extends the runner with an explicit comparison mode rather than loosening this one.
 
 ## Growth triggers (decided now so nobody re-litigates later)

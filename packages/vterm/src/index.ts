@@ -1,4 +1,5 @@
 export { createVtermBackend } from "./backend.ts"
+export { vtermEngineIdentity, type VtermEngineIdentity } from "./engine-identity.ts"
 
 // Production island guest — a structural mirror of `@termless/xtermjs`'s
 // `xtermGuest`, injectable behind the hab deck's ShellGuest seam.
