@@ -80,7 +80,7 @@ Engine gaps are DATA, not red tests: `known-gaps.json` maps `<backend>::<suite>:
 
 The ledger names its engine. vterm.js is the one backend engine that resolves differently per world — the published package in a fresh clone or CI, a workspace `file:` override inside the hh superproject — so the header row `_engine` records the `vterm.js@<version>` the `vterm::` rows were graded against, the suite fails when a different version resolves (re-grade, then update the header), and every vterm failure text names the package's real path on disk. A green run in one world can no longer pass for a fact about the other.
 
-`expectedScreen` comparison uses ghostty `plainString()` semantics (viewport text, trailing whitespace/rows trimmed) because the first corpus's expectations were mined against it; a future suite whose dumps differ extends the runner with an explicit comparison mode rather than loosening this one.
+`expectedScreen` comparison uses ghostty `plainString()` semantics (viewport text, trailing whitespace/rows trimmed) because the first corpus's expectations were mined against it; a future suite whose dumps differ extends the runner with an explicit comparison mode rather than loosening this one. Colors compare by the painted RGB: `Color.index` is identity metadata an engine may preserve or omit (vterm reports the palette slot, xterm.js does not), so it is never part of a conformance verdict — `tests/io/conformance.test.ts`, the io-shaped seed of this grade, encodes the same rule.
 
 ## Growth triggers (decided now so nobody re-litigates later)
 
