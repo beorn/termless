@@ -100,7 +100,10 @@ describe("snapshot codec survives corpus reflow states", () => {
    * This drives a real corpus reflow case on top of production-scale
    * scrollback, including the clear that orphaned the flag array.
    */
-  test("deep scrollback + ED 3 + corpus reflow geometry round-trips", () => {
+  // Production-scale scrollback (1477 lines, then a corpus reflow) ran 5.2 s on
+  // windows-latest against vitest's 5 s default (termless PR #4, 2026-09-01);
+  // the budget names the cost instead of letting a slow runner fail the suite.
+  test("deep scrollback + ED 3 + corpus reflow geometry round-trips", { timeout: 30_000 }, () => {
     const reflow = cases.find((c) => c.name.includes("reflows wide lines")) ?? cases[0]
     expect(reflow, "a reflow case to borrow geometry from").toBeDefined()
     const screen = createVtermScreen({ cols: 80, rows: 24, scrollbackLimit: 4000 })
