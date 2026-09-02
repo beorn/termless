@@ -24,6 +24,19 @@ emu.getText()
 
 `Source = AsyncIterable<Event>` and `Sink = { apply(e) }` are aliases, not concepts. `pipe(source, ...sinks)` awaits each `apply` — backpressure is the pull side doing its job. `toReadable()` / `fromReadable()` bridge to Web Streams for fan-out and platform interop (`pipe.ts`). The picture types (`Cell`, `Color`, `Cursor`, …) and the `Micros` timebase live here too, because `Emulator.getCell` returns a `Cell` (`picture.ts`, `time.ts`).
 
+## Transforms
+
+Pure functions over a `Recording`, in `transforms.ts`. `trim(recording, { from?, to? })` keeps an inclusive window and shifts it to start at 0. `retime(recording, { speed?, maxGap? })` rescales the gaps between events. `filter(recording, keep)` keeps only the events a predicate accepts — pair it with `byType(...types)` for a predicate checked against the `Event` discriminant. None mutate their input, and each returns a `Recording`, so they compose:
+
+```ts
+import { trim, retime, filter, byType, micros } from "@termless/core/io"
+
+// keep the middle third, play it back twice as fast, then just the marks
+const clip = trim(recording, { from: micros(30_000_000), to: micros(90_000_000) })
+const sped = retime(clip, { speed: 2, maxGap: micros(2_000_000) })
+const highlights = filter(sped, byType("mark"))
+```
+
 ## The law
 
 Everything points at io; io points at nothing. Emulators are injected by interface, with vterm the default in exactly one place per consumer. This module is reached as the `./io` subpath, not the root barrel: the barrel still exports an older `Recording`, and a bare `Event` there would shadow the DOM global — both resolve when the Recording models converge (unterm phase A3).
@@ -34,4 +47,4 @@ Phase A1 of unterm Track A: the primitives are minted here and the old names (`T
 
 ## Part of unterm
 
-Anchor: `hub/unterm/design.md` (hh STATE). Siblings today: `@termless/vterm` (production emulator), `@termless/xtermjs` (the differential reference); the physical split into `@unterm/io`, `@unterm/recording`, viterm and termtv is Track B, against this frozen surface.
+Anchor: the unterm design document (kept with the hallohuman workspace, not in this repository). Siblings today: `@termless/vterm` (production emulator), `@termless/xtermjs` (the differential reference); the physical split into `@unterm/io`, `@unterm/recording`, viterm and termtv is Track B, against this frozen surface.

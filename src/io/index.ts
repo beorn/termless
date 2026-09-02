@@ -55,6 +55,9 @@ export type { Emulator } from "./emulator.ts"
 // ── Recording — a header plus the Events, saved ──
 export type { Recording, RecordingHeader } from "./recording.ts"
 
+// ── Transforms — trim, retime, filter over a Recording ──
+export { byType, filter, retime, trim } from "./transforms.ts"
+
 // ── The readable picture ──
 export type { Cell, Color, Cursor, CursorStyle, Mode, Modes, Size, UnderlineStyle } from "./picture.ts"
 export { MODES } from "./picture.ts"
