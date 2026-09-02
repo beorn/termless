@@ -1,6 +1,6 @@
 {
   "name": "@termless/test",
-  "version": "0.8.4",
+  "version": "0.9.0",
   "description": "Playwright-style Vitest integration for terminal apps — fixtures, terminal matchers, snapshots, PTY support, and xterm.js-backed tests",
   "keywords": [
     "ansi",
@@ -60,7 +60,7 @@
     }
   },
   "peerDependencies": {
-    "@termless/core": "^0.8.1",
+    "@termless/core": "^0.9.0",
     "vitest": ">=2.0.0"
   },
   "tsdown": {

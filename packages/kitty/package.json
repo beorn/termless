@@ -1,6 +1,6 @@
 {
   "name": "@termless/kitty",
-  "version": "0.8.4",
+  "version": "0.9.0",
   "description": "Kitty backend for termless — uses kitty's VT parser via subprocess bridge (GPL-3.0 dependency, not distributed)",
   "keywords": [
     "headless",
@@ -43,7 +43,7 @@
     "build:native": "bash build/build.sh"
   },
   "peerDependencies": {
-    "@termless/core": "^0.8.1"
+    "@termless/core": "^0.9.0"
   },
   "tsdown": {
     "clean": true,

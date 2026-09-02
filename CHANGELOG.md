@@ -2,25 +2,7 @@
 
 ## Unreleased
 
-### Added
-
-- **`Trace` is now the multi-track captured-session container** (`src/recording/recording.ts`), split from the single-track `Recording`, which is reserved for the io shape (`@termless/core/io`): `RecordingHeader.theme`, `RecordingHeader.sourceResolution` and `Event.derived` are new on the io side, and `recordingFromTrace`/`traceFromRecording` (`src/recording/trace-bridges.ts`) bridge the two, tallying what the other container cannot carry rather than dropping it.
-- **io transforms** (`@termless/core/io`): `trim`, `retime` and `filter` (paired with the `byType` predicate helper) are pure functions over an io `Recording` that compose, since each returns one.
-- **`readAsciicast`/`writeAsciicast`** (`@termless/core`) are the io-shaped `.cast` pair: total on read for all four asciicast v2 event codes — including the `r` resize event the old codec used to mis-file as input — and byte-symmetric on write, tallying `mode`/`signal`/`exit` events instead of losing them; `parseAsciicast` now validates the event code and throws naming the malformed line.
-- **`loadRecording`/`loadBundle`** (`@termless/core`) are the io-shaped `.tty`/`.ttyz` door: output/input frames keep their raw payload bytes with no UTF-8 decode, a recorded resize becomes a captured (non-`derived`) control event, and every member this slice does not load is tallied by path instead of silently skipped.
-- **Golden asciicast fixtures** (`tests/asciicast/fixtures/`) pin today's parser/writer/codec behavior — eight `.cast` files covering a full header, interleaved markers, unicode/SGR, timing edges, JSON escapes and a generated 100-event trace — as a committed oracle ahead of the format changes above.
-
-### Changed
-
-- The golden `.cast` fixtures are pinned to LF on every checkout (`.gitattributes`) — a Windows runner previously read them back as CRLF and broke every byte-identity round-trip assertion.
-
-### Deprecated
-
-- `Recording`, `CreateRecordingInput` and `createRecording` (`@termless/core`) — renamed to `Trace`/`CreateTraceInput`/`createTrace`, kept as transparent aliases, removed at unterm phase A4a.
-- `readRecording`/`readBundle` (`@termless/core`) — the Trace-shaped `.tty`/`.ttyz` readers; `loadRecording`/`loadBundle` are the io-shaped replacements, removed at unterm phase A4a.
-- `decodeAsciicast`/`encodeAsciicast` (`@termless/core`) — now thin wrappers over `readAsciicast`/`writeAsciicast` plus the Trace bridges, removed at unterm phase A4a.
-
-## 0.9.0 - 2026-09-01
+## 0.9.0 - 2026-09-02
 
 ### Added
 
@@ -34,6 +16,11 @@
 - **`@termless/vterm` projects nested terminal graphics**, and no longer advertises graphics it does not project.
 - **`snapshotView()`** wraps a vterm-family `EngineSnapshot` as a `Terminal` read view, so region selectors and matchers run over a frozen snapshot exactly as over a live backend (a type-only dependency; core still imports no engine).
 - **`termless` umbrella package** (the bare name, 0.9.0) — Effect-style subpaths `.`, `./contract`, `./fmt`, `./rec` and `./backends`; every subpath is a thin re-export of `@termless/core`, and only `./backends` knows more than one engine.
+- **`Trace` is now the multi-track captured-session container** (`src/recording/recording.ts`), split from the single-track `Recording`, which is reserved for the io shape (`@termless/core/io`): `RecordingHeader.theme`, `RecordingHeader.sourceResolution` and `Event.derived` are new on the io side, and `recordingFromTrace`/`traceFromRecording` (`src/recording/trace-bridges.ts`) bridge the two, tallying what the other container cannot carry rather than dropping it.
+- **io transforms** (`@termless/core/io`): `trim`, `retime` and `filter` (paired with the `byType` predicate helper) are pure functions over an io `Recording` that compose, since each returns one.
+- **`readAsciicast`/`writeAsciicast`** (`@termless/core`) are the io-shaped `.cast` pair: total on read for all four asciicast v2 event codes — including the `r` resize event the old codec used to mis-file as input — and byte-symmetric on write, tallying `mode`/`signal`/`exit` events instead of losing them; `parseAsciicast` now validates the event code and throws naming the malformed line.
+- **`loadRecording`/`loadBundle`** (`@termless/core`) are the io-shaped `.tty`/`.ttyz` door: output/input frames keep their raw payload bytes with no UTF-8 decode, a recorded resize becomes a captured (non-`derived`) control event, and every member this slice does not load is tallied by path instead of silently skipped.
+- **Golden asciicast fixtures** (`tests/asciicast/fixtures/`) pin today's parser/writer/codec behavior — eight `.cast` files covering a full header, interleaved markers, unicode/SGR, timing edges, JSON escapes and a generated 100-event trace — as a committed oracle ahead of the format changes above.
 
 ### Changed
 
@@ -41,6 +28,18 @@
 - **CLI sessions default to vterm**, the production engine, instead of the retired xterm.js reference, and an unknown backend name is refused instead of silently substituted. `@termless/peekaboo` and the `termless rec` live overlay run the production engine and shell guest on the data path.
 - Phase A4 of the io migration is named on the deprecated 07-09 read-API names and on the `Cursor.x`/`Cursor.y` markers.
 - **Node 24 is the floor for `@termless/cli` and the `termless` umbrella** — their `silvery` dependency (`^0.21.0`) ships `using` declarations and `AsyncDisposableStack`, which Node 23 cannot parse; the publishable-verify job runs Node 24 accordingly. `@termless/core` and the backends keep `>=23.6.0`. Bun is unaffected.
+- The golden `.cast` fixtures are pinned to LF on every checkout (`.gitattributes`) — a Windows runner previously read them back as CRLF and broke every byte-identity round-trip assertion.
+
+### Deprecated
+
+- `Recording`, `CreateRecordingInput` and `createRecording` (`@termless/core`) — renamed to `Trace`/`CreateTraceInput`/`createTrace`, kept as transparent aliases, removed at unterm phase A4a.
+- `readRecording`/`readBundle` (`@termless/core`) — the Trace-shaped `.tty`/`.ttyz` readers; `loadRecording`/`loadBundle` are the io-shaped replacements, removed at unterm phase A4a.
+- `decodeAsciicast`/`encodeAsciicast` (`@termless/core`) — now thin wrappers over `readAsciicast`/`writeAsciicast` plus the Trace bridges, removed at unterm phase A4a.
+
+### Removed
+
+- **`.rec`** — deleted, not aliased (zero shipped artifacts existed); a frame trace becomes a valid `.tty` bundle by gaining a manifest, which the tracer now writes.
+- The §9-naming pure type aliases in `@termless/core` and `@termless/vterm`, and `@termless/test`'s `createTerminalFixture` aliases.
 
 ### Fixed
 
@@ -49,11 +48,6 @@
 - **Cross-platform perceptual hashes** in the compare tools.
 - **The terminal preserves unrelated escape prefixes**, and the corpus runner replays a file's preamble into segment state.
 - CLI: the `termless` bin entry is committed executable, and the cursor probe keeps its nullable types.
-
-### Removed
-
-- **`.rec`** — deleted, not aliased (zero shipped artifacts existed); a frame trace becomes a valid `.tty` bundle by gaining a manifest, which the tracer now writes.
-- The §9-naming pure type aliases in `@termless/core` and `@termless/vterm`, and `@termless/test`'s `createTerminalFixture` aliases.
 
 ## 0.7.0 – 0.8.4 - 2026-04-09 → 2026-07-27
 
