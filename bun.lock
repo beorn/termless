@@ -50,17 +50,17 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "devDependencies": {
         "@napi-rs/cli": "^3.7.3",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "bin": {
         "termless": "./src/cli.ts",
       },
@@ -74,12 +74,12 @@
         "zod": "^3.24.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
-        "@termless/ghostty": "^0.8.1",
-        "@termless/peekaboo": "^0.8.1",
-        "@termless/vt100": "^0.8.1",
-        "@termless/vterm": "^0.8.1",
-        "@termless/xtermjs": "^0.8.1",
+        "@termless/core": "^0.9.0",
+        "@termless/ghostty": "^0.9.0",
+        "@termless/peekaboo": "^0.9.0",
+        "@termless/vt100": "^0.9.0",
+        "@termless/vterm": "^0.9.0",
+        "@termless/xtermjs": "^0.9.0",
       },
       "optionalPeers": [
         "@termless/ghostty",
@@ -90,52 +90,52 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "@napi-rs/canvas": "^1.0.2",
         "ghostty-web": "^0.4.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
-        "@termless/vterm": "^0.8.1",
+        "@termless/core": "^0.9.0",
+        "@termless/vterm": "^0.9.0",
       },
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "devDependencies": {
         "@napi-rs/cli": "^3.7.3",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/termless": {
@@ -147,42 +147,42 @@
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
         "vitest": ">=2.0.0",
       },
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "vt100.js": "^0.1.3",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "vt220.js": "^0.1.3",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "vterm.js": "^0.7.0",
       },
@@ -190,35 +190,35 @@
         "@termless/xtermjs": "workspace:*",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.8.4",
+      "version": "0.9.0",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.8.1",
+        "@termless/core": "^0.9.0",
         "silvery": ">=0.4.2",
       },
       "optionalPeers": [
@@ -1540,11 +1540,7 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
-    "@termless/cli/@termless/core": ["@termless/core@root:", {}],
-
     "@termless/cli/silvery": ["silvery@0.21.1", "", { "dependencies": { "@chenglou/pretext": "^0.0.7", "@silvery/color": "0.21.0", "@silvery/commander": "0.21.0", "@termless/core": "^0.8.1", "css-select": "^7.0.0", "css-what": "^8.0.0", "flexily": "0.7.3", "loggily": "^0.10.2", "react-reconciler": "^0.33.0", "slice-ansi": "^8.0.0", "string-width": "^8.2.0" }, "peerDependencies": { "@termless/ghostty": "^0.8.2", "@termless/ghostty-native": "^0.8.1", "@termless/test": "^0.8.1", "@termless/xtermjs": "^0.8.1", "playwright": ">=1.40.0", "react": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@termless/ghostty", "@termless/ghostty-native", "@termless/test", "@termless/xtermjs", "playwright"] }, "sha512-SJUf7XIg2i5K4nl+F8/53k/lXbt0AGdOdDDE4I2Pe+Ng41yL78xR3kZpITzT1dR3TiX+KCMacso/aEY2Q30RKw=="],
-
-    "@termless/xtermjs/@termless/core": ["@termless/core@root:", {}],
 
     "@vue/compiler-core/entities": ["entities@7.0.1", "", {}, "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA=="],
 
@@ -1570,6 +1566,8 @@
 
     "silvery/loggily": ["loggily@github:beorn/loggily#7045f84", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0" }, "optionalPeers": ["@opentelemetry/api"] }, "beorn-loggily-7045f84", "sha512-+XbWW1wmJd2xqOzNEIKTq/0lecPwG7Z6pxj3KY2tKRdvoeFHW5ebbEQaU3b9zGCABs1jswizUFCjDkBz+2Y8hw=="],
 
+    "termless/@termless/core": ["@termless/core@root:", {}],
+
     "type-is/content-type": ["content-type@2.0.0", "", {}, "sha512-j/O/d7GcZCyNl7/hwZAb606rzqkyvaDctLmckbxLzHvFBzTJHuGEdodATcP3yIRoDrLHkIATJuvzbFlp/ki2cQ=="],
 
     "vite/fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
@@ -1585,8 +1583,6 @@
     "yargs/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 
     "@napi-rs/wasm-tools-wasm32-wasi/@emnapi/core/@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w=="],
-
-    "@termless/cli/@termless/core/silvery": ["silvery@0.4.3", "", { "dependencies": { "chalk": "^5.6.2", "loggily": "github:beorn/loggily", "react-reconciler": "^0.33.0", "slice-ansi": "^8.0.0", "string-width": "^8.2.0", "zustand": "^5.0.11" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-KE73UL7oSumbVQPNlMQeVgi7cqR657Gvnfqpxnt3MSIrhAPA6ljtYGEIRp9anes7KhpK6YagXlwn9aE/HIy/dg=="],
 
     "@termless/cli/silvery/@silvery/commander": ["@silvery/commander@0.21.0", "", { "dependencies": { "@silvery/ansi": "0.21.0", "commander": ">=13.0.0", "zod": ">=3.0.0" } }, "sha512-Y4cWmpaP/+KjZSAEbDezmzcM5i0jzWOCnqMSyN14aJE+sJB8scQjRLifP0DmR9tXA7sH2L+yH2dWf4f4FomAtA=="],
 
@@ -1609,8 +1605,6 @@
     "yargs/string-width/is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
     "yargs/string-width/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
-
-    "@termless/cli/@termless/core/silvery/loggily": ["loggily@github:beorn/loggily#7045f84", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0" }, "optionalPeers": ["@opentelemetry/api"] }, "beorn-loggily-7045f84", "sha512-+XbWW1wmJd2xqOzNEIKTq/0lecPwG7Z6pxj3KY2tKRdvoeFHW5ebbEQaU3b9zGCABs1jswizUFCjDkBz+2Y8hw=="],
 
     "@termless/cli/silvery/@silvery/commander/@silvery/ansi": ["@silvery/ansi@0.21.0", "", { "dependencies": { "@silvery/color": "0.21.0", "string-width": "^8.2.0" } }, "sha512-UwGg3IUWDFd+QCz89Ek8piSDGbAwEDBeXM0Z4viuBnlGuBkEdb1XHuXQhbUHdOi2uD2bWdfQr0UuY2zyMiMvUw=="],
 
