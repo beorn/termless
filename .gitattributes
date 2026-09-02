@@ -1,0 +1,4 @@
+# Golden asciicast fixtures are byte-exact oracles: keep LF on every checkout
+# (PR #5, 2026-09-01: a Windows runner read them back as CRLF and every
+# byte-identity assertion failed on line endings alone).
+tests/asciicast/fixtures/*.cast text eol=lf
