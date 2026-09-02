@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added
+
+- **`Trace` is now the multi-track captured-session container** (`src/recording/recording.ts`), split from the single-track `Recording`, which is reserved for the io shape (`@termless/core/io`): `RecordingHeader.theme`, `RecordingHeader.sourceResolution` and `Event.derived` are new on the io side, and `recordingFromTrace`/`traceFromRecording` (`src/recording/trace-bridges.ts`) bridge the two, tallying what the other container cannot carry rather than dropping it.
+- **io transforms** (`@termless/core/io`): `trim`, `retime` and `filter` (paired with the `byType` predicate helper) are pure functions over an io `Recording` that compose, since each returns one.
+- **`readAsciicast`/`writeAsciicast`** (`@termless/core`) are the io-shaped `.cast` pair: total on read for all four asciicast v2 event codes — including the `r` resize event the old codec used to mis-file as input — and byte-symmetric on write, tallying `mode`/`signal`/`exit` events instead of losing them; `parseAsciicast` now validates the event code and throws naming the malformed line.
+- **`loadRecording`/`loadBundle`** (`@termless/core`) are the io-shaped `.tty`/`.ttyz` door: output/input frames keep their raw payload bytes with no UTF-8 decode, a recorded resize becomes a captured (non-`derived`) control event, and every member this slice does not load is tallied by path instead of silently skipped.
+- **Golden asciicast fixtures** (`tests/asciicast/fixtures/`) pin today's parser/writer/codec behavior — eight `.cast` files covering a full header, interleaved markers, unicode/SGR, timing edges, JSON escapes and a generated 100-event trace — as a committed oracle ahead of the format changes above.
+
+### Changed
+
+- The golden `.cast` fixtures are pinned to LF on every checkout (`.gitattributes`) — a Windows runner previously read them back as CRLF and broke every byte-identity round-trip assertion.
+
+### Deprecated
+
+- `Recording`, `CreateRecordingInput` and `createRecording` (`@termless/core`) — renamed to `Trace`/`CreateTraceInput`/`createTrace`, kept as transparent aliases, removed at unterm phase A4a.
+- `readRecording`/`readBundle` (`@termless/core`) — the Trace-shaped `.tty`/`.ttyz` readers; `loadRecording`/`loadBundle` are the io-shaped replacements, removed at unterm phase A4a.
+- `decodeAsciicast`/`encodeAsciicast` (`@termless/core`) — now thin wrappers over `readAsciicast`/`writeAsciicast` plus the Trace bridges, removed at unterm phase A4a.
+
 ## 0.9.0 - 2026-09-01
 
 ### Added

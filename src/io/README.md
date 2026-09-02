@@ -37,6 +37,8 @@ const sped = retime(clip, { speed: 2, maxGap: micros(2_000_000) })
 const highlights = filter(sped, byType("mark"))
 ```
 
+Two doors produce an io `Recording` today: `loadRecording` (`.tty`/`.ttyz`, via the root barrel) and `readAsciicast` (`.cast`). Every loader sets `header.sourceResolution` — the clock resolution the source actually recorded at, declared rather than assumed — and reserves `Event.derived: true` for events it reconstructs from other evidence rather than reads directly off the wire.
+
 ## The law
 
 Everything points at io; io points at nothing. Emulators are injected by interface, with vterm the default in exactly one place per consumer. This module is reached as the `./io` subpath, not the root barrel: the barrel still exports an older `Recording`, and a bare `Event` there would shadow the DOM global — both resolve when the Recording models converge (unterm phase A3).

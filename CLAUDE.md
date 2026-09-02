@@ -174,20 +174,44 @@ timer.advanceTime(500) // Partial advance
 
 ## Recording & Replay
 
-The captured-session model is `Recording` (`src/recording/recording.ts`) — io
-truth, commands intent, frames projection, integer-µs clock. On disk it is the
-`.tty`/`.ttyz` format: one format, two encodings (live bundle directory ⇄
-sealed ZIP archive), one encoding-blind reader. Reference:
+One event vocabulary, two containers. **`Recording`** (`@termless/core/io`,
+`src/io/recording.ts`) is the io shape — a header plus `Event[]`, one track.
+**`Trace`** (`src/recording/recording.ts`) is the multi-track container —
+`commands` intent, `io` truth, `frames` projection — over that same
+vocabulary, integer-µs clock throughout. The old names — `Recording`,
+`createRecording`, `readRecording`, `decodeAsciicast`/`encodeAsciicast` —
+still work but now name the _Trace_ shape; they are `@deprecated` aliases
+and wrappers, deleted at unterm phase A4a, when the root barrel's
+`Recording` becomes the io shape.
+
+On disk it is the `.tty`/`.ttyz` format: one format, two encodings (live
+bundle directory ⇄ sealed ZIP archive), one encoding-blind reader. Reference:
 `docs/reference/formats/tty.md`.
 
-```typescript
-import { readRecording, writeRecording, packRecording, unpackRecording } from "@termless/core"
+Doors onto the io shape: `loadRecording`/`loadBundle` read a `.tty` bundle or
+`.ttyz` archive; `readAsciicast`/`writeAsciicast` are the byte-symmetric
+`.cast` pair (`o`/`i`/`m`/`r`, every drop tallied, never silent). Between
+containers, `recordingFromTrace` maps a `Trace`'s `io` track onto an io
+`Recording`, total on every row; `traceFromRecording`
+(`src/recording/trace-bridges.ts`) goes the other way and tallies the events
+with no `io`-track row shape (`control`, `mark`, `exit`) instead of dropping
+them. Pure transforms — `trim`, `retime`, `filter`, `byType` — run over the
+io `Recording` (`@termless/core/io`).
 
-const rec = readRecording("session.tty") // or "session.ttyz" — identical result
-writeRecording("out.ttyz", rec) // seal; "out.tty" writes the bundle directory
+Every loader here follows two rules: `header.sourceResolution`
+(`"us" | "ms" | "s"`) is declared from what the source actually recorded at,
+never assumed; `Event.derived` marks only an event a loader _reconstructs_
+from other evidence — a byte-for-byte capture never carries it.
+
+```typescript
+import { loadRecording, readAsciicast } from "@termless/core"
+
+const rec = loadRecording("session.tty") // or "session.ttyz" — identical result
+const cast = readAsciicast(castText) // .cast text, same io Recording shape
 ```
 
-Codecs: `.cast` (symmetric asciicast v2), `.tape` (compiler input), `ttyrec`
-(import-only). Visual traces read/write through `loadVisualTrace` /
-`writeVisualTrace`; the frame tracer's live directory is itself a valid `.tty`
-bundle.
+Codecs: `.cast` (asciicast v2 — io-shaped `readAsciicast`/`writeAsciicast`;
+Trace-shaped deprecated `decodeAsciicast`/`encodeAsciicast`), `.tape`
+(compiler input), `ttyrec` (import-only). Visual traces read/write through
+`loadVisualTrace`/`writeVisualTrace`; the frame tracer's live directory is
+itself a valid `.tty` bundle.
