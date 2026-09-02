@@ -144,44 +144,95 @@ into the **io-shaped** Recording instead — a header plus `Event[]`
 `readRecording` itself takes over this shape at phase A4a, when the Trace
 alias is deleted (the two names coincide from that point on).
 
-| member                                               | → io Event                                                                                                                                   |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `io`, `hts1` encoding — `output`/`input`             | one Event per frame, the **raw payload bytes** as `data` — no UTF-8 decode                                                                   |
-| `io`, `hts1` encoding — `resize`                     | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track |
-| `io`, `hts1` encoding — `lifecycle`/`truncation`     | no Event form (same as the Trace door) — tallied                                                                                             |
-| `io`, `jsonl` encoding                               | each row through `eventFromIoEvent`                                                                                                          |
-| `commands`, `frames`, `facts`, `habcp`, `checkpoint` | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                               |
+| member                                           | → io Event                                                                                                                                           |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `io`, `hts1` encoding — `output`/`input`         | one Event per frame, the **raw payload bytes** as `data` — no UTF-8 decode                                                                           |
+| `io`, `hts1` encoding — `resize`                 | a **captured, non-derived** `control`/`resize` Event — the source recorded it, the same frame the Trace door reads into its `commands` track         |
+| `io`, `hts1` encoding — `lifecycle`/`truncation` | no Event form (same as the Trace door) — tallied                                                                                                     |
+| `io`, `jsonl` encoding                           | each row through `eventFromIoEvent`                                                                                                                  |
+| `commands`, `frames`, `facts`, `habcp`           | not loaded — tallied by path, the same treatment `readBundle` gives them today                                                                       |
+| `checkpoint`                                     | **loaded**: a derived `mark` per record, plus a derived `control`/`resize` on a geometry change — see [Checkpoint member](#checkpoint-member) below |
 
-Checkpoint members are not loaded in this slice: the only real producer of a
-checkpoint member is the hab side (`TerminalCheckpoint { reason, at,
-throughOffset, snapshot }`, `snapshot` a vterm.js-owned shape carrying the
-geometry), and this format's own doc leaves a checkpoint's on-disk content
-unspecified — a reader for an invented shape would be fiction. Turning
-checkpoints into derived marks and reconstructed resize deltas (`@cto`
-ruling Q1: reconstruction is marked, capture is not) is a later slice's work,
-against that real producer's shape.
+Checkpoint members are loaded (unterm A3 slice 5b) — see
+[Checkpoint member](#checkpoint-member) below for the record contract (D7)
+and the mark / derived-resize rules (D8, D9; `@cto` ruling Q1: reconstruction
+is marked, capture is not).
 
 **The `derived` rule**: `output`/`input` events never carry `derived` — they
 are always a byte-for-byte capture, hts1 or jsonl. A captured hts1 `resize`
 frame _also_ carries no `derived` — it happened, exactly as recorded, same as
 `output`/`input`. `derived: true` is reserved for events this door
-_reconstructs_ from other evidence rather than reads directly off the wire;
-none exist yet (checkpoint-derived marks/resizes land in the later slice
-above).
+_reconstructs_ from other evidence rather than reads directly off the wire:
+a checkpoint record's `mark`, and the `control`/`resize` D9 sometimes
+synthesizes beside it — see [Checkpoint member](#checkpoint-member) below.
 
 **The `sourceResolution` rule** (unterm A3 ruling: declared, never assumed):
-`"ms"` when any loaded `io` member is `hts1`; `"us"` otherwise. Every event
-this door produces comes from an `io` member (hts1 or jsonl — a checkpoint
-member is tallied, never loaded), so a bundle with events always has one to
-decide from; a bundle with none throws the same "no events" error below.
+`"ms"` when any loaded `io` member is `hts1`; `"us"` otherwise — decided by
+the `io` members alone, never by a checkpoint's derived `mark`/`control`
+Events. A bundle with no events at all throws; see below.
 
 **What is tallied** — `TtyLoadSkipped`: the `commands` / `frames` / `facts` /
-`habcp` / `checkpoint` member paths not loaded at all, plus `lifecycle` /
-`truncation` counts for hts1 frames with no Event form. Never a silent drop.
+`habcp` member paths not loaded at all, plus `lifecycle` / `truncation`
+counts for hts1 frames with no Event form. Never a silent drop. `checkpoint`
+member paths are no longer part of this tally — they are loaded (see
+[Checkpoint member](#checkpoint-member) below).
 
-A bundle that yields no events at all (frames-only, commands-only,
-checkpoints-only) throws, naming the members it has — the io shape has
-nothing to say about it.
+A bundle that yields no events at all (frames-only, commands-only, or a
+checkpoint member with zero records) throws, naming the members it has — the
+io shape has nothing to say about it.
+
+### Checkpoint member
+
+The normative record contract (D7), and the mark / derived-resize rules this
+door applies to it (D8, D9; unterm A3 slice 5b). The only real producer is
+hab-tty: one `checkpoint` member whose JSON content is a single record or a
+JSON array of records.
+
+```typescript
+interface TtyCheckpointRecord {
+  at: number // wall-ms, rebased exactly like an hts1 frame
+  reason?: string
+  throughOffset?: number // the journal offset this checkpoint covers through (inclusive)
+  size?: { cols: number; rows: number } // write-new: the hab producer adds this in a later slice
+  snapshot?: unknown // a vterm.js Snapshot — raw v1, or a v2 envelope `{ format, data }`
+}
+```
+
+`snapshot` is never decoded — this format imports no engine (see
+[Member encodings](#member-encodings) below) — so a record's **geometry**
+(D7) is resolved without it wherever possible:
+
+- `size`, when present, wins outright.
+- Else, when `snapshot` is a **raw v1** snapshot — a plain object
+  `{ version: 1, cols, rows, … }`, not a `{ format, data }` envelope — its
+  own top-level `cols`/`rows`: two fields vterm.js documents as that shape's
+  persisted wire form, read as JSON and never decoded.
+- Else the geometry is unknown, and no derived resize can be computed from
+  that record.
+
+**Marks (D8).** Every record becomes one `derived: true` `mark` Event, named
+`checkpoint:<reason>` when the record has one, else `checkpoint:<n>` — its
+0-based index within its member's JSON document. The mark is anchored onto
+the timeline by `throughOffset` when the record declares one _and_ at least
+one loaded `io` event carries an hts1 frame offset at all: onto the last such
+event whose offset is ≤ `throughOffset`, taking that event's own `at`. In
+every other case — no `throughOffset`, no `io` event has an offset to compare
+against, or no loaded event's offset qualifies — the mark falls back to the
+record's own rebased `at`.
+
+**Derived resizes (D9).** A `derived: true` `control`/`resize` Event
+immediately precedes a record's mark whenever that record's geometry is
+known, differs from the geometry last known, and no captured resize happened
+since. "The geometry last known" starts at the manifest's `cols`/`rows` (when
+both are `> 0`) and is updated, in timeline order, by every **captured**
+resize Event and by every geometry-bearing record — so a capture always wins
+over a reconstruction: one truth per resize, a reconstruction never doubles a
+capture that already covers the same change.
+
+Records across every `checkpoint` member in the bundle are processed in one
+global timeline order — by `throughOffset` when present, else by rebased
+`at` — since the D9 geometry-tracking state spans all of them, not just one
+member's own records.
 
 ### Member encodings
 
@@ -190,7 +241,7 @@ nothing to say about it.
 | `jsonl`         | io, commands, facts, habcp | one JSON object per line; io rows are `IoEvent` (µs `at`), commands rows are `Command`; habcp rows are opaque here |
 | `hts1`          | io                         | the binary journal framing (below); wall-ms `at`, rebased on read                                                  |
 | `trace-index`   | frames                     | the frozen `TraceFrame` rows of `index.jsonl`, rasters beside it                                                   |
-| `json`          | checkpoint                 | one JSON document                                                                                                  |
+| `json`          | checkpoint                 | one JSON document — a record or an array of records, see [Checkpoint member](#checkpoint-member) above            |
 | `zstd-seekable` | _reserved_                 | declared for large sealed io members; **not yet implemented** — a reader encountering it must fail loud, not skip  |
 
 ### The `hts1` io encoding

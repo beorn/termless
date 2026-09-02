@@ -95,6 +95,7 @@ export type {
   TtyMemberType,
   TtyMemberEncoding,
   TtyTail,
+  TtyCheckpointRecord,
   TtySkipTally,
   ReadBundleResult,
   WriteRecordingOptions,

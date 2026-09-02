@@ -1,10 +1,10 @@
 /**
  * `loadBundle` / `loadRecording` — the io-shaped `.tty`/`.ttyz` reader
- * (unterm phase A3, slice 5a). `readBundle`/`readRecording`
- * (tests/tty-format.test.ts) produce the Trace-shaped Recording; these
- * produce the io-shaped Recording (`Event[]`, raw bytes,
- * `@termless/core/io`) per docs/reference/formats/tty.md, "Loading as an io
- * Recording".
+ * (unterm phase A3, slice 5a; checkpoint records added in slice 5b).
+ * `readBundle`/`readRecording` (tests/tty-format.test.ts) produce the
+ * Trace-shaped Recording; these produce the io-shaped Recording (`Event[]`,
+ * raw bytes, `@termless/core/io`) per docs/reference/formats/tty.md,
+ * "Loading as an io Recording" and "Checkpoint member".
  *
  * Battery map:
  *  - jsonl bundle: matches recordingFromTrace(readRecording(dir)) event for
@@ -14,15 +14,20 @@
  *    control/resize event (the Trace door reads the same frame into its
  *    commands track — both truths pinned); lifecycle/truncation frames are
  *    tallied, same as the Trace door
- *  - checkpoint members are NOT loaded in this slice — tallied by path, same
- *    as commands/frames/facts/habcp (their content contract is a later
- *    slice, against the real hab-side producer)
+ *  - checkpoint members (slice 5b, D7–D9): LOADED — each record becomes a
+ *    derived `mark`, anchored by `throughOffset` onto the last covered io
+ *    event else by rebased `at`; a derived `control`/`resize` precedes the
+ *    mark when the record's geometry (its `size`, else a raw v1 snapshot's
+ *    own cols/rows) differs from the geometry last known and no captured
+ *    resize happened since — one truth per resize, a capture always wins
  *  - sourceResolution: "ms" when any loaded io member is hts1, "us"
  *    otherwise; a bundle with no io member at all throws "no events" (same
  *    as any other bundle with nothing this door loads)
- *  - the skip tally: commands/frames/facts/habcp/checkpoint member paths,
- *    never a silent drop
- *  - fail-loud: no events at all (commands-only, checkpoints-only)
+ *  - the skip tally: commands/frames/facts/habcp member paths, never a
+ *    silent drop (checkpoint is no longer in this tally — see above)
+ *  - fail-loud: no events at all (commands-only, a checkpoint member with
+ *    zero records); malformed checkpoint JSON or a record with no numeric
+ *    `at` throws naming the member
  *  - encoding-blindness: .ttyz loads identically to its .tty bundle dir
  *  - duration/size fallbacks
  */
@@ -154,6 +159,15 @@ function resizesOf(events: Event[]): Extract<Event, { type: "control"; control: 
   return events.filter(
     (e): e is Extract<Event, { type: "control"; control: "resize" }> => e.type === "control" && e.control === "resize",
   )
+}
+
+function marksOf(events: Event[]): Extract<Event, { type: "mark" }>[] {
+  return events.filter((e): e is Extract<Event, { type: "mark" }> => e.type === "mark")
+}
+
+/** A `checkpoint` member: `content` is a record or an array of records — hand-authored JSON, per the producer's own shape (docs/reference/formats/tty.md, "Checkpoint member"). */
+function checkpointMember(path: string, content: unknown): MemberSpec {
+  return { path, type: "checkpoint", encoding: "json", bytes: new TextEncoder().encode(JSON.stringify(content)) }
 }
 
 describe("loadRecording — jsonl io members", () => {
@@ -318,7 +332,14 @@ describe("loadRecording — hts1 io members", () => {
 })
 
 describe("loadRecording — the skip tally and fail-loud paths", () => {
-  test("the skipped tally lists commands/frames/facts/habcp/checkpoint member paths — not loaded, content never read", () => {
+  // Pre-A3 fixture note: this bundle used to also carry a `checkpoint`
+  // member with deliberately-invalid JSON bytes, proving its content was
+  // never read (slice 5a: checkpoints were tallied by path, not loaded). As
+  // of slice 5b (D7–D9) checkpoint members ARE loaded — invalid JSON now
+  // fails loud instead of being silently tallied (see the dedicated
+  // "checkpoint records" describe block below) — so `checkpoint` is gone
+  // from `TtyLoadSkipped` entirely and this fixture no longer includes one.
+  test("the skipped tally lists commands/frames/facts/habcp member paths — not loaded, content never read", () => {
     const dir = tmp()
     try {
       const junk = text("irrelevant — never parsed by this door\n")
@@ -329,9 +350,6 @@ describe("loadRecording — the skip tally and fail-loud paths", () => {
           { path: "frames/index.jsonl", type: "frames", encoding: "trace-index", bytes: junk },
           { path: "facts/000.jsonl", type: "facts", encoding: "jsonl", bytes: junk },
           { path: "habcp.log", type: "habcp", encoding: "jsonl", bytes: junk },
-          // Deliberately not valid JSON — proves a checkpoint member's
-          // content is never read by this door, only its path tallied.
-          { path: "checkpoints/000.json", type: "checkpoint", encoding: "json", bytes: junk },
         ],
       })
       const { skipped } = loadBundle(bundle)
@@ -339,7 +357,6 @@ describe("loadRecording — the skip tally and fail-loud paths", () => {
       expect(skipped.frames).toEqual(["frames/index.jsonl"])
       expect(skipped.facts).toEqual(["facts/000.jsonl"])
       expect(skipped.habcp).toEqual(["habcp.log"])
-      expect(skipped.checkpoint).toEqual(["checkpoints/000.json"])
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
@@ -359,13 +376,218 @@ describe("loadRecording — the skip tally and fail-loud paths", () => {
     }
   })
 
-  test("a checkpoints-only bundle (no io member) throws 'no events' too — checkpoints aren't loaded in this slice", () => {
+  test("a checkpoints-only bundle with zero records throws 'no events' too — a mark needs a record", () => {
+    const dir = tmp()
+    try {
+      // Valid JSON (an empty array of records) — under slice 5b a checkpoint
+      // member with >=1 record always yields at least one mark Event, so
+      // this fixture (unlike pre-5b's invalid-JSON junk) must be genuinely
+      // empty to still exercise the "no events at all" path.
+      const bundle = writeBundle(dir, {
+        members: [{ path: "checkpoints/000.json", type: "checkpoint", encoding: "json", bytes: text("[]") }],
+      })
+      expect(() => loadRecording(bundle)).toThrow(/no events/)
+      expect(() => loadRecording(bundle)).toThrow(/checkpoints\/000\.json/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("loadRecording — checkpoint records (D7–D9)", () => {
+  test("two checkpoint records over an hts1 io member: marks anchored by throughOffset, one derived resize between them", () => {
+    const dir = tmp()
+    try {
+      const frames = concatBytes([
+        htsFrame({ kind: "output", offset: 0, at: ORIGIN }, text("a")),
+        htsFrame({ kind: "output", offset: 1, at: ORIGIN + 100 }, text("b")),
+        htsFrame({ kind: "output", offset: 2, at: ORIGIN + 200 }, text("c")),
+      ])
+      const bundle = writeBundle(dir, {
+        originWallMs: ORIGIN,
+        members: [
+          { path: "io/seg.hts", type: "io", encoding: "hts1", bytes: frames },
+          checkpointMember("checkpoints/000.json", [
+            // Matches the manifest's own 80x24 — no derived resize expected.
+            { at: ORIGIN + 5, reason: "auto", throughOffset: 0, snapshot: { version: 1, cols: 80, rows: 24 } },
+            // Differs — expect one derived resize immediately before this mark.
+            { at: ORIGIN + 205, throughOffset: 2, snapshot: { version: 1, cols: 120, rows: 40 } },
+          ]),
+        ],
+      })
+
+      const { events } = loadRecording(bundle)
+      const marks = marksOf(events)
+      const resizes = resizesOf(events)
+
+      expect(marks).toHaveLength(2)
+      expect(marks[0]).toMatchObject({ at: 0, name: "checkpoint:auto", derived: true })
+      expect(marks[1]).toMatchObject({ at: 200_000, name: "checkpoint:1", derived: true })
+
+      expect(resizes).toHaveLength(1)
+      expect(resizes[0]).toMatchObject({ at: 200_000, size: { cols: 120, rows: 40 }, derived: true })
+
+      // The derived resize sorts immediately before its record's mark (both at 200_000).
+      expect(events.indexOf(resizes[0]!)).toBe(events.indexOf(marks[1]!) - 1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a captured hts1 resize between two checkpoints suppresses the derived resize — one truth per resize", () => {
+    const dir = tmp()
+    try {
+      const frames = concatBytes([
+        htsFrame({ kind: "output", offset: 0, at: ORIGIN }, text("a")),
+        htsFrame({ kind: "input", offset: 1, at: ORIGIN + 100 }, text("b")),
+        htsFrame({ kind: "resize", offset: 2, at: ORIGIN + 150, size: { cols: 100, rows: 30 } }),
+        htsFrame({ kind: "output", offset: 3, at: ORIGIN + 200 }, text("c")),
+      ])
+      const bundle = writeBundle(dir, {
+        originWallMs: ORIGIN,
+        members: [
+          { path: "io/seg.hts", type: "io", encoding: "hts1", bytes: frames },
+          checkpointMember("checkpoints/000.json", [
+            { at: ORIGIN + 5, throughOffset: 0, snapshot: { version: 1, cols: 80, rows: 24 } },
+            // Declares 120x40 — differs from BOTH the manifest and the
+            // capture's 100x30 — yet must still emit no derived resize: a
+            // capture in the interval always wins, match or not.
+            { at: ORIGIN + 205, throughOffset: 3, snapshot: { version: 1, cols: 120, rows: 40 } },
+          ]),
+        ],
+      })
+
+      const { events } = loadRecording(bundle)
+      const resizes = resizesOf(events)
+      expect(resizes).toHaveLength(1)
+      expect(resizes[0]).toMatchObject({ at: 150_000, size: { cols: 100, rows: 30 } })
+      expect("derived" in resizes[0]!).toBe(false)
+      expect(marksOf(events)).toHaveLength(2)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a record with `size` and a v2 envelope snapshot: geometry comes from `size`", () => {
+    const dir = tmp()
+    try {
+      const frames = htsFrame({ kind: "output", offset: 0, at: ORIGIN }, text("a"))
+      const bundle = writeBundle(dir, {
+        originWallMs: ORIGIN,
+        members: [
+          { path: "io/seg.hts", type: "io", encoding: "hts1", bytes: frames },
+          checkpointMember("checkpoints/000.json", {
+            at: ORIGIN + 5,
+            throughOffset: 0,
+            size: { cols: 100, rows: 30 },
+            snapshot: { format: "vterm-snapshot-v2", data: "QUJD" },
+          }),
+        ],
+      })
+
+      const { events } = loadRecording(bundle)
+      const resizes = resizesOf(events)
+      expect(resizes).toHaveLength(1)
+      expect(resizes[0]).toMatchObject({ size: { cols: 100, rows: 30 }, derived: true })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a v2 envelope snapshot with no `size`: mark only, geometry unknown, no resize", () => {
+    const dir = tmp()
+    try {
+      const frames = htsFrame({ kind: "output", offset: 0, at: ORIGIN }, text("a"))
+      const bundle = writeBundle(dir, {
+        originWallMs: ORIGIN,
+        members: [
+          { path: "io/seg.hts", type: "io", encoding: "hts1", bytes: frames },
+          checkpointMember("checkpoints/000.json", {
+            at: ORIGIN + 5,
+            throughOffset: 0,
+            snapshot: { format: "vterm-snapshot-v2", data: "QUJD" },
+          }),
+        ],
+      })
+
+      const { events } = loadRecording(bundle)
+      expect(marksOf(events)).toHaveLength(1)
+      expect(resizesOf(events)).toHaveLength(0)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a record is placed by rebased `at` when the io member is jsonl — no frame offsets to anchor by", () => {
     const dir = tmp()
     try {
       const bundle = writeBundle(dir, {
-        members: [{ path: "checkpoints/000.json", type: "checkpoint", encoding: "json", bytes: text("not parsed") }],
+        originWallMs: ORIGIN,
+        members: [
+          ioJsonlMember("io.jsonl", [{ at: 0, direction: "out", data: "x" }]),
+          // A large throughOffset is meaningless here — no io event carries
+          // a frame offset in a jsonl-only bundle — so it must be ignored in
+          // favor of the record's own rebased `at`.
+          checkpointMember("checkpoints/000.json", { at: ORIGIN + 300, throughOffset: 999_999 }),
+        ],
       })
-      expect(() => loadRecording(bundle)).toThrow(/no events/)
+
+      const { events } = loadRecording(bundle)
+      const marks = marksOf(events)
+      expect(marks).toHaveLength(1)
+      expect(marks[0]).toMatchObject({ at: 300_000 })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a single record (not wrapped in an array) is accepted", () => {
+    const dir = tmp()
+    try {
+      const frames = htsFrame({ kind: "output", offset: 0, at: ORIGIN }, text("a"))
+      const bundle = writeBundle(dir, {
+        originWallMs: ORIGIN,
+        members: [
+          { path: "io/seg.hts", type: "io", encoding: "hts1", bytes: frames },
+          checkpointMember("checkpoints/000.json", { at: ORIGIN + 5, reason: "boot", throughOffset: 0 }),
+        ],
+      })
+
+      const { events } = loadRecording(bundle)
+      const marks = marksOf(events)
+      expect(marks).toHaveLength(1)
+      expect(marks[0]).toMatchObject({ name: "checkpoint:boot", derived: true })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("malformed JSON in a checkpoint member throws, naming the member", () => {
+    const dir = tmp()
+    try {
+      const bundle = writeBundle(dir, {
+        members: [
+          ioJsonlMember("io.jsonl", [{ at: 0, direction: "out", data: "x" }]),
+          { path: "checkpoints/000.json", type: "checkpoint", encoding: "json", bytes: text("not json {{{") },
+        ],
+      })
+      expect(() => loadRecording(bundle)).toThrow(/not valid JSON/)
+      expect(() => loadRecording(bundle)).toThrow(/checkpoints\/000\.json/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("a checkpoint record with no numeric `at` throws, naming the member", () => {
+    const dir = tmp()
+    try {
+      const bundle = writeBundle(dir, {
+        members: [
+          ioJsonlMember("io.jsonl", [{ at: 0, direction: "out", data: "x" }]),
+          checkpointMember("checkpoints/000.json", [{ reason: "no-at" }]),
+        ],
+      })
+      expect(() => loadRecording(bundle)).toThrow(/no numeric "at"/)
       expect(() => loadRecording(bundle)).toThrow(/checkpoints\/000\.json/)
     } finally {
       rmSync(dir, { recursive: true, force: true })

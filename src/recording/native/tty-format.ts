@@ -549,14 +549,23 @@ export function readRecording(path: string): Recording {
 //    have no Event form (same as the Trace door, which also only tallies
 //    them) — tallied here too, never silently dropped.
 //  - io member, jsonl encoding: each row through `eventFromIoEvent`.
-//  - commands / frames / facts / habcp / checkpoint members: not loaded —
-//    tallied by path, the same treatment `readBundle` gives them today.
-//    Checkpoint-derived marks and reconstructed resize deltas are NOT part
-//    of this slice: the only real producer of a checkpoint member is the hab
-//    side (`TerminalCheckpoint { reason, at, throughOffset, snapshot }`,
-//    `snapshot` a vterm.js-owned shape), and this format's own doc leaves a
-//    checkpoint's content unspecified — a reader for an invented shape would
-//    be fiction. That reader is a later slice, against the real producer.
+//  - commands / frames / facts / habcp members: not loaded — tallied by
+//    path, the same treatment `readBundle` gives them today.
+//  - checkpoint members (unterm A3 slice 5b, D7–D9): LOADED, not tallied.
+//    Each record (`TtyCheckpointRecord`, the hab producer's own
+//    `TerminalCheckpoint` shape, read as opaque JSON beyond the fields this
+//    door acts on) becomes one `derived: true` `mark` named
+//    `checkpoint:<reason>` (or `checkpoint:<n>`, its 0-based index in the
+//    member's JSON document), anchored by `throughOffset` onto the last
+//    loaded io event whose hts1 frame offset it covers, else onto its own
+//    rebased `at`. When a record's geometry (its `size` field, else a raw
+//    v1 snapshot's own `cols`/`rows` — never an opaque v2 envelope) differs
+//    from the geometry last known — the manifest's `cols`/`rows`, updated in
+//    timeline order by every captured resize and every geometry-bearing
+//    record — and no captured resize happened since, a `derived: true`
+//    `control`/`resize` Event precedes the mark: one truth per resize, a
+//    capture always wins over a reconstruction. See
+//    docs/reference/formats/tty.md, "Checkpoint member".
 
 /** Member paths {@link loadBundle} did not load into the io Recording, plus hts1 frame kinds with no Event form — tallied, never a silent drop. */
 export interface TtyLoadSkipped {
@@ -568,8 +577,6 @@ export interface TtyLoadSkipped {
   facts: string[]
   /** `habcp` member paths — opaque by ruling; hab-side readers own the row schema. */
   habcp: string[]
-  /** `checkpoint` member paths — this door doesn't read a checkpoint's content yet (see the section docstring above); a later slice turns these into derived marks/resizes against the real producer's shape. */
-  checkpoint: string[]
   /** hts1 frames of kind `lifecycle` in a loaded io member — no Event form, same as the Trace door. */
   lifecycle: number
   /** hts1 frames of kind `truncation` in a loaded io member — no Event form, same as the Trace door. */
@@ -584,7 +591,7 @@ export interface LoadBundleResult {
 }
 
 function emptySkipped(): TtyLoadSkipped {
-  return { commands: [], frames: [], facts: [], habcp: [], checkpoint: [], lifecycle: 0, truncation: 0 }
+  return { commands: [], frames: [], facts: [], habcp: [], lifecycle: 0, truncation: 0 }
 }
 
 /** Every member of a bundle, sealed members plus a live tail if present — the same set {@link loadMembers} iterates. */
@@ -594,6 +601,198 @@ function everyMember(manifest: TtyManifest): Array<TtyMember | TtyTail> {
 
 function describeMembers(members: Array<TtyMember | TtyTail>): string {
   return members.map((m) => `${m.path} (${m.type})`).join(", ") || "no members"
+}
+
+// =============================================================================
+// Checkpoint records — D7 (contract), D8 (marks), D9 (derived resizes)
+// =============================================================================
+//
+// Normative: docs/reference/formats/tty.md, "Checkpoint member". The only
+// real producer is hab-tty: one `checkpoint` member whose JSON content is a
+// record or an array of `TerminalCheckpoint`-shaped records. `snapshot` is a
+// vterm.js `Snapshot` this package cannot decode — it imports no engine —
+// so geometry comes from the write-new `size` field or, failing that, the
+// two plain top-level fields a raw v1 snapshot documents as its own
+// persisted wire form, read as JSON, never decoded.
+
+/**
+ * One record of a `checkpoint` member — the hab producer's own
+ * `TerminalCheckpoint` shape, read here as directly as this door's use
+ * requires and no further. `at` is wall-ms, rebased exactly like an hts1
+ * frame's. `size` is the write-new geometry field the hab producer adds in
+ * a later slice; `snapshot` is a vterm.js `Snapshot` (raw v1, or a v2
+ * envelope `{ format, data }`) opaque to this package by construction.
+ */
+export interface TtyCheckpointRecord {
+  at: number
+  reason?: string
+  throughOffset?: number
+  size?: { cols: number; rows: number }
+  snapshot?: unknown
+}
+
+/**
+ * A raw vterm.js v1 snapshot's own geometry: two plain top-level fields
+ * (`{ version: 1, cols, rows, … }`) documented as that shape's persisted
+ * wire form. A v2 envelope (`{ format, data }`) is opaque here; `undefined`
+ * covers that and anything else that isn't a plain v1 object.
+ */
+function rawV1SnapshotSize(snapshot: unknown): { cols: number; rows: number } | undefined {
+  if (typeof snapshot !== "object" || snapshot === null || Array.isArray(snapshot)) return undefined
+  const s = snapshot as Record<string, unknown>
+  if (s.version !== 1 || "format" in s || "data" in s) return undefined
+  if (typeof s.cols !== "number" || typeof s.rows !== "number") return undefined
+  return { cols: s.cols, rows: s.rows }
+}
+
+/** D7 geometry resolution: `size` wins, else a raw v1 snapshot's own geometry, else unknown — no derived resize can be computed from that record. */
+function checkpointGeometryOf(record: TtyCheckpointRecord): { cols: number; rows: number } | undefined {
+  return record.size ?? rawV1SnapshotSize(record.snapshot)
+}
+
+/** Parse one checkpoint member's JSON content — a record or an array of records, per D7. Fails loud, naming the member, on invalid JSON or a record with no numeric `at`. */
+function parseCheckpointRecords(bytes: Uint8Array, memberPath: string): TtyCheckpointRecord[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(utf8.decode(bytes))
+  } catch {
+    throw new Error(`loadRecording: checkpoint member "${memberPath}" is not valid JSON`)
+  }
+  const records = Array.isArray(parsed) ? parsed : [parsed]
+  for (const [index, record] of records.entries()) {
+    if (typeof record !== "object" || record === null || typeof (record as { at?: unknown }).at !== "number") {
+      throw new Error(`loadRecording: checkpoint member "${memberPath}" record ${String(index)} has no numeric "at"`)
+    }
+  }
+  return records as TtyCheckpointRecord[]
+}
+
+/** Rebase a checkpoint record's wall-ms `at` onto the µs clock — `rebase()`'s rule, but a checkpoint has no frame offset to infer an origin from: one must already be known by the time a record needs it. */
+function rebaseCheckpointAt(
+  atWallMs: number,
+  originWallMs: number | undefined,
+  memberPath: string,
+  recordIndex: number,
+): Micros {
+  if (originWallMs === undefined) {
+    throw new Error(
+      `loadRecording: checkpoint member "${memberPath}" record ${String(recordIndex)} cannot be rebased — no manifest originWallMs and no hts1 io member to infer one from`,
+    )
+  }
+  const deltaMs = atWallMs - originWallMs
+  if (deltaMs < 0) {
+    throw new Error(
+      `loadRecording: checkpoint member "${memberPath}" record ${String(recordIndex)} has wall-clock ms ${String(atWallMs)} before the recording's origin (${String(originWallMs)})`,
+    )
+  }
+  return millisToMicros(deltaMs)
+}
+
+/** One parsed checkpoint record plus the identity needed to name and rebase it. */
+interface CheckpointRecordRef {
+  record: TtyCheckpointRecord
+  path: string
+  indexInMember: number
+}
+
+/**
+ * D8 anchor — the mark's position. By `throughOffset` onto the last loaded
+ * io event (output/input/resize) whose hts1 frame offset it covers, when the
+ * record declares one and at least one loaded io event carries a frame
+ * offset at all; otherwise, or when no event's offset qualifies, by the
+ * record's own rebased `at`.
+ */
+function checkpointAnchorAt(
+  ref: CheckpointRecordRef,
+  hts1EventOffsets: readonly { event: Event; offset: number }[],
+  originWallMs: number | undefined,
+): Micros {
+  const { record, path, indexInMember } = ref
+  if (record.throughOffset !== undefined && hts1EventOffsets.length > 0) {
+    let best: { event: Event; offset: number } | undefined
+    for (const candidate of hts1EventOffsets) {
+      if (candidate.offset <= record.throughOffset && (best === undefined || candidate.offset > best.offset)) {
+        best = candidate
+      }
+    }
+    if (best !== undefined) return best.event.at
+    // No loaded event's offset is <= throughOffset (it names a position
+    // before anything this door loaded) — fall back to the record's `at`.
+  }
+  return rebaseCheckpointAt(record.at, originWallMs, path, indexInMember)
+}
+
+/**
+ * D8 + D9 — every checkpoint member's records, turned into derived `mark`
+ * and `control`/`resize` Events. Records are ordered by `throughOffset` when
+ * present else rebased `at` (D7's sequencing rule): one global order across
+ * every checkpoint member in the bundle, since the geometry-tracking state
+ * in D9 spans all of them. Returns events to append — the caller's own final
+ * sort places each one next to its anchor (stable: pushed in this order).
+ */
+function checkpointDerivedEvents(
+  checkpointMembers: readonly { path: string; bytes: Uint8Array }[],
+  capturedEvents: readonly Event[],
+  hts1EventOffsets: readonly { event: Event; offset: number }[],
+  manifest: TtyManifest,
+  originWallMs: number | undefined,
+): Event[] {
+  const refs: CheckpointRecordRef[] = []
+  for (const { path, bytes } of checkpointMembers) {
+    parseCheckpointRecords(bytes, path).forEach((record, indexInMember) => refs.push({ record, path, indexInMember }))
+  }
+  if (refs.length === 0) return []
+
+  const sortKeyOf = (ref: CheckpointRecordRef): number =>
+    ref.record.throughOffset ?? rebaseCheckpointAt(ref.record.at, originWallMs, ref.path, ref.indexInMember)
+  const ordered = refs.map((ref) => ({ ref, sortKey: sortKeyOf(ref) })).sort((a, b) => a.sortKey - b.sortKey)
+
+  // Every CAPTURED resize already loaded, in time order — the wire truths D9
+  // walks alongside the records to decide when a derived resize would be
+  // redundant with one that already happened.
+  const capturedResizes = capturedEvents
+    .filter(
+      (e): e is Extract<Event, { type: "control"; control: "resize" }> =>
+        e.type === "control" && e.control === "resize" && e.derived !== true,
+    )
+    .slice()
+    .sort((a, b) => a.at - b.at)
+
+  let previousGeometry: { cols: number; rows: number } | undefined =
+    manifest.cols > 0 && manifest.rows > 0 ? { cols: manifest.cols, rows: manifest.rows } : undefined
+  let sawResizeSinceKnownPoint = false
+  let resizePointer = 0
+  const out: Event[] = []
+
+  for (const { ref } of ordered) {
+    const markAt = checkpointAnchorAt(ref, hts1EventOffsets, originWallMs)
+
+    // Consume every captured resize at-or-before this record's position, in
+    // time order, so `previousGeometry` already reflects the wire truth.
+    while (resizePointer < capturedResizes.length && capturedResizes[resizePointer]!.at <= markAt) {
+      previousGeometry = capturedResizes[resizePointer]!.size
+      sawResizeSinceKnownPoint = true
+      resizePointer += 1
+    }
+
+    const geometry = checkpointGeometryOf(ref.record)
+    if (geometry !== undefined) {
+      const differs =
+        previousGeometry !== undefined &&
+        (previousGeometry.cols !== geometry.cols || previousGeometry.rows !== geometry.rows)
+      if (previousGeometry !== undefined && differs && !sawResizeSinceKnownPoint) {
+        out.push({ at: markAt, type: "control", control: "resize", size: geometry, derived: true })
+      }
+      previousGeometry = geometry
+      sawResizeSinceKnownPoint = false
+    }
+
+    const name =
+      ref.record.reason !== undefined ? `checkpoint:${ref.record.reason}` : `checkpoint:${String(ref.indexInMember)}`
+    out.push({ at: markAt, type: "mark", name, derived: true })
+  }
+
+  return out
 }
 
 interface LoadedIoEvents {
@@ -609,22 +808,29 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
   const skipped = emptySkipped()
   let originWallMs = manifest.originWallMs
   let sawHts1 = false
+  // Every hts1-sourced io Event's own frame offset — D8 anchors a
+  // checkpoint mark onto these, never onto a jsonl-sourced event (which
+  // carries no offset concept at all).
+  const hts1EventOffsets: { event: Event; offset: number }[] = []
+  // Checkpoint members are deferred: D8/D9 need every hts1 event's frame
+  // offset and the fully resolved originWallMs, both only settled once this
+  // loop finishes — and a checkpoint member may precede its io member in
+  // the manifest's own order.
+  const checkpointMembers: { path: string; bytes: Uint8Array }[] = []
 
   for (const member of everyMember(manifest)) {
     if (!source.has(member.path)) {
       throw new Error(`loadRecording: manifest names member "${member.path}" but the bundle has no such file`)
     }
-    if (
-      member.type === "commands" ||
-      member.type === "frames" ||
-      member.type === "facts" ||
-      member.type === "habcp" ||
-      member.type === "checkpoint"
-    ) {
+    if (member.type === "commands" || member.type === "frames" || member.type === "facts" || member.type === "habcp") {
       skipped[member.type].push(member.path)
       continue
     }
-    // member.type is "io" from here — every other type is skipped above.
+    if (member.type === "checkpoint") {
+      checkpointMembers.push({ path: member.path, bytes: source.bytesOf(member.path) })
+      continue
+    }
+    // member.type is "io" from here — every other type is handled above.
     switch (member.encoding) {
       case "jsonl": {
         const rows = utf8.decode(source.bytesOf(member.path))
@@ -638,20 +844,26 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
         if (originWallMs === undefined && frames1.length > 0) originWallMs = frames1[0]!.header.at
         for (const f of frames1) {
           switch (f.header.kind) {
-            case "output":
-              events.push({
+            case "output": {
+              const event: Event = {
                 at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
                 type: "output",
                 data: f.payload,
-              })
+              }
+              events.push(event)
+              hts1EventOffsets.push({ event, offset: f.header.offset })
               break
-            case "input":
-              events.push({
+            }
+            case "input": {
+              const event: Event = {
                 at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
                 type: "input",
                 data: f.payload,
-              })
+              }
+              events.push(event)
+              hts1EventOffsets.push({ event, offset: f.header.offset })
               break
+            }
             case "resize": {
               const size = f.header.size
               if (size === undefined) {
@@ -659,12 +871,14 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
               }
               // A captured resize — the source recorded it, so unlike a
               // checkpoint-reconstructed delta this carries no `derived`.
-              events.push({
+              const event: Event = {
                 at: rebase(f.header.at, originWallMs!, f.header.offset, member.path),
                 type: "control",
                 control: "resize",
                 size: { cols: size.cols, rows: size.rows },
-              })
+              }
+              events.push(event)
+              hts1EventOffsets.push({ event, offset: f.header.offset })
               break
             }
             case "lifecycle":
@@ -694,6 +908,8 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
     }
   }
 
+  events.push(...checkpointDerivedEvents(checkpointMembers, events, hts1EventOffsets, manifest, originWallMs))
+
   events.sort((a, b) => a.at - b.at)
   return { events, skipped, sawHts1, originWallMs }
 }
@@ -707,8 +923,9 @@ function loadIoEvents(manifest: TtyManifest, source: BundleSource): LoadedIoEven
  * option would be a silent no-op.
  *
  * @throws {Error} when the bundle yields no events at all (e.g. a
- * frames-only, commands-only, or checkpoints-only bundle) — naming the
- * members it has, since the io shape has nothing else to say about it.
+ * frames-only or commands-only bundle, or a checkpoint member with zero
+ * records) — naming the members it has, since the io shape has nothing else
+ * to say about it.
  */
 export function loadBundle(path: string): LoadBundleResult {
   const { manifest, source } = bundleSourceOf(path, "loadRecording")
