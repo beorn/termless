@@ -1,0 +1,7 @@
+{"version":2,"width":120,"height":40,"timestamp":1700000000,"duration":3.2,"title":"header fields demo","env":{"SHELL":"/bin/zsh","TERM":"xterm-256color"},"theme":{"fg":"#e0e0e0","bg":"#1a1a1a","palette":"#000000:#cc0000:#4e9a06:#c4a000:#3465a4:#75507b:#06989a:#d3d7cf:#555753:#ef2929:#8ae234:#fce94f:#729fcf:#ad7fa8:#34e2e2:#eeeeec"}}
+[0,"o","$ "]
+[0.4,"i","ls -la\r"]
+[0.42,"o","ls -la\r\n"]
+[0.9,"o","total 12\r\ndrwxr-xr-x  2 u u 4096 file\r\n"]
+[1.5,"i","pwd\r"]
+[1.52,"o","pwd\r\n/home/u\r\n$ "]

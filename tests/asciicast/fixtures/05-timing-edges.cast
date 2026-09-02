@@ -1,0 +1,9 @@
+{"version":2,"width":80,"height":24}
+[0,"o","start\r\n"]
+[0,"o","immediately-after\r\n"]
+[0.000001,"o","one-microsecond-later\r\n"]
+[2.9999995,"o","boundary-precision-rounding\r\n"]
+[3.5,"i","same-time-as-next-input\r"]
+[3.5,"o","same-time-as-next-output\r\n"]
+[48.5,"o","after a long idle gap\r\n"]
+[48.5,"o","end\r\n"]

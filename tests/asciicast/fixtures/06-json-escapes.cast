@@ -1,0 +1,6 @@
+{"version":2,"width":80,"height":24}
+[0,"o","line one\nline two\n"]
+[0.1,"o","col1\tcol2\tcol3\n"]
+[0.2,"o","She said \"hello\"\n"]
+[0.3,"o","path\\to\\file.txt\n"]
+[0.4,"o","mixed: \"quoted\\path\"\twith\ttabs\nand\nnewlines\n"]

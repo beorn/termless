@@ -1,0 +1,6 @@
+{"version":2,"width":80,"height":24}
+[0,"o","\u001b[1;32m✓\u001b[0m done\r\n"]
+[0.2,"o","emoji: 😀🚀🎉\r\n"]
+[0.4,"o","wide: 文字化け テスト\r\n"]
+[0.6,"o","mixed line\r\nnext line\n"]
+[0.8,"o","\u001b[38;5;208mtruecolor-ish\u001b[0m\r\n"]

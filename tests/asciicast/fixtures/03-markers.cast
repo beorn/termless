@@ -1,0 +1,8 @@
+{"version":2,"width":80,"height":24,"title":"markers demo"}
+[0,"o","$ "]
+[0.1,"m","prompt"]
+[0.3,"o","running tests...\r\n"]
+[0.35,"m","test-start"]
+[2.1,"o","PASS  all tests\r\n"]
+[2.15,"m","test-end"]
+[2.2,"o","$ "]
