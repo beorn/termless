@@ -14,71 +14,393 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.14"
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v5
+        with:
+          version: "9.15.9"
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - run: npm install -g pnpm
-      - run: bun install
+      - run: bun install --frozen-lockfile
 
-      - name: Build all packages
+      - name: Build and pack all 18 public packages with declarations
+        shell: bash
+        env:
+          RELEASE_ARTIFACTS: ${{ runner.temp }}/termless-publishable
         run: |
-          for dir in . packages/*; do
-            [ -f "$dir/package.json" ] || continue
-            name=$(node -e "console.log(require('./$dir/package.json').name)")
-            private=$(node -e "const p=require('./$dir/package.json'); console.log(p.private || false)")
-            has_tsdown=$(node -e "const p=require('./$dir/package.json'); console.log(!!p.tsdown)")
-            [ "$private" = "true" ] && continue
-            [ "$has_tsdown" = "false" ] && continue
-            echo "📦 Building $name..."
-            (cd "$dir" && npx tsdown --no-dts 2>&1) || { echo "❌ Build FAILED for $name"; exit 1; }
-          done
+          set -euo pipefail
 
-      - name: Pack all tarballs
-        run: |
-          mkdir -p /tmp/tarballs
-          for dir in . packages/*; do
-            [ -f "$dir/package.json" ] || continue
-            private=$(node -e "const p=require('./$dir/package.json'); console.log(p.private || false)")
-            [ "$private" = "true" ] && continue
-            (cd "$dir" && pnpm pack 2>/dev/null) || true
-            tgz=$(ls "$dir"/*.tgz 2>/dev/null | head -1)
-            [ -n "$tgz" ] && mv "$tgz" /tmp/tarballs/
-          done
-          echo "Packed tarballs:"
-          ls /tmp/tarballs/
+          if [[ -e "$RELEASE_ARTIFACTS" ]]; then
+            echo "ERROR: artifact directory already exists: $RELEASE_ARTIFACTS" >&2
+            exit 1
+          fi
+          mkdir -p "$RELEASE_ARTIFACTS/tarballs"
 
-      - name: Install all tarballs together and verify
-        run: |
-          set -e
-          tmpdir=$(mktemp -d)
-          cd "$tmpdir"
-          npm init -y --quiet 2>/dev/null
-          npm install /tmp/tarballs/*.tgz --no-save 2>&1
-          echo "✓ All tarballs installed together"
+          bun -e 'import { validatePublishOrder } from "./scripts/publish-workspaces.ts"; const packages = await validatePublishOrder(process.cwd()); if (packages.length !== 18) throw new Error(`expected exactly 18 public packages, found ${packages.length}`); for (const pkg of packages) console.log([pkg.dir, pkg.name, pkg.version].join("\t"))' \
+            > "$RELEASE_ARTIFACTS/inventory.tsv"
 
-          for dir in . packages/*; do
-            [ -f "$GITHUB_WORKSPACE/$dir/package.json" ] || continue
-            name=$(node -e "console.log(require('$GITHUB_WORKSPACE/$dir/package.json').name)")
-            private=$(node -e "const p=require('$GITHUB_WORKSPACE/$dir/package.json'); console.log(p.private || false)")
-            [ "$private" = "true" ] && continue
-            [ "$name" = "@termless/test" ] && continue
+          package_count=$(wc -l < "$RELEASE_ARTIFACTS/inventory.tsv")
+          if [[ "$package_count" -ne 18 ]]; then
+            echo "ERROR: inventory contains $package_count packages, expected 18" >&2
+            exit 1
+          fi
 
-            node -e "import('$name').then(m => console.log('✓ $name:', Object.keys(m).slice(0,3).join(', ')))" 2>&1 || {
-              echo "❌ import('$name') failed"
-              exit 1
+          while IFS=$'\t' read -r dir name version; do
+            node - "$dir/package.json" "$name" <<'NODE'
+          const { readFileSync } = require("node:fs")
+
+          const manifestPath = process.argv[2]
+          const expectedName = process.argv[3]
+          const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
+
+          if (manifest.name !== expectedName) {
+            throw new Error(`${manifestPath}: expected ${expectedName}, found ${manifest.name}`)
+          }
+          if (!manifest.tsdown || !manifest.tsdown.dts) {
+            throw new Error(`${manifest.name}: public package must enable tsdown DTS generation`)
+          }
+
+          const publishedExports = manifest.publishConfig?.exports
+          if (
+            !publishedExports ||
+            typeof publishedExports !== "object" ||
+            Array.isArray(publishedExports)
+          ) {
+            throw new Error(`${manifest.name}: missing publishConfig.exports`)
+          }
+
+          for (const [subpath, target] of Object.entries(publishedExports)) {
+            if (!subpath.startsWith(".") || subpath.includes("*")) {
+              throw new Error(`${manifest.name}: unsupported non-literal export ${subpath}`)
             }
+            if (!target || typeof target !== "object" || typeof target.types !== "string") {
+              throw new Error(`${manifest.name}${subpath}: missing explicit types target`)
+            }
+          }
+          NODE
+
+            printf 'BUILD %s@%s (%s)\n' "$name" "$version" "$dir"
+            (
+              cd "$dir"
+              "$GITHUB_WORKSPACE/node_modules/.bin/tsdown"
+            )
+
+            printf 'PACK %s@%s (%s)\n' "$name" "$version" "$dir"
+            (
+              cd "$dir"
+              pnpm pack --pack-destination "$RELEASE_ARTIFACTS/tarballs"
+            )
+          done < "$RELEASE_ARTIFACTS/inventory.tsv"
+
+          node <<'NODE'
+          const { execFileSync } = require("node:child_process")
+          const { createHash } = require("node:crypto")
+          const { readFileSync, readdirSync, writeFileSync } = require("node:fs")
+          const { basename, join } = require("node:path")
+
+          const root = process.env.RELEASE_ARTIFACTS
+          const tarballDir = join(root, "tarballs")
+          const rows = readFileSync(join(root, "inventory.tsv"), "utf8")
+            .trim()
+            .split("\n")
+            .map((line) => {
+              const [dir, name, version] = line.split("\t")
+              return { dir, name, version, key: `${name}@${version}` }
+            })
+
+          if (rows.length !== 18) {
+            throw new Error(`expected 18 inventory rows, found ${rows.length}`)
+          }
+
+          const expected = new Map()
+          for (const row of rows) {
+            if (expected.has(row.key)) {
+              throw new Error(`duplicate expected package: ${row.key}`)
+            }
+            expected.set(row.key, row)
+          }
+
+          const files = readdirSync(tarballDir)
+            .filter((file) => file.endsWith(".tgz"))
+            .sort()
+
+          if (files.length !== 18) {
+            throw new Error(`expected exactly 18 tarballs, found ${files.length}`)
+          }
+
+          const seen = new Set()
+          const records = []
+
+          for (const file of files) {
+            const archive = join(tarballDir, file)
+            const manifest = JSON.parse(
+              execFileSync("tar", ["-xOf", archive, "package/package.json"], {
+                encoding: "utf8",
+              }),
+            )
+            const key = `${manifest.name}@${manifest.version}`
+
+            if (!expected.has(key)) {
+              throw new Error(`unexpected packed package: ${key} (${file})`)
+            }
+            if (seen.has(key)) {
+              throw new Error(`duplicate packed package: ${key}`)
+            }
+            seen.add(key)
+
+            const members = new Set(
+              execFileSync("tar", ["-tzf", archive], { encoding: "utf8" })
+                .trim()
+                .split("\n"),
+            )
+
+            const packedExports = manifest.exports
+            if (
+              !packedExports ||
+              typeof packedExports !== "object" ||
+              Array.isArray(packedExports)
+            ) {
+              throw new Error(`${key}: packed manifest has no exports map`)
+            }
+
+            for (const [subpath, target] of Object.entries(packedExports)) {
+              if (!subpath.startsWith(".") || subpath.includes("*")) {
+                throw new Error(`${key}: unsupported non-literal packed export ${subpath}`)
+              }
+              if (!target || typeof target !== "object" || typeof target.types !== "string") {
+                throw new Error(`${key}${subpath}: packed export lacks a types target`)
+              }
+
+              const declaration = `package/${target.types.replace(/^\.\//, "")}`
+              if (!members.has(declaration)) {
+                throw new Error(`${key}${subpath}: missing packed declaration ${declaration}`)
+              }
+            }
+
+            records.push({
+              file: basename(archive),
+              name: manifest.name,
+              version: manifest.version,
+              sha256: createHash("sha256").update(readFileSync(archive)).digest("hex"),
+              exports: Object.keys(packedExports),
+            })
+          }
+
+          const missing = rows.filter((row) => !seen.has(row.key))
+          if (missing.length > 0) {
+            throw new Error(`missing packed packages: ${missing.map((row) => row.key).join(", ")}`)
+          }
+
+          records.sort((a, b) => a.name.localeCompare(b.name))
+          writeFileSync(
+            join(root, "MANIFEST.json"),
+            `${JSON.stringify({ gitSha: process.env.GITHUB_SHA, packages: records }, null, 2)}\n`,
+          )
+          writeFileSync(
+            join(root, "SHA256SUMS"),
+            `${records.map((record) => `${record.sha256}  tarballs/${record.file}`).join("\n")}\n`,
+          )
+
+          console.log(`CENSUS PASS: ${records.length}/18 exact tarballs`)
+          NODE
+
+      # Upload before downstream checks so a publint, ATTW, import, or CLI
+      # failure still leaves the exact bytes available for diagnosis.
+      - name: Retain exact publishable tarballs
+        uses: actions/upload-artifact@v7
+        with:
+          name: termless-publishable-${{ github.sha }}
+          path: ${{ runner.temp }}/termless-publishable
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Run publint and ATTW on every exact tarball
+        shell: bash
+        env:
+          RELEASE_ARTIFACTS: ${{ runner.temp }}/termless-publishable
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          tarballs=("$RELEASE_ARTIFACTS"/tarballs/*.tgz)
+
+          if [[ "${#tarballs[@]}" -ne 18 ]]; then
+            echo "ERROR: verification received ${#tarballs[@]} tarballs, expected 18" >&2
+            exit 1
+          fi
+
+          for tgz in "${tarballs[@]}"; do
+            printf 'PUBLINT %s\n' "$(basename "$tgz")"
+            bunx publint@0.3.24 "$tgz" --strict
+
+            printf 'ATTW %s\n' "$(basename "$tgz")"
+            bunx @arethetypeswrong/cli@0.18.5 "$tgz" \
+              --profile node16 \
+              --ignore-rules cjs-resolves-to-esm \
+              --format table \
+              --no-color
           done
 
-          cp "$GITHUB_WORKSPACE/tests/packed-vitest-smoke.test.ts" .
-          TERMLESS_PACKED_SMOKE=1 ./node_modules/.bin/vitest run packed-vitest-smoke.test.ts
-          echo "✓ @termless/test verified inside its supported Vitest runner"
+      - name: Install and exercise every exported subpath on Node 24
+        shell: bash
+        env:
+          RELEASE_ARTIFACTS: ${{ runner.temp }}/termless-publishable
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
 
-          ./node_modules/.bin/termless --help >/dev/null
-          echo "✓ installed termless binary starts"
+          node -e 'if (Number(process.versions.node.split(".")[0]) !== 24) throw new Error(`expected Node 24, running ${process.version}`)'
 
-          rm -rf "$tmpdir"
-          echo "✓ All packages verified"
+          tarballs=("$RELEASE_ARTIFACTS"/tarballs/*.tgz)
+          if [[ "${#tarballs[@]}" -ne 18 ]]; then
+            echo "ERROR: consumer install received ${#tarballs[@]} tarballs, expected 18" >&2
+            exit 1
+          fi
+
+          consumer_dir="$RUNNER_TEMP/termless-consumer"
+          if [[ -e "$consumer_dir" ]]; then
+            echo "ERROR: consumer directory already exists: $consumer_dir" >&2
+            exit 1
+          fi
+          mkdir -p "$consumer_dir"
+          cd "$consumer_dir"
+
+          npm init --yes --quiet
+          npm install \
+            --no-save \
+            --no-audit \
+            --no-fund \
+            --loglevel=warn \
+            vitest@4.1.10 \
+            "${tarballs[@]}"
+
+          TARBALL_DIR="$RELEASE_ARTIFACTS/tarballs" node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process"
+          import { readdirSync, writeFileSync } from "node:fs"
+          import { join } from "node:path"
+
+          const tarballDir = process.env.TARBALL_DIR
+          const files = readdirSync(tarballDir)
+            .filter((file) => file.endsWith(".tgz"))
+            .sort()
+
+          const nodeSpecifiers = []
+          const vitestSpecifiers = []
+          const expectedSpecifiers = [
+            "@termless/alacritty",
+            "@termless/cli",
+            "@termless/core",
+            "@termless/core/io",
+            "@termless/ghostty",
+            "@termless/ghostty-native",
+            "@termless/kitty",
+            "@termless/libvterm",
+            "@termless/peekaboo",
+            "@termless/swash-render",
+            "@termless/test",
+            "@termless/test/fixture",
+            "@termless/test/matchers",
+            "@termless/vt100",
+            "@termless/vt100-rust",
+            "@termless/vt220",
+            "@termless/vterm",
+            "@termless/web-player",
+            "@termless/web-player/browser",
+            "@termless/wezterm",
+            "@termless/xtermjs",
+            "termless",
+            "termless/backends",
+            "termless/contract",
+            "termless/fmt",
+            "termless/rec",
+          ]
+
+          for (const file of files) {
+            const archive = join(tarballDir, file)
+            const manifest = JSON.parse(
+              execFileSync("tar", ["-xOf", archive, "package/package.json"], {
+                encoding: "utf8",
+              }),
+            )
+
+            if (
+              !manifest.exports ||
+              typeof manifest.exports !== "object" ||
+              Array.isArray(manifest.exports)
+            ) {
+              throw new Error(`${manifest.name}: packed manifest has no exports map`)
+            }
+
+            const exportKeys = Object.keys(manifest.exports)
+            if (exportKeys.length === 0) {
+              throw new Error(`${manifest.name}: packed exports map is empty`)
+            }
+
+            for (const subpath of exportKeys) {
+              if (!subpath.startsWith(".") || subpath.includes("*")) {
+                throw new Error(`${manifest.name}: cannot exhaustively test export ${subpath}`)
+              }
+
+              const specifier =
+                subpath === "." ? manifest.name : `${manifest.name}${subpath.slice(1)}`
+
+              if (manifest.name === "@termless/test") {
+                vitestSpecifiers.push(specifier)
+              } else {
+                nodeSpecifiers.push(specifier)
+              }
+            }
+          }
+
+          const discoveredSpecifiers = [...nodeSpecifiers, ...vitestSpecifiers].sort()
+          const missingSpecifiers = expectedSpecifiers.filter(
+            (specifier) => !discoveredSpecifiers.includes(specifier),
+          )
+          const unexpectedSpecifiers = discoveredSpecifiers.filter(
+            (specifier) => !expectedSpecifiers.includes(specifier),
+          )
+          if (
+            discoveredSpecifiers.length !== expectedSpecifiers.length ||
+            missingSpecifiers.length > 0 ||
+            unexpectedSpecifiers.length > 0
+          ) {
+            throw new Error(
+              `export contract mismatch; missing: ${missingSpecifiers.join(", ") || "none"}; unexpected: ${unexpectedSpecifiers.join(", ") || "none"}`,
+            )
+          }
+
+          for (const specifier of nodeSpecifiers) {
+            const loaded = await import(specifier)
+            if (Object.keys(loaded).length === 0) {
+              throw new Error(`${specifier}: imported an empty module namespace`)
+            }
+            console.log(`NODE IMPORT ${specifier}`)
+          }
+
+          const testSource = `import { describe, expect, test } from "vitest"
+
+          const specifiers = ${JSON.stringify(vitestSpecifiers)}
+
+          describe("@termless/test exact packed exports", () => {
+            for (const specifier of specifiers) {
+              test("imports " + specifier, async () => {
+                const loaded = await import(specifier)
+                expect(Object.keys(loaded).length).toBeGreaterThan(0)
+              })
+            }
+          })
+          `
+          writeFileSync(join(process.cwd(), "packed-exports.test.mjs"), testSource)
+          NODE
+
+          ./node_modules/.bin/vitest run packed-exports.test.mjs
+
+          help_output=$(./node_modules/.bin/termless --help)
+          if [[ "$help_output" != *"Usage:"* ]]; then
+            echo "ERROR: installed termless --help did not contain Usage:" >&2
+            exit 1
+          fi
+          printf '%s\n' "$help_output"
