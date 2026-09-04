@@ -1,6 +1,6 @@
 {
   "name": "termless",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Headless terminals: test, record, replay, and run sessions.",
   "keywords": [
     "ansi",

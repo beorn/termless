@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.9.1 - 2026-09-03
+
+### Changed
+
+- Publishability verification now uses the shared `verify-publishable` gate for the exact 18-package release set, including packed exports, declarations, fresh Node installs, imports, and CLI execution.
+
+### Fixed
+
+- `@termless/cli` bundles its optional Ghostty integration so a fresh install can run `termless --help` without separately installing the optional peer.
+
 ## 0.9.0 - 2026-09-02
 
 ### Added

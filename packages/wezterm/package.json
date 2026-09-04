@@ -1,6 +1,6 @@
 {
   "name": "@termless/wezterm",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "headless",
@@ -47,7 +47,7 @@
     "postbuild:native": "cp native/target/release/libtermless_wezterm_native.dylib termless-wezterm.node"
   },
   "peerDependencies": {
-    "@termless/core": "^0.9.0"
+    "@termless/core": "^0.9.1"
   },
   "tsdown": {
     "clean": true,

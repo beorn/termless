@@ -1,6 +1,6 @@
 {
   "name": "@termless/libvterm",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "libvterm backend for termless — neovim's VT parser via Emscripten WASM for cross-terminal TUI testing",
   "keywords": [
     "headless",
@@ -42,7 +42,7 @@
     }
   },
   "peerDependencies": {
-    "@termless/core": "^0.9.0"
+    "@termless/core": "^0.9.1"
   },
   "tsdown": {
     "clean": true,
