@@ -55,6 +55,7 @@
     }
   },
   "scripts": {
+    "build": "tsdown && tsdown -W",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ci": "bun vitest run",
@@ -91,6 +92,7 @@
     "silvery": "^0.4.2",
     "tsdown": "^0.22.5",
     "typescript": "^5.9.3",
+    "verify-publishable": "github:beorn/verify-publishable#fd581bdf5cb4bded1a9a32e333f5fae21edd5645",
     "vitepress": "^1.6.4",
     "vitepress-enrich": "^0.4.0",
     "vitepress-plugin-llms": "^1.13.3",
@@ -131,5 +133,28 @@
   "engines": {
     "bun": ">=1.0.0",
     "node": ">=23.6.0"
+  },
+  "verifyPublishable": {
+    "maxUnpackedBytes": 104857600,
+    "public": [
+      "@termless/alacritty",
+      "@termless/cli",
+      "@termless/core",
+      "@termless/ghostty",
+      "@termless/ghostty-native",
+      "@termless/kitty",
+      "@termless/libvterm",
+      "@termless/peekaboo",
+      "@termless/swash-render",
+      "@termless/test",
+      "@termless/vt100",
+      "@termless/vt100-rust",
+      "@termless/vt220",
+      "@termless/vterm",
+      "@termless/web-player",
+      "@termless/wezterm",
+      "@termless/xtermjs",
+      "termless"
+    ]
   }
 }

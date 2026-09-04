@@ -79,6 +79,11 @@
   },
   "tsdown": {
     "clean": true,
+    "deps": {
+      "alwaysBundle": [
+        "@termless/ghostty"
+      ]
+    },
     "dts": true,
     "entry": [
       "src/index.ts",
