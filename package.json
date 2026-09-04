@@ -92,7 +92,7 @@
     "silvery": "^0.4.2",
     "tsdown": "^0.22.5",
     "typescript": "^5.9.3",
-    "verify-publishable": "github:beorn/verify-publishable#fd581bdf5cb4bded1a9a32e333f5fae21edd5645",
+    "verify-publishable": "github:beorn/verify-publishable#ef92031daa9e20daa75673b6df30ebb631ac7d73",
     "vitepress": "^1.6.4",
     "vitepress-enrich": "^0.4.0",
     "vitepress-plugin-llms": "^1.13.3",
