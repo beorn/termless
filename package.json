@@ -89,7 +89,7 @@
     "@vue/server-renderer": "^3.5.39",
     "loggily": "^0.10.2",
     "oxfmt": "0.38.0",
-    "silvery": "^0.4.2",
+    "silvery": "^0.24.0",
     "tsdown": "^0.22.5",
     "typescript": "^5.9.3",
     "verify-publishable": "github:beorn/verify-publishable#ef92031daa9e20daa75673b6df30ebb631ac7d73",
