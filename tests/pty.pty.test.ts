@@ -5,7 +5,7 @@
  * Marked .pty. to run in the dedicated PTY vitest project (no isTTY override).
  */
 
-import { describe, test, expect } from "vitest"
+import { afterEach, describe, test, expect, vi } from "vitest"
 import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import "../packages/viterm/src/matchers.ts"
@@ -153,23 +153,29 @@ describe.skipIf(!hasPty)("PTY integration", () => {
 
 // ── Colour palette handed to the child ──
 //
-// `spawnPty` sets FORCE_COLOR and TERM together, and the two DISAGREE: every
-// mainstream detector reads FORCE_COLOR first, where "1" means the 16-colour
-// tier, so the `xterm-256color` set beside it never gets a vote. The child is
-// therefore pinned BELOW what it would have detected from the TERM alone.
+// `spawnPty` supplies FORCE_COLOR and TERM, and they are DEFAULTS: they fill in
+// what the environment does not say, and never override what it does. That
+// distinction is the whole contract here, because it used to be the other way
+// round and the reversal was silent.
 //
-// These tests exist because nothing here read the palette back, and a day was
-// spent attributing a 16-colour capture to the application under test: a Nord
-// theme quantised to ansi16 renders #81a1c1 (blue) as #c0c0c0 and #bf616a
-// (red) as #808080, so "the app is not using blue" and "the app is not using
-// red" are both guaranteed observations that carry no information.
+// Until 2026-09-08 the values were written unconditionally, so a hardcoded
+// FORCE_COLOR=1 — the SIXTEEN-colour tier, not "colour on" — overwrote both the
+// ambient environment and the `TERM=xterm-256color` set beside it, leaving every
+// hosted app BELOW the tier a bare TERM would have given it. A test that stubbed
+// FORCE_COLOR saw its stub silently discarded for the child, and a recording
+// taken through this PTY showed a Nord theme collapsed to greys: #81a1c1 (blue)
+// to #c0c0c0, #bf616a (error red) to #808080 — the same grey as muted text. Two
+// display defects were reported and ruled on from such a capture before the
+// instrument was found; both were withdrawn and the component was correct.
 //
-// They pin the CURRENT behaviour deliberately. Changing the constant moves
-// every screenshot and trace baseline in the estate at once, so the flip is
-// gated on a survey of those baselines; when it happens, these are the tests
-// that must change with it, which is the point.
+// So the order is: the caller's explicit `env` beats everything, an ambient
+// value beats the defaults, and the defaults apply only to what nobody set.
 
 describe.skipIf(!hasPty)("the COLOUR PALETTE a spawned child is given", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   async function readEnv(name: string, override?: Record<string, string>): Promise<string> {
     const term = createXterm()
     try {
@@ -182,19 +188,53 @@ describe.skipIf(!hasPty)("the COLOUR PALETTE a spawned child is given", () => {
     }
   }
 
-  test("hands the child FORCE_COLOR=1, which means SIXTEEN colours, not 'colour enabled'", async () => {
-    expect(await readEnv("FORCE_COLOR")).toBe("1")
+  test("defaults the child to FORCE_COLOR=3 — truecolor — when nothing in the environment says otherwise", async () => {
+    // An instrument built to CAPTURE colour wants the widest palette, so that a
+    // finding taken through it is about the app and not about the tier.
+    vi.stubEnv("FORCE_COLOR", undefined)
+    vi.stubEnv("NO_COLOR", undefined)
+    expect(await readEnv("FORCE_COLOR")).toBe("3")
   })
 
-  test("also sets TERM=xterm-256color, which FORCE_COLOR overrides — the two disagree by construction", async () => {
-    // Both are really there; the defect is not a missing variable, it is that
-    // the loser is set deliberately and reads as if it were in force.
+  test("RESPECTS an ambient FORCE_COLOR instead of overwriting it — this is what vi.stubEnv used to lie about", async () => {
+    // The reversal that cost a day: a test process could stub this and watch the
+    // child receive something else entirely, with nothing reporting the
+    // substitution. 2 is chosen deliberately — it is neither the old hardcoded
+    // value nor the new default, so passing cannot be a coincidence of either.
+    vi.stubEnv("FORCE_COLOR", "2")
+    expect(await readEnv("FORCE_COLOR")).toBe("2")
+  })
+
+  test("RESPECTS an ambient NO_COLOR by not injecting a palette over it", async () => {
+    // Asking for no colour is an answer, not an absence, so the default must not
+    // fill in over it. Without this the instrument would silently re-enable what
+    // the environment just switched off.
+    vi.stubEnv("FORCE_COLOR", undefined)
+    vi.stubEnv("NO_COLOR", "1")
+    expect(await readEnv("FORCE_COLOR")).toBe("")
+  })
+
+  test("a caller's explicit env still beats both the ambient value and the default", async () => {
+    // The spawn spreads the caller's env last, so an explicit request always
+    // wins. This is how a deliberate 16-colour capture is still taken.
+    vi.stubEnv("FORCE_COLOR", "2")
+    expect(await readEnv("FORCE_COLOR", { FORCE_COLOR: "1" })).toBe("1")
+  })
+
+  test("treats an EMPTY FORCE_COLOR as an answer, not as absence — the detector does too", async () => {
+    // Found by this suite's own first red run: `FORCE_COLOR=` is SET, and
+    // silvery's detector reads any defined value as a tier request rather than
+    // falling through. If the defaults filled in over it, the instrument and the
+    // detector would disagree about the same variable — which is precisely the
+    // two-inputs-one-wins-silently class this change exists to end.
+    vi.stubEnv("FORCE_COLOR", "")
+    expect(await readEnv("FORCE_COLOR")).toBe("")
+  })
+
+  test("supplies TERM when the environment has none, and leaves an ambient TERM alone", async () => {
+    vi.stubEnv("TERM", undefined)
     expect(await readEnv("TERM")).toBe("xterm-256color")
-  })
-
-  test("a caller CAN override the palette, which is how a truecolor capture is taken", async () => {
-    // The spawn spreads the caller's env AFTER the defaults, so passing
-    // FORCE_COLOR=3 is the supported way to read real colours through a PTY.
-    expect(await readEnv("FORCE_COLOR", { FORCE_COLOR: "3" })).toBe("3")
+    vi.stubEnv("TERM", "screen-256color")
+    expect(await readEnv("TERM")).toBe("screen-256color")
   })
 })

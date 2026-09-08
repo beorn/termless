@@ -75,42 +75,72 @@ export type PtyShellOptions = Omit<SpawnOptions, "size" | "command"> &
  *
  * The command is spawned directly (no shell wrapper) to avoid shell injection.
  *
- * ## The child's colour palette is PINNED TO 16 COLOURS — prove it before reading a colour
+ * ## The colour palette is a DEFAULT — it fills in, it never overrides
  *
- * This sets `FORCE_COLOR=1` and `TERM=xterm-256color`, and **the two disagree**.
- * Every mainstream detector reads `FORCE_COLOR` before `TERM`, and the value
- * `1` means the **16-colour** tier — not "colour enabled". So the
- * `xterm-256color` set on the next line never gets a vote, and the child ends
- * up BELOW the tier a bare `TERM=xterm-256color` would have given it.
+ * Three inputs decide the child's palette, in this order:
  *
- * **Anything rendered through this PTY is quantised to 16 slots**, which is
- * lossy in a way that looks like data. A Nord palette collapses: `#81a1c1`
- * (blue) becomes `#c0c0c0`, `#bf616a` (red) becomes `#808080` — the same grey
- * as muted text — and the `#2e3440` ground becomes pure black. **A capture
- * showing black plus greys of 128 and 192 is the signature of this pinning,
- * not a finding about the application.**
+ * 1. the caller's explicit `env` argument, which beats everything;
+ * 2. an ambient `FORCE_COLOR` or `NO_COLOR` in the environment, which beats the
+ *    defaults — an environment that already answered is not asked again, and an
+ *    EMPTY value is an answer (the detector reads any defined value as set);
+ * 3. these defaults, `FORCE_COLOR=3` and `TERM=xterm-256color`, for whatever
+ *    nobody set. `3` is truecolor: an instrument built to CAPTURE colour wants
+ *    the widest palette, so a finding taken through it is about the application
+ *    and never about the tier.
  *
- * A day was spent here: "the app never renders blue" was measured across 495
- * frames of a recording and reported as a defect. In a palette without blue
- * that observation is guaranteed and carries no information, and the
- * application was correct all along.
+ * **It used to be the other way round, and the reversal was silent.** Until
+ * 2026-09-08 both values were written unconditionally, so a hardcoded
+ * `FORCE_COLOR=1` — the SIXTEEN-colour tier, not "colour enabled" — overwrote
+ * the ambient environment AND the `xterm-256color` beside it, leaving every
+ * hosted app below the tier a bare `TERM` would have given it. A test that
+ * stubbed `FORCE_COLOR` watched its stub be discarded for the child.
  *
- * **To read real colours, pass your own value — the caller's `env` is spread
- * AFTER these defaults, so it wins:**
+ * **What that cost, so the shape is recognisable if it recurs:** a Nord palette
+ * quantised to 16 slots collapses — `#81a1c1` (blue) to `#c0c0c0`, `#bf616a`
+ * (error red) to `#808080`, the same grey as muted text, and the `#2e3440`
+ * ground to pure black. Two display defects were measured, reported and ruled
+ * on from such a capture; both were withdrawn and the component was correct.
+ * **A capture showing a black ground with greys of 128 and 192 is a palette
+ * signature, not a finding about the application.**
+ *
+ * To take a deliberately narrow capture, say so at the spawn site:
  *
  * ```ts
- * spawnPty({ command, cols, rows, env: { FORCE_COLOR: "3" } })  // truecolor
+ * spawnPty({ command, cols, rows, env: { FORCE_COLOR: "1" } })  // 16 colours
  * ```
  *
- * The constant is not simply raised to `3` because every screenshot and trace
- * baseline in the estate was captured at 16 colours and encodes this
- * behaviour; the flip and their regeneration have to land together.
- * `tests/pty.pty.test.ts` pins what a child actually receives.
+ * `tests/pty.pty.test.ts` pins all three levels of that ordering.
  *
  * Runtime support:
  * - Bun: uses native `Bun.spawn()` with `terminal` option (built-in PTY)
  * - Node.js: uses `node-pty` (must be installed as a peer dependency)
  */
+/**
+ * The palette this instrument supplies to a child — as DEFAULTS, which fill in
+ * what the environment does not say and never override what it does.
+ *
+ * Ordering, and every step of it was once wrong: the caller's explicit `env`
+ * beats everything (it is spread after these); an ambient value beats these;
+ * and these apply only to what nobody set. `NO_COLOR` counts as an answer, so a
+ * palette is not injected over it.
+ *
+ * `FORCE_COLOR=3` is truecolor, chosen because an instrument built to CAPTURE
+ * colour wants the widest palette by default — a finding taken through it
+ * should be about the application, never about the tier. The previous value was
+ * `1`, which means SIXTEEN colours rather than "colour on", and it was written
+ * unconditionally.
+ */
+function paletteDefaults(): Record<string, string> {
+  const defaults: Record<string, string> = {}
+  // A caller who wants a narrower palette says so at the spawn site; an
+  // environment that already answered is not asked again.
+  if (process.env.FORCE_COLOR === undefined && process.env.NO_COLOR === undefined) {
+    defaults.FORCE_COLOR = "3"
+  }
+  if (process.env.TERM === undefined) defaults.TERM = "xterm-256color"
+  return defaults
+}
+
 export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle {
   const { env, cwd, cols, rows, onData } = options
 
@@ -123,8 +153,7 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     rows,
     cwd,
     env: {
-      FORCE_COLOR: "1",
-      TERM: "xterm-256color",
+      ...paletteDefaults(),
       ...env,
     },
     onData,
