@@ -74,7 +74,38 @@ export type PtyShellOptions = Omit<SpawnOptions, "size" | "command"> &
  * Spawn a child process with a PTY and return a handle for interacting with it.
  *
  * The command is spawned directly (no shell wrapper) to avoid shell injection.
- * Sets FORCE_COLOR=1 and TERM=xterm-256color to ensure proper color output.
+ *
+ * ## The child's colour palette is PINNED TO 16 COLOURS — prove it before reading a colour
+ *
+ * This sets `FORCE_COLOR=1` and `TERM=xterm-256color`, and **the two disagree**.
+ * Every mainstream detector reads `FORCE_COLOR` before `TERM`, and the value
+ * `1` means the **16-colour** tier — not "colour enabled". So the
+ * `xterm-256color` set on the next line never gets a vote, and the child ends
+ * up BELOW the tier a bare `TERM=xterm-256color` would have given it.
+ *
+ * **Anything rendered through this PTY is quantised to 16 slots**, which is
+ * lossy in a way that looks like data. A Nord palette collapses: `#81a1c1`
+ * (blue) becomes `#c0c0c0`, `#bf616a` (red) becomes `#808080` — the same grey
+ * as muted text — and the `#2e3440` ground becomes pure black. **A capture
+ * showing black plus greys of 128 and 192 is the signature of this pinning,
+ * not a finding about the application.**
+ *
+ * A day was spent here: "the app never renders blue" was measured across 495
+ * frames of a recording and reported as a defect. In a palette without blue
+ * that observation is guaranteed and carries no information, and the
+ * application was correct all along.
+ *
+ * **To read real colours, pass your own value — the caller's `env` is spread
+ * AFTER these defaults, so it wins:**
+ *
+ * ```ts
+ * spawnPty({ command, cols, rows, env: { FORCE_COLOR: "3" } })  // truecolor
+ * ```
+ *
+ * The constant is not simply raised to `3` because every screenshot and trace
+ * baseline in the estate was captured at 16 colours and encodes this
+ * behaviour; the flip and their regeneration have to land together.
+ * `tests/pty.pty.test.ts` pins what a child actually receives.
  *
  * Runtime support:
  * - Bun: uses native `Bun.spawn()` with `terminal` option (built-in PTY)

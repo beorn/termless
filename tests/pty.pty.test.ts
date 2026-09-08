@@ -150,3 +150,51 @@ describe.skipIf(!hasPty)("PTY integration", () => {
     }
   })
 })
+
+// ── Colour palette handed to the child ──
+//
+// `spawnPty` sets FORCE_COLOR and TERM together, and the two DISAGREE: every
+// mainstream detector reads FORCE_COLOR first, where "1" means the 16-colour
+// tier, so the `xterm-256color` set beside it never gets a vote. The child is
+// therefore pinned BELOW what it would have detected from the TERM alone.
+//
+// These tests exist because nothing here read the palette back, and a day was
+// spent attributing a 16-colour capture to the application under test: a Nord
+// theme quantised to ansi16 renders #81a1c1 (blue) as #c0c0c0 and #bf616a
+// (red) as #808080, so "the app is not using blue" and "the app is not using
+// red" are both guaranteed observations that carry no information.
+//
+// They pin the CURRENT behaviour deliberately. Changing the constant moves
+// every screenshot and trace baseline in the estate at once, so the flip is
+// gated on a survey of those baselines; when it happens, these are the tests
+// that must change with it, which is the point.
+
+describe.skipIf(!hasPty)("the COLOUR PALETTE a spawned child is given", () => {
+  async function readEnv(name: string, override?: Record<string, string>): Promise<string> {
+    const term = createXterm()
+    try {
+      await term.spawn(["sh", "-c", `printf "<%s>" "$${name}"`], override === undefined ? undefined : { env: override })
+      await expect(term.screen).toContainText(">", { timeout: 5000 })
+      const shown = /<([^>]*)>/u.exec(term.screen.getText())
+      return shown?.[1] ?? "NO MATCH"
+    } finally {
+      await term.close()
+    }
+  }
+
+  test("hands the child FORCE_COLOR=1, which means SIXTEEN colours, not 'colour enabled'", async () => {
+    expect(await readEnv("FORCE_COLOR")).toBe("1")
+  })
+
+  test("also sets TERM=xterm-256color, which FORCE_COLOR overrides — the two disagree by construction", async () => {
+    // Both are really there; the defect is not a missing variable, it is that
+    // the loser is set deliberately and reads as if it were in force.
+    expect(await readEnv("TERM")).toBe("xterm-256color")
+  })
+
+  test("a caller CAN override the palette, which is how a truecolor capture is taken", async () => {
+    // The spawn spreads the caller's env AFTER the defaults, so passing
+    // FORCE_COLOR=3 is the supported way to read real colours through a PTY.
+    expect(await readEnv("FORCE_COLOR", { FORCE_COLOR: "3" })).toBe("3")
+  })
+})
