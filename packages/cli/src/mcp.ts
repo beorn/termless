@@ -81,7 +81,7 @@ export async function startMcpServer(): Promise<void> {
     "start",
     {
       description:
-        "Open a live terminal session — a TestTerminal object backed by a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (truecolor + full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. Pass `trace: { dir }` to also *record* the session: every buffer mutation is captured as a debounced PNG + JSONL frame. Read the recorded frames with the `trace` tool; finalize the recording with `stop`.",
+        "Open a live terminal session — a TestTerminal object backed by a PTY and a headless terminal emulator backend. Default backend is xtermjs (fast, portable, lower visual fidelity). Use 'ghostty' for visual-faithful screenshots (full glyph coverage matching the real Ghostty terminal) — required for visual-bug-close Layer 2 evidence. PROVE THE PALETTE BEFORE YOU READ A COLOUR: the PTY hands every child FORCE_COLOR=1, which means SIXTEEN colours, so the app under test renders at ansi16 no matter how faithful the emulator is — blues and reds collapse toward grey and a black ground with greys of 128/192 is that pinning, not a finding. Pass env: { FORCE_COLOR: '3' } for a truecolor capture. Pass `trace: { dir }` to also *record* the session: every buffer mutation is captured as a debounced PNG + JSONL frame. Read the recorded frames with the `trace` tool; finalize the recording with `stop`.",
       inputSchema: {
         command: z.array(z.string()).describe("Command to run (e.g. ['bun', 'km', 'view', '/path'])"),
         env: z.record(z.string(), z.string()).optional().describe("Environment variables"),
@@ -97,7 +97,7 @@ export async function startMcpServer(): Promise<void> {
           .enum(SESSION_BACKENDS)
           .optional()
           .describe(
-            "TestTerminal emulator backend. 'vterm' (default) — pure-TS, standards-compliant, the production engine; reports cursor shape, cursor visibility and narrowing reflow faithfully. 'xtermjs' — the differential reference; fast and portable, but flattens those three. 'ghostty' — ghostty-web WASM, truecolor + full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots). 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect). An unknown name is refused, never substituted.",
+            "TestTerminal emulator backend. 'vterm' (default) — pure-TS, standards-compliant, the production engine; reports cursor shape, cursor visibility and narrowing reflow faithfully. 'xtermjs' — the differential reference; fast and portable, but flattens those three. 'ghostty' — ghostty-web WASM, full glyph coverage, matches real Ghostty rendering (use for visual-bug screenshots); it can DISPLAY truecolor, but the child is told otherwise unless you pass env: { FORCE_COLOR: '3' }. 'vt100' — minimal VT100 subset. 'peekaboo' — OS automation against a real terminal app (macOS only, slowest, pixel-perfect). An unknown name is refused, never substituted.",
           ),
         trace: z
           .object({
