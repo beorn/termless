@@ -26,6 +26,27 @@
  * })
  * ```
  *
+ * ## COLOUR: the child's palette is a DEFAULT, and your environment now wins
+ *
+ * A spawned child's colour tier is decided in this order, highest first:
+ *
+ * 1. the `env` you pass at the spawn site;
+ * 2. an ambient `FORCE_COLOR` or `NO_COLOR` in the test process — **so
+ *    `vi.stubEnv("FORCE_COLOR", …)` DOES reach the child.** It did not before
+ *    2026-09-08: the PTY stamped its own value over yours and nothing reported
+ *    the substitution, which made a stubbed tier a lie;
+ * 3. the PTY's own defaults, `FORCE_COLOR=3` (truecolor) and
+ *    `TERM=xterm-256color`, for whatever nobody set. An EMPTY value counts as
+ *    set, because colour detectors read any defined value as a tier request.
+ *
+ * **Prefer not to depend on any of it.** If you are testing how something
+ * RENDERS at a tier, the sturdiest pattern is to drive the tier as an explicit
+ * PARAMETER into the renderer and feed the resulting string to a terminal with
+ * `feed()` — no spawn, no environment, and you can loop over every tier in one
+ * test. Spawn-and-inherit couples a colour assertion to the ambient
+ * environment, which is how a palette pinned somewhere else can masquerade as a
+ * defect in the code under test.
+ *
  * For cross-backend testing:
  * ```typescript
  * import { describeBackends } from "@termless/test"
