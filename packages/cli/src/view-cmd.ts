@@ -60,42 +60,38 @@ export async function viewAction(opts: ViewCliOpts): Promise<void> {
     return
   }
 
-  const bundle = openRecordingBundle(opts.recording)
-  try {
-    // ── Animate mode: --format gif ──
-    if (format) {
-      if (output === undefined) throw new Error("viewAction: validated GIF output path is missing")
-      const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
-      const { createGifFromPngs } = await import("../../../src/view/gif.ts")
+  using bundle = openRecordingBundle(opts.recording)
+  // ── Animate mode: --format gif ──
+  if (format) {
+    if (output === undefined) throw new Error("viewAction: validated GIF output path is missing")
+    const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
+    const { createGifFromPngs } = await import("../../../src/view/gif.ts")
 
-      const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
-      const gif = await createGifFromPngs(frames)
+    const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
+    const gif = await createGifFromPngs(frames)
 
-      const out = resolve(output)
-      mkdirSync(dirname(out), { recursive: true })
-      writeFileSync(out, gif)
-      console.log(`Saved: ${output} (${frames.length} frames)`)
-      return
-    }
-
-    // ── Scrub mode (default): self-contained HTML viewer ──
-    const { writeViewer } = await import("../../../src/view/viewer.ts")
-    const result = writeViewer(bundle.framesDir)
-    let viewerFile = result.viewerFile
-    // When the source was a sealed `.ttyz`, the viewer was written into a
-    // temp directory — copy it next to the original archive.
-    const srcAbs = resolve(opts.recording)
-    if (existsSync(srcAbs) && statSync(srcAbs).isFile()) {
-      const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.ttyz$/i, "") + ".viewer.html")
-      copyFileSync(result.viewerFile, dest)
-      viewerFile = dest
-    }
-    console.log(`Viewer: ${viewerFile}`)
-    console.log(`  ${result.frameCount} frames, ${result.imageCount} images, ${(result.bytes / 1024).toFixed(0)} KB`)
-    console.log(`  Open it in a browser — no server needed.`)
-  } finally {
-    bundle[Symbol.dispose]?.()
+    const out = resolve(output)
+    mkdirSync(dirname(out), { recursive: true })
+    writeFileSync(out, gif)
+    console.log(`Saved: ${output} (${frames.length} frames)`)
+    return
   }
+
+  // ── Scrub mode (default): self-contained HTML viewer ──
+  const { writeViewer } = await import("../../../src/view/viewer.ts")
+  const result = writeViewer(bundle.framesDir)
+  let viewerFile = result.viewerFile
+  // When the source was a sealed `.ttyz`, the viewer was written into a
+  // temp directory — copy it next to the original archive.
+  const srcAbs = resolve(opts.recording)
+  if (existsSync(srcAbs) && statSync(srcAbs).isFile()) {
+    const dest = join(dirname(srcAbs), basename(srcAbs).replace(/\.ttyz$/i, "") + ".viewer.html")
+    copyFileSync(result.viewerFile, dest)
+    viewerFile = dest
+  }
+  console.log(`Viewer: ${viewerFile}`)
+  console.log(`  ${result.frameCount} frames, ${result.imageCount} images, ${(result.bytes / 1024).toFixed(0)} KB`)
+  console.log(`  Open it in a browser — no server needed.`)
 }
 
 export function registerViewCommand(program: Command): void {

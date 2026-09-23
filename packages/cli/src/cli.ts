@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * termless CLI — record, view, play, and compare terminal sessions.
  *
@@ -35,6 +35,8 @@ import { registerViewCommand } from "./view-cmd.ts"
 import { registerPlayCommand } from "./play-cmd.ts"
 import { registerCompareCommand } from "./compare-cmd.ts"
 import { registerInspectCommand } from "./inspect-cmd.ts"
+import { registerBackendCommand } from "./backend-cmd.tsx"
+import { registerDoctorCommand } from "./doctor-cmd.tsx"
 
 const program = new Command()
   .name("termless")
@@ -67,60 +69,8 @@ registerViewCommand(program)
 registerPlayCommand(program)
 registerCompareCommand(program)
 registerInspectCommand(program)
-// ── backends ──
-
-const backendsCmd = program.command("backends").description("Manage terminal emulator backends")
-
-backendsCmd.addHelpSection("Examples:", [
-  ["$ termless backends", "List all backends + install status"],
-  ["$ termless backends install", "Install default backends"],
-  ["$ termless backends install ghostty alacritty", "Install specific backends"],
-  ["$ termless backends install --all", "Install all 11 backends"],
-  ["$ termless backends update", "Check upstream for newer versions"],
-  ["$ termless backends update --apply", "Update backends.json with latest"],
-])
-
-backendsCmd.action(async () => {
-  const { backendDefaultAction } = await import("./backend-cmd.tsx")
-  await backendDefaultAction()
-})
-
-backendsCmd
-  .command("list")
-  .description("List all backends and their install status")
-  .action(async () => {
-    const { printBackendsTable } = await import("./backend-cmd.tsx")
-    await printBackendsTable()
-  })
-
-backendsCmd
-  .command("install")
-  .description("Install or upgrade backends")
-  .argument("[names...]", "Backend names to install")
-  .option("--all", "Install all backends")
-  .actionMerged(async (opts: { names: string[]; all?: boolean }) => {
-    const { installAction } = await import("./backend-cmd.tsx")
-    await installAction(opts.names, opts)
-  })
-
-backendsCmd
-  .command("update")
-  .description("Check upstream registries for newer versions")
-  .option("--apply", "Update backends.json with latest versions")
-  .action(async () => {
-    const { updateAction } = await import("./backend-cmd.tsx")
-    await updateAction()
-  })
-
-// ── doctor ──
-
-program
-  .command("doctor")
-  .description("Check health of all backends")
-  .action(async () => {
-    const { doctorAction } = await import("./doctor-cmd.tsx")
-    await doctorAction()
-  })
+registerBackendCommand(program)
+registerDoctorCommand(program)
 
 // ── themes ──
 

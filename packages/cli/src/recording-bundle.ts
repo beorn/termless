@@ -23,7 +23,6 @@ export function openRecordingBundle(path: string) {
     return {
       ...result,
       framesDir: resolve(rootDir, dirname(framesMember.path)),
-      dispose: cleanup,
       [Symbol.dispose]: cleanup,
     }
   } catch (error) {

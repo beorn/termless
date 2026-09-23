@@ -69,7 +69,7 @@ function buildBackendRows(): { rows: BackendRow[]; version: string } {
   return { rows, version: m.version }
 }
 
-export async function printBackendsTable(): Promise<void> {
+async function printBackendsTable(): Promise<void> {
   const { rows, version } = buildBackendRows()
   const installedCount = rows.filter((r) => r.installed).length
   const totalCount = rows.length
@@ -148,7 +148,7 @@ function ResultMessage({
 // Install action
 // =============================================================================
 
-export async function installAction(names: string[], opts: { all?: boolean }): Promise<void> {
+async function installAction(names: string[], opts: { all?: boolean }): Promise<void> {
   const m = getManifest()
   const pm = detectPackageManager()
   const allNames = backends()
@@ -443,33 +443,11 @@ export async function updateAction(opts: { apply?: boolean } = {}): Promise<void
 // Command registration
 // =============================================================================
 
-export async function backendDefaultAction(): Promise<void> {
-  await printBackendsTable()
-  await printComponent(
-    <Box flexDirection="column" marginTop={1}>
-      <Box>
-        <Box width={42}>
-          <Text color="$muted">termless backends install [names...]</Text>
-        </Box>
-        <Text color="$muted">Install or upgrade backends</Text>
-      </Box>
-      <Box>
-        <Box width={42}>
-          <Text color="$muted">{"termless backends update [--apply]"}</Text>
-        </Box>
-        <Text color="$muted">Check upstream for newer versions</Text>
-      </Box>
-      <Box>
-        <Box width={42}>
-          <Text color="$muted">termless backends --help</Text>
-        </Box>
-        <Text color="$muted">Full help</Text>
-      </Box>
-    </Box>,
-  )
-}
-
-export function registerBackendCommand(program: Command): void {
+export function registerBackendCommand(
+  program: Command,
+  actions?: { updateAction?: (opts: { apply?: boolean }) => Promise<void> },
+): void {
+  const updateHandler = actions?.updateAction ?? updateAction
   const cmd = program.command("backends").description("Manage terminal emulator backends")
 
   cmd.addHelpSection("Examples:", [
@@ -482,7 +460,31 @@ export function registerBackendCommand(program: Command): void {
   ])
 
   // Default action: show list + usage hint
-  cmd.action(backendDefaultAction)
+  cmd.action(async () => {
+    await printBackendsTable()
+    await printComponent(
+      <Box flexDirection="column" marginTop={1}>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">termless backends install [names...]</Text>
+          </Box>
+          <Text color="$muted">Install or upgrade backends</Text>
+        </Box>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">{"termless backends update [--apply]"}</Text>
+          </Box>
+          <Text color="$muted">Check upstream for newer versions</Text>
+        </Box>
+        <Box>
+          <Box width={42}>
+            <Text color="$muted">termless backends --help</Text>
+          </Box>
+          <Text color="$muted">Full help</Text>
+        </Box>
+      </Box>,
+    )
+  })
 
   cmd
     .command("list")
@@ -504,5 +506,5 @@ export function registerBackendCommand(program: Command): void {
     .command("update")
     .description("Check upstream registries for newer versions")
     .option("--apply", "Update backends.json with latest versions")
-    .action(updateAction)
+    .action(updateHandler)
 }

@@ -25,7 +25,7 @@
     "directory": "packages/cli"
   },
   "bin": {
-    "termless": "./src/cli.ts"
+    "termless": "./bin/termless.ts"
   },
   "files": [
     "dist"
@@ -89,8 +89,7 @@
       "src/index.ts",
       "src/cli.ts"
     ],
-    "format": "esm",
-    "onSuccess": "node scripts/fix-dist-shebang.mjs"
+    "format": "esm"
   },
   "engines": {
     "bun": ">=1.0.0",

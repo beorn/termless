@@ -80,12 +80,8 @@ function isRecordedFrameOutputPath(path: string): boolean {
 function tapeFrameTraceExists(tapePath: string, tape: TapeFile): boolean {
   const path = resolveTapeFramesDir(tapePath, tape.settings.Frames)
   if (!existsSync(path)) return false
-  const bundle = openRecordingBundle(path)
-  try {
-    return (bundle.recording.frames?.length ?? 0) > 0
-  } finally {
-    bundle[Symbol.dispose]?.()
-  }
+  using bundle = openRecordingBundle(path)
+  return (bundle.recording.frames?.length ?? 0) > 0
 }
 
 /** Resolve the output directory for `--compare separate`. */
@@ -294,29 +290,25 @@ export async function playFrameReplayFromTape(
   }
 
   const { recordingToPngFrames } = await import("../../../src/view/from-recording.ts")
-  const bundle = openRecordingBundle(bundlePath)
-  try {
-    const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
-    const outputs = opts.output ?? []
+  using bundle = openRecordingBundle(bundlePath)
+  const frames = recordingToPngFrames(bundle.recording, bundle.framesDir)
+  const outputs = opts.output ?? []
 
-    for (const output of outputs) {
-      await writeFrameReplayOutput(output, frames)
-      console.log(`Frame replay saved: ${output}`)
-    }
+  for (const output of outputs) {
+    await writeFrameReplayOutput(output, frames)
+    console.log(`Frame replay saved: ${output}`)
+  }
 
-    if (outputs.length === 0) {
-      const { writeViewer } = await import("../../../src/view/viewer.ts")
-      const result = writeViewer(bundle.framesDir)
-      console.log(`Frame replay viewer: ${result.viewerFile}`)
-    }
+  if (outputs.length === 0) {
+    const { writeViewer } = await import("../../../src/view/viewer.ts")
+    const result = writeViewer(bundle.framesDir)
+    console.log(`Frame replay viewer: ${result.viewerFile}`)
+  }
 
-    return {
-      framesDir: bundle.framesDir,
-      frameCount: bundle.recording.frames?.length ?? frames.length,
-      outputCount: outputs.length,
-    }
-  } finally {
-    bundle[Symbol.dispose]?.()
+  return {
+    framesDir: bundle.framesDir,
+    frameCount: bundle.recording.frames?.length ?? frames.length,
+    outputCount: outputs.length,
   }
 }
 
