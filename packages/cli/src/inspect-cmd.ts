@@ -39,18 +39,22 @@ function resolveFramesDir(tapePath: string, framesSetting: string | undefined): 
 function inspectFrameTrace(dir: string): FrameTraceInspection | null {
   if (!existsSync(dir)) return null
 
-  using bundle = openRecordingBundle(dir)
-  const frames = bundle.recording.frames ?? []
-  const uniqueCount = frames.filter((frame) => frame.duplicateOf === null).length
-  const first = frames[0]
-  const last = frames[frames.length - 1]
-  return {
-    dir,
-    frameCount: frames.length,
-    uniqueCount,
-    duplicateRatio: frames.length === 0 ? 0 : 1 - uniqueCount / frames.length,
-    durationMs: first && last ? Math.max(0, Math.round((last.at - first.at) / 1000)) : 0,
-    files: readdirSync(bundle.framesDir).sort(),
+  const bundle = openRecordingBundle(dir)
+  try {
+    const frames = bundle.recording.frames ?? []
+    const uniqueCount = frames.filter((frame) => frame.duplicateOf === null).length
+    const first = frames[0]
+    const last = frames[frames.length - 1]
+    return {
+      dir,
+      frameCount: frames.length,
+      uniqueCount,
+      duplicateRatio: frames.length === 0 ? 0 : 1 - uniqueCount / frames.length,
+      durationMs: first && last ? Math.max(0, Math.round((last.at - first.at) / 1000)) : 0,
+      files: readdirSync(bundle.framesDir).sort(),
+    }
+  } finally {
+    bundle[Symbol.dispose]?.()
   }
 }
 

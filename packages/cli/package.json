@@ -89,7 +89,8 @@
       "src/index.ts",
       "src/cli.ts"
     ],
-    "format": "esm"
+    "format": "esm",
+    "onSuccess": "node scripts/fix-dist-shebang.mjs"
   },
   "engines": {
     "bun": ">=1.0.0",

@@ -133,83 +133,82 @@ function DoctorSummary({
 // Command registration
 // =============================================================================
 
-export function registerDoctorCommand(program: Command): void {
-  program
-    .command("doctor")
-    .description("Check health of all backends")
-    .action(async () => {
-      const m = getManifest()
-      const allNames = backends()
+export async function doctorAction(): Promise<void> {
+  const m = getManifest()
+  const allNames = backends()
+
+  await printComponent(
+    <Box flexDirection="column">
+      <Header title="termless doctor" version={m.version} />
+      <Text color="$muted">Checking backends...</Text>
+    </Box>,
+  )
+
+  let healthy = 0
+  let unhealthy = 0
+  let notInstalled = 0
+
+  for (const name of allNames) {
+    const e = entry(name)!
+    const upstreamStr = e.upstream
+      ? `${e.upstream}${e.version ? ` ${e.version}` : ""}`
+      : e.type === "os"
+        ? "(OS automation)"
+        : "(built-in)"
+
+    if (!isReady(name)) {
+      await printComponent(<DoctorResult name={name} installed={false} upstream={upstreamStr} />)
+      notInstalled++
+      continue
+    }
+
+    // Run health check
+    try {
+      const b = await backend(name)
+      b.init({ cols: 80, rows: 24 })
+      b.feed(new TextEncoder().encode("Hello"))
+      const ok = b.getText().includes("Hello")
+      const caps = b.capabilities
+      b.destroy()
+
+      const capsStr = `${caps.name} (truecolor: ${caps.truecolor}, kitty: ${caps.kittyKeyboard})`
+      const ver = getInstalledVersion(e.package)
 
       await printComponent(
-        <Box flexDirection="column">
-          <Header title="termless doctor" version={m.version} />
-          <Text color="$muted">Checking backends...</Text>
-        </Box>,
+        <DoctorResult
+          name={name}
+          installed={true}
+          healthy={ok}
+          version={ver ?? undefined}
+          upstream={upstreamStr}
+          capabilities={capsStr}
+        />,
       )
 
-      let healthy = 0
-      let unhealthy = 0
-      let notInstalled = 0
+      if (ok) healthy++
+      else unhealthy++
+    } catch (err) {
+      await printComponent(
+        <DoctorResult
+          name={name}
+          installed={true}
+          healthy={false}
+          version={getInstalledVersion(e.package) ?? undefined}
+          upstream={upstreamStr}
+          error={err instanceof Error ? err.message : String(err)}
+        />,
+      )
+      unhealthy++
+    }
+  }
 
-      for (const name of allNames) {
-        const e = entry(name)!
-        const upstreamStr = e.upstream
-          ? `${e.upstream}${e.version ? ` ${e.version}` : ""}`
-          : e.type === "os"
-            ? "(OS automation)"
-            : "(built-in)"
+  await printComponent(<DoctorSummary healthy={healthy} unhealthy={unhealthy} notInstalled={notInstalled} />)
 
-        if (!isReady(name)) {
-          await printComponent(<DoctorResult name={name} installed={false} upstream={upstreamStr} />)
-          notInstalled++
-          continue
-        }
+  if (unhealthy > 0) {
+    process.exitCode = 1
+  }
+}
 
-        // Run health check
-        try {
-          const b = await backend(name)
-          b.init({ cols: 80, rows: 24 })
-          b.feed(new TextEncoder().encode("Hello"))
-          const ok = b.getText().includes("Hello")
-          const caps = b.capabilities
-          b.destroy()
-
-          const capsStr = `${caps.name} (truecolor: ${caps.truecolor}, kitty: ${caps.kittyKeyboard})`
-          const ver = getInstalledVersion(e.package)
-
-          await printComponent(
-            <DoctorResult
-              name={name}
-              installed={true}
-              healthy={ok}
-              version={ver ?? undefined}
-              upstream={upstreamStr}
-              capabilities={capsStr}
-            />,
-          )
-
-          if (ok) healthy++
-          else unhealthy++
-        } catch (err) {
-          await printComponent(
-            <DoctorResult
-              name={name}
-              installed={true}
-              healthy={false}
-              version={getInstalledVersion(e.package) ?? undefined}
-              upstream={upstreamStr}
-              error={err instanceof Error ? err.message : String(err)}
-            />,
-          )
-          unhealthy++
-        }
-      }
-
-      await printComponent(<DoctorSummary healthy={healthy} unhealthy={unhealthy} notInstalled={notInstalled} />)
-
-      if (unhealthy > 0) {
-        process.exitCode = 1
-      }
-    })
+export function registerDoctorCommand(program: Command): void {
+  program.command("doctor").description("Check health of all backends").action(doctorAction)
 }
