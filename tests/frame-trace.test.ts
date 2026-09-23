@@ -1,5 +1,5 @@
 /**
- * @reach fs-walk <fixture-only: every dirN is mkdtempSync(join(tmpdir(), ...)); readdirSync only scans these temp directories.>
+ * @reach fs-walk <fixture-only: every dirN is mkdtempSync(tmpdir()); reads scoped there>
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"

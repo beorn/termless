@@ -14,7 +14,7 @@
  * render tests).
  *
  * Phase 0.5 step 7 of @km/infra/mcp-tty-ghostty-backend-toggle.
- * @reach fs-walk <fixture-only: dir = mkdtempSync(join(tmpdir(), ...)); readdirSync only scans this temp trace directory.>
+ * @reach fs-walk <fixture-only: dir=mkdtempSync(tmpdir()); readdirSync scoped to it>
  */
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"

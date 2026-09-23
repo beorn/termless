@@ -14,7 +14,7 @@
  *  (b) `writeVisualTrace` is expressible over the canonical `Recording` noun:
  *      writing a trace via the Recording path yields a byte-identical
  *      `index.jsonl` to the legacy raw-`TraceFrame[]` path.
- * @reach fs-walk <fixture-only: root = mkdtempSync(join(tmpdir(), ...)); every readdirSync/readFileSync targets subdirs under this temp root.>
+ * @reach fs-walk <fixture-only: root=mkdtempSync(tmpdir()); reads scoped to subdirs of it>
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest"

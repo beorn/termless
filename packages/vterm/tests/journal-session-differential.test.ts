@@ -21,7 +21,7 @@
  *   converted by the `@hab/terminal-session-termless` bridge) — each must
  *   replay to completion; divergence is reported as conformance-backlog
  *   seeds, not failed, until a curated set graduates to pinned expectations.
- * @reach fs-walk <fixture-only: the only always-run read is a single named fixture file (FIXTURES/hello-journal.json); the sole readdirSync targets corpusDir = process.env.TERMLES...>
+ * @reach fs-walk <fixture-only: default run reads one named FIXTURES file; corpus is env-gated/skipped>
  */
 
 import { readdirSync, readFileSync } from "node:fs"
