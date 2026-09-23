@@ -3,6 +3,7 @@
  *
  * Uses the vt100 backend (pure TypeScript, sync init, fast) created directly
  * via createVt100Backend() — bypasses the registry for reliable test resolution.
+ * @reach fs-walk <fixture-only: dir/optDir/tapeDir are mkdtempSync(join(tmpdir(), ...)) fixtures; readdirSync/existsSync only touch these temp dirs.>
  */
 
 import { describe, test, expect } from "vitest"

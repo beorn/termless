@@ -8,6 +8,7 @@
  * Recording does NOT alter the on-disk `index.jsonl` + `NNNNN.png` layout.
  * One test asserts the on-disk bytes are identical before and after
  * `toRecording()`.
+ * @reach fs-walk <fixture-only: dir = mkdtempSync(join(tmpdir(), ...)); every readdirSync targets this temp trace directory.>
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest"

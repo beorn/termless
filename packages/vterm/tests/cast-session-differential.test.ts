@@ -15,6 +15,7 @@
  *   (each replay must complete; its divergence report surfaces so a curated
  *   session set can graduate to pinned expectations). Sourcing external casts
  *   follows corpus/README.md licensing rules — no GPL/unlicensed vendoring.
+ * @reach fs-walk <fixture-only: the only always-run read is a single named fixture file (FIXTURES/hello-parity.cast); the sole readdirSync targets corpusDir = process.env.TERMLESS...>
  */
 
 import { readdirSync, readFileSync } from "node:fs"
