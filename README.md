@@ -22,6 +22,8 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 
 ## Quick Start
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ```typescript
 import { createTerminal } from "@termless/core"
 import { createXtermBackend } from "@termless/xtermjs"

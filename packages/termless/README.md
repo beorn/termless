@@ -29,6 +29,8 @@ VT/ECMA-48/xterm coverage, graded at arm's length by its own conformance rig.
 
 ## Quick start
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ```typescript
 import { createTerminal } from "termless"
 import { backend } from "termless/backends"

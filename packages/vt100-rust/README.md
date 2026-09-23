@@ -2,6 +2,8 @@
 
 Rust vt100 backend for termless -- wraps the [vt100](https://crates.io/crates/vt100) Rust crate via napi-rs.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## Build
 
 Requires Rust toolchain:

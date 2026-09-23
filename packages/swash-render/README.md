@@ -12,6 +12,8 @@ tables directly, so 📁 / 📋 / ✅ / 🔥 render in full color.
 
 The native binding is ~1.3 MB — far smaller than `@napi-rs/canvas`'s ~26 MB.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## Why a cell-grid API (not SVG)
 
 swash does shaping + glyph rasterization only; it has no cell-grid layout layer.

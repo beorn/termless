@@ -2,6 +2,8 @@
 
 Kitty backend for termless — uses [kitty's](https://github.com/kovidgoyal/kitty) actual VT parser via a Python subprocess bridge.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## How it works
 
 Unlike other native backends that compile a Rust crate into a `.node` binary, the kitty backend runs kitty's own Python-embedded C code via `kitty +runpy`. This is necessary because kitty's VT parser is deeply coupled to CPython (all data structures use `PyObject_HEAD`, callbacks use the Python C API, etc.).

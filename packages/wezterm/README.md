@@ -2,6 +2,8 @@
 
 WezTerm backend for [Termless](../../README.md) — headless terminal emulation using the [wezterm-term](https://crates.io/crates/tattoy-wezterm-term) Rust crate via [napi-rs](https://napi.rs) native bindings.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## Why WezTerm?
 
 WezTerm's VT parser is one of the most complete terminal emulation implementations:

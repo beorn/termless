@@ -4,6 +4,8 @@ Native [Ghostty](https://ghostty.org/) backend for [termless](https://termless.d
 
 Same VT processing as the Ghostty terminal emulator, running natively (no WASM overhead). Compare with `@termless/ghostty` which uses the WASM build.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## Build
 
 Requires **Zig 0.15.2+** (available via nix).

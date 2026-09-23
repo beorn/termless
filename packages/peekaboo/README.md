@@ -2,6 +2,8 @@
 
 Peekaboo backend for Termless -- OS-level terminal control via real terminal apps.
 
+> Install from npm; a git install resolves the TypeScript source and runs only under Bun.
+
 ## What is this?
 
 A Termless backend that combines:
