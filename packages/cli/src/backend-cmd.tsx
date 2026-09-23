@@ -350,7 +350,7 @@ function UpdateTable({
   return <Table columns={columns} data={data} />
 }
 
-async function updateAction(opts: { apply?: boolean }): Promise<void> {
+export async function updateAction(opts: { apply?: boolean } = {}): Promise<void> {
   const m = getManifest()
   const allNames = backends()
 
@@ -443,7 +443,11 @@ async function updateAction(opts: { apply?: boolean }): Promise<void> {
 // Command registration
 // =============================================================================
 
-export function registerBackendCommand(program: Command): void {
+export function registerBackendCommand(
+  program: Command,
+  actions?: { updateAction?: (opts: { apply?: boolean }) => Promise<void> },
+): void {
+  const updateHandler = actions?.updateAction ?? updateAction
   const cmd = program.command("backends").description("Manage terminal emulator backends")
 
   cmd.addHelpSection("Examples:", [
@@ -502,5 +506,5 @@ export function registerBackendCommand(program: Command): void {
     .command("update")
     .description("Check upstream registries for newer versions")
     .option("--apply", "Update backends.json with latest versions")
-    .action(updateAction)
+    .action(updateHandler)
 }
