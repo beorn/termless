@@ -89,7 +89,8 @@
       "src/index.ts",
       "src/cli.ts"
     ],
-    "format": "esm"
+    "format": "esm",
+    "onSuccess": "node -e \"const fs=require('fs');const f='dist/cli.mjs';if(fs.existsSync(f)){fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^#!.*/,'#!/usr/bin/env node'));}\""
   },
   "engines": {
     "bun": ">=1.0.0",
