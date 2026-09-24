@@ -50,7 +50,8 @@ echo "Found kitty: $KITTY"
 
 # Verify kitty can import its fast_data_types module
 echo "Verifying kitty Python environment..."
-if ! "$KITTY" +runpy "from kitty.fast_data_types import Screen; print('OK')" 2>/dev/null | grep -q OK; then
+if ! verify_output=$("$KITTY" +runpy "from kitty.fast_data_types import Screen; print('OK')" 2>/dev/null) ||
+  ! grep -q OK <<< "$verify_output"; then
   echo "ERROR: kitty's Python environment is not working."
   echo "Try reinstalling kitty: brew reinstall --cask kitty"
   exit 1
@@ -71,7 +72,7 @@ RESULT=$("$KITTY" +runpy "import sys; sys.path.insert(0, '$SCRIPT_DIR'); import 
 EOF
 )
 
-if echo "$RESULT" | grep -q '"cursor"'; then
+if grep -q '"cursor"' <<< "$RESULT"; then
   echo "Smoke test passed."
 else
   echo "ERROR: Smoke test failed."
