@@ -331,3 +331,41 @@ describe("resvg emoji / symbol coverage (bug 3)", () => {
     expect(String.fromCharCode(gif[0]!, gif[1]!, gif[2]!)).toBe("GIF")
   })
 })
+
+/**
+ * 25781: the spaces a run starts with. A style change opens a new `<tspan>`,
+ * and a run that begins with a space (" example" after a bold "RUNNER", " 05"
+ * at a row's start) lost that space: without `xml:space="preserve"` the SVG
+ * collapses it, the run's remaining glyphs take the first x values of its
+ * per-character list, and every one draws a cell to the left. Screenshots
+ * read "RUNNERexample", "043000fix" and "05 :00" while the terminal held the
+ * spaces. Each row below asserts that a cell has ink exactly when its
+ * character is not a space, so a glyph drawn one cell off fails both cells.
+ */
+describe("resvg keeps a run's leading space on the cell grid (25781)", () => {
+  const rows: Array<[string, Cell[]]> = [
+    [
+      "a bold run followed by a space",
+      [...[..."RUNNER"].map((ch) => cell(ch, { bold: true })), ...[..." example"].map((ch) => cell(ch))],
+    ],
+    [
+      "a row whose first run starts with a space",
+      [cell(" "), cell("0"), cell("5"), cell(":", { dim: true }), cell("0"), cell("0")],
+    ],
+    ["an em dash, an ellipsis and a multiplication sign", [..."ab — … × cd"].map((ch) => cell(ch))],
+  ]
+
+  for (const [name, cells] of rows) {
+    test.skipIf(!CANVAS_AVAILABLE)(
+      name,
+      async () => {
+        const img = await decode(await screenshotPng(readableFromCells(cells), { scale: SCALE }))
+        const text = cells.map((c) => c.char).join("")
+        const inked = cells.map((_, col) => (cellBandInk(img, col) > 20 ? "#" : "."))
+        const expected = cells.map((c) => (c.char === " " ? "." : "#"))
+        expect(`${text}\n${inked.join("")}`).toBe(`${text}\n${expected.join("")}`)
+      },
+      60000,
+    )
+  }
+})

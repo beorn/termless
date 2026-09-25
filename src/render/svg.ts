@@ -424,8 +424,11 @@ function renderTextRows(lines: Cell[][], opts: ResolvedOptions): string[] {
         continue
       }
       if (!textOpen) {
+        // xml:space="preserve": a run that starts with a space (" example" after a bold
+        // "RUNNER") must keep it, or the SVG collapses the space and the run's glyphs take
+        // the per-character x list from its first slot, one cell left (25781).
         parts.push(
-          `<text x="0" y="${y}" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
+          `<text x="0" y="${y}" xml:space="preserve" font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${themeFg}">`,
         )
         textOpen = true
       }
