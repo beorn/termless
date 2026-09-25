@@ -103,6 +103,48 @@ describe("renderAnsiPng", () => {
     expect(result.meta.height).toBeGreaterThan(0)
   })
 
+  // Operator 2026-09-25 (Telegram, on a pane PNG): text sat high in its cells —
+  // ghostty-web measures only "M", so capitals started 1px below the cell top
+  // with 5px free beneath. Capitals now sit centered, as in a real terminal.
+  test("centers capital letters vertically in their cell", async () => {
+    const { png, meta } = await renderAnsiPng("\x1b[97mHH\x1b[0m", {
+      cols: 4,
+      rows: 1,
+      theme: { background: "#000000" },
+      returnMeta: true,
+    })
+    const { createCanvas, loadImage } = await import("@napi-rs/canvas")
+    const image = await loadImage(Buffer.from(png))
+    const ctx = createCanvas(meta.width, meta.height).getContext("2d")
+    ctx.drawImage(image, 0, 0)
+    const { data } = ctx.getImageData(0, 0, meta.width, meta.height)
+    const inked = (y: number) => {
+      for (let x = 0; x < meta.cellWidth * 2 * meta.dpr; x++) if (data[(y * meta.width + x) * 4]! > 128) return true
+      return false
+    }
+    const rows = Array.from({ length: meta.height }, (_, y) => y).filter(inked)
+    const top = rows[0]!
+    const bottom = meta.height - 1 - rows[rows.length - 1]!
+    expect(Math.abs(top - bottom), `ink gap above ${top}px, below ${bottom}px`).toBeLessThanOrEqual(meta.dpr)
+  })
+
+  test("keeps a descender inside its own cell after centering", async () => {
+    const { png, meta } = await renderAnsiPng("\x1b[97mgjpqy\x1b[0m", {
+      cols: 6,
+      rows: 2,
+      theme: { background: "#000000" },
+      returnMeta: true,
+    })
+    const { createCanvas, loadImage } = await import("@napi-rs/canvas")
+    const image = await loadImage(Buffer.from(png))
+    const ctx = createCanvas(meta.width, meta.height).getContext("2d")
+    ctx.drawImage(image, 0, 0)
+    const cellBottom = meta.cellHeight * meta.dpr
+    const { data } = ctx.getImageData(0, cellBottom, meta.width, meta.height - cellBottom)
+    const spilled = data.some((value, index) => index % 4 === 0 && value > 128)
+    expect(spilled, "descender ink in the row below").toBe(false)
+  })
+
   test("accepts Uint8Array input", async () => {
     const bytes = new TextEncoder().encode("\x1b[32mok\x1b[0m")
     const png = await renderAnsiPng(bytes, { cols: 10, rows: 2 })

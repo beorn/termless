@@ -500,6 +500,26 @@ function assertCanvasPixelCeiling(width: number, height: number, surface: "rende
 }
 
 /**
+ * The baseline that centers the font's ascent + descent box in the cell, the way
+ * a real terminal places text. ghostty-web measures only "M" (cap height, no
+ * descent) and puts the baseline one pixel under the cap top, so capitals hugged
+ * the cell's top edge with most of the free space beneath them (operator,
+ * 2026-09-25, on a pane screenshot).
+ */
+function centeredBaseline(canvas: Canvas, font: string, cellHeight: number): number {
+  const ctx = canvas.getContext("2d")
+  ctx.font = font
+  const metrics = ctx.measureText("M")
+  const ascent = metrics.fontBoundingBoxAscent
+  const descent = metrics.fontBoundingBoxDescent
+  if (!Number.isFinite(ascent) || !Number.isFinite(descent)) {
+    throw new Error(`termless: the canvas reports no font ascent/descent for ${font}; cannot place the baseline`)
+  }
+  const baseline = Math.round(ascent + (cellHeight - ascent - descent) / 2)
+  return Math.min(Math.max(baseline, 1), cellHeight - 1)
+}
+
+/**
  * Render raw ANSI bytes to a PNG via ghostty-web's CanvasRenderer + native
  * Skia canvas. This is the preferred entry point when the ANSI source is
  * already on hand — bypasses the cells round-trip entirely.
@@ -531,7 +551,7 @@ export async function renderAnsiPng(
   const rows = opts.rows ?? 40
   const fontSize = opts.fontSize ?? 16
   const dpr = opts.dpr ?? 2
-  const theme: Required<CanvasTheme> = { ...DEFAULT_THEME, ...(opts.theme ?? {}) }
+  const theme: Required<CanvasTheme> = { ...DEFAULT_THEME, ...opts.theme }
   const cursorStyle = mapCursorStyle(opts.cursorStyle)
   const cursorBlink = opts.cursorBlink ?? false
 
@@ -583,10 +603,8 @@ export async function renderAnsiPng(
   //    AFTER remeasureFont and BEFORE resize, mirroring the legacy path.
   renderer.remeasureFont()
   if (opts.cellWidth != null) renderer.metrics.width = opts.cellWidth
-  if (opts.cellHeight != null) {
-    renderer.metrics.height = opts.cellHeight
-    renderer.metrics.baseline = Math.min(renderer.metrics.baseline, opts.cellHeight - 1)
-  }
+  if (opts.cellHeight != null) renderer.metrics.height = opts.cellHeight
+  renderer.metrics.baseline = centeredBaseline(canvas, `${fontSize}px ${fontFamily}`, renderer.metrics.height)
   const renderWidth = Math.ceil(cols * renderer.metrics.width * dpr)
   const renderHeight = Math.ceil(rows * renderer.metrics.height * dpr)
   assertCanvasPixelCeiling(renderWidth, renderHeight, "render")
