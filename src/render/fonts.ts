@@ -1,9 +1,9 @@
 /**
  * Bundled fallback fonts — the canonical termless font assets.
  *
- * Four OFL-licensed faces ship inside `@termless/core` under `assets/fonts`:
+ * Five OFL-licensed faces ship inside `@termless/core` under `assets/fonts`:
  *
- *   - JetBrains Mono       — primary monospace face (broad Latin + box-drawing)
+ *   - JetBrains Mono       — primary monospace face, Regular and Bold (broad Latin + box-drawing)
  *   - Noto Sans Symbols 2  — terminal symbol glyphs JetBrains Mono lacks
  *   - Symbols Nerd Font    — Nerd Font private-use icons (powerline, devicons,
  *                            the U+F0xx/U+E0xx glyphs TUIs like km use)
@@ -43,6 +43,9 @@ export interface BundledFont {
  */
 export const BUNDLED_FONTS: readonly BundledFont[] = [
   { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY },
+  // The bold face under the same family: resvg matches font-weight="bold" to it and does not
+  // synthesize a bold from Regular the way Skia does, so without it every bold cell drew regular (25786).
+  { file: "JetBrainsMono-Bold.ttf", family: BUNDLED_PRIMARY_FAMILY },
   { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY },
   { file: "SymbolsNerdFontMono-Regular.ttf", family: BUNDLED_NERD_FAMILY },
   { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY },

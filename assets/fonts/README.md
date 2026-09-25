@@ -19,6 +19,7 @@ copy, not one per package.
 | File                           | Font                    | License | Source                                     |
 | ------------------------------ | ----------------------- | ------- | ------------------------------------------ |
 | `JetBrainsMono-Regular.ttf`    | JetBrains Mono          | OFL-1.1 | https://github.com/JetBrains/JetBrainsMono |
+| `JetBrainsMono-Bold.ttf`       | JetBrains Mono Bold     | OFL-1.1 | https://github.com/JetBrains/JetBrainsMono |
 | `NotoSansSymbols2-Regular.ttf` | Noto Sans Symbols 2     | OFL-1.1 | https://github.com/notofonts/symbols       |
 | `NotoEmoji-Regular.ttf`        | Noto Emoji (monochrome) | OFL-1.1 | https://github.com/googlefonts/noto-emoji  |
 
@@ -31,6 +32,10 @@ Roles:
 
 - **JetBrains Mono** — the default primary monospace face. True fixed pitch,
   broad Latin + box-drawing + geometric-shape coverage.
+  Both faces are version 2.305 from upstream commit 19371302 (`fonts/ttf/`).
+  Bold is bundled because resvg matches `font-weight="bold"` to a real bold
+  face and never synthesizes one; with Regular alone every bold cell in a
+  resvg screenshot drew regular (25786).
 - **Noto Sans Symbols 2** — fallback for terminal symbol glyphs JetBrains Mono
   lacks (e.g. the hourglass U+29D7, rarer geometric shapes, arrows).
 - **Noto Emoji** — last-resort monochrome fallback for emoji code points; in

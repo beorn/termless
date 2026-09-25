@@ -233,9 +233,9 @@ async function rasterGlyph(
 describe("resvg emoji / symbol coverage (bug 3)", () => {
   test("bundled fallback font files exist and resolve", () => {
     const files = bundledFontFiles()
-    // The four OFL faces: JetBrains Mono + Noto Sans Symbols 2 +
+    // The five OFL faces: JetBrains Mono Regular + Bold + Noto Sans Symbols 2 +
     // Symbols Nerd Font + Noto Emoji.
-    expect(files.length).toBe(4)
+    expect(files.length).toBe(5)
     for (const f of files) expect(existsSync(f), `bundled font missing: ${f}`).toBe(true)
   })
 
@@ -368,4 +368,31 @@ describe("resvg keeps a run's leading space on the cell grid (25781)", () => {
       60000,
     )
   }
+})
+
+/**
+ * 25786: the resvg path drew no bold. Only JetBrains Mono Regular was bundled, and
+ * resvg (unlike Skia) does not synthesize a bold from a regular face, so a bold run
+ * rendered pixel-for-pixel like regular text: the yrd watch header's YRD QUEUE and
+ * the RUNNER label lost the emphasis the terminal shows.
+ */
+describe("resvg draws a bold run in a bold face (25786)", () => {
+  test.skipIf(!CANVAS_AVAILABLE)(
+    "a bold run carries more ink than the same text in regular weight",
+    async () => {
+      const word = "YRD QUEUE"
+      const inkOf = async (bold: boolean): Promise<number> => {
+        const img = await decode(
+          await screenshotPng(readableFromCells([...word].map((ch) => cell(ch, { bold }))), { scale: SCALE }),
+        )
+        let ink = 0
+        for (let col = 0; col < word.length; col++) ink += cellBandInk(img, col)
+        return ink
+      }
+      const regular = await inkOf(false)
+      const bold = await inkOf(true)
+      expect(bold, `bold ink ${bold} vs regular ink ${regular}`).toBeGreaterThan(regular * 1.15)
+    },
+    60000,
+  )
 })
