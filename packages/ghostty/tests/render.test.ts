@@ -15,6 +15,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { renderAnsiPng, renderTerminalPng, _resetDomShimForTesting, type CanvasTheme } from "../src/render.ts"
 import { cellsToAnsi } from "../src/cells-to-ansi.ts"
+import { BUNDLED_PRIMARY_FAMILY } from "../../../src/render/fonts.ts"
 import { initGhostty, createGhosttyBackend } from "../src/backend.ts"
 import type { Ghostty } from "ghostty-web"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
@@ -107,42 +108,43 @@ describe("renderAnsiPng", () => {
   // ghostty-web measures only "M", so capitals started 1px below the cell top
   // with 5px free beneath. Capitals now sit centered, as in a real terminal.
   test("centers capital letters vertically in their cell", async () => {
-    const { png, meta } = await renderAnsiPng("\x1b[97mHH\x1b[0m", {
-      cols: 4,
-      rows: 1,
-      theme: { background: "#000000" },
-      returnMeta: true,
-    })
-    const { createCanvas, loadImage } = await import("@napi-rs/canvas")
-    const image = await loadImage(Buffer.from(png))
-    const ctx = createCanvas(meta.width, meta.height).getContext("2d")
-    ctx.drawImage(image, 0, 0)
-    const { data } = ctx.getImageData(0, 0, meta.width, meta.height)
-    const inked = (y: number) => {
-      for (let x = 0; x < meta.cellWidth * 2 * meta.dpr; x++) if (data[(y * meta.width + x) * 4]! > 128) return true
-      return false
-    }
-    const rows = Array.from({ length: meta.height }, (_, y) => y).filter(inked)
-    const top = rows[0]!
-    const bottom = meta.height - 1 - rows[rows.length - 1]!
+    const { top, bottom, meta } = await inkGaps("HH")
     expect(Math.abs(top - bottom), `ink gap above ${top}px, below ${bottom}px`).toBeLessThanOrEqual(meta.dpr)
   })
 
-  test("keeps a descender inside its own cell after centering", async () => {
-    const { png, meta } = await renderAnsiPng("\x1b[97mgjpqy\x1b[0m", {
-      cols: 6,
-      rows: 2,
-      theme: { background: "#000000" },
-      returnMeta: true,
-    })
-    const { createCanvas, loadImage } = await import("@napi-rs/canvas")
-    const image = await loadImage(Buffer.from(png))
-    const ctx = createCanvas(meta.width, meta.height).getContext("2d")
-    ctx.drawImage(image, 0, 0)
-    const cellBottom = meta.cellHeight * meta.dpr
-    const { data } = ctx.getImageData(0, cellBottom, meta.width, meta.height - cellBottom)
-    const spilled = data.some((value, index) => index % 4 === 0 && value > 128)
-    expect(spilled, "descender ink in the row below").toBe(false)
+  // review2 (09cc203808 verdict): a spill check cannot fail when the canvas clips
+  // at the cell edge, so compare the glyph's height against the same glyph drawn
+  // straight onto a canvas, where no cell can clip it.
+  test("draws a descender whole, not clipped at the cell's bottom edge", async () => {
+    const rendered = await inkGaps("g")
+    const { createCanvas } = await import("@napi-rs/canvas")
+    const size = 16 * rendered.meta.dpr
+    const canvas = createCanvas(size * 2, size * 4)
+    const ctx = canvas.getContext("2d")
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(0, 0, size * 2, size * 4)
+    ctx.fillStyle = "#ffffff"
+    ctx.font = `${size}px '${BUNDLED_PRIMARY_FAMILY}'`
+    ctx.fillText("g", size / 2, size * 2)
+    const expected = inkHeight(ctx.getImageData(0, 0, size * 2, size * 4))
+    expect(
+      Math.abs(rendered.height - expected),
+      `"g" ink ${rendered.height}px vs ${expected}px drawn whole`,
+    ).toBeLessThanOrEqual(1)
+  })
+
+  test("centers capitals when cellHeight is overridden", async () => {
+    const { top, bottom, meta } = await inkGaps("HH", { cellHeight: 24 })
+    expect(meta.cellHeight).toBe(24)
+    expect(Math.abs(top - bottom), `ink gap above ${top}px, below ${bottom}px`).toBeLessThanOrEqual(meta.dpr)
+  })
+
+  // Centering in an 8px cell puts the baseline at 10, below the cell; the clamp
+  // holds it at 7, so the capitals end one pixel above the cell's bottom edge.
+  test("clamps the baseline inside a cell shorter than the font", async () => {
+    const { bottom, height, meta } = await inkGaps("HH", { cellHeight: 8 })
+    expect(height, "capitals still draw in an 8px cell").toBeGreaterThan(0)
+    expect(bottom, "the baseline sits inside the cell").toBeGreaterThanOrEqual(meta.dpr)
   })
 
   test("accepts Uint8Array input", async () => {
@@ -337,3 +339,35 @@ describe("DOM shim discipline", () => {
     expect(typeof w!.devicePixelRatio).toBe("number")
   })
 })
+
+/** Render `text` white on black in one row and report the ink's gaps to the cell's top and bottom, in device pixels. */
+async function inkGaps(text: string, opts: { cellHeight?: number } = {}) {
+  const { png, meta } = await renderAnsiPng(`\x1b[97m${text}\x1b[0m`, {
+    cols: text.length + 2,
+    rows: 1,
+    theme: { background: "#000000" },
+    returnMeta: true,
+    ...opts,
+  })
+  const { createCanvas, loadImage } = await import("@napi-rs/canvas")
+  const image = await loadImage(Buffer.from(png))
+  const ctx = createCanvas(meta.width, meta.height).getContext("2d")
+  ctx.drawImage(image, 0, 0)
+  const { data } = ctx.getImageData(0, 0, meta.width, meta.height)
+  const rows = Array.from({ length: meta.height }, (_, y) => y).filter((y) => {
+    for (let x = 0; x < meta.width; x++) if (data[(y * meta.width + x) * 4]! > 128) return true
+    return false
+  })
+  const first = rows[0] ?? meta.height
+  const last = rows[rows.length - 1] ?? -1
+  return { top: first, bottom: meta.height - 1 - last, height: rows.length === 0 ? 0 : last - first + 1, meta }
+}
+
+/** Rows of an RGBA image that hold any bright pixel, first to last. */
+function inkHeight(image: { data: Uint8ClampedArray; width: number; height: number }): number {
+  const rows = Array.from({ length: image.height }, (_, y) => y).filter((y) => {
+    for (let x = 0; x < image.width; x++) if (image.data[(y * image.width + x) * 4]! > 128) return true
+    return false
+  })
+  return rows.length === 0 ? 0 : rows[rows.length - 1]! - rows[0]! + 1
+}
