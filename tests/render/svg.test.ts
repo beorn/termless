@@ -597,7 +597,8 @@ describe("screenshotSvg", () => {
 describe("embedded @font-face rules carry each face's weight", () => {
   test("the primary family's Regular rule is weight 400 and its Bold rule is weight 700", () => {
     const rules = [...embeddedFontFaceDefs().matchAll(/@font-face\{([^}]*)\}/g)].map((m) => m[1]!)
-    const faceOf = (file: string): string => readFileSync(join(bundledFontsDir(), file)).toString("base64").slice(0, 4096)
+    const faceOf = (file: string): string =>
+      readFileSync(join(bundledFontsDir(), file)).toString("base64").slice(0, 4096)
     const weightOf = (file: string): string | undefined => {
       const rule = rules.find((r) => r.includes(`font-family:'${BUNDLED_PRIMARY_FAMILY}'`) && r.includes(faceOf(file)))
       return rule?.match(/font-weight:(\d+)/)?.[1]
