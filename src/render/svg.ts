@@ -37,10 +37,10 @@ export function embeddedFontFaceDefs(): string {
   if (cachedFontDefs !== null) return cachedFontDefs
   const dir = bundledFontsDir()
   const faces: string[] = []
-  for (const { file, family } of BUNDLED_FONTS) {
+  for (const { file, family, weight } of BUNDLED_FONTS) {
     try {
       const b64 = readFileSync(join(dir, file)).toString("base64")
-      faces.push(`@font-face{font-family:'${family}';src:url(data:font/ttf;base64,${b64});}`)
+      faces.push(`@font-face{font-family:'${family}';font-weight:${weight};src:url(data:font/ttf;base64,${b64});}`)
     } catch {
       // a missing bundled font is non-fatal — skip it
     }

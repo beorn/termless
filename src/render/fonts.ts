@@ -35,6 +35,8 @@ export const BUNDLED_EMOJI_FAMILY = "TermlessEmoji"
 export interface BundledFont {
   file: string
   family: string
+  /** The face's CSS weight. Two faces share the primary family, so each embedded @font-face rule must say which it is. */
+  weight: 400 | 700
 }
 
 /**
@@ -42,13 +44,13 @@ export interface BundledFont {
  * symbol + emoji faces follow so per-glyph fallback resolves in that order.
  */
 export const BUNDLED_FONTS: readonly BundledFont[] = [
-  { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY },
+  { file: "JetBrainsMono-Regular.ttf", family: BUNDLED_PRIMARY_FAMILY, weight: 400 },
   // The bold face under the same family: resvg matches font-weight="bold" to it and does not
   // synthesize a bold from Regular the way Skia does, so without it every bold cell drew regular (25786).
-  { file: "JetBrainsMono-Bold.ttf", family: BUNDLED_PRIMARY_FAMILY },
-  { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY },
-  { file: "SymbolsNerdFontMono-Regular.ttf", family: BUNDLED_NERD_FAMILY },
-  { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY },
+  { file: "JetBrainsMono-Bold.ttf", family: BUNDLED_PRIMARY_FAMILY, weight: 700 },
+  { file: "NotoSansSymbols2-Regular.ttf", family: BUNDLED_SYMBOL_FAMILY, weight: 400 },
+  { file: "SymbolsNerdFontMono-Regular.ttf", family: BUNDLED_NERD_FAMILY, weight: 400 },
+  { file: "NotoEmoji-Regular.ttf", family: BUNDLED_EMOJI_FAMILY, weight: 400 },
 ]
 
 /**

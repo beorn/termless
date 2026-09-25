@@ -1,5 +1,8 @@
 import { describe, test, expect } from "vitest"
-import { screenshotSvg, rgbToHex, rgbToString } from "../../src/render/svg.ts"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import { screenshotSvg, rgbToHex, rgbToString, embeddedFontFaceDefs } from "../../src/render/svg.ts"
+import { BUNDLED_PRIMARY_FAMILY, bundledFontsDir } from "../../src/render/fonts.ts"
 import type {
   Terminal,
   Cell,
@@ -583,5 +586,25 @@ describe("screenshotSvg", () => {
     expect(darkBar?.[1]).toBeDefined()
     expect(lightBar?.[1]).toBeDefined()
     expect(darkBar?.[1]).not.toBe(lightBar?.[1])
+  })
+})
+
+/**
+ * 25786 follow-up (review2's P4): the primary family has two faces, Regular and Bold. An embedded
+ * `@font-face` rule without `font-weight` reads as normal under CSS Fonts 3, so a browser showing an
+ * animated SVG could serve regular text from whichever rule came last, the Bold face.
+ */
+describe("embedded @font-face rules carry each face's weight", () => {
+  test("the primary family's Regular rule is weight 400 and its Bold rule is weight 700", () => {
+    const rules = [...embeddedFontFaceDefs().matchAll(/@font-face\{([^}]*)\}/g)].map((m) => m[1]!)
+    const faceOf = (file: string): string => readFileSync(join(bundledFontsDir(), file)).toString("base64").slice(0, 4096)
+    const weightOf = (file: string): string | undefined => {
+      const rule = rules.find((r) => r.includes(`font-family:'${BUNDLED_PRIMARY_FAMILY}'`) && r.includes(faceOf(file)))
+      return rule?.match(/font-weight:(\d+)/)?.[1]
+    }
+    expect({ regular: weightOf("JetBrainsMono-Regular.ttf"), bold: weightOf("JetBrainsMono-Bold.ttf") }).toEqual({
+      regular: "400",
+      bold: "700",
+    })
   })
 })
