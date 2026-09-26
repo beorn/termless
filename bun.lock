@@ -91,7 +91,7 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.9.1",
+      "version": "0.9.2",
       "dependencies": {
         "@napi-rs/canvas": "^1.0.2",
         "ghostty-web": "^0.4.0",

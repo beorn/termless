@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.9.2 - 2026-09-26 (`@termless/ghostty` only)
+
+### Fixed
+
+- A published `@termless/ghostty` finds the bundled fonts. They ship once, in
+  `@termless/core`, and the ghostty build (which inlines the font module into
+  its own `dist/`) now probes from where `@termless/core` resolves as well as
+  upward from itself. In 0.9.1 no ancestor of its `dist/` held them, so every
+  canvas render measured a zero-width cell and threw a `RangeError` on a
+  canvas of width 0.
+
+### Changed
+
+- A missing bundled primary font now throws, naming the path it looked at. It
+  used to warn and render 0-width. A missing symbol or emoji face still only
+  warns: a partial fallback chain still renders.
+
 ## 0.9.1 - 2026-09-03
 
 ### Changed

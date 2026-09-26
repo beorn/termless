@@ -31,6 +31,7 @@
  * @see https://github.com/mitchellh/ghostty — Ghostty (renderer source)
  */
 
+import { Blob } from "node:buffer"
 import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
@@ -408,14 +409,24 @@ let bundledFontsRegistered = false
 
 /**
  * Register the bundled fallback fonts process-wide. Idempotent — the first
- * call registers, later calls are no-ops. Missing files are skipped with a
- * warning rather than throwing: a render with a partial fallback chain still
- * beats a hard failure, and the bundled-font test pins the happy path.
+ * call registers, later calls are no-ops. A missing bold, symbol or emoji
+ * face is skipped with a warning: a render with a partial chain still beats a
+ * hard failure (Skia synthesizes bold). A missing Regular primary face throws:
+ * it sets the cell geometry, and without it the cell measures zero wide and
+ * the render fails later on a canvas of width 0, far from why.
  */
 function ensureBundledFonts(): void {
   if (bundledFontsRegistered) return
-  bundledFontsRegistered = true
   const dir = bundledFontsDir()
+  for (const { file, family, weight } of BUNDLED_FONTS) {
+    const path = join(dir, file)
+    if (!existsSync(path) && family === BUNDLED_PRIMARY_FAMILY && weight === 400) {
+      throw new Error(
+        `[termless/ghostty] the bundled primary font ${path} is missing; @termless/core ships assets/fonts, so install it beside @termless/ghostty`,
+      )
+    }
+  }
+  bundledFontsRegistered = true
   for (const { file, family } of BUNDLED_FONTS) {
     const path = join(dir, file)
     if (!existsSync(path)) {
@@ -662,11 +673,14 @@ export async function renderAnsiPng(
  * terminal and pass them to {@link renderAnsiPng} directly.
  */
 export async function renderTerminalPng(
+  // oxlint-disable-next-line typescript/no-deprecated -- renderTerminalPng takes the Terminal read contract until unterm phase A4 moves it to Emulator
   terminal: Terminal,
   opts: RenderOptions & { returnMeta: true },
 ): Promise<{ png: Uint8Array; meta: RenderMeta }>
+// oxlint-disable-next-line typescript/no-deprecated -- renderTerminalPng takes the Terminal read contract until unterm phase A4 moves it to Emulator
 export async function renderTerminalPng(terminal: Terminal, opts?: RenderOptions): Promise<Uint8Array>
 export async function renderTerminalPng(
+  // oxlint-disable-next-line typescript/no-deprecated -- renderTerminalPng takes the Terminal read contract until unterm phase A4 moves it to Emulator
   terminal: Terminal,
   opts: RenderOptions = {},
 ): Promise<Uint8Array | { png: Uint8Array; meta: RenderMeta }> {
@@ -681,9 +695,10 @@ export async function renderTerminalPng(
 
 // ── Inference helpers ──
 
+// oxlint-disable-next-line typescript/no-deprecated -- renderTerminalPng takes the Terminal read contract until unterm phase A4 moves it to Emulator
 function inferCols(terminal: Terminal): number | null {
   try {
-    const lines = terminal.getLines()
+    const lines = terminal.getRows()
     if (lines.length === 0) return null
     return lines[lines.length - 1]?.length || null
   } catch {
@@ -691,17 +706,18 @@ function inferCols(terminal: Terminal): number | null {
   }
 }
 
+// oxlint-disable-next-line typescript/no-deprecated -- renderTerminalPng takes the Terminal read contract until unterm phase A4 moves it to Emulator
 function inferRows(terminal: Terminal): number | null {
   let lineCount: number
   try {
-    lineCount = terminal.getLines().length
+    lineCount = terminal.getRows().length
     if (lineCount === 0) return null
   } catch {
     return null
   }
   try {
     const scrollback = terminal.getScrollback()
-    const viewportRows = scrollback.screenRows ?? scrollback.screenLines
+    const viewportRows = scrollback.screenRows
     if (!Number.isSafeInteger(viewportRows) || viewportRows <= 0) return lineCount
     return Math.min(lineCount, viewportRows)
   } catch {

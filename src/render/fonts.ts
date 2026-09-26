@@ -61,17 +61,42 @@ export const BUNDLED_FONTS: readonly BundledFont[] = [
  * In dev the file sits two levels deep (`src/render/`), in a published build
  * one level deep (`dist/`). We probe upward for the first ancestor that has
  * an `assets/fonts` child so both layouts resolve without a build-time guess.
+ *
+ * A published backend package (`@termless/ghostty`) bundles this module into
+ * its own `dist/`, where no ancestor holds the fonts: they ship only in
+ * `@termless/core`, its peer dependency. So the probe runs again from where
+ * `@termless/core` itself resolves.
  */
 export function bundledFontsDir(): string {
-  let here = dirname(fileURLToPath(import.meta.url))
+  const found = findFontsUpward(dirname(fileURLToPath(import.meta.url))) ?? findFontsUpward(coreEntryDir())
+  if (found !== undefined) return found
+  // Fall back to the dev layout (`src/render/` → two levels up) so callers
+  // get a deterministic path even when the assets are absent.
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets", "fonts")
+}
+
+/** The first `assets/fonts` directory at `start` or up to three ancestors above it. */
+export function findFontsUpward(start: string | undefined): string | undefined {
+  if (start === undefined) return undefined
+  let here = start
   for (let i = 0; i < 4; i++) {
     const candidate = join(here, "assets", "fonts")
     if (existsSync(candidate)) return candidate
     here = dirname(here)
   }
-  // Fall back to the dev layout (`src/render/` → two levels up) so callers
-  // get a deterministic path even when the assets are absent.
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets", "fonts")
+  return undefined
+}
+
+/** The directory `@termless/core`'s entry resolves to from here, or undefined when it does not resolve. */
+function coreEntryDir(): string | undefined {
+  let entry: string
+  try {
+    entry = import.meta.resolve("@termless/core")
+  } catch {
+    // silent-fallback-allow: @termless/core not installed beside this copy leaves the upward probe as the only place to look; a render that then lacks its primary face throws naming the path
+    return undefined
+  }
+  return entry.startsWith("file:") ? dirname(fileURLToPath(entry)) : undefined
 }
 
 /**
