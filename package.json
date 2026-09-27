@@ -55,7 +55,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && tsdown -W",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ci": "bun vitest run",
