@@ -105,6 +105,10 @@ export interface TtyManifest {
   rows: number
   /** Total duration, integer µs. */
   durationMicros: number
+  /** Why an interactive capture ended, when its producer recorded the reason. */
+  ended?: RecordingEnding["reason"]
+  /** Bound requested by the caller, in ms, when one applied. */
+  timeoutMs?: number
   /** Whether the frames projection is regenerable from io. */
   reproducible: boolean
   /**
@@ -127,6 +131,12 @@ export interface TtyManifest {
   members: TtyMember[]
   /** The ONE open segment of a live bundle. */
   tail?: TtyTail
+}
+
+/** Optional ending metadata for an interactive capture. */
+export interface RecordingEnding {
+  reason: "child-exit" | "user-stop" | "signal" | "timeout" | "wait-for" | "wait-for-timeout" | "wait-for-exit"
+  timeoutMs?: number
 }
 
 /** The skip tally of a read: journal events that map to no Recording track. Tallied, never silent. */
@@ -169,6 +179,8 @@ export interface WriteRecordingOptions {
    * when the recording carries no rasters on disk.
    */
   pngSourceDir?: string
+  /** Ending metadata for a capture written into the bundle manifest. */
+  ending?: RecordingEnding
 }
 
 // =============================================================================
@@ -1103,7 +1115,11 @@ export function loadRecording(path: string): IoRecording {
 // =============================================================================
 
 /** Serialize a Recording into the member map + manifest of an at-rest bundle. */
-function serializeRecording(recording: Recording, pngSourceDir?: string): Map<string, Uint8Array> {
+function serializeRecording(
+  recording: Recording,
+  pngSourceDir?: string,
+  ending?: RecordingEnding,
+): Map<string, Uint8Array> {
   const encoder = new TextEncoder()
   const files = new Map<string, Uint8Array>()
   const members: TtyMember[] = []
@@ -1137,6 +1153,8 @@ function serializeRecording(recording: Recording, pngSourceDir?: string): Map<st
     cols: recording.cols,
     rows: recording.rows,
     durationMicros: recording.durationMicros,
+    ...(ending ? { ended: ending.reason } : {}),
+    ...(ending?.timeoutMs !== undefined ? { timeoutMs: ending.timeoutMs } : {}),
     reproducible: recording.provenance.reproducible,
     ...(fingerprint !== undefined ? { fingerprint } : {}),
     members,
@@ -1250,7 +1268,7 @@ export function writeRecording(
 ): void {
   const files = isIoRecording(recording)
     ? serializeIoRecording(recording)
-    : serializeRecording(recording, options.pngSourceDir)
+    : serializeRecording(recording, options.pngSourceDir, options.ending)
   writeBundleFiles(path, files)
 }
 
