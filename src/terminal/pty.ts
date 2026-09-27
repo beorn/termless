@@ -88,6 +88,7 @@ function ignoresSigterm(pid: number): boolean | null {
         "TermlessSignalProbe",
       )
     }
+    // silent-fallback-allow: ENOENT is the ordinary race with child exit; any other read failure is warned above, and null keeps the full TERM grace
     return null
   }
 }
