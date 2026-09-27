@@ -135,24 +135,24 @@ $ termless record --compat -o c.png -- bun km view ~/Vault
 
 ### Options
 
-| Option                   | Description                                                                         | Default     |
-| ------------------------ | ----------------------------------------------------------------------------------- | ----------- |
-| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`   |
-| `--renderer <kind>`      | Raster renderer: `resvg`, `swash`, `canvas`, `browser`, or `auto`                   | `auto`      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
-| `--cols <n>`             | Terminal columns                                                                    | `80`        |
-| `--rows <n>`             | Terminal rows                                                                       | `30`        |
-| `--scale <n>`            | Raster resolution multiplier for `.gif`/`.apng`/`.png` — `1` native, `2` retina     | `2`         |
+| Option                   | Description                                                                         | Default                                 |
+| ------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`                               |
+| `--renderer <kind>`      | Raster renderer: `resvg`, `swash`, `canvas`, `browser`, or `auto`                   | `auto`                                  |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --                                      |
+| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm                                   |
+| `--cols <n>`             | Terminal columns                                                                    | `80`                                    |
+| `--rows <n>`             | Terminal rows                                                                       | `30`                                    |
+| `--scale <n>`            | Raster resolution multiplier for `.gif`/`.apng`/`.png` — `1` native, `2` retina     | `2`                                     |
 | `--timeout <ms>`         | Interactive duration cap; with `--keys` or `--wait-for`, wait bound                 | Unbounded interactive; `5000` for waits |
-| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
-| `--text`                 | Print terminal text to stdout                                                       | off         |
-| `--chrome <style>`       | Window chrome on rendered output: `none`, `macos`, `windows`                        | `none`      |
-| `--title <text>`         | Title text in the window chrome bar                                                 | the command |
-| `--compat`               | Compat capture — record in a real desktop terminal app                              | off         |
-| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`                        | auto-detect |
-| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)                        | --          |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --                                      |
+| `--wait-for <text>`      | Interactive: stop on text; `--keys`: wait before keys (default: `content`)          | --                                      |
+| `--text`                 | Print terminal text to stdout                                                       | off                                     |
+| `--chrome <style>`       | Window chrome on rendered output: `none`, `macos`, `windows`                        | `none`                                  |
+| `--title <text>`         | Title text in the window chrome bar                                                 | the command                             |
+| `--compat`               | Compat capture — record in a real desktop terminal app                              | off                                     |
+| `--terminal <name>`      | Compat terminal app: `ghostty`, `kitty`, `iterm`, `terminal`                        | auto-detect                             |
+| `--cwd <path>`           | Working directory for the recorded command (with `--compat`)                        | --                                      |
 
 `record`'s defaults are tuned for a README-droppable artifact: the `ghostty`
 backend (truecolor + real glyph shaping), `80×30` (GitHub renders README

@@ -170,21 +170,21 @@ $ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
 
 ### Record options
 
-| Option                   | Description                                                                         | Default     |
-| ------------------------ | ----------------------------------------------------------------------------------- | ----------- |
-| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`   |
-| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                                       | `auto`      |
-| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --          |
-| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
-| `--cols <n>`             | Terminal columns                                                                    | `80`        |
-| `--rows <n>`             | Terminal rows                                                                       | `30`        |
+| Option                   | Description                                                                         | Default                                 |
+| ------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| `-o, --output <path...>` | Output path — extension picks the format, trailing `/` a folder bundle (repeatable) | `out.gif`                               |
+| `--renderer <kind>`      | Raster renderer: `canvas`, `resvg`, or `auto`                                       | `auto`                                  |
+| `-t, --tape <commands>`  | Inline tape commands (scripted mode)                                                | --                                      |
+| `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm                                   |
+| `--cols <n>`             | Terminal columns                                                                    | `80`                                    |
+| `--rows <n>`             | Terminal rows                                                                       | `30`                                    |
 | `--timeout <ms>`         | Interactive duration cap; with `--keys` or `--wait-for`, wait bound                 | Unbounded interactive; `5000` for waits |
-| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
-| `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
-| `--text`                 | Print terminal text to stdout                                                       | off         |
-| `--compat`               | Compat capture in a real desktop terminal app                                       | off         |
-| `--terminal <name>`      | Compat terminal app (with `--compat`)                                               | auto-detect |
-| `--live-chrome <style>`  | Live preview chrome: `macos`, `windows`, or `none`                                  | `macos`     |
+| `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --                                      |
+| `--wait-for <text>`      | Interactive: stop on text; `--keys`: wait before keys (default: `content`)          | --                                      |
+| `--text`                 | Print terminal text to stdout                                                       | off                                     |
+| `--compat`               | Compat capture in a real desktop terminal app                                       | off                                     |
+| `--terminal <name>`      | Compat terminal app (with `--compat`)                                               | auto-detect                             |
+| `--live-chrome <style>`  | Live preview chrome: `macos`, `windows`, or `none`                                  | `macos`                                 |
 
 `record`'s defaults yield a README-droppable artifact: backend `ghostty`,
 `80×30`, ~12 fps, and a ~300-frame cap.

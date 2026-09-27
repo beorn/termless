@@ -16,7 +16,7 @@ const longLivedChild = 'process.stdout.write("boot\\n"); setTimeout(() => {}, 10
 
 function record(output: string, options: string[], childScript: string, timeout = 6000) {
   return spawnSync(
-    process.execPath,
+    "bun",
     [cli, "record", ...options, "--live-chrome", "none", "-o", output, "--", process.execPath, "-e", childScript],
     { encoding: "utf8", timeout },
   )
@@ -62,6 +62,22 @@ describe("interactive record timeout", () => {
       const { header, events } = readCast(output)
       expect(header.ended).toBe("wait-for")
       expect(events.some((event) => event[2].includes("ready"))).toBe(true)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("reports an early child exit without claiming the timeout elapsed", { timeout: 10_000 }, () => {
+    const dir = mkdtempSync(join(tmpdir(), "termless-record-early-exit-"))
+    const output = join(dir, "session.cast")
+    try {
+      const result = record(output, ["--timeout", "1000"], 'process.stdout.write("done\\n")')
+
+      expect(result.error).toBeUndefined()
+      expect(result.status, result.stderr).toBe(0)
+      expect(readCast(output).header.ended).toBe("child-exit")
+      expect(result.stderr).toContain("Recording ended: child-exit; saved:")
+      expect(result.stderr).not.toContain("after 1000ms")
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
@@ -128,7 +144,7 @@ describe("interactive record timeout", () => {
       try {
         const result = await new Promise<{ code: number | null; stderr: string }>((resolveExit, rejectExit) => {
           const child = spawn(
-            process.execPath,
+            "bun",
             [
               cli,
               "record",

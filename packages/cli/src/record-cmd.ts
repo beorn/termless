@@ -934,9 +934,8 @@ async function interactiveRecord(
       )
       process.exitCode = 1
     } else {
-      process.stderr.write(
-        `Recording ended: ${ending.reason}${timeoutMs !== undefined ? ` after ${timeoutMs}ms` : ""}; saved: ${outputPaths.join(", ")}\n`,
-      )
+      const elapsedCap = ending.reason === "timeout" ? ` after ${timeoutMs}ms` : ""
+      process.stderr.write(`Recording ended: ${ending.reason}${elapsedCap}; saved: ${outputPaths.join(", ")}\n`)
       if (signalExitCode !== undefined) process.exitCode = signalExitCode
     }
   } finally {
