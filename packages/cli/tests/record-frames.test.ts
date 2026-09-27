@@ -25,6 +25,7 @@ function session(): CapturedSession {
     cols: 2,
     rows: 1,
     durationMs: 84,
+    ending: { reason: "child-exit" },
     command: ["demo"],
     inputEvents: [],
     outputEvents: [],
@@ -106,5 +107,18 @@ describe("record frame sidecars", () => {
       const tape = readFileSync(tapePath, "utf-8")
       expect(tape).not.toContain("Set Frames")
       expect(existsSync(join(dir, "demo.frames"))).toBe(false)
+    }))
+})
+
+// The .cast CLI regression does not exercise bundle manifest serialization.
+describe("record bundle ending metadata", () => {
+  test("writes a timed ending and its bound to both bundle encodings", async () =>
+    withTempDir(async (dir) => {
+      const captured = { ...session(), ending: { reason: "timeout" as const, timeoutMs: 1000 } }
+      for (const format of ["tty", "ttyz"] as const) {
+        const path = join(dir, `session.${format}`)
+        await writeOutputs([{ path, format }], captured, () => "")
+        expect(readBundle(path).manifest).toMatchObject({ ended: "timeout", timeoutMs: 1000 })
+      }
     }))
 })

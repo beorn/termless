@@ -115,10 +115,9 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     if (closed) return
     closed = true
 
-    // Close PTY write channel
-    proc.closePty()
-
-    // SIGTERM, then wait up to 2s, then SIGKILL
+    // Keep the PTY read channel open while the child handles SIGTERM. Closing
+    // it first drops the child's final output before a recorder can save it.
+    // SIGTERM, then wait up to 2s, then SIGKILL.
     try {
       proc.kill()
       const exited = await Promise.race([
@@ -127,9 +126,12 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
       ])
       if (!exited) {
         proc.kill(9) // SIGKILL
+        await proc.exited
       }
     } catch {
       // Ignore cleanup errors
+    } finally {
+      proc.closePty()
     }
   }
 

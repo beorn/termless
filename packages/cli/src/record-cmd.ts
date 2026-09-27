@@ -430,6 +430,8 @@ async function interactiveRecord(
     title?: string
     liveChrome?: ChromeStyle
     scale: number
+    timeout?: number
+    waitFor?: string
   },
 ): Promise<void> {
   const shell = process.env.SHELL ?? "bash"
@@ -453,6 +455,7 @@ async function interactiveRecord(
   const liveChrome: ChromeStyle = opts.liveChrome ?? "macos"
   const targets = resolveOutputTargets(opts.output ?? [])
   const outputPaths = targets.map((t) => t.path)
+  const timeoutMs = opts.waitFor !== undefined ? (opts.timeout ?? 5000) : opts.timeout
   const termFont = detectTerminalFont()
 
   const cmdLabel = cmd.join(" ")
@@ -485,6 +488,7 @@ async function interactiveRecord(
 
   const inputEvents: Array<{ time: number; bytes: Uint8Array }> = []
   const outputEvents: Array<{ time: number; data: string }> = []
+  let waitForMatched = false
   const startTime = Date.now()
 
   // Window title with live timer (invisible in recording — only on real terminal).
@@ -602,6 +606,9 @@ async function interactiveRecord(
     outputEvents.push({ time: Date.now() - startTime, data: text })
     // Feed into headless terminal for image capture
     headlessTerminal.feed(text)
+    if (opts.waitFor !== undefined && headlessTerminal.getText().includes(opts.waitFor)) {
+      waitForMatched = true
+    }
     // Mouse-mode mirroring: snoop PTY output for `\x1b[?1000h/?1002h/
     // ?1003h/?1006h/?1015h` (and their `l` disable variants). The
     // recorded program enables mouse mode when it expects mouse events;
@@ -651,6 +658,23 @@ async function interactiveRecord(
       else routePtyOutput(data)
     },
   })
+  const recordingStartTime = Date.now()
+  let ending: import("../../../src/recording/native/tty-format.ts").RecordingEnding = { reason: "child-exit" }
+  let closePromise: Promise<void> | null = null
+  const closePty = (): Promise<void> => (closePromise ??= pty.close())
+  let signalExitCode: number | undefined
+  const onSigint = () => {
+    ending = { reason: "signal" }
+    signalExitCode = 130
+    void closePty()
+  }
+  const onSigterm = () => {
+    ending = { reason: "signal" }
+    signalExitCode = 143
+    void closePty()
+  }
+  process.once("SIGINT", onSigint)
+  process.once("SIGTERM", onSigterm)
 
   // Track the latest keystroke label for overlay
   let currentKeystrokeLabel = ""
@@ -751,7 +775,8 @@ async function interactiveRecord(
       const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk)
 
       if (classifyRecorderInput(bytes) === "stop") {
-        void pty.close()
+        ending = { reason: "user-stop" }
+        void closePty()
         return
       }
 
@@ -775,14 +800,29 @@ async function interactiveRecord(
     }
     process.stdin.on("data", stdinHandler)
 
-    // Wait for PTY to exit
-    await new Promise<void>((resolveExit) => {
+    // A requested timeout is a capture duration. With --wait-for, it bounds
+    // the wait for visible terminal text. A plain interactive recording has
+    // no deadline and still runs until the user or child ends it.
+    await new Promise<void>((resolve, reject) => {
       const check = setInterval(() => {
-        if (!pty.alive) {
+        const finish = (close: Promise<void> | null) => {
           clearInterval(check)
-          resolveExit()
+          if (close) void close.then(resolve, reject)
+          else resolve()
         }
-      }, 100)
+        if (ending.reason === "signal" || ending.reason === "user-stop") {
+          finish(closePromise)
+        } else if (opts.waitFor !== undefined && waitForMatched) {
+          ending = { reason: "wait-for", timeoutMs }
+          finish(pty.alive ? closePty() : closePromise)
+        } else if (!pty.alive) {
+          if (opts.waitFor !== undefined) ending = { reason: "wait-for-exit", timeoutMs }
+          finish(closePromise)
+        } else if (timeoutMs !== undefined && Date.now() - recordingStartTime >= timeoutMs) {
+          ending = { reason: opts.waitFor !== undefined ? "wait-for-timeout" : "timeout", timeoutMs }
+          finish(closePty())
+        }
+      }, 25)
     })
     rawOsc8Gate?.end()
 
@@ -865,6 +905,7 @@ async function interactiveRecord(
       cols: gridCols,
       rows: gridRows,
       durationMs,
+      ending,
       command: cmd,
       inputEvents,
       outputEvents,
@@ -886,12 +927,26 @@ async function interactiveRecord(
       frameTrace: { enabled: opts.frames !== false, dir: opts.framesDir },
       eventsToTape: (s, context) => eventsToTape(s.inputEvents, s.command.join(" "), raw, context?.tape),
     })
+    if (ending.reason === "wait-for-timeout" || ending.reason === "wait-for-exit") {
+      const why = ending.reason === "wait-for-timeout" ? `within ${timeoutMs}ms` : "before the child exited"
+      process.stderr.write(
+        `Error: --wait-for ${JSON.stringify(opts.waitFor)} was not visible ${why}; saved recording: ${outputPaths.join(", ")}\n`,
+      )
+      process.exitCode = 1
+    } else {
+      const elapsedCap = ending.reason === "timeout" ? ` after ${timeoutMs}ms` : ""
+      process.stderr.write(`Recording ended: ${ending.reason}${elapsedCap}; saved: ${outputPaths.join(", ")}\n`)
+      if (signalExitCode !== undefined) process.exitCode = signalExitCode
+    }
   } finally {
     // Best-effort cleanup for the unhappy path (exception before teardown).
     clearInterval(titleTimer)
     if (frameTimer) clearInterval(frameTimer)
     if (stdinHandler) process.stdin.removeListener("data", stdinHandler)
     if (hostResizeHandler) process.stdout.removeListener("resize", hostResizeHandler)
+    process.removeListener("SIGINT", onSigint)
+    process.removeListener("SIGTERM", onSigterm)
+    if (pty.alive || closePromise) await closePty()
     if (process.stdin.isTTY) {
       try {
         process.stdin.setRawMode(false)
@@ -981,7 +1036,7 @@ async function recordAction(
     backend?: string
     cols: number
     rows: number
-    timeout: number
+    timeout?: number
     text?: boolean
     keys?: string
     waitFor?: string
@@ -1075,14 +1130,14 @@ async function recordAction(
         cols: opts.cols,
         rows: opts.rows,
         waitFor: opts.waitFor ?? "content",
-        timeout: opts.timeout,
+        timeout: opts.timeout ?? 5000,
       })
       const keys = opts.keys.split(",").map((k: string) => k.trim())
       for (const key of keys) {
         terminal.press(key)
         await new Promise((r) => setTimeout(r, 50))
       }
-      await terminal.waitForStable(200, opts.timeout)
+      await terminal.waitForStable(200, opts.timeout ?? 5000)
       const targets = resolveOutputTargets(opts.output ?? [])
       // Window chrome for the still — `--title` defaults to the command label.
       const stillChrome: SvgScreenshotOptions =
@@ -1132,6 +1187,8 @@ async function recordAction(
     title: opts.title,
     liveChrome: liveChromeStyle,
     scale,
+    timeout: opts.timeout,
+    waitFor: opts.waitFor,
   })
 }
 
@@ -1167,7 +1224,11 @@ export function registerRecordCommand(program: Command): void {
       parseNum,
       DEFAULT_SCALE,
     )
-    .option("--timeout <ms>", "Wait timeout in ms", parseNum, 5000)
+    .option(
+      "--timeout <ms>",
+      "Interactive duration cap (unbounded if omitted); --keys/--wait-for wait bound (default 5000ms)",
+      parseNum,
+    )
     .option("--text", "Print terminal text to stdout")
     .option("--keys <keys>", "Comma-separated key names to press, then capture a still")
     .option("--wait-for <text>", "Wait for text before pressing keys")
