@@ -149,4 +149,25 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       await term.close()
     }
   })
+
+  /**
+   * @failure Interactive shells ignore SIGTERM, so close waited for SIGKILL's full 2-second deadline.
+   * @level l2
+   * @consumer createTerminal.close(), including interactive `termless record`.
+   */
+  test("close hangs up an interactive shell before the kill deadline", async () => {
+    const term = createXterm()
+    try {
+      await term.spawn(["bash", "--norc", "-i"], { env: { PS1: "CLOSE-READY> " } })
+      await expect(term.screen).toContainText("CLOSE-READY>", { timeout: 5000 })
+      expect(term.alive).toBe(true)
+
+      const started = performance.now()
+      await term.close()
+      // The broken path takes >= 2 s; leave room for shared-host scheduling.
+      expect(performance.now() - started).toBeLessThan(1500)
+    } finally {
+      await term.close()
+    }
+  })
 })

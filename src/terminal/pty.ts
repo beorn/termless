@@ -32,7 +32,7 @@ export interface PtyHandle {
   readonly alive: boolean
   /** Exit info string (e.g., "exit=0") when process has exited, null otherwise. */
   readonly exitInfo: string | null
-  /** Gracefully close the PTY: SIGTERM, wait 2s, SIGKILL if needed. */
+  /** Gracefully close the PTY: SIGTERM, then SIGHUP, then SIGKILL if needed. */
   close(): Promise<void>
 }
 
@@ -117,16 +117,30 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
 
     // Keep the PTY read channel open while the child handles SIGTERM. Closing
     // it first drops the child's final output before a recorder can save it.
-    // SIGTERM, then wait up to 2s, then SIGKILL.
+    // Interactive shells ignore SIGTERM but exit on SIGHUP. Give TERM handlers
+    // a short chance to flush output, then hang up before the KILL deadline.
+    async function exitedWithin(ms: number): Promise<boolean> {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        return await Promise.race([
+          proc.exited.then(() => true),
+          new Promise<false>((resolve) => {
+            timer = setTimeout(() => resolve(false), ms)
+          }),
+        ])
+      } finally {
+        if (timer !== undefined) clearTimeout(timer)
+      }
+    }
+
     try {
       proc.kill()
-      const exited = await Promise.race([
-        proc.exited.then(() => true as const),
-        new Promise<false>((resolve) => setTimeout(() => resolve(false), 2000)),
-      ])
-      if (!exited) {
-        proc.kill(9) // SIGKILL
-        await proc.exited
+      if (!(await exitedWithin(100))) {
+        proc.kill(1) // SIGHUP
+        if (!(await exitedWithin(1900))) {
+          proc.kill(9) // SIGKILL
+          await proc.exited
+        }
       }
     } catch {
       // Ignore cleanup errors

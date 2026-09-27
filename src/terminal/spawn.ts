@@ -173,7 +173,7 @@ function spawnNodePty(options: PortablePtySpawnOptions): PortablePtyProcess {
     },
     kill(signal?: number): void {
       // node-pty uses string signals
-      const sig = signal === 9 ? "SIGKILL" : "SIGTERM"
+      const sig = signal === 1 ? "SIGHUP" : signal === 9 ? "SIGKILL" : "SIGTERM"
       try {
         ptyProcess.kill(sig)
       } catch {
