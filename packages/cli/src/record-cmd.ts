@@ -1231,7 +1231,7 @@ export function registerRecordCommand(program: Command): void {
     )
     .option("--text", "Print terminal text to stdout")
     .option("--keys <keys>", "Comma-separated key names to press, then capture a still")
-    .option("--wait-for <text>", "Wait for text before pressing keys")
+    .option("--wait-for <text>", "Stop interactive capture on visible text; with --keys, wait before pressing keys")
     .option("--raw", "Preserve terminal protocol responses (skip filtering)")
     .option("--show-keys", "Overlay keystroke badges on image frames")
     .option("--frames-dir <path>", "Frame trace sidecar directory for .tape output")
