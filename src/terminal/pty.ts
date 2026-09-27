@@ -6,6 +6,8 @@
  * (via node-pty optional peer dependency).
  */
 
+import { readFileSync } from "node:fs"
+import { basename } from "node:path"
 import { spawnPortablePty, type PortablePtyProcess } from "./spawn.ts"
 import type { Size } from "../io/picture.ts"
 import type { SpawnOptions } from "../io/session.ts"
@@ -32,7 +34,7 @@ export interface PtyHandle {
   readonly alive: boolean
   /** Exit info string (e.g., "exit=0") when process has exited, null otherwise. */
   readonly exitInfo: string | null
-  /** Gracefully close the PTY: SIGTERM, then SIGHUP, then SIGKILL if needed. */
+  /** Gracefully close the PTY: SIGTERM, SIGHUP if TERM is ignored, then SIGKILL if needed. */
   close(): Promise<void>
 }
 
@@ -67,6 +69,35 @@ export type PtyShellOptions = Omit<SpawnOptions, "size" | "command"> &
     /** Callback invoked when the child process writes output data. */
     onData: (data: Uint8Array) => void
   }
+
+/** Linux exposes ignored signals on the child; `null` means the fact is unavailable. */
+function ignoresSigterm(pid: number): boolean | null {
+  if (process.platform !== "linux") return null
+  const statusPath = `/proc/${pid}/status`
+  try {
+    const mask = /^SigIgn:\s*([0-9a-f]+)\s*$/im.exec(readFileSync(statusPath, "utf8"))?.[1]
+    if (mask !== undefined) return (BigInt(`0x${mask}`) & (1n << 14n)) !== 0n
+    process.emitWarning(`${statusPath} has no SigIgn fact; retaining the full TERM grace`, "TermlessSignalProbe")
+    return null
+  } catch (error) {
+    // ENOENT is an ordinary race with child exit. Other failures are reported;
+    // the fallback keeps the full TERM grace unless argv names a shell.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.emitWarning(
+        `cannot read ${statusPath}; retaining the full TERM grace: ${String(error)}`,
+        "TermlessSignalProbe",
+      )
+    }
+    return null
+  }
+}
+
+/** Fallback for platforms without /proc; never classify `bash -c <script>` as interactive. */
+function isInteractiveShell(argv: readonly string[]): boolean {
+  const shell = basename(argv[0] ?? "")
+  if (!["bash", "zsh", "fish", "sh", "ksh", "csh", "tcsh"].includes(shell)) return false
+  return argv.length === 1 || argv.slice(1).some((arg) => arg === "--interactive" || /^-[^-]*i/.test(arg))
+}
 
 // ── Implementation ──
 
@@ -117,8 +148,8 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
 
     // Keep the PTY read channel open while the child handles SIGTERM. Closing
     // it first drops the child's final output before a recorder can save it.
-    // Interactive shells ignore SIGTERM but exit on SIGHUP. Give TERM handlers
-    // a short chance to flush output, then hang up before the KILL deadline.
+    // Interactive shells ignore SIGTERM but exit on SIGHUP. A child that catches
+    // TERM still needs the original 2 s to flush its final output.
     async function exitedWithin(ms: number): Promise<boolean> {
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
@@ -134,13 +165,14 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     }
 
     try {
+      const ignored = ignoresSigterm(proc.pid)
       proc.kill()
-      if (!(await exitedWithin(100))) {
+      if (ignored === true || (ignored === null && isInteractiveShell(argv))) {
         proc.kill(1) // SIGHUP
-        if (!(await exitedWithin(1900))) {
-          proc.kill(9) // SIGKILL
-          await proc.exited
-        }
+      }
+      if (!(await exitedWithin(2000))) {
+        proc.kill(9) // SIGKILL
+        await proc.exited
       }
     } catch {
       // Ignore cleanup errors

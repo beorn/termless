@@ -7,6 +7,7 @@
 
 import { describe, test, expect } from "vitest"
 import { createTerminal } from "../src/terminal/terminal.ts"
+import { spawnPty } from "../src/terminal/pty.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
 import "../packages/viterm/src/matchers.ts"
 
@@ -168,6 +169,35 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       expect(performance.now() - started).toBeLessThan(1500)
     } finally {
       await term.close()
+    }
+  })
+
+  /**
+   * @failure A 100 ms hangup cut off a slow TERM handler's final output; the immediate-output row missed it.
+   * @level l2
+   * @consumer PTY close and interactive recording final-output capture.
+   */
+  test("close keeps output from a TERM handler that takes 500 ms", { timeout: 10_000 }, async () => {
+    let output = ""
+    const pty = spawnPty({
+      command: ["bash", "-c", "trap 'sleep 0.5; echo BYE-SLOW; exit 0' TERM; echo ready; while :; do sleep 0.05; done"],
+      cols: 80,
+      rows: 24,
+      env: {},
+      onData: (data) => {
+        output += new TextDecoder().decode(data)
+      },
+    })
+    try {
+      const deadline = Date.now() + 5000
+      while (!output.includes("ready") && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      expect(output).toContain("ready")
+      await pty.close()
+      expect(output).toContain("BYE-SLOW")
+    } finally {
+      await pty.close()
     }
   })
 })
