@@ -173,6 +173,37 @@ describe.skipIf(!hasPty)("PTY integration", () => {
   })
 
   /**
+   * @failure A caught, no-op TERM is not listed in Linux SigIgn, so a child
+   * that exits on HUP still waited for the full KILL deadline.
+   * @level l2
+   * @consumer PTY close for commands that handle TERM without exiting.
+   */
+  test("close hangs up a child with a no-op TERM handler before the kill deadline", async () => {
+    let output = ""
+    const pty = spawnPty({
+      command: ["bash", "-c", "trap : TERM; trap 'exit 0' HUP; echo ready; while :; do sleep 0.05; done"],
+      cols: 80,
+      rows: 24,
+      env: {},
+      onData: (data) => {
+        output += new TextDecoder().decode(data)
+      },
+    })
+    try {
+      const deadline = Date.now() + 5000
+      while (!output.includes("ready") && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      expect(output).toContain("ready")
+      const started = performance.now()
+      await pty.close()
+      expect(performance.now() - started).toBeLessThan(1500)
+    } finally {
+      await pty.close()
+    }
+  })
+
+  /**
    * @failure A 100 ms hangup cut off a slow TERM handler's final output; the immediate-output row missed it.
    * @level l2
    * @consumer PTY close and interactive recording final-output capture.

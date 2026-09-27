@@ -34,7 +34,7 @@ export interface PtyHandle {
   readonly alive: boolean
   /** Exit info string (e.g., "exit=0") when process has exited, null otherwise. */
   readonly exitInfo: string | null
-  /** Gracefully close the PTY: SIGTERM, SIGHUP if TERM is ignored, then SIGKILL if needed. */
+  /** Gracefully close the PTY: SIGTERM, then SIGHUP after a grace, then SIGKILL if needed. */
   close(): Promise<void>
 }
 
@@ -148,8 +148,8 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
 
     // Keep the PTY read channel open while the child handles SIGTERM. Closing
     // it first drops the child's final output before a recorder can save it.
-    // Interactive shells ignore SIGTERM but exit on SIGHUP. A child that catches
-    // TERM still needs the original 2 s to flush its final output.
+    // Interactive shells ignore SIGTERM but exit on SIGHUP. Give a child that
+    // catches TERM time to flush its final output before sending SIGHUP.
     async function exitedWithin(ms: number): Promise<boolean> {
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
@@ -167,10 +167,12 @@ export function spawnPty(options: PtySpawnOptions | PtyShellOptions): PtyHandle 
     try {
       const ignored = ignoresSigterm(proc.pid)
       proc.kill()
-      if (ignored === true || (ignored === null && isInteractiveShell(argv))) {
-        proc.kill(1) // SIGHUP
-      }
-      if (!(await exitedWithin(2000))) {
+      const immediateHup = ignored === true || (ignored === null && isInteractiveShell(argv))
+      // A no-op TERM handler is caught rather than kernel-ignored. It also
+      // needs HUP before the KILL deadline, after a bounded output grace.
+      if (!immediateHup && (await exitedWithin(1000))) return
+      proc.kill(1) // SIGHUP
+      if (!(await exitedWithin(immediateHup ? 2000 : 1000))) {
         proc.kill(9) // SIGKILL
         await proc.exited
       }
