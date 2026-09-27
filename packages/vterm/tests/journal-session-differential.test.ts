@@ -21,6 +21,7 @@
  *   converted by the `@hab/terminal-session-termless` bridge) — each must
  *   replay to completion; divergence is reported as conformance-backlog
  *   seeds, not failed, until a curated set graduates to pinned expectations.
+ * @reach fs-walk <fixture-only: optional TERMLESS_JOURNAL_DIR is an external journal corpus; bundled fixture is read by name>
  */
 
 import { readdirSync, readFileSync } from "node:fs"

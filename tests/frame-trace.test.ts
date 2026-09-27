@@ -1,3 +1,6 @@
+/**
+ * @reach fs-walk <fixture-only: frame trace files live in mkdtempSync dirs>
+ */
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -45,6 +48,7 @@ async function waitForFrames(
 
 describe("createFrameTracer", () => {
   test("captures a frame after debounce when writes arrive", async () => {
+    // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
     let onAfterWrite: ((data: Uint8Array) => void) | undefined
     const term = createTerminal({
       backend: createVt100Backend(),
@@ -85,6 +89,7 @@ describe("createFrameTracer", () => {
   test("identical buffer state yields duplicate_of without writing a new PNG", async () => {
     const dir2 = mkdtempSync(join(tmpdir(), "frame-trace-dup-"))
     try {
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -122,6 +127,7 @@ describe("createFrameTracer", () => {
   test("maxFrames cap stops further captures", async () => {
     const dir3 = mkdtempSync(join(tmpdir(), "frame-trace-cap-"))
     try {
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -179,6 +185,7 @@ describe("createFrameTracer", () => {
       }
       writeFileSync(join(dirS, "render-events.jsonl"), JSON.stringify(evA) + "\n" + JSON.stringify(evB) + "\n")
 
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -220,6 +227,7 @@ describe("createFrameTracer", () => {
   test("frames have no silvery field when no sidecar exists", async () => {
     const dirN = mkdtempSync(join(tmpdir(), "frame-trace-nosilvery-"))
     try {
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -258,6 +266,7 @@ describe("createFrameTracer", () => {
       }
       writeFileSync(join(dirD, "render-events.jsonl"), JSON.stringify(ev) + "\n")
 
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -309,6 +318,7 @@ describe("createFrameTracer", () => {
           "\n",
       )
 
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
@@ -339,6 +349,7 @@ describe("createFrameTracer", () => {
   test("framesSinceTime filters by ts", async () => {
     const dir4 = mkdtempSync(join(tmpdir(), "frame-trace-since-"))
     try {
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let hook: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),

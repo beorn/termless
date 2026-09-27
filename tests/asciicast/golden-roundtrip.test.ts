@@ -39,6 +39,7 @@
  * event on each door, superseding what used to be measured there
  * (parseAsciicast passing an unvalidated `"r"` through and decodeAsciicast
  * mis-filing it as input).
+ * @reach fs-walk vendor/termless/tests/asciicast/fixtures/**
  */
 import { describe, test, expect } from "vitest"
 import { readFileSync, readdirSync } from "node:fs"

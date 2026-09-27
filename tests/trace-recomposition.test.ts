@@ -14,6 +14,7 @@
  *  (b) `writeVisualTrace` is expressible over the canonical `Recording` noun:
  *      writing a trace via the Recording path yields a byte-identical
  *      `index.jsonl` to the legacy raw-`TraceFrame[]` path.
+ * @reach fs-walk <fixture-only: recomposed trace files live under mkdtempSync root>
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest"

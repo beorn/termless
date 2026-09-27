@@ -10,6 +10,7 @@
  * Critical invariant: `writeVisualTrace` → `loadVisualTrace` round-trips, and a
  * trace directory written by `writeVisualTrace` is byte-identical (`index.jsonl`
  * + PNGs) to the one it was copied from.
+ * @reach fs-walk <fixture-only: visual trace directories live under mkdtempSync root>
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest"

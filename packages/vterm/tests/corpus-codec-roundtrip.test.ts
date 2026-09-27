@@ -16,6 +16,7 @@
  * narrow, cursors carried across the boundary — instead of screens invented
  * by whoever wrote the test. This package is the one place that can reach
  * both the corpus and `vterm.js`.
+ * @reach fs-walk vendor/termless/corpus/libvterm/cases/**
  */
 import { describe, expect, test } from "vitest"
 import { readFileSync, readdirSync, existsSync } from "node:fs"

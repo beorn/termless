@@ -14,6 +14,7 @@
  * render tests).
  *
  * Phase 0.5 step 7 of @km/infra/mcp-tty-ghostty-backend-toggle.
+ * @reach fs-walk <fixture-only: trace files live in the mkdtempSync dir fixture>
  */
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"

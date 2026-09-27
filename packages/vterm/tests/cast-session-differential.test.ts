@@ -15,6 +15,7 @@
  *   (each replay must complete; its divergence report surfaces so a curated
  *   session set can graduate to pinned expectations). Sourcing external casts
  *   follows corpus/README.md licensing rules — no GPL/unlicensed vendoring.
+ * @reach fs-walk <fixture-only: optional TERMLESS_CAST_DIR is an external recording corpus; bundled fixture is read by name>
  */
 
 import { readdirSync, readFileSync } from "node:fs"

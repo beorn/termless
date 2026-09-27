@@ -10,6 +10,7 @@
  *
  * Scope: this repository's own docs and source, not a sibling package or the
  * hab side, which are free to use the term for their own concept.
+ * @reach fs-walk vendor/termless/README.md vendor/termless/CLAUDE.md vendor/termless/docs/** vendor/termless/src/** vendor/termless/packages/*\/src/** vendor/termless/packages/*\/README.md
  */
 
 import { describe, expect, test } from "vitest"

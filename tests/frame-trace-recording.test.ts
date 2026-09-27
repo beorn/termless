@@ -8,6 +8,7 @@
  * Recording does NOT alter the on-disk `index.jsonl` + `NNNNN.png` layout.
  * One test asserts the on-disk bytes are identical before and after
  * `toRecording()`.
+ * @reach fs-walk <fixture-only: frame trace files live in mkdtempSync dir>
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -48,6 +49,7 @@ function snapshotDir(d: string): Map<string, string> {
 
 describe("frame-trace → Recording projection", () => {
   test("toRecording() populates the frames projection", async () => {
+    // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
     let onAfterWrite: ((data: Uint8Array) => void) | undefined
     const term = createTerminal({
       backend: createVt100Backend(),
@@ -75,6 +77,7 @@ describe("frame-trace → Recording projection", () => {
   })
 
   test("projected frames carry a renderer fingerprint + content hash", async () => {
+    // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
     let onAfterWrite: ((data: Uint8Array) => void) | undefined
     const term = createTerminal({
       backend: createVt100Backend(),
@@ -108,6 +111,7 @@ describe("frame-trace → Recording projection", () => {
   test("on-disk index.jsonl + PNG layout is byte-unchanged by toRecording()", async () => {
     const isolatedDir = mkdtempSync(join(tmpdir(), "frame-trace-iso-"))
     try {
+      // oxlint-disable-next-line eslint/prefer-const -- callback captures this binding before tracer creation
       let onAfterWrite: ((data: Uint8Array) => void) | undefined
       const term = createTerminal({
         backend: createVt100Backend(),
