@@ -22,6 +22,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync, wri
 import { tmpdir } from "node:os"
 import { basename, dirname, extname, join, relative, resolve } from "node:path"
 import type { TraceFrame } from "@termless/core"
+import type { RecordingEnding } from "../../../src/recording/native/tty-format.ts"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { OutputFormat, OutputTarget } from "./output-targets.ts"
 
@@ -33,6 +34,8 @@ export interface CapturedSession {
   rows: number
   /** Total session duration in milliseconds. */
   durationMs: number
+  /** Why this capture ended, including any requested deadline. */
+  ending: RecordingEnding
   /** The command that was recorded (for `.cast` / `.tape` metadata). */
   command: string[]
   /** Keyboard input events, ordered by `time` (ms from start). */
@@ -58,6 +61,8 @@ function writeCast(path: string, session: CapturedSession): void {
     height: session.rows,
     timestamp: Math.floor(Date.now() / 1000),
     duration: session.durationMs / 1000,
+    ended: session.ending.reason,
+    ...(session.ending.timeoutMs !== undefined ? { timeoutMs: session.ending.timeoutMs } : {}),
     env: { SHELL: session.command[0] ?? "", TERM: "xterm-256color" },
   })
   const events: Array<[number, string, string]> = []
@@ -295,7 +300,7 @@ async function writeRecordingOutput(path: string, session: CapturedSession): Pro
       ...(io.length > 0 ? { io } : {}),
       provenance: { reproducible: false },
     })
-    writeRecording(path, recording, { pngSourceDir: pngDir })
+    writeRecording(path, recording, { pngSourceDir: pngDir, ending: session.ending })
   } finally {
     rmSync(pngDir, { recursive: true, force: true })
   }

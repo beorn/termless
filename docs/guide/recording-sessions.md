@@ -178,7 +178,7 @@ $ termless record -o demo.gif -o demo.cast -- bun km view ~/Vault
 | `-b, --backend <name>`   | Backend for scripted mode                                                           | vterm       |
 | `--cols <n>`             | Terminal columns                                                                    | `80`        |
 | `--rows <n>`             | Terminal rows                                                                       | `30`        |
-| `--timeout <ms>`         | Wait timeout in ms                                                                  | `5000`      |
+| `--timeout <ms>`         | Interactive duration cap; with `--keys` or `--wait-for`, wait bound                 | Unbounded interactive; `5000` for waits |
 | `--keys <keys>`          | Comma-separated key names to press, then capture a still                            | --          |
 | `--wait-for <text>`      | Wait for text before pressing keys                                                  | `content`   |
 | `--text`                 | Print terminal text to stdout                                                       | off         |
