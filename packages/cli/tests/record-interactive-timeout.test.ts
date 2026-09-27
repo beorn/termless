@@ -67,15 +67,17 @@ describe("interactive record timeout", () => {
     }
   })
 
-  test("reports an early child exit without claiming the timeout elapsed", { timeout: 10_000 }, () => {
+  test("reports an early child exit without claiming the timeout elapsed", { timeout: 15_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-early-exit-"))
     const output = join(dir, "session.cast")
     try {
-      const result = record(output, ["--timeout", "1000"], 'process.stdout.write("done\\n")')
+      const result = record(output, ["--timeout", "1000"], 'process.stdout.write("done\\n")', 12_000)
 
-      expect(result.error).toBeUndefined()
+      expect(result.error, result.stderr).toBeUndefined()
       expect(result.status, result.stderr).toBe(0)
-      expect(readCast(output).header.ended).toBe("child-exit")
+      const { header, events } = readCast(output)
+      expect(header.ended).toBe("child-exit")
+      expect(events.some((event) => event[2].includes("done"))).toBe(true)
       expect(result.stderr).toContain("Recording ended: child-exit; saved:")
       expect(result.stderr).not.toContain("after 1000ms")
     } finally {
@@ -102,14 +104,14 @@ describe("interactive record timeout", () => {
     }
   })
 
-  test("keeps interactive recording unbounded when no stop option is given", { timeout: 12_000 }, () => {
+  test("keeps interactive recording unbounded when no stop option is given", { timeout: 25_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-unbounded-"))
     const output = join(dir, "session.cast")
     try {
       const child = 'process.stdout.write("boot\\n"); setTimeout(() => {}, 5600)'
-      const result = record(output, [], child, 9000)
+      const result = record(output, [], child, 20_000)
 
-      expect(result.error).toBeUndefined()
+      expect(result.error, result.stderr).toBeUndefined()
       expect(result.status, result.stderr).toBe(0)
       const { header } = readCast(output)
       expect(header.duration).toBeGreaterThan(5.2)

@@ -817,7 +817,7 @@ async function interactiveRecord(
           finish(pty.alive ? closePty() : closePromise)
         } else if (!pty.alive) {
           if (opts.waitFor !== undefined) ending = { reason: "wait-for-exit", timeoutMs }
-          finish(closePromise)
+          finish(closePty())
         } else if (timeoutMs !== undefined && Date.now() - recordingStartTime >= timeoutMs) {
           ending = { reason: opts.waitFor !== undefined ? "wait-for-timeout" : "timeout", timeoutMs }
           finish(closePty())
@@ -946,7 +946,7 @@ async function interactiveRecord(
     if (hostResizeHandler) process.stdout.removeListener("resize", hostResizeHandler)
     process.removeListener("SIGINT", onSigint)
     process.removeListener("SIGTERM", onSigterm)
-    if (pty.alive || closePromise) await closePty()
+    await closePty()
     if (process.stdin.isTTY) {
       try {
         process.stdin.setRawMode(false)
