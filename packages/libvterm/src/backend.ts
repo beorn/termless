@@ -437,7 +437,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   const capabilities: TerminalCapabilities = {
     name: "libvterm",
-    version: "0.3.0",
+    version: "0.3.3",
     truecolor: true,
     kittyKeyboard: false,
     kittyGraphics: false,

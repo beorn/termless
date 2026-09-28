@@ -86,5 +86,7 @@ emcc -O2 \
   -s ENVIRONMENT='node' \
   -o "$WASM_DIR/libvterm.js"
 
+bun "$SCRIPT_DIR/write-receipt.ts" "$BUILD_DIR/libvterm" "$WASM_DIR/libvterm.wasm" "$WASM_DIR/libvterm.js"
+
 echo "Built: $WASM_DIR/libvterm.js + libvterm.wasm"
 echo "Done!"
