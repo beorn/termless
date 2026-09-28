@@ -5,7 +5,7 @@
  * @testonly none
  * @reach fs-walk vendor/termless/packages/vterm/node_modules/vterm.js/package.json vendor/vterm/packages/vterm/package.json
  */
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, test } from "vitest"
 import { createVtermBackend } from "../src/backend.ts"
@@ -17,10 +17,8 @@ describe("vtermEngineIdentity", () => {
     expect(engine.name).toBe("vterm.js")
     expect(engine.version).toMatch(/^\d+\.\d+\.\d+/)
     expect(existsSync(join(engine.location, "package.json")), `no manifest at ${engine.location}`).toBe(true)
-    // The real path keeps the package name in either world: an unpacked
-    // tarball under node_modules, or a workspace override whose copy is
-    // named for the package.
-    expect(engine.location).toContain("vterm.js")
+    const manifest: unknown = JSON.parse(readFileSync(join(engine.location, "package.json"), "utf8"))
+    expect(manifest).toEqual(expect.objectContaining({ name: "vterm.js", version: engine.version }))
   })
 
   test("reports the loaded engine version through the production backend", () => {
