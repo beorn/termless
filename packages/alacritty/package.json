@@ -40,7 +40,7 @@
     }
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.7.3"
+    "@napi-rs/cli": "3.10.5"
   },
   "peerDependencies": {
     "@termless/core": "^0.9.2"
