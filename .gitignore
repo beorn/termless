@@ -11,6 +11,7 @@ census-results/
 *.tsbuildinfo
 termless-vt100-rust.node
 *.node
+*.node.receipt.json
 .direnv/
 packages/*/native/target/
 packages/*/native/Cargo.lock

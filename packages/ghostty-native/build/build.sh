@@ -94,6 +94,8 @@ if [[ -z "$NODE_FILE" ]]; then
 fi
 
 cp "$NODE_FILE" "$PKG_DIR/termless-ghostty-native.node"
+ZIG_VERSION=$(nix --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command zig version)
+bun "$SCRIPT_DIR/write-receipt.ts" "$PKG_DIR/termless-ghostty-native.node" "$GHOSTTY_DIR" "$ZIG_VERSION"
 SIZE=$(du -h "$PKG_DIR/termless-ghostty-native.node" | cut -f1)
 echo "  termless-ghostty-native.node ($SIZE)"
 echo
