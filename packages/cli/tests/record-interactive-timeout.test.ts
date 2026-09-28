@@ -14,7 +14,11 @@ import { describe, expect, test } from "vitest"
 const cli = resolve(import.meta.dirname, "../bin/termless.ts")
 const longLivedChild = 'process.stdout.write("boot\\n"); setTimeout(() => {}, 10000)'
 
-function record(output: string, options: string[], childScript: string, timeout = 6000) {
+// The spawnSync timeout is a hang guard, not a latency assertion: each row's own
+// duration/ending checks carry the timing contract. A cold `bun` start of the CLI on a
+// busy CI runner took >6s (run 36393893027 windows; 36319227249, 36317858271 ubuntu)
+// for a recording that takes ~1.4s locally, so the guard matches the early-exit row's 12s.
+function record(output: string, options: string[], childScript: string, timeout = 12_000) {
   return spawnSync(
     "bun",
     [cli, "record", ...options, "--live-chrome", "none", "-o", output, "--", process.execPath, "-e", childScript],
@@ -31,7 +35,7 @@ function readCast(output: string): { header: Record<string, unknown>; events: Ar
 }
 
 describe("interactive record timeout", () => {
-  test("stops a long-running child and saves its output at the requested deadline", { timeout: 10_000 }, () => {
+  test("stops a long-running child and saves its output at the requested deadline", { timeout: 15_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-timeout-"))
     const output = join(dir, "session.cast")
     try {
@@ -49,7 +53,7 @@ describe("interactive record timeout", () => {
     }
   })
 
-  test("stops after --wait-for text is visible and saves the recording", { timeout: 10_000 }, () => {
+  test("stops after --wait-for text is visible and saves the recording", { timeout: 15_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-wait-match-"))
     const output = join(dir, "session.cast")
     try {
@@ -85,7 +89,7 @@ describe("interactive record timeout", () => {
     }
   })
 
-  test("writes the artifact and reports an unmatched --wait-for", { timeout: 10_000 }, () => {
+  test("writes the artifact and reports an unmatched --wait-for", { timeout: 15_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-wait-miss-"))
     const output = join(dir, "session.cast")
     try {
@@ -121,7 +125,7 @@ describe("interactive record timeout", () => {
     }
   })
 
-  test("reports a timed image-only capture on stderr", { timeout: 10_000 }, () => {
+  test("reports a timed image-only capture on stderr", { timeout: 15_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-image-timeout-"))
     const output = join(dir, "session.svg")
     try {
