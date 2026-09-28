@@ -14,6 +14,9 @@ termless-vt100-rust.node
 .direnv/
 packages/*/native/target/
 packages/*/native/Cargo.lock
+!packages/alacritty/native/Cargo.lock
+!packages/vt100-rust/native/Cargo.lock
+!packages/wezterm/native/Cargo.lock
 .termless-cache/
 sites/terminfo.dev/
 

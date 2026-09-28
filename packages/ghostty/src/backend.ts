@@ -25,6 +25,9 @@
  */
 
 import { Ghostty, type GhosttyTerminal, type GhosttyCell, CellFlags } from "ghostty-web"
+import { createHash } from "node:crypto"
+import { readFileSync, realpathSync } from "node:fs"
+import { resolveGhosttyWebWasm } from "./load-native.ts"
 import type {
   TerminalBackend,
   TerminalOptions,
@@ -54,6 +57,13 @@ import type { RenderOptions } from "./render.ts"
 
 let sharedGhostty: Ghostty | null = null
 let initPromise: Promise<Ghostty> | null = null
+let loadedWasm: { path: string; sha256: string } | null = null
+
+/** Internal measurement of the exact WASM file supplied to Ghostty.load. */
+export function loadedGhosttyWasm(): { path: string; sha256: string } {
+  if (!sharedGhostty || !loadedWasm) throw new Error("Ghostty WASM has not loaded")
+  return loadedWasm
+}
 
 /**
  * Initialize the shared Ghostty WASM module. Safe to call multiple times —
@@ -68,8 +78,17 @@ export async function initGhostty(): Promise<Ghostty> {
   if (initPromise) return initPromise
 
   ;(globalThis as { self?: unknown }).self ??= globalThis
-  initPromise = Ghostty.load().then((g) => {
+  const path = realpathSync(resolveGhosttyWebWasm())
+  const bytes = readFileSync(path)
+  const sha256 = createHash("sha256").update(bytes).digest("hex")
+  // ghostty-web's path loader falls through to fetch() in Node/Vitest. A data
+  // URL supplies these exact measured bytes in both Bun and Node.
+  initPromise = Ghostty.load(`data:application/wasm;base64,${bytes.toString("base64")}`).then((g) => {
+    if (createHash("sha256").update(readFileSync(path)).digest("hex") !== sha256) {
+      throw new Error(`Ghostty WASM changed while loading: ${path}`)
+    }
     sharedGhostty = g
+    loadedWasm = { path, sha256 }
     return g
   })
 
@@ -84,6 +103,7 @@ export async function initGhostty(): Promise<Ghostty> {
 export function _resetSharedForTesting(): void {
   sharedGhostty = null
   initPromise = null
+  loadedWasm = null
 }
 
 // ═══════════════════════════════════════════════════════

@@ -18,3 +18,4 @@ if [[ ! -f "$source_file" ]]; then
   exit 1
 fi
 cp "$source_file" "$2"
+bun "$(dirname "$0")/write-native-build-receipt.ts" "$PWD" "$2"
