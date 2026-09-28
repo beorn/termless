@@ -41,7 +41,7 @@
     }
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.2",
+    "@napi-rs/canvas": "1.0.9",
     "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {

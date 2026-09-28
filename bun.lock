@@ -93,7 +93,7 @@
       "name": "@termless/ghostty",
       "version": "0.9.2",
       "dependencies": {
-        "@napi-rs/canvas": "^1.0.2",
+        "@napi-rs/canvas": "1.0.9",
         "ghostty-web": "^0.4.0",
       },
       "peerDependencies": {
@@ -2035,7 +2035,7 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
-    "@termless/swash-render/@termless/core": ["@termless/core@root:", {}],
+    "@termless/ghostty/@termless/core": ["@termless/core@root:", {}],
 
     "@verdaccio/logger-prettify/pino-abstract-transport": ["pino-abstract-transport@1.2.0", "", { "dependencies": { "readable-stream": "^4.0.0", "split2": "^4.0.0" } }, "sha512-Guhh8EZfPCfH+PMXAb6rKOjGQEoy0xlAIn+irODG5kgfYV+BQ0rGYYWTIel3P5mmyXqkYkPmdIkywsn6QKUR1Q=="],
 
