@@ -320,18 +320,25 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
       const style = ext.underlineStyle as number | undefined
       let color: Color | null = null
-      // Use the underlineColor getter which returns the raw 0xRRGGBB value
+      // xterm.js ExtendedAttrs.underlineColor includes color-mode bits; see
+      // AttributeData.ts CM_P16 / CM_P256 / CM_RGB in the pinned xterm.js source.
       const rawColor = ext.underlineColor as number | undefined
-      if (rawColor && rawColor !== 0) {
-        color = {
-          r: (rawColor >> 16) & 0xff,
-          g: (rawColor >> 8) & 0xff,
-          b: rawColor & 0xff,
+      if (rawColor !== undefined) {
+        switch (rawColor & 0x3000000) {
+          case 0x0000000:
+            break
+          case 0x1000000:
+          case 0x2000000:
+            color = paletteToRgb(rawColor & 0xff)
+            break
+          case 0x3000000:
+            color = truecolorToRgb(rawColor & 0xffffff)
+            break
         }
       }
       return { underlineStyle: style, underlineColor: color ?? undefined }
-    } catch {
-      return {}
+    } catch (cause) {
+      throw new Error(`Cannot read xterm.js extended attributes at row ${row}, col ${col}`, { cause })
     }
   }
 
