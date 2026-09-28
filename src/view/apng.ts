@@ -1,3 +1,9 @@
+// The package index exports this file, so it is in every consumer's program: it carries the
+// upng-js and gifenc declarations for the whole package, not only for itself.
+// oxlint-disable-next-line typescript/triple-slash-reference -- a consumer that type-checks this source needs the declaration, and an ambient module declaration cannot be imported (26287)
+/// <reference path="./upng.d.ts" />
+// oxlint-disable-next-line typescript/triple-slash-reference -- a consumer that type-checks this source needs the declaration, and an ambient module declaration cannot be imported (26287)
+/// <reference path="./gifenc.d.ts" />
 /**
  * Animated PNG (APNG) encoder for termless.
  *
