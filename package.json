@@ -82,11 +82,11 @@
     "@termless/vterm": "workspace:*",
     "@termless/wezterm": "workspace:*",
     "@termless/xtermjs": "workspace:*",
-    "@types/bun": "^1.4.2",
+    "@types/bun": "1.4.2",
     "@types/node": "^25.9.4",
     "@types/react": "^19.2.14",
     "@vitest/expect": "^4.1.10",
-    "@vue/server-renderer": "^3.5.43",
+    "@vue/server-renderer": "3.5.43",
     "loggily": "^0.10.2",
     "oxfmt": "0.38.0",
     "silvery": "^0.24.0",
@@ -95,9 +95,9 @@
     "verify-publishable": "github:beorn/verify-publishable#9f3413bcd8cafb5945d6d7486c588b6db2595a04",
     "vitepress": "^1.6.4",
     "vitepress-enrich": "^0.4.0",
-    "vitepress-plugin-llms": "^1.14.0",
+    "vitepress-plugin-llms": "1.14.0",
     "vitest": "^4.1.10",
-    "vue": "^3.5.43"
+    "vue": "3.5.43"
   },
   "peerDependencies": {
     "node-pty": ">=1.0.0"
