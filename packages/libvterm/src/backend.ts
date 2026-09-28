@@ -28,12 +28,15 @@ import type {
   TerminalOptions,
   Cell,
   Cursor,
-  TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
   Color,
 } from "../../../src/terminal/types.ts"
+import type { Mode } from "@termless/core/io"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+
+// oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
+type LegacyBackend = TerminalBackend
 
 // ===============================================================
 // Cell conversion
@@ -59,7 +62,11 @@ const ANSI_COLORS: readonly Color[] = [
 ]
 
 function indexedColor(index: number): Color {
-  if (index < 16) return ANSI_COLORS[index]!
+  if (index < 16) {
+    const color = ANSI_COLORS[index]
+    if (!color) throw new Error(`Missing ANSI color ${index}`)
+    return color
+  }
   if (index < 232) {
     const n = index - 16
     const component = (v: number) => (v === 0 ? 0 : 55 + 40 * v)
@@ -114,7 +121,9 @@ const encoder = new TextEncoder()
 
 function writeBytes(mod: LibvtermModule, ptr: number, data: Uint8Array): void {
   for (let i = 0; i < data.length; i++) {
-    mod.setValue(ptr + i, data[i]!, "i8")
+    const byte = data[i]
+    if (byte === undefined) throw new Error(`Missing input byte ${i}`)
+    mod.setValue(ptr + i, byte, "i8")
   }
 }
 
@@ -138,7 +147,7 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
  * @param mod - Optional pre-loaded LibvtermModule (for test isolation).
  *   Falls back to the shared instance from initLibvterm().
  */
-export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: LibvtermModule): TerminalBackend {
+export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: LibvtermModule): LegacyBackend {
   let vt: number = 0 // VTerm* pointer
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer
@@ -257,14 +266,13 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     if (backend.onResponse) {
       const text = new TextDecoder().decode(data)
       CSI_14t_RE.lastIndex = 0
-      let mm: RegExpExecArray | null
-      while ((mm = CSI_14t_RE.exec(text)) !== null) {
+      while (CSI_14t_RE.exec(text) !== null) {
         const heightPx = rows * CELL_H_PX
         const widthPx = cols * CELL_W_PX
         backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
       }
       CSI_18t_RE.lastIndex = 0
-      while ((mm = CSI_18t_RE.exec(text)) !== null) {
+      while (CSI_18t_RE.exec(text) !== null) {
         backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
@@ -373,7 +381,9 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     m._free(posPtr)
 
     return {
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       x: cursorCol,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       y: cursorRow,
       col: cursorCol,
       row: cursorRow,
@@ -382,7 +392,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     }
   }
 
-  function getMode(_mode: TerminalMode): boolean {
+  function getMode(_mode: Mode): boolean {
     // libvterm's C API doesn't expose terminal modes directly through
     // simple function calls. A full implementation would require
     // setting up state callbacks to track mode changes.
@@ -421,8 +431,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     // libvterm doesn't maintain its own scrollback buffer --
     // scrollback is the responsibility of the embedding application.
     return {
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       viewportOffset: 0,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       totalLines: rows,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       screenLines: rows,
       viewportTop: 0,
       totalRows: rows,
@@ -449,7 +462,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     extensions: new Set<string>(),
   }
 
-  const backend: TerminalBackend = {
+  const backend: LegacyBackend = {
     name: "libvterm",
     init,
     destroy,
@@ -459,9 +472,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     getText,
     getTextRange,
     getCell,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
     getRow: getLine,
     getRows: getLines,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLines,
     getCursor,
     getMode,

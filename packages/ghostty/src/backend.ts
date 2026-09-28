@@ -33,7 +33,6 @@ import type {
   TerminalOptions,
   Cell,
   Cursor,
-  TerminalMode,
   ScrollbackState,
   TerminalCapabilities,
   Color,
@@ -41,6 +40,7 @@ import type {
   WarningExtension,
   ScreenshotOptions,
 } from "../../../src/terminal/types.ts"
+import type { Mode } from "@termless/core/io"
 // MUST come from the @termless/core package specifier, not the monorepo-
 // relative path: the warning registry is STATEFUL, and a relative import gets
 // inlined into this package's published bundle — giving ghostty a private
@@ -50,6 +50,9 @@ import { pushWarning } from "@termless/core"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { renderTerminalPng } from "./render.ts"
 import type { RenderOptions } from "./render.ts"
+
+// oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
+type LegacyBackend = TerminalBackend
 
 // ═══════════════════════════════════════════════════════
 // Shared Ghostty WASM instance
@@ -226,7 +229,7 @@ const DEFAULT_ROWS = 24
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
   ghostty?: Ghostty,
-): TerminalBackend & WarningExtension {
+): LegacyBackend & WarningExtension {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   let cols = DEFAULT_COLS
@@ -252,8 +255,8 @@ export function createGhosttyBackend(
   function parseGhosttyWarning(message: string): EmulatorWarning {
     // Classify by Ghostty's warning(category) format
     const categoryMatch = message.match(/warning\((osc|csi|esc|dcs|pm|apc|sos)\)/i)
-    if (categoryMatch) {
-      const category = categoryMatch[1]!.toUpperCase()
+    if (categoryMatch?.[1]) {
+      const category = categoryMatch[1].toUpperCase()
       return { code: `UNSUPPORTED_${category}`, message, backend: "ghostty" }
     }
 
@@ -390,14 +393,13 @@ export function createGhosttyBackend(
       // Synthesize 14t / 18t responses if ghostty-web didn't already
       // (it currently doesn't — see backend doc above).
       CSI_14t_RE.lastIndex = 0
-      let m: RegExpExecArray | null
-      while ((m = CSI_14t_RE.exec(text)) !== null) {
+      while (CSI_14t_RE.exec(text) !== null) {
         const heightPx = rows * CELL_H_PX
         const widthPx = cols * CELL_W_PX
         backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
       }
       CSI_18t_RE.lastIndex = 0
-      while ((m = CSI_18t_RE.exec(text)) !== null) {
+      while (CSI_18t_RE.exec(text) !== null) {
         backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
@@ -452,7 +454,8 @@ export function createGhosttyBackend(
   ): string {
     let line = ""
     for (let col = 0; col < cells.length; col++) {
-      const cell = cells[col]!
+      const cell = cells[col]
+      if (!cell) throw new Error(`Missing Ghostty cell at ${lineIndex}:${col}`)
       if (cell.width === 0) continue // Skip continuation cells (wide char second half)
       if (cell.grapheme_len > 0) {
         line += isScrollback
@@ -550,14 +553,16 @@ export function createGhosttyBackend(
     return {
       col: cursor.x,
       row: cursor.y,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       x: cursor.x,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       y: cursor.y,
       visible: cursor.visible,
       style: "block", // Ghostty WASM doesn't expose cursor style directly
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: Mode): boolean {
     const t = ensureTerm()
 
     switch (mode) {
@@ -600,8 +605,11 @@ export function createGhosttyBackend(
       viewportTop: scrollbackLength,
       totalRows: scrollbackLength + rows,
       screenRows: rows,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       viewportOffset: scrollbackLength,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       totalLines: scrollbackLength + rows,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       screenLines: rows,
     }
   }
@@ -651,7 +659,7 @@ export function createGhosttyBackend(
     return renderTerminalPng(backend, opts as RenderOptions | undefined)
   }
 
-  const backend: TerminalBackend & WarningExtension = {
+  const backend: LegacyBackend & WarningExtension = {
     name: "ghostty",
     init,
     destroy,
@@ -661,7 +669,9 @@ export function createGhosttyBackend(
     getText,
     getTextRange,
     getCell,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLines,
     getRow: getLine,
     getRows: getLines,
