@@ -44,7 +44,7 @@
   },
   "scripts": {
     "build:native": "cd native && cargo build --release",
-    "postbuild:native": "cp native/target/release/libtermless_wezterm_native.dylib termless-wezterm.node"
+    "postbuild:native": "bash ../../scripts/copy-native-addon.sh libtermless_wezterm_native termless-wezterm.node"
   },
   "peerDependencies": {
     "@termless/core": "^0.9.2"

@@ -24,6 +24,8 @@ PKG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 NATIVE_DIR="$PKG_DIR/native"
 GHOSTTY_DIR="$NATIVE_DIR/.ghostty-src"
 GHOSTTY_VERSION="v1.3.1"
+GHOSTTY_COMMIT="332b2aefc6e72d363aa93ab6ecfc86eeeeb5ed28"
+BUILD_JOBS="${TERMLESS_BUILD_JOBS:-2}"
 
 echo "Building @termless/ghostty-native..."
 
@@ -38,14 +40,12 @@ if [[ ! -d "$GHOSTTY_DIR" ]]; then
     https://github.com/ghostty-org/ghostty.git "$GHOSTTY_DIR"
 else
   echo "  Using cached ghostty source in $GHOSTTY_DIR"
-  # Verify we have the right version
-  CURRENT=$(cd "$GHOSTTY_DIR" && git describe --tags --exact-match 2>/dev/null || echo "unknown")
-  if [[ "$CURRENT" != "$GHOSTTY_VERSION" ]]; then
-    echo "  Version mismatch ($CURRENT != $GHOSTTY_VERSION), re-cloning..."
-    rm -rf "$GHOSTTY_DIR"
-    git clone --depth 1 --branch "$GHOSTTY_VERSION" \
-      https://github.com/ghostty-org/ghostty.git "$GHOSTTY_DIR"
-  fi
+fi
+
+CURRENT_COMMIT=$(git -C "$GHOSTTY_DIR" rev-parse HEAD)
+if [[ "$CURRENT_COMMIT" != "$GHOSTTY_COMMIT" ]]; then
+  echo "ERROR: Ghostty source is $CURRENT_COMMIT; expected $GHOSTTY_VERSION at $GHOSTTY_COMMIT" >&2
+  exit 1
 fi
 
 # ─── Phase 2: Build N-API bindings ───────────────────────
@@ -61,7 +61,7 @@ cd "$NATIVE_DIR"
 # Ghostty requires specific Zig and SDK versions that its flake provides.
 # We unset SDKROOT/DEVELOPER_DIR so zig finds the system SDK via xcrun
 # (ghostty's build.zig eagerly evaluates XCFramework targets on macOS).
-nix develop "$GHOSTTY_DIR" --command bash -c "unset SDKROOT DEVELOPER_DIR; zig build --release=fast" || {
+nix --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command bash -c "unset SDKROOT DEVELOPER_DIR; zig build -j$BUILD_JOBS --release=fast" || {
   echo
   echo "ERROR: Failed to build N-API bindings."
   echo

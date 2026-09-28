@@ -21,17 +21,24 @@ echo "No compilation needed — kitty must be installed separately."
 echo ""
 
 # Find kitty binary
-KITTY=""
-for path in \
-  "/Applications/kitty.app/Contents/MacOS/kitty" \
-  "/usr/local/bin/kitty" \
-  "/usr/bin/kitty" \
-  "/opt/homebrew/bin/kitty"; do
-  if [ -x "$path" ]; then
-    KITTY="$path"
-    break
-  fi
-done
+KITTY="${KITTY_BINARY:-}"
+if [ -n "$KITTY" ] && [ ! -x "$KITTY" ]; then
+  echo "ERROR: KITTY_BINARY is not executable: $KITTY" >&2
+  exit 1
+fi
+
+if [ -z "$KITTY" ]; then
+  for path in \
+    "/Applications/kitty.app/Contents/MacOS/kitty" \
+    "/usr/local/bin/kitty" \
+    "/usr/bin/kitty" \
+    "/opt/homebrew/bin/kitty"; do
+    if [ -x "$path" ]; then
+      KITTY="$path"
+      break
+    fi
+  done
+fi
 
 if [ -z "$KITTY" ]; then
   KITTY=$(which kitty 2>/dev/null || true)
@@ -47,12 +54,14 @@ if [ -z "$KITTY" ] || [ ! -x "$KITTY" ]; then
 fi
 
 echo "Found kitty: $KITTY"
+"$KITTY" --version
 
 # Verify kitty can import its fast_data_types module
 echo "Verifying kitty Python environment..."
-if ! verify_output=$("$KITTY" +runpy "from kitty.fast_data_types import Screen; print('OK')" 2>/dev/null) ||
+if ! verify_output=$("$KITTY" +runpy "from kitty.fast_data_types import Screen; print('OK')" 2>&1) ||
   ! grep -q OK <<< "$verify_output"; then
   echo "ERROR: kitty's Python environment is not working."
+  echo "$verify_output" >&2
   echo "Try reinstalling kitty: brew reinstall --cask kitty"
   exit 1
 fi
@@ -68,6 +77,7 @@ echo "Running smoke test..."
 RESULT=$("$KITTY" +runpy "import sys; sys.path.insert(0, '$SCRIPT_DIR'); import bridge; bridge.main()" <<'EOF'
 {"op":"init","cols":80,"rows":24}
 {"op":"feed","data":"SGVsbG8="}
+{"op":"snapshot"}
 {"op":"quit"}
 EOF
 )

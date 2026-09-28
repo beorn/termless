@@ -8,19 +8,31 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PKG_DIR="$(dirname "$SCRIPT_DIR")"
-BUILD_DIR="$SCRIPT_DIR/tmp"
+BUILD_DIR="${TERMLESS_LIBVTERM_BUILD_DIR:-$SCRIPT_DIR/tmp}"
 WASM_DIR="$PKG_DIR/wasm"
+LIBVTERM_TAG="v0.3.3"
+LIBVTERM_COMMIT="9d6d2112335080312ef8c36667fa717ded4f7daf"
 
 # Clone libvterm if not present
 if [ ! -d "$BUILD_DIR/libvterm" ]; then
   echo "Cloning libvterm..."
   mkdir -p "$BUILD_DIR"
-  git clone https://github.com/neovim/libvterm.git "$BUILD_DIR/libvterm"
+  git clone --depth 1 --branch "$LIBVTERM_TAG" \
+    https://github.com/neovim/libvterm.git "$BUILD_DIR/libvterm"
 fi
 
 cd "$BUILD_DIR/libvterm"
+ACTUAL_COMMIT="$(git rev-parse HEAD)"
+if [ "$ACTUAL_COMMIT" != "$LIBVTERM_COMMIT" ]; then
+  echo "ERROR: libvterm source is $ACTUAL_COMMIT; expected $LIBVTERM_TAG at $LIBVTERM_COMMIT" >&2
+  exit 1
+fi
 
 echo "Building libvterm with Emscripten..."
+
+# Release source keeps encoding tables as .tbl files; the upstream Makefile
+# generates the C includes before compiling encoding.c.
+make src/encoding/DECdrawing.inc src/encoding/uk.inc src/fullwidth.inc
 
 # Compile all libvterm source files to object files
 SOURCES=(
@@ -41,6 +53,7 @@ for src in "${SOURCES[@]}"; do
   obj="$BUILD_DIR/obj/$(basename "$src" .c).o"
   emcc -O2 -I include -c "$src" -o "$obj"
 done
+emcc -O2 -I include -c "$SCRIPT_DIR/flat-api.c" -o "$BUILD_DIR/obj/flat-api.o"
 
 # Link into WASM module with exported functions
 mkdir -p "$WASM_DIR"
@@ -58,6 +71,8 @@ emcc -O2 \
     "_vterm_screen_enable_altscreen",
     "_vterm_screen_get_cell",
     "_vterm_screen_get_text",
+    "_termless_vterm_screen_get_cell_flat",
+    "_termless_vterm_screen_get_text_flat",
     "_vterm_state_get_cursorpos",
     "_vterm_obtain_state",
     "_vterm_screen_set_callbacks",

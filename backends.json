@@ -5,7 +5,7 @@
     "xtermjs": {
       "package": "@termless/xtermjs",
       "upstream": "npm:@xterm/headless",
-      "upstreamVersion": "5.5.0",
+      "upstreamVersion": "6.0.0",
       "type": "js",
       "default": true,
       "label": "xterm.js",
@@ -44,7 +44,7 @@
     "vt100": {
       "package": "@termless/vt100",
       "upstream": "npm:vt100.js",
-      "upstreamVersion": "0.2.1",
+      "upstreamVersion": "0.7.0",
       "type": "js",
       "default": true,
       "label": "vt100",
@@ -58,10 +58,20 @@
         "repo": "https://github.com/beorn/vterm"
       }
     },
+    "vt220": {
+      "package": "@termless/vt220",
+      "upstream": "npm:vt220.js",
+      "upstreamVersion": "0.7.0",
+      "type": "js",
+      "default": false,
+      "label": "vt220",
+      "slug": "vt220-js",
+      "description": "Pure TypeScript VT220 emulator library."
+    },
     "vterm": {
       "package": "@termless/vterm",
       "upstream": "npm:vterm.js",
-      "upstreamVersion": "0.2.0",
+      "upstreamVersion": "0.7.0",
       "type": "js",
       "default": false,
       "label": "vterm",
@@ -117,8 +127,6 @@
     },
     "peekaboo": {
       "package": "@termless/peekaboo",
-      "upstream": "npm:peekaboo",
-      "upstreamVersion": "0.7.0",
       "type": "os",
       "default": false,
       "platforms": ["darwin"],
@@ -129,7 +137,7 @@
     "vt100-rust": {
       "package": "@termless/vt100-rust",
       "upstream": "crate:vt100",
-      "upstreamVersion": "0.15.0",
+      "upstreamVersion": "0.16.2",
       "type": "native",
       "default": false,
       "requiresBuild": "Rust toolchain (cargo build --release)",
@@ -150,7 +158,7 @@
     "libvterm": {
       "package": "@termless/libvterm",
       "upstream": "github:neovim/libvterm",
-      "upstreamVersion": "0.3.0",
+      "upstreamVersion": "0.3.3",
       "type": "wasm",
       "default": false,
       "requiresBuild": "Emscripten SDK (bash build/build.sh)",
@@ -190,10 +198,10 @@
     "kitty": {
       "package": "@termless/kitty",
       "upstream": "github:kovidgoyal/kitty",
-      "upstreamVersion": "0.40.0",
+      "upstreamVersion": "0.49.1",
       "type": "native",
       "default": false,
-      "requiresBuild": "kitty terminal installed (brew install --cask kitty)",
+      "requiresBuild": "Kitty binary 0.49.1 via KITTY_BINARY or PATH",
       "label": "Kitty",
       "slug": "kitty",
       "url": "https://sw.kovidgoyal.net/kitty",

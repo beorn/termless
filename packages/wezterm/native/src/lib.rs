@@ -2,9 +2,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::sync::Arc;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
-use tattoy_wezterm_term::{
-    color::ColorScheme, Terminal, TerminalConfiguration, TerminalSize,
-};
+use tattoy_wezterm_term::{color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize};
 
 // ═══════════════════════════════════════════════════════
 // Minimal config for headless use
@@ -24,8 +22,8 @@ impl TerminalConfiguration for HeadlessConfig {
         true
     }
 
-    fn color_palette(&self) -> ColorScheme {
-        ColorScheme::default()
+    fn color_palette(&self) -> ColorPalette {
+        ColorPalette::default()
     }
 }
 
@@ -118,7 +116,7 @@ impl WeztermTerminal {
             cols,
             rows,
             title: String::new(),
-            auto_wrap: true,              // wezterm defaults to true
+            auto_wrap: true, // wezterm defaults to true
             application_cursor_keys: false,
             application_keypad: false,
             focus_tracking: false,
@@ -296,13 +294,9 @@ impl WeztermTerminal {
         let cursor = self.term.cursor_pos();
         let visible = cursor.visibility == CursorVisibility::Visible;
         let style = match cursor.shape {
-            CursorShape::Default
-            | CursorShape::BlinkingBlock
-            | CursorShape::SteadyBlock => "block",
-            CursorShape::BlinkingUnderline
-            | CursorShape::SteadyUnderline => "underline",
-            CursorShape::BlinkingBar
-            | CursorShape::SteadyBar => "beam",
+            CursorShape::Default | CursorShape::BlinkingBlock | CursorShape::SteadyBlock => "block",
+            CursorShape::BlinkingUnderline | CursorShape::SteadyUnderline => "underline",
+            CursorShape::BlinkingBar | CursorShape::SteadyBar => "beam",
         };
         NapiCursor {
             x: cursor.x as u32,
@@ -321,10 +315,7 @@ impl WeztermTerminal {
     pub fn get_mode(&self, mode: String) -> bool {
         match mode.as_str() {
             "altScreen" => self.term.is_alt_screen_active(),
-            "cursorVisible" => {
-                self.term.cursor_pos().visibility
-                    == CursorVisibility::Visible
-            }
+            "cursorVisible" => self.term.cursor_pos().visibility == CursorVisibility::Visible,
             "bracketedPaste" => self.term.bracketed_paste_enabled(),
             "applicationCursor" => self.application_cursor_keys,
             "applicationKeypad" => self.application_keypad,
@@ -409,11 +400,11 @@ impl WeztermTerminal {
     /// Apply a DEC private mode set/reset to tracked state.
     fn apply_dec_mode(&mut self, code: u32, set: bool) {
         match code {
-            1 => self.application_cursor_keys = set,   // DECCKM
-            6 => self.origin_mode = set,                // DECOM
-            7 => self.auto_wrap = set,                  // DECAWM
-            66 => self.application_keypad = set,        // DECNKM
-            1004 => self.focus_tracking = set,          // Focus tracking
+            1 => self.application_cursor_keys = set, // DECCKM
+            6 => self.origin_mode = set,             // DECOM
+            7 => self.auto_wrap = set,               // DECAWM
+            66 => self.application_keypad = set,     // DECNKM
+            1004 => self.focus_tracking = set,       // Focus tracking
             _ => {}
         }
     }
@@ -502,9 +493,7 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef) -> NapiCell {
             let (r, g, b, _) = rgba.to_tuple_rgba();
             (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b), false)
         }
-        tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => {
-            (idx, 0, 0, false)
-        }
+        tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => (idx, 0, 0, false),
     };
 
     // Underline style

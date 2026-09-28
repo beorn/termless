@@ -57,6 +57,27 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
+  test("reads fed text and cells through the flat WASM ABI", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 8, rows: 2 })
+    try {
+      backend.feed(new TextEncoder().encode("A\x1b[1;3;4;38;2;12;34;56;48;2;78;90;123mB\x1b[0mC"))
+      expect(backend.getText().split("\n")[0]).toBe("ABC")
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "A", fg: null, bg: null })
+      expect(backend.getCell(0, 1)).toMatchObject({
+        char: "B",
+        bold: true,
+        italic: true,
+        underline: "single",
+        fg: { r: 12, g: 34, b: 56 },
+        bg: { r: 78, g: 90, b: 123 },
+      })
+      expect(backend.getCell(0, 2)).toMatchObject({ char: "C", fg: null, bg: null })
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("feeds bytes through exported accessors without requiring HEAPU8", async () => {
     const backend: TerminalBackend = createLibvtermBackend(undefined, wasmModule!)
     backend.init?.({ cols: 80, rows: 24 })

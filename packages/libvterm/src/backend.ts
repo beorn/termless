@@ -39,20 +39,49 @@ import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 // Cell conversion
 // ===============================================================
 
-/**
- * Convert a libvterm cell (read from WASM memory) to the termless Cell type.
- *
- * NOTE: The struct offsets used in readCell are approximate and may need
- * verification against the actual compiled WASM output.
- */
+const ANSI_COLORS: readonly Color[] = [
+  { r: 0, g: 0, b: 0 },
+  { r: 128, g: 0, b: 0 },
+  { r: 0, g: 128, b: 0 },
+  { r: 128, g: 128, b: 0 },
+  { r: 0, g: 0, b: 128 },
+  { r: 128, g: 0, b: 128 },
+  { r: 0, g: 128, b: 128 },
+  { r: 192, g: 192, b: 192 },
+  { r: 128, g: 128, b: 128 },
+  { r: 255, g: 0, b: 0 },
+  { r: 0, g: 255, b: 0 },
+  { r: 255, g: 255, b: 0 },
+  { r: 0, g: 0, b: 255 },
+  { r: 255, g: 0, b: 255 },
+  { r: 0, g: 255, b: 255 },
+  { r: 255, g: 255, b: 255 },
+]
+
+function indexedColor(index: number): Color {
+  if (index < 16) return ANSI_COLORS[index]!
+  if (index < 232) {
+    const n = index - 16
+    const component = (v: number) => (v === 0 ? 0 : 55 + 40 * v)
+    return { r: component(Math.floor(n / 36)), g: component(Math.floor(n / 6) % 6), b: component(n % 6) }
+  }
+  const gray = 8 + 10 * (index - 232)
+  return { r: gray, g: gray, b: gray }
+}
+
+function cellColor(type: number, r: number, g: number, b: number, defaultFlag: number): Color | null {
+  if (type & defaultFlag) return null
+  return type & 1 ? indexedColor(r) : { r, g, b }
+}
+
+/** Convert a libvterm cell from the shim's fixed-width values. */
 function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, col: number, cellPtr: number): Cell {
   mod.vterm_screen_get_cell(screen, row, col, cellPtr)
   const raw = readCell(mod, cellPtr)
 
-  // libvterm reports colors with a type byte:
-  // 0 = default, 1 = indexed, 2 = RGB
-  const fg: Color | null = raw.fgType === 2 ? { r: raw.fgR, g: raw.fgG, b: raw.fgB } : null
-  const bg: Color | null = raw.bgType === 2 ? { r: raw.bgR, g: raw.bgG, b: raw.bgB } : null
+  // vterm.h: bit 0 selects indexed color; bits 1/2 mark default fg/bg.
+  const fg = cellColor(raw.fgType, raw.fgR, raw.fgG, raw.fgB, 0x02)
+  const bg = cellColor(raw.bgType, raw.bgR, raw.bgG, raw.bgB, 0x04)
 
   return {
     char: raw.chars,
@@ -61,7 +90,7 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
     bold: raw.bold,
     dim: false, // libvterm doesn't expose dim/faint in its cell attrs
     italic: raw.italic,
-    underline: raw.underline > 0 ? "single" : false,
+    underline: ([false, "single", "double", "curly"] as const)[raw.underline] ?? false,
     underlineColor: null,
     strikethrough: raw.strike,
     inverse: raw.reverse,
@@ -270,7 +299,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     for (let row = 0; row < rows; row++) {
       const len = m.vterm_screen_get_text(screen, buf, bufLen, row, 0, row + 1, cols)
       if (len > 0) {
-        const line = m.UTF8ToString(buf)
+        const line = m.UTF8ToString(buf, len)
         lines.push(line.replace(/\s+$/, ""))
       } else {
         lines.push("")
@@ -293,7 +322,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
       const len = m.vterm_screen_get_text(screen, buf, bufLen, row, colStart, row + 1, colEnd)
       if (len > 0) {
-        const line = m.UTF8ToString(buf)
+        const line = m.UTF8ToString(buf, len)
         parts.push(line.replace(/\s+$/, ""))
       } else {
         parts.push("")

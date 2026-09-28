@@ -35,7 +35,7 @@ describe("manifest", () => {
     expect(Object.keys(m.backends).length).toBeGreaterThan(0)
   })
 
-  test("manifest has all 10 backends", () => {
+  test("manifest has all 12 backends", () => {
     const m = manifest()
     const names = Object.keys(m.backends)
     expect(names).toEqual(
@@ -43,15 +43,18 @@ describe("manifest", () => {
         "xtermjs",
         "ghostty",
         "vt100",
+        "vt220",
+        "vterm",
         "alacritty",
         "wezterm",
         "peekaboo",
         "vt100-rust",
         "libvterm",
         "kitty",
+        "ghostty-native",
       ]),
     )
-    expect(names).toHaveLength(11)
+    expect(names).toHaveLength(12)
   })
 
   test("each backend entry has required fields", () => {
@@ -78,12 +81,13 @@ describe("manifest", () => {
 // ═══════════════════════════════════════════════════════
 
 describe("enumeration", () => {
-  test("backends() returns all 11 names", () => {
+  test("backends() returns all 12 names", () => {
     const names = backends()
-    expect(names).toHaveLength(11)
+    expect(names).toHaveLength(12)
     expect(names).toContain("xtermjs")
     expect(names).toContain("ghostty")
     expect(names).toContain("vt100")
+    expect(names).toContain("vt220")
     expect(names).toContain("alacritty")
     expect(names).toContain("wezterm")
     expect(names).toContain("peekaboo")

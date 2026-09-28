@@ -2,6 +2,17 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::sync::Mutex;
 
+#[derive(Default)]
+struct TitleCallbacks {
+    title: String,
+}
+
+impl vt100::Callbacks for TitleCallbacks {
+    fn set_window_title(&mut self, _: &mut vt100::Screen, title: &[u8]) {
+        self.title = String::from_utf8_lossy(title).into_owned();
+    }
+}
+
 // ===============================================================
 // Standard 256-color palette (indices 0..=255) → RGB
 // ===============================================================
@@ -88,10 +99,9 @@ pub struct NapiScrollback {
 
 #[napi]
 pub struct Vt100RustTerminal {
-    parser: Mutex<vt100::Parser>,
+    parser: Mutex<vt100::Parser<TitleCallbacks>>,
     cols: u16,
     rows: u16,
-    title: Mutex<String>,
 }
 
 #[napi]
@@ -102,59 +112,53 @@ impl Vt100RustTerminal {
         let r = rows as u16;
         let c = cols as u16;
 
-        let parser = vt100::Parser::new(r, c, scrollback);
+        let parser = vt100::Parser::new_with_callbacks(r, c, scrollback, TitleCallbacks::default());
 
         Vt100RustTerminal {
             parser: Mutex::new(parser),
             cols: c,
             rows: r,
-            title: Mutex::new(String::new()),
         }
     }
 
     #[napi]
     pub fn feed(&self, data: Buffer) -> Result<()> {
-        let mut parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let mut parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         parser.process(data.as_ref());
-        // Capture title from terminal state
-        let title = parser.screen().title().to_string();
-        let mut t = self.title.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock title: {}", e))
-        })?;
-        *t = title;
         Ok(())
     }
 
     #[napi]
     pub fn resize(&self, cols: u32, rows: u32) -> Result<()> {
-        let mut parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
-        parser.set_size(rows as u16, cols as u16);
+        let mut parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        parser.screen_mut().set_size(rows as u16, cols as u16);
         Ok(())
     }
 
     #[napi]
     pub fn reset(&self) -> Result<()> {
-        let mut parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let mut parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         // Feed RIS escape sequence to reset
         parser.process(b"\x1bc");
-        let mut t = self.title.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock title: {}", e))
-        })?;
-        t.clear();
+        parser.callbacks_mut().title.clear();
         Ok(())
     }
 
     #[napi]
     pub fn get_text(&self) -> Result<String> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
         let mut lines = Vec::new();
 
@@ -209,9 +213,10 @@ impl Vt100RustTerminal {
         end_row: i32,
         end_col: i32,
     ) -> Result<String> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
         let mut parts = Vec::new();
 
@@ -251,9 +256,10 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_cell(&self, row: i32, col: i32) -> Result<NapiCell> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
 
         if row < 0 || row >= self.rows as i32 || col < 0 || col >= self.cols as i32 {
@@ -268,9 +274,10 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_line(&self, row: i32) -> Result<Vec<NapiCell>> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
 
         if row < 0 || row >= self.rows as i32 {
@@ -287,9 +294,10 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_cursor(&self) -> Result<NapiCursor> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
         let (row, col) = screen.cursor_position();
 
@@ -303,9 +311,10 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_mode(&self, mode: String) -> Result<bool> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
 
         Ok(match mode.as_str() {
@@ -316,7 +325,7 @@ impl Vt100RustTerminal {
             "applicationKeypad" => screen.application_keypad(),
             "mouseTracking" => screen.mouse_protocol_mode() != vt100::MouseProtocolMode::None,
             // Modes not directly exposed by the vt100 crate
-            "autoWrap" => true,  // Default on, not queryable
+            "autoWrap" => true, // Default on, not queryable
             "focusTracking" => false,
             "originMode" => false,
             "insertMode" => false,
@@ -327,17 +336,19 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_title(&self) -> Result<String> {
-        let t = self.title.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock title: {}", e))
-        })?;
-        Ok(t.clone())
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(parser.callbacks().title.clone())
     }
 
     #[napi]
     pub fn get_scrollback(&self) -> Result<NapiScrollback> {
-        let parser = self.parser.lock().map_err(|e| {
-            Error::from_reason(format!("Failed to lock parser: {}", e))
-        })?;
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         let screen = parser.screen();
         let scrollback_len = screen.scrollback() as u32;
 

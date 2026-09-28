@@ -9,7 +9,7 @@ description = "napi-rs bridge for alacritty_terminal — headless VT emulation"
 crate-type = ["cdylib"]
 
 [dependencies]
-alacritty_terminal = "0.25"
+alacritty_terminal = "=0.26.0"
 napi = { version = "3", features = ["napi9"] }
 napi-derive = "3"
 

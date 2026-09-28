@@ -38,6 +38,8 @@
 
             # Build tools
             pkg-config
+            gnumake
+            perl
 
             # Search
             ripgrep

@@ -49,6 +49,11 @@ const KITTY_PATHS = [
 let kittyPath: string | null = null
 
 function findKitty(): string {
+  const explicit = process.env.KITTY_BINARY
+  if (explicit) {
+    if (!existsSync(explicit)) throw new Error(`KITTY_BINARY does not exist: ${explicit}`)
+    return explicit
+  }
   if (kittyPath) return kittyPath
 
   for (const p of KITTY_PATHS) {
@@ -182,6 +187,11 @@ const DEFAULT_ROWS = 24
  * Check if kitty is installed and available.
  */
 export function isKittyAvailable(): boolean {
+  // An explicit measurement target is required; never turn a bad path into a skip.
+  if (process.env.KITTY_BINARY) {
+    findKitty()
+    return true
+  }
   try {
     findKitty()
     return true

@@ -39,6 +39,10 @@
       }
     }
   },
+  "scripts": {
+    "build:native": "cd native && cargo build --release",
+    "postbuild:native": "bash ../../scripts/copy-native-addon.sh libtermless_alacritty_native termless-alacritty-native.node"
+  },
   "devDependencies": {
     "@napi-rs/cli": "3.10.5"
   },

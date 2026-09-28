@@ -35,7 +35,7 @@ export interface LibvtermModule {
   // Emscripten runtime
   getValue(ptr: number, type: string): number
   setValue(ptr: number, value: number, type: string): void
-  UTF8ToString(ptr: number): string
+  UTF8ToString(ptr: number, maxBytesToRead?: number): string
   stringToUTF8(str: string, outPtr: number, maxBytesToWrite: number): void
   lengthBytesUTF8(str: string): number
 }
@@ -68,8 +68,13 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.vterm_obtain_state = cwrap("vterm_obtain_state", "number", ["number"])
     module.vterm_screen_reset = cwrap("vterm_screen_reset", null, ["number", "number"])
     module.vterm_screen_enable_altscreen = cwrap("vterm_screen_enable_altscreen", null, ["number", "number"])
-    module.vterm_screen_get_cell = cwrap("vterm_screen_get_cell", "number", ["number", "number", "number", "number"])
-    module.vterm_screen_get_text = cwrap("vterm_screen_get_text", "number", [
+    module.vterm_screen_get_cell = cwrap("termless_vterm_screen_get_cell_flat", "number", [
+      "number",
+      "number",
+      "number",
+      "number",
+    ])
+    module.vterm_screen_get_text = cwrap("termless_vterm_screen_get_text_flat", "number", [
       "number",
       "number",
       "number",
@@ -98,27 +103,10 @@ export function _resetLibvtermForTesting(): void {
   modulePromise = null
 }
 
-/**
- * VTermScreenCell struct layout (from libvterm's vterm.h):
- * - chars[VTERM_MAX_CHARS_PER_CELL] (uint32_t[6]) = 24 bytes at offset 0
- * - char width (char) = 1 byte at offset 24
- * - attrs (bitfield struct) = ~4 bytes at offset 25-28
- *   - bold, underline, italic, blink, reverse, conceal, strike, font(4), dwl, dhl, small, baseline(2)
- * - fg (VTermColor) = 4 bytes at offset 32 (type + rgb.r/g/b)
- * - bg (VTermColor) = 4 bytes at offset 36
- *
- * NOTE: These offsets are approximate and may vary by platform/alignment.
- * They need to be verified against the actual compiled WASM output.
- * The CELL_SIZE should be large enough to hold a VTermScreenCell struct.
- */
-export const CELL_SIZE = 64 // Conservative -- actual struct is ~44 bytes
+/** 17 uint32_t fields written by build/flat-api.c, independent of C struct layout. */
+export const CELL_SIZE = 17 * 4
 
-/**
- * Read a VTermScreenCell from WASM memory at the given pointer.
- *
- * NOTE: The struct field offsets used here are based on the libvterm C header
- * and may need adjustment after verifying against the actual compiled WASM.
- */
+/** Read the fixed-width cell values emitted by the C shim. */
 export function readCell(
   mod: LibvtermModule,
   cellPtr: number,
@@ -141,54 +129,27 @@ export function readCell(
   bgG: number
   bgB: number
 } {
-  const byteAt = (offset: number) => mod.getValue(cellPtr + offset, "i8") & 0xff
-
-  // Read chars (uint32_t[6] -- we only need the first codepoint for most cells)
-  const cp0 = mod.getValue(cellPtr, "i32")
+  const wordAt = (index: number) => mod.getValue(cellPtr + index * 4, "i32") >>> 0
+  const cp0 = wordAt(0)
   const chars = cp0 > 0 ? String.fromCodePoint(cp0) : ""
-
-  // Read width (offset 24)
-  const width = byteAt(24)
-
-  // Read attrs bitfield (offset 25 -- packed bits)
-  const attrByte = byteAt(25)
-  const bold = !!(attrByte & 1)
-  const underline = (attrByte >> 1) & 0x3
-  const italic = !!((attrByte >> 3) & 1)
-  const blink = !!((attrByte >> 4) & 1)
-  const reverse = !!((attrByte >> 5) & 1)
-  const conceal = !!((attrByte >> 6) & 1)
-  const strike = !!((attrByte >> 7) & 1)
-
-  // Read fg color (VTermColor at offset 32 -- type byte + r/g/b)
-  const fgType = byteAt(32)
-  const fgR = byteAt(33)
-  const fgG = byteAt(34)
-  const fgB = byteAt(35)
-
-  // Read bg color (VTermColor at offset 36)
-  const bgType = byteAt(36)
-  const bgR = byteAt(37)
-  const bgG = byteAt(38)
-  const bgB = byteAt(39)
 
   return {
     chars,
-    width,
-    bold,
-    underline,
-    italic,
-    blink,
-    reverse,
-    conceal,
-    strike,
-    fgType,
-    fgR,
-    fgG,
-    fgB,
-    bgType,
-    bgR,
-    bgG,
-    bgB,
+    width: wordAt(1),
+    bold: !!wordAt(2),
+    underline: wordAt(3),
+    italic: !!wordAt(4),
+    blink: !!wordAt(5),
+    reverse: !!wordAt(6),
+    conceal: !!wordAt(7),
+    strike: !!wordAt(8),
+    fgType: wordAt(9),
+    fgR: wordAt(10),
+    fgG: wordAt(11),
+    fgB: wordAt(12),
+    bgType: wordAt(13),
+    bgR: wordAt(14),
+    bgG: wordAt(15),
+    bgB: wordAt(16),
   }
 }
