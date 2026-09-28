@@ -18,6 +18,7 @@ import type {
   TerminalCapabilities,
 } from "@termless/core"
 import { encodeKeyToAnsi } from "@termless/core"
+import { vtermEngineIdentity } from "./engine-identity.ts"
 
 // ═══════════════════════════════════════════════════════
 // Backend factory
@@ -111,27 +112,6 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return shape
   }
 
-  function convertCell(sc: ScreenCell | undefined): Cell {
-    if (!sc) return BLANK_CELL
-    return {
-      char: sc.char,
-      fg: sc.fg,
-      bg: sc.bg,
-      bold: sc.bold,
-      dim: sc.faint,
-      italic: sc.italic,
-      underline: mapUnderline(sc.underline),
-      underlineColor: sc.underlineColor,
-      strikethrough: sc.strikethrough,
-      inverse: sc.inverse,
-      blink: sc.blink,
-      hidden: sc.hidden,
-      wide: sc.wide,
-      continuation: sc.char === "",
-      hyperlink: sc.url,
-    }
-  }
-
   function convertRow(row: readonly ScreenCell[] | undefined): Cell[] {
     const cells: Cell[] = []
     let prevWide = false
@@ -163,7 +143,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     const snap = ensureScreen().snapshot()
     const scrollback = snap.scrollback
     const grid = snap.activeBuffer === "alt" ? snap.alt.grid : snap.main.grid
-    const rows: Cell[][] = new Array(scrollback.length + grid.length)
+    const rows = new Array<Cell[]>(scrollback.length + grid.length)
     for (let row = 0; row < scrollback.length; row++) rows[row] = convertRow(scrollback[row])
     for (let row = 0; row < grid.length; row++) rows[scrollback.length + row] = convertRow(grid[row])
     return rows
@@ -250,7 +230,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "vterm",
-    version: "0.2.0",
+    version: vtermEngineIdentity().version,
 
     // Genuinely implemented: parses RGB values, stores on cells, resolves palette
     truecolor: true,

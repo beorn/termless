@@ -1,6 +1,14 @@
+/**
+ * @failure Backend capabilities can report a stale package version instead of the loaded vterm.js engine.
+ * @level l1
+ * @consumer Termless backend identity and probe freshness
+ * @testonly none
+ * @reach fs-walk vendor/termless/packages/vterm/node_modules/vterm.js/package.json vendor/vterm/packages/vterm/package.json
+ */
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, test } from "vitest"
+import { createVtermBackend } from "../src/backend.ts"
 import { vtermEngineIdentity } from "../src/engine-identity.ts"
 
 describe("vtermEngineIdentity", () => {
@@ -13,5 +21,10 @@ describe("vtermEngineIdentity", () => {
     // tarball under node_modules, or a workspace override whose copy is
     // named for the package.
     expect(engine.location).toContain("vterm.js")
+  })
+
+  test("reports the loaded engine version through the production backend", () => {
+    const engine = vtermEngineIdentity()
+    expect(createVtermBackend().capabilities.version).toBe(engine.version)
   })
 })
