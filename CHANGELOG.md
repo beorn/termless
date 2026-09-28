@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- `@termless/cli` now requires Zod 4 (`^4.6.5`) for its MCP tool schemas;
+  applications that supply Zod 3 must upgrade that dependency.
+
 ## 0.9.2 - 2026-09-26 (`@termless/ghostty` only)
 
 ### Fixed
