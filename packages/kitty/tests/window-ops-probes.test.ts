@@ -36,6 +36,58 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", () => {
+  /**
+   * @failure Kitty batch replay redelivers previous query replies as if they belonged to a later feed.
+   * @level l2
+   * @consumer Terminfo headless device and mode queries
+   */
+  test("delivers only each feed's new reply, including after reset", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    const feed = (sequence: string): void => backend.feed(new TextEncoder().encode(sequence))
+
+    feed("\x1b[6n")
+    backend.getCursor() // Kitty's lazy batch replay delivers the pending reply.
+    expect(responses.join("")).toBe("\x1b[1;1R")
+
+    responses.length = 0
+    feed("\x1b[6n")
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[1;1R")
+
+    responses.length = 0
+    backend.reset()
+    backend.getCursor()
+    expect(responses).toEqual([])
+
+    feed("\x1b[6n")
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[1;1R")
+    backend.destroy()
+  })
+
+  /**
+   * @failure A response generated without a listener leaks into the next scoped capture.
+   * @level l2
+   * @consumer Terminfo headless query capture
+   */
+  test("consumes replies observed in a snapshot without a listener", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const feed = (sequence: string): void => backend.feed(new TextEncoder().encode(sequence))
+    feed("\x1b[6n")
+    backend.getCursor()
+
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    feed("\x1b[6n")
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[1;1R")
+    backend.destroy()
+  })
+
   test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
     const responses = await probeBackend(createKittyBackend(), "\x1b[14t")
     const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))

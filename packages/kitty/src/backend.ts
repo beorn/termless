@@ -18,6 +18,7 @@
  *   brew install --cask kitty   # macOS
  *   # or install from https://sw.kovidgoyal.net/kitty
  */
+/* oxlint-disable typescript/no-deprecated -- This adapter still implements the required TerminalBackend compatibility contract until unterm A4. */
 
 import type {
   TerminalBackend,
@@ -226,6 +227,10 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   // Cached snapshot from last query
   let snapshot: BridgeSnapshot | null = null
 
+  // Batch replay includes every earlier response. Keep the observed prefix so
+  // a later snapshot only delivers replies generated since the previous one.
+  let observedResponses = Buffer.alloc(0)
+
   function ensureInit(): void {
     if (!initialized) throw new Error("kitty backend not initialized -- call init() first")
   }
@@ -280,14 +285,17 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function ensureSnapshot(): BridgeSnapshot {
     ensureInit()
     if (snapshot) return snapshot
-    snapshot = replayAndSnapshot()
+    const nextSnapshot = replayAndSnapshot()
 
-    // Forward any DA1/DA2/DSR responses accumulated during replay
-    if (backend.onResponse && snapshot.responses) {
-      const responseBytes = Buffer.from(snapshot.responses, "base64")
-      if (responseBytes.length > 0) {
-        backend.onResponse(new Uint8Array(responseBytes))
-      }
+    const responseBytes = nextSnapshot.responses ? Buffer.from(nextSnapshot.responses, "base64") : Buffer.alloc(0)
+    if (!responseBytes.subarray(0, observedResponses.length).equals(observedResponses)) {
+      throw new Error("Kitty bridge changed an earlier response during batch replay")
+    }
+    const newResponses = responseBytes.subarray(observedResponses.length)
+    snapshot = nextSnapshot
+    observedResponses = responseBytes
+    if (backend.onResponse && newResponses.length > 0) {
+      backend.onResponse(new Uint8Array(newResponses))
     }
 
     return snapshot
@@ -302,6 +310,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     commandLog = [{ op: "init", cols, rows, scrollbackLimit }]
     initialized = true
     snapshot = null
+    observedResponses = Buffer.alloc(0)
   }
 
   // Eagerly init if opts provided
@@ -317,6 +326,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     commandLog = []
     initialized = false
     snapshot = null
+    observedResponses = Buffer.alloc(0)
   }
 
   /**
@@ -352,14 +362,13 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
       // matching the other backends.
       const text = new TextDecoder().decode(data)
       CSI_14t_RE.lastIndex = 0
-      let m: RegExpExecArray | null
-      while ((m = CSI_14t_RE.exec(text)) !== null) {
+      while (CSI_14t_RE.exec(text) !== null) {
         const heightPx = rows * CELL_H_PX
         const widthPx = cols * CELL_W_PX
         backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
       }
       CSI_18t_RE.lastIndex = 0
-      while ((m = CSI_18t_RE.exec(text)) !== null) {
+      while (CSI_18t_RE.exec(text) !== null) {
         backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
@@ -390,11 +399,14 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     for (let row = startRow; row <= endRow; row++) {
       if (row >= s.cells.length) break
       const cellRow = s.cells[row]
+      if (!cellRow) throw new Error(`Kitty bridge omitted cell row ${row}`)
       const colStart = row === startRow ? startCol : 0
       const colEnd = row === endRow ? endCol : cols
       let line = ""
-      for (let col = colStart; col < colEnd && col < cellRow!.length; col++) {
-        const text = cellRow![col]!.text
+      for (let col = colStart; col < colEnd && col < cellRow.length; col++) {
+        const cell = cellRow[col]
+        if (!cell) throw new Error(`Kitty bridge omitted cell ${row},${col}`)
+        const text = cell.text
         line += text || " "
       }
       lines.push(line.trimEnd())
@@ -404,10 +416,15 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   function getCell(row: number, col: number): Cell {
     const s = ensureSnapshot()
-    if (row >= s.cells.length || col >= s.cells[row]!.length) {
+    if (row >= s.cells.length) {
       return EMPTY_CELL
     }
-    return convertBridgeCell(s.cells[row]![col]!)
+    const cellRow = s.cells[row]
+    if (!cellRow) throw new Error(`Kitty bridge omitted cell row ${row}`)
+    if (col >= cellRow.length) return EMPTY_CELL
+    const cell = cellRow[col]
+    if (!cell) throw new Error(`Kitty bridge omitted cell ${row},${col}`)
+    return convertBridgeCell(cell)
   }
 
   function getLine(row: number): Cell[] {
@@ -415,7 +432,9 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     if (row >= s.cells.length) {
       return Array.from({ length: cols }, () => EMPTY_CELL)
     }
-    return s.cells[row]!.map(convertBridgeCell)
+    const cellRow = s.cells[row]
+    if (!cellRow) throw new Error(`Kitty bridge omitted cell row ${row}`)
+    return cellRow.map(convertBridgeCell)
   }
 
   function getLines(): Cell[][] {
