@@ -44,6 +44,7 @@ import type {
 } from "./silvery-compat.ts"
 import { scanMouseDecsetTracking } from "@termless/core"
 import { bufferFromRows, cloneBufferRows, mergeDirtyRows, type DirtyRect } from "../../../src/terminal/dirty-plane.ts"
+import { resolveXtermCellHyperlink, type XtermLinkCore } from "./xterm-link.ts"
 
 type IBufferCell = import("@xterm/headless").IBufferCell
 
@@ -52,15 +53,8 @@ const { Terminal } = xtermPkg
 type XTerminal = InstanceType<typeof Terminal>
 type XtermDataChunk = Buffer | Uint8Array | string
 
-interface XtermInternalBufferCell extends IBufferCell {
-  readonly extended?: { readonly urlId?: number }
-}
-
-interface XtermInternalCore {
+interface XtermInternalCore extends XtermLinkCore {
   readonly _writeBuffer: { writeSync(data: string): void }
-  readonly _oscLinkService?: {
-    getLinkData(linkId: number): { uri: string } | undefined
-  }
 }
 
 // xterm-headless parses OSC 8 into a private cell urlId + link service, but its
@@ -262,18 +256,7 @@ function convertCell(c: IBufferCell | undefined, palettePassthrough: boolean, te
   // CellAttrs (silvery treats them as out of scope for the v1 cell vocab).
   // Drop them at the boundary rather than smuggle private fields through.
 
-  const linkId = (c as XtermInternalBufferCell).extended?.urlId
-  let hyperlink: string | undefined
-  if (linkId) {
-    const linkService = xtermCore(term)._oscLinkService
-    if (!linkService) {
-      throw new Error("xterm OSC 8 cell has a link id but no link service")
-    }
-    hyperlink = linkService.getLinkData(linkId)?.uri
-    if (!hyperlink) {
-      throw new Error(`xterm OSC 8 link id ${linkId} has no URI`)
-    }
-  }
+  const hyperlink = resolveXtermCellHyperlink(c, xtermCore(term)) ?? undefined
 
   const chars = c.getChars()
   return {

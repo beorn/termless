@@ -7,6 +7,10 @@
  * Build the native module:
  *   cd packages/wezterm/native && cargo build --release
  *   cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node
+ * @failure WezTerm falsely declares OSC 8 URI metadata exposed by its NAPI cells.
+ * @level l0
+ * @consumer Termless WezTerm backend capability declaration.
+ * @testonly none
  */
 
 import { describe, test, expect, beforeEach, afterEach } from "vitest"
@@ -348,8 +352,8 @@ describeNative("wezterm backend", () => {
       expect(backend.capabilities.sixel).toBe(true)
     })
 
-    test("supports osc8 hyperlinks", () => {
-      expect(backend.capabilities.osc8Hyperlinks).toBe(true)
+    test("does not claim OSC 8 link metadata from the NAPI bridge", () => {
+      expect(backend.capabilities.osc8Hyperlinks).toBe(false)
     })
 
     test("supports reflow", () => {

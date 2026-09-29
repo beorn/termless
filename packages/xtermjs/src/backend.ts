@@ -31,6 +31,7 @@ import type {
   Color,
 } from "@termless/core"
 import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
+import { resolveXtermCellHyperlink, type XtermLinkCore } from "./xterm-link.ts"
 
 // ═══════════════════════════════════════════════════════
 // ANSI 256-color palette
@@ -409,7 +410,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       hidden: bufCell.isInvisible() !== 0,
       wide: bufCell.getWidth() > 1,
       continuation: false,
-      hyperlink: null,
+      hyperlink: resolveXtermCellHyperlink(bufCell, (ensureTerm() as unknown as { _core: XtermLinkCore })._core),
     }
   }
 

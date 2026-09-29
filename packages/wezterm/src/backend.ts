@@ -347,7 +347,8 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     kittyKeyboard: true,
     kittyGraphics: false, // Not available in headless mode
     sixel: true,
-    osc8Hyperlinks: true,
+    // The NAPI cell bridge does not expose parsed URI metadata.
+    osc8Hyperlinks: false,
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,

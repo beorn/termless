@@ -1,5 +1,12 @@
+/**
+ * @failure OSC 8 links parsed by xterm were hidden from backend cell observations.
+ * @level l0
+ * @consumer Termless headless xterm backend.
+ * @testonly none
+ */
 import { describe, test, expect } from "vitest"
 import { createXtermBackend } from "../src/backend.ts"
+import { resolveXtermCellHyperlink } from "../src/xterm-link.ts"
 
 describe("createXtermBackend", () => {
   // ── Lifecycle ──
@@ -394,6 +401,37 @@ describe("createXtermBackend", () => {
   })
 
   // ── Capabilities ──
+
+  test("getCell reports the exact OSC 8 URI and a closed, unlinked sentinel", () => {
+    const backend = createXtermBackend({ cols: 20, rows: 3 })
+    backend.feed(new TextEncoder().encode("A\x1b]8;;https://example.com/target\x07LINK\x1b]8;;\x07Z"))
+    expect(backend.getCell(0, 0).hyperlink).toBeNull()
+    for (let col = 1; col <= 4; col++) {
+      expect(backend.getCell(0, col).hyperlink).toBe("https://example.com/target")
+    }
+    expect(backend.getCell(0, 5).hyperlink).toBeNull()
+    backend.destroy()
+  })
+
+  test("getCell resolves OSC 8 in the current viewport after scrolling", () => {
+    const backend = createXtermBackend({ cols: 20, rows: 2 })
+    backend.feed(new TextEncoder().encode("old\r\nA\x1b]8;;https://example.com/scrolled\x07LINK\x1b]8;;\x07Z\r\nnew"))
+    // getCell addresses the full buffer: row 0 is old scrollback, row 1 is
+    // the linked line now visible in the viewport.
+    expect(backend.getCell(0, 0).char).toBe("o")
+    expect(backend.getCell(1, 0).char).toBe("A")
+    expect(backend.getCell(1, 1).hyperlink).toBe("https://example.com/scrolled")
+    expect(backend.getCell(1, 5).hyperlink).toBeNull()
+    backend.destroy()
+  })
+
+  test("a linked xterm cell fails by name when its service or URI is missing", () => {
+    const linked = { extended: { urlId: 7 } } as unknown as import("@xterm/headless").IBufferCell
+    expect(() => resolveXtermCellHyperlink(linked, {})).toThrow("xterm OSC 8 cell has a link id but no link service")
+    expect(() => resolveXtermCellHyperlink(linked, { _oscLinkService: { getLinkData: () => undefined } })).toThrow(
+      "xterm OSC 8 link id 7 has no URI",
+    )
+  })
 
   test("capabilities are correctly set", () => {
     const backend = createXtermBackend({ cols: 80, rows: 24 })
