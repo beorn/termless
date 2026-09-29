@@ -16,6 +16,7 @@ export { eventFromIoEvent, ioEventFromEvent } from "./recording/io-compat.ts"
 
 export type {
   Cell,
+  // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   CellView,
   Color,
   Cursor,
@@ -32,13 +33,17 @@ export type {
   Row,
   ScreenshotOptions,
   ScrollbackState,
+  // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   SpawnOptions,
   SvgScreenshotOptions,
   SvgTheme,
+  // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   Terminal,
+  // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   TerminalBackend,
   TerminalCapabilities,
   TerminalCreateOptions,
+  // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   TerminalMode,
   TerminalOptions,
   TestTerminal,
@@ -76,7 +81,9 @@ export type { WriteVisualTraceOptions } from "./recording/write-visual-trace.ts"
 // The `.tty`/`.ttyz` recording format: one format, two encodings — the live
 // bundle directory and the sealed archive — read by one encoding-blind reader.
 export {
+  // oxlint-disable-next-line typescript/no-deprecated -- Trace-shaped compatibility export remains until unterm phase A4a.
   readRecording, // @deprecated — the Trace-shaped door; loadRecording is the io-shaped one (flips at unterm phase A4a)
+  // oxlint-disable-next-line typescript/no-deprecated -- Trace-shaped compatibility export remains until unterm phase A4a.
   readBundle, // @deprecated — as above; loadBundle is the io-shaped door
   loadRecording,
   loadBundle,
@@ -120,6 +127,7 @@ export { encodeKeyToAnsi } from "./terminal/key-encoding.ts"
 export { scanMouseDecset, scanMouseDecsetTracking, scanWindowOpQueries } from "./terminal/escape-scans.ts"
 export {
   createBufferView,
+  // oxlint-disable-next-line typescript/no-deprecated -- Positioned-cell compatibility export remains until unterm phase A4.
   createCellView,
   createRangeView,
   createRegion,
@@ -154,6 +162,7 @@ export type {
 // deprecated alias, kept transparent through unterm phase A4a.
 export {
   createTrace,
+  // oxlint-disable-next-line typescript/no-deprecated -- Renamed compatibility export remains until unterm phase A4a.
   createRecording, // @deprecated — renamed to createTrace; alias removed at unterm phase A4a
   trackAuthority,
   micros,
@@ -162,9 +171,12 @@ export {
 } from "./recording/recording.ts"
 export type {
   Trace,
+  // oxlint-disable-next-line typescript/no-deprecated -- Renamed compatibility export remains until unterm phase A4a.
   Recording, // @deprecated — renamed to Trace; alias removed at unterm phase A4a
   Command,
+  // oxlint-disable-next-line typescript/no-deprecated -- Legacy event compatibility export remains until unterm phase A4.
   IoEvent,
+  // oxlint-disable-next-line typescript/no-deprecated -- Legacy direction compatibility export remains until unterm phase A4.
   IoDirection,
   Frame,
   RenderArtifacts,
@@ -173,6 +185,7 @@ export type {
   RecordingProvenance,
   TrackAuthority,
   CreateTraceInput,
+  // oxlint-disable-next-line typescript/no-deprecated -- Renamed compatibility export remains until unterm phase A4a.
   CreateRecordingInput, // @deprecated — renamed to CreateTraceInput; alias removed at unterm phase A4a
 } from "./recording/recording.ts"
 // Trace ⇄ io-Recording bridges (unterm phase A3 legacy-side scaffolding):
@@ -287,6 +300,7 @@ export type {
 // @deprecated decodeAsciicast/encodeAsciicast — use readAsciicast/writeAsciicast
 // above; these are now thin Trace-shaped wrappers over that pair (see
 // recording-codec.ts's file header for what composing through Trace loses).
+// oxlint-disable-next-line typescript/no-deprecated -- Trace-shaped codec compatibility exports remain until unterm phase A4a.
 export { decodeAsciicast, decodeAsciicastSource, encodeAsciicast } from "./recording/asciicast/recording-codec.ts"
 export type { EncodeAsciicastOptions } from "./recording/asciicast/recording-codec.ts"
 export type {

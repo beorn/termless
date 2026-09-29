@@ -30,7 +30,7 @@
  */
 
 import type { TapeFile } from "./parser.ts"
-import type { Cell, Cursor, TestTerminal, TerminalBackend, Terminal } from "../../terminal/types.ts"
+import type { TestTerminal, TerminalBackend } from "../../terminal/types.ts"
 import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../../terminal/snapshot.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
@@ -44,6 +44,7 @@ import { encodePng, decodePngRgba, type RgbaImage } from "./png-codec.ts"
 export type CanvasCompareMode = "separate" | "side-by-side" | "diff"
 
 /** A backend specification: a name string, or a pre-created instance + label. */
+// oxlint-disable-next-line typescript/no-deprecated -- Tape comparison accepts legacy backends until unterm phase A4.
 export type CanvasBackendSpec = string | { name: string; backend: TerminalBackend }
 
 export interface CanvasCompareOptions {
@@ -178,7 +179,10 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
     await run.terminal.close()
   }
 
-  const textMatch = results.every((r) => r.text === results[0]!.text)
+  // options.backends is refused when empty above, so every successful run
+  // must contribute one result before comparison.
+  const firstResult = readAt(results, 0, "compareCanvas backend result")
+  const textMatch = results.every((r) => r.text === firstResult.text)
 
   // ── separate: no composition ─────────────────────────────
   if (mode === "separate") {
@@ -198,7 +202,7 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
   for (let f = 0; f < frameCount; f++) {
     const panelImages = results.map((r) => {
       const idx = options.animate ? Math.min(f, r.frames.length - 1) : r.frames.length - 1
-      return { label: r.backend, png: r.frames[idx]!.png }
+      return { label: r.backend, png: readAt(r.frames, idx, `${r.backend} frame`).png }
     })
 
     if (mode === "diff") {
@@ -282,16 +286,17 @@ export function composeDiff(
   // Divergence mask — over the common (min) area of all panels.
   const width = Math.min(...decoded.map((d) => d.img.width))
   const height = Math.min(...decoded.map((d) => d.img.height))
-  const overlay = cloneRegion(decoded[0]!.img, width, height)
+  const firstDecoded = readAt(decoded, 0, "composeDiff decoded panel")
+  const overlay = cloneRegion(firstDecoded.img, width, height)
   let divergentPixels = 0
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       let divergent = false
-      const base = decoded[0]!.img
+      const base = firstDecoded.img
       const bi = (y * base.width + x) * 4
       for (let p = 1; p < decoded.length && !divergent; p++) {
-        const other = decoded[p]!.img
+        const other = readAt(decoded, p, "composeDiff decoded panel").img
         const oi = (y * other.width + x) * 4
         if (
           base.data[bi] !== other.data[oi] ||
@@ -307,9 +312,9 @@ export function composeDiff(
         const di = (y * width + x) * 4
         // Alpha-blend the red overlay over the base pixel.
         const a = DIVERGE[3] / 255
-        overlay.data[di] = Math.round(DIVERGE[0] * a + overlay.data[di]! * (1 - a))
-        overlay.data[di + 1] = Math.round(DIVERGE[1] * a + overlay.data[di + 1]! * (1 - a))
-        overlay.data[di + 2] = Math.round(DIVERGE[2] * a + overlay.data[di + 2]! * (1 - a))
+        overlay.data[di] = Math.round(DIVERGE[0] * a + readAt(overlay.data, di, "divergence overlay") * (1 - a))
+        overlay.data[di + 1] = Math.round(DIVERGE[1] * a + readAt(overlay.data, di + 1, "divergence overlay") * (1 - a))
+        overlay.data[di + 2] = Math.round(DIVERGE[2] * a + readAt(overlay.data, di + 2, "divergence overlay") * (1 - a))
         overlay.data[di + 3] = 255
       }
     }
@@ -356,10 +361,10 @@ function cloneRegion(src: RgbaImage, width: number, height: number): RgbaImage {
     for (let x = 0; x < width; x++) {
       const si = (y * src.width + x) * 4
       const di = (y * width + x) * 4
-      data[di] = src.data[si]!
-      data[di + 1] = src.data[si + 1]!
-      data[di + 2] = src.data[si + 2]!
-      data[di + 3] = src.data[si + 3]!
+      data[di] = readAt(src.data, si, "cloneRegion source")
+      data[di + 1] = readAt(src.data, si + 1, "cloneRegion source")
+      data[di + 2] = readAt(src.data, si + 2, "cloneRegion source")
+      data[di + 3] = readAt(src.data, si + 3, "cloneRegion source")
     }
   }
   return { width, height, data }
@@ -375,10 +380,10 @@ function blit(dst: RgbaImage, src: RgbaImage, ox: number, oy: number): void {
       if (dx < 0 || dx >= dst.width) continue
       const si = (y * src.width + x) * 4
       const di = (dy * dst.width + dx) * 4
-      dst.data[di] = src.data[si]!
-      dst.data[di + 1] = src.data[si + 1]!
-      dst.data[di + 2] = src.data[si + 2]!
-      dst.data[di + 3] = src.data[si + 3]!
+      dst.data[di] = readAt(src.data, si, "blit source")
+      dst.data[di + 1] = readAt(src.data, si + 1, "blit source")
+      dst.data[di + 2] = readAt(src.data, si + 2, "blit source")
+      dst.data[di + 3] = readAt(src.data, si + 3, "blit source")
     }
   }
 }
@@ -396,11 +401,15 @@ function drawCaption(dst: RgbaImage, label: string, ox: number, panelWidth: numb
   const textWidth = text.length * glyphW
   const startX = ox + Math.max(2, Math.floor((panelWidth - textWidth) / 2))
   const startY = Math.max(0, Math.floor((captionHeight - glyphH) / 2))
+  const fallbackGlyph = FONT5x7["?"]
+  if (fallbackGlyph === undefined) {
+    throw new Error('drawCaption: fallback "?" glyph is missing')
+  }
 
   for (let i = 0; i < text.length; i++) {
-    const glyph = FONT5x7[text[i]!.toUpperCase()] ?? FONT5x7["?"]!
+    const glyph = FONT5x7[readAt(text, i, "drawCaption label").toUpperCase()] ?? fallbackGlyph
     for (let row = 0; row < 7; row++) {
-      const bits = glyph[row]!
+      const bits = readAt(glyph, row, "drawCaption glyph row")
       for (let col = 0; col < 5; col++) {
         if ((bits >> (4 - col)) & 1) {
           fillRect(dst, startX + (i * 6 + col) * scale, startY + row * scale, scale, scale, FG)
@@ -408,6 +417,14 @@ function drawCaption(dst: RgbaImage, label: string, ox: number, panelWidth: numb
       }
     }
   }
+}
+
+function readAt<T>(values: ArrayLike<T>, index: number, subject: string): T {
+  const value = values[index]
+  if (value === undefined) {
+    throw new Error(`${subject}: missing value at index ${index}`)
+  }
+  return value
 }
 
 function fillRect(
