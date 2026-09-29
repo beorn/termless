@@ -14,6 +14,7 @@ export interface LibvtermModule {
   _free(ptr: number): void
 
   // libvterm functions (cwrap'd)
+  /** Creates the adapter's UTF-8 terminal, rather than libvterm's byte-mode default. */
   vterm_new(rows: number, cols: number): number
   vterm_free(vt: number): void
   vterm_set_size(vt: number, rows: number, cols: number): void
@@ -96,7 +97,7 @@ export async function initLibvterm(): Promise<LibvtermModule> {
 
     // Wrap C functions with cwrap for easier calling
     const cwrap = module.cwrap.bind(module)
-    module.vterm_new = cwrap("vterm_new", "number", ["number", "number"])
+    module.vterm_new = cwrap("termless_vterm_new_utf8", "number", ["number", "number"])
     module.vterm_free = cwrap("vterm_free", null, ["number"])
     module.vterm_set_size = cwrap("vterm_set_size", null, ["number", "number", "number"])
     module.vterm_input_write = cwrap("vterm_input_write", "number", ["number", "number", "number"])

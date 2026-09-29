@@ -24,8 +24,8 @@
  * this". A discriminator has to come from where they genuinely disagree.
  * Measured at this seam before writing the test:
  *
- * - **DECTCEM** (`ESC[?25l`, hide cursor) — xterm reports `visible: true`,
- *   vterm reports `visible: false`. Discriminates.
+ * - **DECTCEM** (`ESC[?25l`, hide cursor) — both now report `visible: false`.
+ *   This checks cursor truth but cannot identify the selected backend.
  * - **DECSCUSR** (`ESC[6 q`, bar cursor) — xterm hardcodes `style: "block"`,
  *   vterm reports `"beam"`. Discriminates.
  * - **Fancy underline** (`SGR 4:4`) — REJECTED. Both backends report
@@ -36,12 +36,9 @@
  *
  * ## Why the xterm control assertion is not redundant
  *
- * The default-is-vterm test alone would still pass if someone taught the xterm
- * backend to report the cursor truthfully — the discriminator would be dead and
- * the test would be vacuous while looking green. The control pins the
- * divergence itself, so that change breaks the control (a loud, accurate
- * failure naming exactly what happened) instead of silently hollowing out the
- * test above it.
+ * The default-is-vterm test alone would still pass if xterm learned the bar
+ * cursor shape. The control pins the remaining style divergence so that the
+ * backend-selection assertion cannot silently become vacuous.
  */
 
 import { describe, expect, test } from "vitest"
@@ -76,7 +73,7 @@ describe("session manager default backend (@pm/22783 Track 2)", () => {
   test("a consumer that names no backend gets vterm's truthful cursor reporting", async () => {
     const unnamed = await cursorAfterProbe()
 
-    // Both are things vterm reports faithfully and xterm.js flattens.
+    // Visibility checks the user-facing result; shape identifies the backend.
     expect(unnamed.visible).toBe(false) // the app hid the cursor; say so
     expect(unnamed.style).toBe("beam") // the app asked for a bar; say so
   })
@@ -87,12 +84,10 @@ describe("session manager default backend (@pm/22783 Track 2)", () => {
     expect(await cursorAfterProbe()).toEqual(await cursorAfterProbe("vterm"))
   })
 
-  test("control: xterm.js still flattens both, so the assertions above discriminate", async () => {
+  test("control: xterm.js still reports a block cursor, so shape identifies vterm", async () => {
     const xterm = await cursorAfterProbe("xtermjs")
 
-    // If either of these ever fails, the discriminator is gone and the two
-    // tests above have quietly become vacuous — fix them, do not delete this.
-    expect(xterm.visible).toBe(true) // hidden cursor reported visible anyway
-    expect(xterm.style).toBe("block") // bar cursor reported as a block anyway
+    // If this changes, the shape discriminator above must be reconsidered.
+    expect(xterm.style).toBe("block")
   })
 })

@@ -2,6 +2,14 @@
 #include <stdint.h>
 #include <string.h>
 
+// TerminalBackend accepts UTF-8 bytes; libvterm itself defaults to legacy
+// single-byte input. Select the encoding before state/screen initialization.
+VTerm *termless_vterm_new_utf8(int rows, int cols) {
+  VTerm *vt = vterm_new(rows, cols);
+  if (vt) vterm_set_utf8(vt, 1);
+  return vt;
+}
+
 // Emscripten cwrap accepts scalar arguments; libvterm's cell/text APIs take
 // small structs by value, whose C ABI cannot be expressed by cwrap directly.
 int termless_vterm_screen_get_cell_flat(const VTermScreen *screen, int row, int col, uint32_t *out) {

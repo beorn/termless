@@ -235,6 +235,18 @@ describe("ghostty backend", () => {
       expect(cursor.y).toBe(4) // 0-based
       expect(cursor.x).toBe(9) // 0-based
     })
+
+    test("reports cursor visibility as booleans through show/hide/show", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[?25h")
+      const shown = backend.getCursor().visible
+      feedText(backend, "\x1b[?25l")
+      const hidden = backend.getCursor().visible
+      feedText(backend, "\x1b[?25h")
+      const shownAgain = backend.getCursor().visible
+
+      expect([shown, hidden, shownAgain]).toEqual([true, false, true])
+    })
   })
 
   describe("modes", () => {

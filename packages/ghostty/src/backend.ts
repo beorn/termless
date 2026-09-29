@@ -550,6 +550,7 @@ export function createGhosttyBackend(
     const t = ensureTerm()
     t.update()
     const cursor = t.getCursor()
+    const rawVisible: unknown = cursor.visible
     return {
       col: cursor.x,
       row: cursor.y,
@@ -557,7 +558,7 @@ export function createGhosttyBackend(
       x: cursor.x,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       y: cursor.y,
-      visible: cursor.visible,
+      visible: rawVisible === true || rawVisible === 1 ? true : rawVisible === false || rawVisible === 0 ? false : null,
       style: "block", // Ghostty WASM doesn't expose cursor style directly
     }
   }

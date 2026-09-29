@@ -61,8 +61,8 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     const backend = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 8, rows: 2 })
     try {
-      backend.feed(new TextEncoder().encode("A\x1b[1;3;4;38;2;12;34;56;48;2;78;90;123mB\x1b[0mC"))
-      expect(backend.getText().split("\n")[0]).toBe("ABC")
+      backend.feed(new TextEncoder().encode("A\x1b[1;3;4;38;2;12;34;56;48;2;78;90;123mB\x1b[0mCé世"))
+      expect(backend.getText().split("\n")[0]).toBe("ABCé世")
       expect(backend.getCell(0, 0)).toMatchObject({ char: "A", fg: null, bg: null })
       expect(backend.getCell(0, 1)).toMatchObject({
         char: "B",
@@ -73,6 +73,14 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         bg: { r: 78, g: 90, b: 123 },
       })
       expect(backend.getCell(0, 2)).toMatchObject({ char: "C", fg: null, bg: null })
+      // The backend accepts UTF-8 bytes; ASCII alone cannot detect libvterm
+      // accidentally starting in its default legacy single-byte mode.
+      expect(backend.getCell(0, 3)).toMatchObject({ char: "é", wide: false })
+      expect(backend.getCell(0, 4)).toMatchObject({ char: "世", wide: true })
+      backend.feed(new TextEncoder().encode("\x1bcé世"))
+      expect(backend.getText().split("\n")[0]).toBe("é世")
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "é", wide: false })
+      expect(backend.getCell(0, 1)).toMatchObject({ char: "世", wide: true })
     } finally {
       backend.destroy()
     }

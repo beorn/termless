@@ -61,7 +61,7 @@ mkdir -p "$WASM_DIR"
 emcc -O2 \
   "$BUILD_DIR"/obj/*.o \
   -s EXPORTED_FUNCTIONS='[
-    "_vterm_new",
+    "_termless_vterm_new_utf8",
     "_vterm_free",
     "_vterm_set_size",
     "_vterm_input_write",

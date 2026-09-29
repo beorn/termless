@@ -203,6 +203,24 @@ describe("createXtermBackend", () => {
     backend.destroy()
   })
 
+  test("cursor visibility follows DECTCEM and soft reset", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const feed = (sequence: string): void => backend.feed(new TextEncoder().encode(sequence))
+    const expectVisible = (visible: boolean): void => {
+      expect(backend.getCursor().visible).toBe(visible)
+      expect(backend.getMode("cursorVisible")).toBe(visible)
+    }
+
+    expectVisible(true)
+    feed("\x1b[?25l")
+    expectVisible(false)
+    feed("\x1b[?25h")
+    expectVisible(true)
+    feed("\x1b[?25l\x1b[!p")
+    expectVisible(true)
+    backend.destroy()
+  })
+
   // ── Modes ──
 
   test("alt screen mode detection", () => {

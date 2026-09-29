@@ -10,6 +10,21 @@ import xterm from "@xterm/headless"
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
 
+interface XtermInternalLine {
+  readonly length: number
+  readonly _extendedAttrs?: ReadonlyArray<{ readonly underlineStyle?: number; readonly underlineColor?: number }>
+  replaceCells?(start: number, end: number, fill: unknown): void
+}
+
+interface XtermInternalCore {
+  readonly _writeBuffer?: { writeSync(data: string): void }
+  readonly coreService?: { readonly isCursorHidden?: unknown }
+  readonly buffer?: {
+    readonly lines?: { readonly length: number; get(index: number): XtermInternalLine | undefined }
+    getNullCell?(): unknown
+  }
+}
+
 // Unicode V11 addon: treats most emoji + many extended-grapheme codepoints as
 // wide (2-cell). Without it, xterm.js defaults to Unicode V6 wcwidth, where
 // many emoji are narrow (1-cell). Real modern terminals (Ghostty, iTerm 3.5+,
@@ -63,10 +78,10 @@ function buildPalette256(): Color[] {
 
   // 6x6x6 color cube (indices 16-231)
   const levels = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff]
-  for (let r = 0; r < 6; r++) {
-    for (let g = 0; g < 6; g++) {
-      for (let b = 0; b < 6; b++) {
-        palette.push({ r: levels[r]!, g: levels[g]!, b: levels[b]! })
+  for (const r of levels) {
+    for (const g of levels) {
+      for (const b of levels) {
+        palette.push({ r, g, b })
       }
     }
   }
@@ -109,14 +124,32 @@ const DEFAULT_ROWS = 24
  * Uses @xterm/headless for in-process terminal emulation — no browser needed.
  * The terminal is initialized lazily via init(), or eagerly if opts are provided.
  */
+// oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
 export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
 
+  function coreOf(t: XTerminal): XtermInternalCore {
+    const core = (t as unknown as { _core?: XtermInternalCore })._core
+    if (!core) throw new Error("xterm.js headless internal core is unavailable")
+    return core
+  }
+
   /** Access the internal write buffer for synchronous writes */
   function writeSync(t: XTerminal, data: string): void {
-    ;(t as any)._core._writeBuffer.writeSync(data)
+    const buffer = coreOf(t)._writeBuffer
+    if (typeof buffer?.writeSync !== "function")
+      throw new Error("xterm.js headless synchronous write API is unavailable")
+    buffer.writeSync(data)
+  }
+
+  function cursorVisible(t: XTerminal): boolean {
+    const hidden = coreOf(t).coreService?.isCursorHidden
+    if (typeof hidden !== "boolean") {
+      throw new Error("xterm.js headless cursor visibility state is unavailable (_core.coreService.isCursorHidden)")
+    }
+    return !hidden
   }
 
   function ensureTerm(): XTerminal {
@@ -242,9 +275,15 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function clampActiveBufferWidth(t: XTerminal, cols: number, oldCols: number): void {
     // xterm.js exposes line mutation only on its internal buffer — same `_core`
     // access pattern as getExtendedAttrs below.
-    const buffer = (t as any)._core?.buffer
+    const buffer = coreOf(t).buffer
     const lines = buffer?.lines
-    if (!lines || typeof lines.get !== "function" || typeof buffer.getNullCell !== "function") {
+    if (
+      !lines ||
+      typeof lines.get !== "function" ||
+      !Number.isSafeInteger(lines.length) ||
+      lines.length < 0 ||
+      typeof buffer?.getNullCell !== "function"
+    ) {
       throw new Error(
         "xterm.js internal buffer API (buffer.lines / getNullCell) unavailable — cannot clamp " +
           "alt-screen width on shrink (20335). xterm.js internals changed; update clampActiveBufferWidth.",
@@ -314,16 +353,18 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   function getExtendedAttrs(row: number, col: number): { underlineStyle?: number; underlineColor?: Color | null } {
     const t = ensureTerm()
     try {
-      const internalLine = (t as any)._core.buffer.lines.get(row + t.buffer.active.baseY)
+      const lines = coreOf(t).buffer?.lines
+      if (!lines || typeof lines.get !== "function") throw new Error("xterm.js internal line API is unavailable")
+      const internalLine = lines.get(row + t.buffer.active.baseY)
       if (!internalLine?._extendedAttrs) return {}
       const ext = internalLine._extendedAttrs[col]
       if (!ext) return {}
 
-      const style = ext.underlineStyle as number | undefined
+      const style = ext.underlineStyle
       let color: Color | null = null
       // xterm.js ExtendedAttrs.underlineColor includes color-mode bits; see
       // AttributeData.ts CM_P16 / CM_P256 / CM_RGB in the pinned xterm.js source.
-      const rawColor = ext.underlineColor as number | undefined
+      const rawColor = ext.underlineColor
       if (rawColor !== undefined) {
         switch (rawColor & 0x3000000) {
           case 0x0000000:
@@ -343,9 +384,8 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
-  // Note: cursor visibility (DECTCEM) and reverse video (DECSCNM) are handled
-  // by the renderer in xterm.js and are not stored in headless mode.
-  // These remain as genuine headless limitations.
+  // Reverse video (DECSCNM) is handled by the xterm.js renderer and is not
+  // stored in headless mode. Cursor visibility comes from its internal core.
 
   function convertCell(bufCell: import("@xterm/headless").IBufferCell | undefined, row?: number, col?: number): Cell {
     if (!bufCell) {
@@ -465,13 +505,16 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return {
       col: t.buffer.active.cursorX,
       row: t.buffer.active.cursorY,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       x: t.buffer.active.cursorX,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       y: t.buffer.active.cursorY,
-      visible: true, // DECTCEM not available in headless mode
+      visible: cursorVisible(t),
       style: "block", // default — headless doesn't expose cursor style
     }
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- This adapter still implements the legacy mode signature.
   function getMode(mode: TerminalMode): boolean {
     const t = ensureTerm()
 
@@ -479,7 +522,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       case "altScreen":
         return t.buffer.active.type === "alternate"
       case "cursorVisible":
-        return true // not easily trackable in headless
+        return cursorVisible(t)
       case "bracketedPaste":
         return t.modes.bracketedPasteMode
       case "applicationCursor":
@@ -512,8 +555,11 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       viewportTop: buf.viewportY,
       totalRows: buf.length,
       screenRows: t.rows,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       viewportOffset: buf.viewportY,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       totalLines: buf.length,
+      // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       screenLines: t.rows,
     }
   }
@@ -536,6 +582,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     extensions: new Set(),
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
   const backend: TerminalBackend = {
     name: "xterm",
     init,
@@ -546,7 +593,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getText,
     getTextRange,
     getCell,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
+    // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLines,
     getRow: getLine,
     getRows: getLines,

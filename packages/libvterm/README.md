@@ -8,16 +8,23 @@ libvterm is the VT parser used by neovim's built-in terminal. It provides a clea
 
 ## Build
 
-Requires [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html):
+The repository's `flake.nix` declares Emscripten and the build tools. From the
+Termless repository root:
 
 ```bash
-cd packages/libvterm
-bash build/build.sh
+nix develop --command bash packages/libvterm/build/build.sh
 ```
 
-This generates `wasm/libvterm.js` and `wasm/libvterm.wasm`.
+An existing Emscripten SDK can also run `bash build/build.sh` from this package.
+The build generates `wasm/libvterm.js`, `wasm/libvterm.wasm`, and a receipt binding
+their hashes to the committed build inputs. Uncommitted build inputs prevent
+receipt generation; diagnostic binaries from such a build are not attested.
 
 ## Usage
+
+New backend instances start in UTF-8 mode, matching the bytes supplied through
+`TerminalBackend.feed`. The low-level module's `vterm_new` binding uses the same
+UTF-8 constructor; it does not expose libvterm's legacy byte-mode default.
 
 ```typescript
 import { createLibvtermBackend, initLibvterm } from "@termless/libvterm"
