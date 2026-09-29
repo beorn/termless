@@ -152,6 +152,7 @@ export function readCell(
 ): {
   chars: string
   width: number
+  continuation: boolean
   bold: boolean
   underline: number
   italic: boolean
@@ -170,11 +171,15 @@ export function readCell(
 } {
   const wordAt = (index: number) => mod.getValue(cellPtr + index * 4, "i32") >>> 0
   const cp0 = wordAt(0)
-  const chars = cp0 > 0 ? String.fromCodePoint(cp0) : ""
+  // libvterm marks the trailing cell of a wide glyph with UINT32_MAX.
+  // It is a cell marker, not a Unicode code point.
+  const continuation = cp0 === 0xffffffff
+  const chars = cp0 === 0 || continuation ? "" : String.fromCodePoint(cp0)
 
   return {
     chars,
     width: wordAt(1),
+    continuation,
     bold: !!wordAt(2),
     underline: wordAt(3),
     italic: !!wordAt(4),

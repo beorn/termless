@@ -104,7 +104,7 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
     blink: raw.blink,
     hidden: raw.conceal,
     wide: raw.width > 1,
-    continuation: false,
+    continuation: raw.continuation,
     hyperlink: null,
   }
 }

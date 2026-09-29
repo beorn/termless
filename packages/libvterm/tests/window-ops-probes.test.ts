@@ -77,6 +77,7 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
       // accidentally starting in its default legacy single-byte mode.
       expect(backend.getCell(0, 3)).toMatchObject({ char: "é", wide: false })
       expect(backend.getCell(0, 4)).toMatchObject({ char: "世", wide: true })
+      expect(backend.getCell(0, 5)).toMatchObject({ char: "", wide: false, continuation: true })
       backend.feed(new TextEncoder().encode("\x1bcé世"))
       expect(backend.getText().split("\n")[0]).toBe("é世")
       expect(backend.getCell(0, 0)).toMatchObject({ char: "é", wide: false })
