@@ -57,6 +57,31 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     expect(Number(m[1])).toBe(24)
     expect(Number(m[2])).toBe(80)
   })
+
+  /**
+   * @failure Headless Kitty drops its title-stack callback and reports XTWINOPS 22/23 unsupported.
+   * @level l2
+   * @consumer Terminfo headless window-title probes
+   */
+  test("tracks Kitty's title-only stack with its ten-entry limit", () => {
+    const backend = createKittyBackend()
+    backend.init?.({ cols: 80, rows: 24 })
+    const feed = (sequence: string): void => backend.feed(new TextEncoder().encode(sequence))
+
+    feed("\x1b]2;original\x07\x1b[22;0t\x1b]2;changed\x07")
+    expect(backend.getTitle()).toBe("changed")
+    feed("\x1b[23;0t")
+    expect(backend.getTitle()).toBe("original")
+
+    // Kitty's icon-only form must not save or restore the visible title.
+    feed("\x1b[22;1t\x1b]2;icon-only\x07\x1b[23;1t")
+    expect(backend.getTitle()).toBe("icon-only")
+
+    // Kitty's window keeps at most ten saved titles; the oldest falls off.
+    for (let i = 0; i < 11; i++) feed(`\x1b[22;2t\x1b]2;title-${i}\x07`)
+    for (let i = 0; i < 11; i++) feed("\x1b[23;2t")
+    expect(backend.getTitle()).toBe("title-0")
+  })
 })
 
 describe.skipIf(kittyAvailable)("window-op probe responses — kitty backend (skipped)", () => {

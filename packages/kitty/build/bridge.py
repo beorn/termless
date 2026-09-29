@@ -34,6 +34,7 @@ import base64
 import json
 import sys
 import traceback
+from collections import deque
 
 from kitty.fast_data_types import Screen, set_options
 from kitty.options.types import defaults
@@ -115,6 +116,7 @@ class Callbacks:
     def __init__(self):
         self.wtcbuf = b""
         self.title = ""
+        self.title_stack = deque(maxlen=10)
         self.responses = b""  # Accumulated DA1/DA2/DSR response data
 
     def write(self, data):
@@ -127,6 +129,16 @@ class Callbacks:
             self.title = bytes(title).decode("utf-8", errors="replace")
         else:
             self.title = str(title)
+
+    def manipulate_title_stack(self, pop, title, icon):
+        # Kitty's Window owns the title stack; its icon stack is not implemented.
+        if not title:
+            return
+        if pop:
+            if self.title_stack:
+                self.title = self.title_stack.pop()
+        elif self.title:
+            self.title_stack.append(self.title)
 
     def drain_responses(self):
         """Drain and return accumulated response data."""
