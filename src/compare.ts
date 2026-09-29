@@ -28,7 +28,7 @@
 
 import { spawnSync } from "node:child_process"
 
-import { renderTerminalPng, type CanvasTheme, type RenderOptions, type RenderMeta } from "@termless/ghostty"
+import type { CanvasTheme, RenderOptions, RenderMeta } from "./render/canvas-types.ts"
 
 import type { TestTerminal, SvgScreenshotOptions } from "./terminal/types.ts"
 
@@ -132,6 +132,9 @@ export async function captureCrossRenderer(
     ...(options.fontSize ? { fontSize: options.fontSize } : {}),
     ...(options.fontFamily ? { fontFamily: options.fontFamily } : {}),
   }
+  const { renderTerminalPng } = await import("@termless/ghostty").catch((cause: unknown) => {
+    throw new Error("captureCrossRenderer: cannot load the canvas renderer. Install @termless/ghostty.", { cause })
+  })
   const canvasResult = (await renderTerminalPng(terminal, canvasOptions)) as unknown as {
     png: Uint8Array
     meta: RenderMeta

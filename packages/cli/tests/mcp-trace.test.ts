@@ -19,7 +19,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, beforeEach, describe, expect, test } from "vitest"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { createFrameTracer } from "@termless/core"
 import { createSessionManager } from "../src/session.ts"
 
@@ -98,8 +98,8 @@ describe("session manager — FrameTracer integration (MCP tool surface)", () =>
       // schedule a debounced capture, and persist.
       terminal.feed("\x1b[2J\x1b[Hhello")
 
-      // Wait past debounce window.
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      // A frame is recorded only after the debounced capture finishes writing its PNG.
+      await vi.waitFor(() => expect(tracer.framesSinceSeq(0).length).toBeGreaterThanOrEqual(1), { timeout: 5000 })
 
       // Pull frames since seq 0.
       const frames = tracer.framesSinceSeq(0)

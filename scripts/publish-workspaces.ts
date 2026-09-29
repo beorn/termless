@@ -28,6 +28,7 @@ interface PackageManifest {
   private?: boolean
   dependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>
 }
 
 export interface PublishableWorkspace {
@@ -80,7 +81,11 @@ export async function validatePublishOrder(root: string): Promise<PublishableWor
   for (const [index, { dir, manifest }] of manifests.entries()) {
     const localDependencies = {
       ...manifest.dependencies,
-      ...manifest.peerDependencies,
+      ...Object.fromEntries(
+        Object.entries(manifest.peerDependencies ?? {}).filter(
+          ([name]) => manifest.peerDependenciesMeta?.[name]?.optional !== true,
+        ),
+      ),
     }
     for (const dependency of Object.keys(localDependencies)) {
       const dependencyIndex = packageIndex.get(dependency)

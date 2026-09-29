@@ -33,7 +33,7 @@ import type { TapeFile } from "./parser.ts"
 import type { Cell, Cursor, TestTerminal, TerminalBackend, Terminal } from "../../terminal/types.ts"
 import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../../terminal/snapshot.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
-import { renderTerminalPng, type CanvasTheme, type RenderOptions } from "@termless/ghostty"
+import type { CanvasTheme, RenderOptions } from "../../render/canvas-types.ts"
 import { pngDimensions } from "../../compare.ts"
 import { encodePng, decodePngRgba, type RgbaImage } from "./png-codec.ts"
 
@@ -106,6 +106,10 @@ export interface CanvasCompareResult {
 // Public API
 // =============================================================================
 
+function unavailableCanvasRenderer(cause: unknown): never {
+  throw new Error("compareCanvas: cannot load the canvas renderer. Install @termless/ghostty.", { cause })
+}
+
 /**
  * Replay a tape through N backends and render every result through the same
  * canvas pipeline. See the file header for the design rationale.
@@ -117,6 +121,8 @@ export async function compareCanvas(tape: TapeFile, options: CanvasCompareOption
   const mode = options.mode ?? "side-by-side"
   const captionHeight = options.captionHeight ?? 28
   const gap = options.gap ?? 12
+
+  const { renderTerminalPng } = await import("@termless/ghostty").catch(unavailableCanvasRenderer)
 
   const results: CanvasBackendResult[] = []
 

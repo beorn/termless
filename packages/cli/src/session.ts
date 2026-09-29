@@ -1,7 +1,7 @@
 /**
  * Session Manager — shared between CLI and MCP server.
  *
- * Manages named terminal sessions backed by termless + xterm.js.
+ * Manages named terminal sessions backed by termless, using vterm by default.
  * Each session wraps a TestTerminal instance with optional PTY process.
  */
 
@@ -12,11 +12,11 @@ import { createXtermBackend } from "@termless/xtermjs"
 // ── Types ──
 
 /**
- * Backend name accepted by createSession. Default is "xtermjs" (the historical
- * behavior, fast + portable). "ghostty" uses ghostty-web WASM and is the
+ * Backend name accepted by createSession. Default is "vterm", the production
+ * engine (pure-TS, standards-compliant). "ghostty" uses ghostty-web WASM and is the
  * highest-fidelity headless backend — matches what real Ghostty renders, so
- * screenshots reflect true truecolor + glyph fidelity. "vterm" uses vterm.js
- * (pure-TS, standards-compliant). "vt100" uses the minimal VT100 emulator.
+ * screenshots reflect true truecolor + glyph fidelity. "xtermjs" is the
+ * differential reference. "vt100" uses the minimal VT100 emulator.
  * "peekaboo" drives a real terminal app via OS automation (macOS only) —
  * pixel-perfect against the user's actual terminal, slowest of all backends.
  *

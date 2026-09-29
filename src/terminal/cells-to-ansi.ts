@@ -5,7 +5,7 @@
  * when fed to a fresh terminal — produce the same visible state. The inverse of
  * "feed bytes → parse → cells".
  *
- * This is the bridge used by `renderTerminalPng()` (in `./render.ts`) to feed
+ * This is the bridge used by `@termless/ghostty`'s `renderTerminalPng()` to feed
  * an already-parsed terminal back into ghostty-web's parser for the canvas
  * renderer. It's also useful standalone for round-tripping snapshots.
  *
@@ -13,7 +13,7 @@
  * scroll history, or original SGR sequencing — just the final visible grid.
  */
 
-import type { Cell, Cursor, Color, Terminal } from "../../../src/terminal/types.ts"
+import type { Cell, Cursor, Color, Terminal } from "./types.ts"
 
 function rgbToSgr(role: "fg" | "bg", color: Color): string {
   const code = role === "fg" ? 38 : 48

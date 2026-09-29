@@ -100,9 +100,13 @@
     "vue": "3.5.43"
   },
   "peerDependencies": {
+    "@termless/ghostty": "^0.9.2",
     "node-pty": ">=1.0.0"
   },
   "peerDependenciesMeta": {
+    "@termless/ghostty": {
+      "optional": true
+    },
     "node-pty": {
       "optional": true
     }

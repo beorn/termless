@@ -50,6 +50,7 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@resvg/resvg-js": "^2.6.0",
     "@silvery/commander": "^0.18.2",
+    "@termless/vterm": "^0.9.2",
     "loggily": "^0.10.2",
     "react": "^19.0.0",
     "silvery": "^0.24.0",
@@ -60,14 +61,10 @@
     "@termless/ghostty": "^0.9.2",
     "@termless/peekaboo": "^0.9.2",
     "@termless/vt100": "^0.9.2",
-    "@termless/vterm": "^0.9.2",
     "@termless/xtermjs": "^0.9.2"
   },
   "peerDependenciesMeta": {
     "@termless/ghostty": {
-      "optional": true
-    },
-    "@termless/vterm": {
       "optional": true
     },
     "@termless/vt100": {
