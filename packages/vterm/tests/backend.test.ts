@@ -337,16 +337,22 @@ describe("createVtermBackend", () => {
 
   // ── vterm-specific: hyperlinks ──
 
-  test("OSC 8 hyperlinks are captured", () => {
+  // @failure Advertised OSC 8 metadata loses exact URIs or leaks beyond close.
+  // @level l0
+  // @consumer Headless collectors using the Termless hyperlinks extension.
+  test("OSC 8 hyperlinks are captured through the advertised metadata extension", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
-    // OSC 8 ; params ; URI ST ... OSC 8 ; ; ST
-    backend.feed(new TextEncoder().encode("\x1b]8;;https://example.com\x1b\\link text\x1b]8;;\x1b\\"))
-    const cell = backend.getCell(0, 0)
-    expect(cell.char).toBe("l")
-    expect(cell.hyperlink).toBe("https://example.com")
-    // Cell after the hyperlink should not have a hyperlink
-    const after = backend.getCell(0, 9)
-    expect(after.hyperlink).toBeNull()
+    backend.feed(new TextEncoder().encode("A\x1b]8;;https://example.com/target\x1b\\LINK\x1b]8;;\x1b\\Z"))
+    expect(backend.capabilities.extensions.has("hyperlinks")).toBe(true)
+    expect(backend.getCell(0, 0).char).toBe("A")
+    expect(backend.getHyperlinkAt(0, 0)).toBeNull()
+    for (let col = 1; col <= 4; col++) {
+      expect(backend.getCell(0, col).hyperlink).toBe("https://example.com/target")
+      expect(backend.getHyperlinkAt(0, col)).toBe("https://example.com/target")
+    }
+    expect(backend.getCell(0, 5).char).toBe("Z")
+    expect(backend.getCell(0, 5).hyperlink).toBeNull()
+    expect(backend.getHyperlinkAt(0, 5)).toBeNull()
     backend.destroy()
   })
 

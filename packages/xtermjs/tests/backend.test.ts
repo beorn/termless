@@ -420,14 +420,21 @@ describe("createXtermBackend", () => {
 
   // ── Capabilities ──
 
+  // @failure Advertised OSC 8 metadata loses exact URIs or leaks beyond close.
+  // @level l0
+  // @consumer Headless collectors using the Termless hyperlinks extension.
   test("getCell reports the exact OSC 8 URI and a closed, unlinked sentinel", () => {
     const backend = createXtermBackend({ cols: 20, rows: 3 })
     backend.feed(new TextEncoder().encode("A\x1b]8;;https://example.com/target\x07LINK\x1b]8;;\x07Z"))
+    expect(backend.capabilities.extensions.has("hyperlinks")).toBe(true)
     expect(backend.getCell(0, 0).hyperlink).toBeNull()
+    expect(backend.getHyperlinkAt(0, 0)).toBeNull()
     for (let col = 1; col <= 4; col++) {
       expect(backend.getCell(0, col).hyperlink).toBe("https://example.com/target")
+      expect(backend.getHyperlinkAt(0, col)).toBe("https://example.com/target")
     }
     expect(backend.getCell(0, 5).hyperlink).toBeNull()
+    expect(backend.getHyperlinkAt(0, 5)).toBeNull()
     backend.destroy()
   })
 
@@ -461,7 +468,6 @@ describe("createXtermBackend", () => {
     expect(backend.capabilities.osc8Hyperlinks).toBe(true)
     expect(backend.capabilities.reflow).toBe(true)
     expect(backend.capabilities.extensions).toBeInstanceOf(Set)
-    expect(backend.capabilities.extensions.size).toBe(0)
     backend.destroy()
   })
 

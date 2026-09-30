@@ -9,6 +9,7 @@
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   TerminalBackend,
+  HyperlinkExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -55,7 +56,7 @@ const BLANK_CELL: Cell = {
  * underline color, cursor shapes (DECSCUSR), OSC 8 hyperlinks, all DEC
  * private modes, DA1/DA2/DSR responses, synchronized output, and more.
  */
-export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend & HyperlinkExtension {
   let screen: Screen | null = null
   let unsubscribeParser: (() => void) | null = null
 
@@ -264,6 +265,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     reflow: true,
 
     extensions: new Set([
+      "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc52", // Clipboard read/write via OSC 52
       "osc7", // CWD reporting via OSC 7
       "osc9", // Desktop notifications via OSC 9
@@ -287,7 +289,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     ]),
   }
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & HyperlinkExtension = {
     name: "vterm",
     init,
     destroy,
@@ -297,6 +299,9 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt(row, col) {
+      return getCell(row, col).hyperlink
+    },
     getLine,
     getLines,
     getRow: getLine,

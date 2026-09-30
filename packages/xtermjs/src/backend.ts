@@ -37,6 +37,7 @@ interface XtermInternalCore {
 import { Unicode11Addon } from "@xterm/addon-unicode11"
 import type {
   TerminalBackend,
+  HyperlinkExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -125,7 +126,7 @@ const DEFAULT_ROWS = 24
  * The terminal is initialized lazily via init(), or eagerly if opts are provided.
  */
 // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend & HyperlinkExtension {
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
@@ -139,8 +140,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   /** Access the internal write buffer for synchronous writes */
   function writeSync(t: XTerminal, data: string): void {
     const buffer = coreOf(t)._writeBuffer
-    if (typeof buffer?.writeSync !== "function")
+    if (typeof buffer?.writeSync !== "function") {
       throw new Error("xterm.js headless synchronous write API is unavailable")
+    }
     buffer.writeSync(data)
   }
 
@@ -579,11 +581,11 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(),
+    extensions: new Set(["hyperlinks"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & HyperlinkExtension = {
     name: "xterm",
     init,
     destroy,
@@ -593,6 +595,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt(row, col) {
+      return getCell(row, col).hyperlink
+    },
     // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
     // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.

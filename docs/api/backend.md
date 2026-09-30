@@ -174,6 +174,8 @@ export function createMyBackend(): TerminalBackend {
 
 ## Extension Interfaces
 
+`osc8Hyperlinks` declares clickable-link feature support; the `hyperlinks` extension separately exposes per-cell URI metadata through `getHyperlinkAt`.
+
 Backends can optionally implement extension interfaces. Use `hasExtension()` to check:
 
 ```typescript
