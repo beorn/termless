@@ -57,6 +57,25 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
+  // AC2: unknown cursor properties must not become negative feature results.
+  // Existing ABI tests cover cells and positions, not unavailable properties.
+  // @failure Fixed cursor defaults misreport accepted hide/shape sequences.
+  // @level l2
+  // @consumer Terminfo cursor probes
+  // @testonly none
+  test("keeps unobserved cursor properties unknown while reading its position", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 8, rows: 2 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[2;4H\x1b[?25l\x1b[6 q"))
+      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: null, style: null })
+      backend.feed(new TextEncoder().encode("\x1b[?25h\x1b[2 q"))
+      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: null, style: null })
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("reads fed text and cells through the flat WASM ABI", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 8, rows: 2 })

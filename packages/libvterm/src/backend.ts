@@ -387,8 +387,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
       y: cursorRow,
       col: cursorCol,
       row: cursorRow,
-      visible: true, // libvterm doesn't expose cursor visibility via this API
-      style: "block", // libvterm doesn't expose cursor style via this API
+      visible: null, // This adapter does not observe libvterm's cursor properties.
+      style: null,
     }
   }
 
