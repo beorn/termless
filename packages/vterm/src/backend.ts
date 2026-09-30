@@ -1,3 +1,4 @@
+/* oxlint-disable typescript/no-deprecated -- This adapter implements the current published TerminalBackend lifecycle and legacy cursor/scrollback fields until the Emulator migration replaces that loader. */
 /**
  * Full-featured vterm.js backend for termless.
  *

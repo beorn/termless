@@ -1,3 +1,4 @@
+/* oxlint-disable typescript/no-deprecated -- This compatibility barrel intentionally re-exports published legacy contracts; remove this annotation when their owning Emulator/recording migrations retire them. */
 // ── The io primitives — Session, Event, Emulator, Recording, pipe ──
 //
 // They live at `@termless/core/io` (src/io/), a module that depends on
