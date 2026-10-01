@@ -76,6 +76,7 @@
     "@termless/kitty": "workspace:*",
     "@termless/libvterm": "workspace:*",
     "@termless/peekaboo": "workspace:*",
+    "@termless/test": "workspace:*",
     "@termless/vt100": "workspace:*",
     "@termless/vt100-rust": "workspace:*",
     "@termless/vt220": "workspace:*",
