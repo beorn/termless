@@ -1,7 +1,7 @@
 import { t as createPlayerFactory } from "./player-BYFGG-d9.mjs";
-import xterm from "@xterm/xterm";
+import { Terminal } from "@xterm/xterm";
 //#region src/browser.ts
-const createPlayer = createPlayerFactory(() => xterm.Terminal);
+const createPlayer = createPlayerFactory(() => Terminal);
 function createTermlessPlayer(element, source, options = {}) {
 	return createPlayer(element, source, options);
 }
