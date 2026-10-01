@@ -4,7 +4,7 @@
  * @consumer Node consumers of @termless/test and its required @termless/core peer.
  * @testonly none
  */
-import { createRequire } from "node:module"
+import { readFileSync } from "node:fs"
 import { describe, expect, test } from "vitest"
 import { backends, entry, isReady, manifest } from "@termless/core"
 import { createTestTerminal } from "@termless/test"
@@ -22,9 +22,10 @@ describe("@termless/test packed artifact", () => {
   })
 
   // Source-tree Vitest cannot resolve workspace peers through import.meta.resolve.
-  // This consumer check must run against emitted archives; their entry is .mjs.
-  const coreEntry = createRequire(import.meta.url).resolve("@termless/core")
-  test.skipIf(coreEntry.endsWith(".ts"))("fixture default enumeration reads the public core registry", async () => {
+  // Only the source package declares this TS entry; isolated packed consumers run this case.
+  const consumer = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  const sourceWorkspace = consumer.name === "@termless/core" && consumer.exports?.["."] === "./src/index.ts"
+  test.skipIf(sourceWorkspace)("fixture default enumeration reads the public core registry", async () => {
     const name = `__packed_peer_probe_${process.pid}`
     const catalog = manifest()
     expect(catalog.backends[name]).toBeUndefined()
