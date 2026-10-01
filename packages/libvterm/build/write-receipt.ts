@@ -51,6 +51,7 @@ const generatedIncludes = [
   "src/fullwidth.inc",
 ].map((path) => [path, sha256(readFileSync(join(sourceDir, path)))])
 const buildInputs = {
+  runtimeTarget: "node",
   sourceCommit,
   wrapperSourceCommit,
   wrapperTreeOid,
