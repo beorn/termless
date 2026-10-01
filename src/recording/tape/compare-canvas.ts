@@ -35,7 +35,7 @@ import { snapshotTerminal, snapshotReadable, type TerminalSnapshot } from "../..
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import type { CanvasTheme, RenderOptions } from "../../render/canvas-types.ts"
 import { pngDimensions } from "../../compare.ts"
-import { encodePng, decodePngRgba, type RgbaImage } from "./png-codec.ts"
+import { encodePng, decodePngRgba, type RgbaImage } from "../../render/png-codec.ts"
 
 // =============================================================================
 // Types

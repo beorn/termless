@@ -22,8 +22,7 @@ import type { TapeFile } from "./parser.ts"
 import type { TerminalBackend } from "../../terminal/types.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { screenshotPng } from "../../render/png.ts"
-
-let upngModule: typeof import("upng-js") | null = null
+import { pngCodec } from "../../render/png-codec.ts"
 
 // =============================================================================
 // Types
@@ -316,18 +315,8 @@ interface PixelDiffOverlay {
   totalPixels: number
 }
 
-async function loadUpng() {
-  if (upngModule) return upngModule
-  try {
-    upngModule = await import("upng-js")
-    return upngModule
-  } catch {
-    throw new Error("diff comparison requires upng-js. Install it:\n  bun add upng-js")
-  }
-}
-
-async function decodePng(data: Uint8Array): Promise<DecodedPng> {
-  const UPNG = await loadUpng()
+function decodePng(data: Uint8Array): DecodedPng {
+  const UPNG = pngCodec()
   const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
   const decoded = UPNG.decode(buffer)
   const frame = UPNG.toRGBA8(decoded)[0]
@@ -341,8 +330,8 @@ async function decodePng(data: Uint8Array): Promise<DecodedPng> {
   }
 }
 
-async function measureScreenshots(screenshots: BackendScreenshot[]): Promise<MeasuredScreenshot[]> {
-  const UPNG = await loadUpng()
+function measureScreenshots(screenshots: BackendScreenshot[]): MeasuredScreenshot[] {
+  const UPNG = pngCodec()
   return screenshots.map((s) => {
     const buffer = s.png.buffer.slice(s.png.byteOffset, s.png.byteOffset + s.png.byteLength) as ArrayBuffer
     const decoded = UPNG.decode(buffer)
@@ -358,7 +347,7 @@ async function createPixelDiffOverlay(
   baseline: BackendScreenshot,
   target: BackendScreenshot,
 ): Promise<PixelDiffOverlay> {
-  const UPNG = await loadUpng()
+  const UPNG = pngCodec()
   const [a, b] = await Promise.all([decodePng(baseline.png), decodePng(target.png)])
   const width = Math.max(a.width, b.width)
   const height = Math.max(a.height, b.height)

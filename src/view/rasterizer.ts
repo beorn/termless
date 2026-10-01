@@ -34,6 +34,7 @@
 import { bundledFontFiles, bundledFontsDir, BUNDLED_FONTS } from "../render/fonts.ts"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
+import { decodePngRgba, encodePng } from "../render/png-codec.ts"
 
 /** How a raster frame is rasterized from SVG. */
 export type RendererKind = "canvas" | "resvg" | "swash" | "browser" | "auto"
@@ -216,11 +217,9 @@ async function createSwashRasterizer(mod: SwashModule): Promise<Rasterizer> {
     async rasterizeCells(terminal, scale) {
       return toBitmap(terminal, scale)
     },
-    async cellsToPng(terminal, scale) {
+    cellsToPng(terminal, scale) {
       const { pixels, width, height } = toBitmap(terminal, scale)
-      const UPNG = (await import("upng-js")) as typeof import("upng-js")
-      const ab = pixels.buffer.slice(pixels.byteOffset, pixels.byteOffset + pixels.byteLength) as ArrayBuffer
-      return new Uint8Array(UPNG.encode([ab], width, height, 0))
+      return Promise.resolve(encodePng({ data: pixels, width, height }))
     },
   }
 }
@@ -351,13 +350,10 @@ function createBrowserRasterizer(playwright: { chromium: PlaywrightChromium }): 
     async rasterize(svg, scale) {
       // Decode the PNG back to RGBA via upng — the GIF/APNG encoders consume
       // raw pixels, not PNG bytes.
-      const { png, width, height } = await shot(svg, scale)
-      const UPNG = (await import("upng-js")) as typeof import("upng-js")
-      const ab = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer
-      const decoded = UPNG.decode(ab)
-      const rgbaFrames = UPNG.toRGBA8(decoded)
+      const { png } = await shot(svg, scale)
+      const decoded = decodePngRgba(png)
       return {
-        pixels: new Uint8Array(rgbaFrames[0] ?? new ArrayBuffer(0)),
+        pixels: decoded.data,
         width: decoded.width,
         height: decoded.height,
       }

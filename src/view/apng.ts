@@ -19,19 +19,7 @@
 import type { AnimationFrame, AnimationOptions } from "./animation-types.ts"
 import { rasterizeFrameLayers } from "./frame-layers.ts"
 import { selectRasterizer, type RendererKind } from "./rasterizer.ts"
-
-// Lazy-cached imports
-let upngModule: typeof import("upng-js") | null = null
-
-async function loadUpng() {
-  if (upngModule) return upngModule
-  try {
-    upngModule = await import("upng-js")
-    return upngModule
-  } catch {
-    throw new Error("createApng() requires upng-js. Install it:\n  bun add upng-js")
-  }
-}
+import { pngCodec } from "../render/png-codec.ts"
 
 /**
  * Encode animation frames as an animated PNG (APNG).
@@ -52,7 +40,8 @@ export async function createApng(
     throw new Error("createApng requires at least one frame")
   }
 
-  const [UPNG, rasterizer] = await Promise.all([loadUpng(), selectRasterizer(options?.renderer ?? "auto")])
+  const UPNG = pngCodec()
+  const rasterizer = await selectRasterizer(options?.renderer ?? "auto")
 
   const defaultDuration = options?.defaultDuration ?? 100
   const scale = options?.scale ?? 2

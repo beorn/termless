@@ -229,8 +229,8 @@ export type {
   CanvasBackendResult,
   CanvasBackendFrame,
 } from "./recording/tape/compare-canvas.ts"
-export { decodePngRgba, encodePng } from "./recording/tape/png-codec.ts"
-export type { RgbaImage } from "./recording/tape/png-codec.ts"
+export { decodePngRgba, encodePng } from "./render/png-codec.ts"
+export type { RgbaImage } from "./render/png-codec.ts"
 export { overlayKeystroke } from "./recording/tape/overlay.ts"
 export type { KeyOverlayOptions } from "./recording/tape/overlay.ts"
 export { resolveTheme, listThemes, listAliases } from "./recording/tape/themes.ts"
