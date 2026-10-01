@@ -41,10 +41,15 @@
  */
 
 import { afterEach, describe } from "vitest"
-import type { TestTerminal, TerminalCreateOptions } from "../../../src/terminal/types.ts"
-import { createTerminal } from "../../../src/index.ts"
+import {
+  backend,
+  backends,
+  createTerminal,
+  isReady,
+  type TestTerminal,
+  type TerminalCreateOptions,
+} from "@termless/core"
 import { createXtermBackend } from "../../xtermjs/src/backend.ts"
-import { backend, backends, isReady } from "../../../src/backend/backends.ts"
 
 // ═══════════════════════════════════════════════════════
 // Option types
