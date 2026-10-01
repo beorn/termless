@@ -61,7 +61,7 @@ cd "$NATIVE_DIR"
 # Ghostty requires specific Zig and SDK versions that its flake provides.
 # We unset SDKROOT/DEVELOPER_DIR so zig finds the system SDK via xcrun
 # (ghostty's build.zig eagerly evaluates XCFramework targets on macOS).
-nix --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command bash -c "unset SDKROOT DEVELOPER_DIR; zig build -j$BUILD_JOBS --release=fast" || {
+nix --accept-flake-config --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command bash -c "unset SDKROOT DEVELOPER_DIR; zig build -j$BUILD_JOBS --release=fast" || {
   echo
   echo "ERROR: Failed to build N-API bindings."
   echo
@@ -94,7 +94,7 @@ if [[ -z "$NODE_FILE" ]]; then
 fi
 
 cp "$NODE_FILE" "$PKG_DIR/termless-ghostty-native.node"
-ZIG_VERSION=$(nix --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command zig version)
+ZIG_VERSION=$(nix --accept-flake-config --option max-jobs "$BUILD_JOBS" --option cores "$BUILD_JOBS" develop "$GHOSTTY_DIR" --command zig version)
 bun "$SCRIPT_DIR/write-receipt.ts" "$PKG_DIR/termless-ghostty-native.node" "$GHOSTTY_DIR" "$ZIG_VERSION"
 SIZE=$(du -h "$PKG_DIR/termless-ghostty-native.node" | cut -f1)
 echo "  termless-ghostty-native.node ($SIZE)"

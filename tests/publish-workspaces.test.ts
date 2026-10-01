@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto"
+import { existsSync, writeFileSync } from "node:fs"
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { describe, expect, test } from "vitest"
-import { PUBLISH_ORDER, validatePublishOrder } from "../scripts/publish-workspaces.ts"
+import { describe, expect, test, vi } from "vitest"
+import { PUBLISH_ORDER, publishWorkspaces, validatePublishOrder } from "../scripts/publish-workspaces.ts"
 
 async function withWorkspaceManifests(run: (root: string) => Promise<void>): Promise<void> {
   const source = resolve(import.meta.dirname, "..")
@@ -127,5 +129,103 @@ describe("publish workspace inventory", () => {
       await writeFile(resolve(dir, "package.json"), JSON.stringify({ name: "@termless/unlisted", version: "0.9.2" }))
       await expect(validatePublishOrder(root)).rejects.toThrow("unlisted public workspaces: packages/unlisted")
     })
+  })
+})
+
+/**
+ * @failure Release repacks or publishes a workspace directory instead of the verified archive, or accepts an incomplete/changed verifier receipt.
+ * @level l2
+ * @consumer Termless release publisher
+ * @testonly none
+ */
+describe("verified archive handoff", () => {
+  const encoder = new TextEncoder()
+  const stream = (value: string) =>
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(value))
+        controller.close()
+      },
+    })
+  const child = (exitCode: number, stdout = "", stderr = "") =>
+    ({ exited: Promise.resolve(exitCode), stdout: stream(stdout), stderr: stream(stderr) }) as never
+
+  async function capturePublish(mode: "valid" | "missing" | "digest") {
+    const root = resolve(import.meta.dirname, "..")
+    const inventory = await validatePublishOrder(root)
+    const target = inventory[0]!
+    const commands: string[][] = []
+    let outputDir = ""
+    let verifiedPath = ""
+    let published = false
+    vi.stubGlobal("Bun", { spawn: vi.fn(), sleep: vi.fn() })
+    const spawn = vi.spyOn(Bun, "spawn").mockImplementation((args) => {
+      const command = args as string[]
+      commands.push(command)
+      if (command[0] === "bunx" && command.includes("verify-publishable")) {
+        outputDir = command[command.indexOf("--output-dir") + 1]!
+        const packages = inventory.map(({ name, version }, index) => {
+          const tarballPath = join(outputDir, `${index.toString().padStart(4, "0")}.tgz`)
+          const bytes = encoder.encode(`${name}@${version}`)
+          writeFileSync(tarballPath, bytes)
+          if (name === target.name) verifiedPath = tarballPath
+          const sha512 = `sha512-${createHash("sha512").update(bytes).digest("base64")}`
+          return { name, version, tarballPath, sha512 }
+        })
+        if (mode === "missing") packages.pop()
+        if (mode === "digest") packages[0]!.sha512 = `sha512-${Buffer.alloc(64).toString("base64")}`
+        return child(0, JSON.stringify({ schema: "verify-publishable/v1", ok: true, packages }))
+      }
+      if (command[0] === "npm" && command[1] === "view") {
+        const nameVersion = command[2]!
+        if (nameVersion === `${target.name}@${target.version}` && !published) return child(1, "", "E404")
+        return child(0, JSON.stringify(nameVersion.slice(nameVersion.lastIndexOf("@") + 1)))
+      }
+      if (command[0] === "pnpm" && command[1] === "publish") {
+        published = true
+        return child(0)
+      }
+      if (command[0] === "bunx" && command[1] === "tsdown") return child(0)
+      return child(1, "", `unexpected process: ${command.join(" ")}`)
+    })
+    return {
+      root,
+      target,
+      commands,
+      spawn,
+      get outputDir() {
+        return outputDir
+      },
+      get verifiedPath() {
+        return verifiedPath
+      },
+    }
+  }
+
+  test("publishes exactly the verified tarball and removes the handoff directory", async () => {
+    const fixture = await capturePublish("valid")
+    try {
+      await publishWorkspaces(fixture.root)
+      const publications = fixture.commands.filter(([binary, verb]) => binary === "pnpm" && verb === "publish")
+      expect(publications).toHaveLength(1)
+      expect(publications[0]![2]).toBe(fixture.verifiedPath)
+      expect(fixture.commands.some(([binary, arg]) => binary === "bunx" && arg === "tsdown")).toBe(false)
+      expect(existsSync(fixture.outputDir)).toBe(false)
+    } finally {
+      fixture.spawn.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  test.each(["missing", "digest"] as const)("rejects %s verifier receipt before publishing", async (mode) => {
+    const fixture = await capturePublish(mode)
+    try {
+      await expect(publishWorkspaces(fixture.root)).rejects.toThrow()
+      expect(fixture.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
+      expect(existsSync(fixture.outputDir)).toBe(false)
+    } finally {
+      fixture.spawn.mockRestore()
+      vi.unstubAllGlobals()
+    }
   })
 })

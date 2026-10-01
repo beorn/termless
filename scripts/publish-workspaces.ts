@@ -1,5 +1,7 @@
-import { readdir, readFile } from "node:fs/promises"
-import { join, resolve } from "node:path"
+import { createHash } from "node:crypto"
+import { mkdtemp, readdir, readFile, realpath, rm, stat } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { isAbsolute, join, relative, resolve, sep } from "node:path"
 
 export const PUBLISH_ORDER = [
   ".",
@@ -35,6 +37,13 @@ export interface PublishableWorkspace {
   dir: string
   name: string
   version: string
+}
+
+interface VerifiedArchive {
+  name: string
+  version: string
+  tarballPath: string
+  sha512: string
 }
 
 async function readManifest(root: string, dir: string): Promise<PackageManifest> {
@@ -149,22 +158,110 @@ async function waitForPublishedVersion(name: string, version: string, cwd: strin
   throw new Error(`${name}@${version} did not resolve from npm after publish`)
 }
 
+async function validateArchive(archive: VerifiedArchive, outputDir: string): Promise<void> {
+  if (!isAbsolute(archive.tarballPath)) {
+    throw new Error(`verified archive path is not absolute: ${archive.name} ${archive.tarballPath}`)
+  }
+  const path = await realpath(archive.tarballPath)
+  const inside = relative(outputDir, path)
+  if (inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+    throw new Error(`verified archive escapes output directory: ${archive.name} ${archive.tarballPath}`)
+  }
+  if (!(await stat(path)).isFile()) throw new Error(`verified archive is not a file: ${archive.name} ${path}`)
+  const digest = `sha512-${createHash("sha512")
+    .update(await readFile(path))
+    .digest("base64")}`
+  if (digest !== archive.sha512) {
+    throw new Error(
+      `verified archive SHA-512 mismatch: ${archive.name} ${path}; expected=${archive.sha512} actual=${digest}`,
+    )
+  }
+}
+
+async function verifiedArchives(
+  root: string,
+  outputDir: string,
+  inventory: PublishableWorkspace[],
+): Promise<Map<string, VerifiedArchive>> {
+  const result = await runCapture(
+    ["bunx", "--bun", "--no-install", "verify-publishable", "--output-dir", outputDir],
+    root,
+  )
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `verify-publishable failed (${result.exitCode}):\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    )
+  }
+  let receipt: unknown
+  try {
+    receipt = JSON.parse(result.stdout)
+  } catch (error) {
+    throw new Error(
+      `verify-publishable returned malformed JSON: ${String(error)}; stdout=${result.stdout}; stderr=${result.stderr}`,
+    )
+  }
+  if (
+    receipt === null ||
+    typeof receipt !== "object" ||
+    (receipt as { schema?: unknown }).schema !== "verify-publishable/v1" ||
+    (receipt as { ok?: unknown }).ok !== true ||
+    !Array.isArray((receipt as { packages?: unknown }).packages)
+  ) {
+    throw new Error(
+      `verify-publishable did not return a v1 success package receipt: ${result.stdout}; stderr=${result.stderr}`,
+    )
+  }
+  const packages = (receipt as { packages: unknown[] }).packages
+  const expected = new Map(inventory.map(({ name, version }) => [name, version]))
+  if (packages.length !== expected.size) {
+    throw new Error(`verified package inventory mismatch: expected=${expected.size} actual=${packages.length}`)
+  }
+  const archives = new Map<string, VerifiedArchive>()
+  for (const value of packages) {
+    if (value === null || typeof value !== "object") {
+      throw new Error(`invalid verified package receipt: ${String(value)}`)
+    }
+    const archive = value as Partial<VerifiedArchive>
+    if (
+      typeof archive.name !== "string" ||
+      typeof archive.version !== "string" ||
+      typeof archive.tarballPath !== "string" ||
+      typeof archive.sha512 !== "string" ||
+      expected.get(archive.name) !== archive.version ||
+      archives.has(archive.name)
+    ) {
+      throw new Error(`verified package contradicts publish inventory: ${JSON.stringify(value)}`)
+    }
+    archives.set(archive.name, archive as VerifiedArchive)
+  }
+  const outputRoot = await realpath(outputDir)
+  for (const archive of archives.values()) await validateArchive(archive, outputRoot)
+  return archives
+}
+
 export async function publishWorkspaces(root: string): Promise<void> {
   const inventory = await validatePublishOrder(root)
+  const outputDir = await mkdtemp(join(tmpdir(), "termless-verified-publish-"))
+  try {
+    const archives = await verifiedArchives(root, outputDir, inventory)
+    const outputRoot = await realpath(outputDir)
+    for (const { dir, name, version } of inventory) {
+      const cwd = resolve(root, dir)
+      if ((await publishedVersion(name, version, cwd)) === version) {
+        console.log(`⏭ ${name}@${version} already published`)
+        continue
+      }
 
-  for (const { dir, name, version } of inventory) {
-    const cwd = resolve(root, dir)
-    if ((await publishedVersion(name, version, cwd)) === version) {
-      console.log(`⏭ ${name}@${version} already published`)
-      continue
+      const archive = archives.get(name)
+      if (!archive) throw new Error(`verified archive is missing for publish package: ${name}@${version}`)
+      await validateArchive(archive, outputRoot)
+      console.log(`📦 Publishing ${name}@${version}`)
+      await run(["pnpm", "publish", archive.tarballPath, "--access", "public", "--no-git-checks"], cwd)
+      await waitForPublishedVersion(name, version, cwd)
+      console.log(`✓ ${name}@${version} resolves from npm`)
     }
-
-    console.log(`🔨 Building ${name}@${version}`)
-    await run(["bunx", "tsdown"], cwd)
-    console.log(`📦 Publishing ${name}@${version}`)
-    await run(["pnpm", "publish", "--access", "public", "--no-git-checks"], cwd)
-    await waitForPublishedVersion(name, version, cwd)
-    console.log(`✓ ${name}@${version} resolves from npm`)
+  } finally {
+    await rm(outputDir, { recursive: true, force: true })
   }
 }
 
