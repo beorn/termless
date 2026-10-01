@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from "node:fs"
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { describe, expect, test, vi } from "vitest"
+import { afterEach, describe, expect, test, vi } from "vitest"
 import { PUBLISH_ORDER, publishWorkspaces, validatePublishOrder } from "../scripts/publish-workspaces.ts"
 
 async function withWorkspaceManifests(run: (root: string) => Promise<void>): Promise<void> {
@@ -139,6 +139,11 @@ describe("publish workspace inventory", () => {
  * @testonly none
  */
 describe("verified archive handoff", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   const encoder = new TextEncoder()
   const stream = (value: string) =>
     new ReadableStream<Uint8Array>({
@@ -158,8 +163,10 @@ describe("verified archive handoff", () => {
     let outputDir = ""
     let verifiedPath = ""
     let published = false
-    vi.stubGlobal("Bun", { spawn: vi.fn(), sleep: vi.fn() })
-    const spawn = vi.spyOn(Bun, "spawn").mockImplementation((args) => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {})
+    // Node needs the fake global; Bun's real global cannot be replaced.
+    if (typeof Bun === "undefined") vi.stubGlobal("Bun", { spawn: vi.fn(), sleep: vi.fn() })
+    vi.spyOn(Bun, "spawn").mockImplementation((args) => {
       const command = args as string[]
       commands.push(command)
       if (command[0] === "bunx" && command.includes("verify-publishable")) {
@@ -192,7 +199,7 @@ describe("verified archive handoff", () => {
       root,
       target,
       commands,
-      spawn,
+      log,
       get outputDir() {
         return outputDir
       },
@@ -204,28 +211,22 @@ describe("verified archive handoff", () => {
 
   test("publishes exactly the verified tarball and removes the handoff directory", async () => {
     const fixture = await capturePublish("valid")
-    try {
-      await publishWorkspaces(fixture.root)
-      const publications = fixture.commands.filter(([binary, verb]) => binary === "pnpm" && verb === "publish")
-      expect(publications).toHaveLength(1)
-      expect(publications[0]![2]).toBe(fixture.verifiedPath)
-      expect(fixture.commands.some(([binary, arg]) => binary === "bunx" && arg === "tsdown")).toBe(false)
-      expect(existsSync(fixture.outputDir)).toBe(false)
-    } finally {
-      fixture.spawn.mockRestore()
-      vi.unstubAllGlobals()
-    }
+    await publishWorkspaces(fixture.root)
+    const publications = fixture.commands.filter(([binary, verb]) => binary === "pnpm" && verb === "publish")
+    expect(publications).toHaveLength(1)
+    expect(publications[0]![2]).toBe(fixture.verifiedPath)
+    expect(fixture.commands.some(([binary, arg]) => binary === "bunx" && arg === "tsdown")).toBe(false)
+    expect(existsSync(fixture.outputDir)).toBe(false)
+    expect(fixture.log).toHaveBeenCalledWith(`📦 Publishing ${fixture.target.name}@${fixture.target.version}`)
+    expect(fixture.log).toHaveBeenCalledWith(`✓ ${fixture.target.name}@${fixture.target.version} resolves from npm`)
+    expect(fixture.log).toHaveBeenCalledTimes(PUBLISH_ORDER.length + 1)
   })
 
   test.each(["missing", "digest"] as const)("rejects %s verifier receipt before publishing", async (mode) => {
     const fixture = await capturePublish(mode)
-    try {
-      await expect(publishWorkspaces(fixture.root)).rejects.toThrow()
-      expect(fixture.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
-      expect(existsSync(fixture.outputDir)).toBe(false)
-    } finally {
-      fixture.spawn.mockRestore()
-      vi.unstubAllGlobals()
-    }
+    await expect(publishWorkspaces(fixture.root)).rejects.toThrow()
+    expect(fixture.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
+    expect(existsSync(fixture.outputDir)).toBe(false)
+    expect(fixture.log).not.toHaveBeenCalled()
   })
 })
