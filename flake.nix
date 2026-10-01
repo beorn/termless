@@ -22,7 +22,8 @@
         # nix shell .#native-tools --command bun run --cwd packages/alacritty build:native
         packages.native-tools = pkgs.symlinkJoin {
           name = "termless-native-tools";
-          paths = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf pkgs.binutils ];
+          paths = [ pkgs.cargo pkgs.rustc pkgs.stdenv.cc ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf pkgs.binutils ];
         };
 
         devShells.default = pkgs.mkShell {
