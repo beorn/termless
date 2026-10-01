@@ -21,11 +21,15 @@
  */
 
 import type { Command } from "@silvery/commander"
+import {
+  backend as resolveBackend,
+  compareCanvas,
+  compareTape,
+  type CanvasBackendSpec,
+  type CompareMode,
+} from "@termless/core"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { backend as resolveBackend } from "../../../src/backend/backends.ts"
-import { compareCanvas, type CanvasBackendSpec } from "../../../src/recording/tape/compare-canvas.ts"
-import { type CompareMode, compareTape } from "../../../src/recording/tape/compare.ts"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
 import { compareSeparateOutputDir, resolveBackendNames, writeComparisonOutput } from "./play-cmd.ts"
 

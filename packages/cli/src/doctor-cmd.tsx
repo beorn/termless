@@ -9,14 +9,8 @@
 import React from "react"
 import { Box, Text } from "silvery"
 import type { Command } from "@silvery/commander"
-import {
-  manifest as getManifest,
-  backends,
-  entry,
-  isReady,
-  backend,
-  getInstalledVersion,
-} from "../../../src/backend/backends.ts"
+import { manifest as getManifest, backends, entry, isReady, backend } from "@termless/core"
+import { getInstalledVersion } from "../../../src/backend/backends.ts"
 import { printComponent } from "./render.tsx"
 import { Header, StatusLine, Summary } from "./ui.tsx"
 

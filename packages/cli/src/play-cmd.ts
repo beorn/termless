@@ -22,6 +22,9 @@ import {
   isTtyzPath,
   readRecording,
   trackAuthority,
+  executeTape,
+  backends as listBackends,
+  isReady as isBackendReady,
   type Recording,
 } from "@termless/core"
 
@@ -29,10 +32,8 @@ const parseNum = (v: string) => parseInt(v, 10)
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { basename, dirname, extname, join, resolve } from "node:path"
 import { parseTape, type TapeFile } from "../../../src/recording/tape/parser.ts"
-import { executeTape } from "../../../src/recording/tape/executor.ts"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveTheme } from "../../../src/recording/tape/themes.ts"
-import { backends as listBackends, isReady as isBackendReady } from "../../../src/backend/backends.ts"
 import type { AnimationFrame } from "../../../src/view/animation-types.ts"
 import type { SvgScreenshotOptions, WindowBar } from "../../../src/terminal/types.ts"
 import { openRecordingBundle } from "./recording-bundle.ts"
@@ -337,7 +338,7 @@ async function playCast(
 ): Promise<void> {
   const { parseAsciicast, replayAsciicast } = await import("../../../src/recording/asciicast/reader.ts")
   const { createTerminal } = await import("../../../src/terminal/terminal.ts")
-  const { backend } = await import("../../../src/backend/backends.ts")
+  const { backend } = await import("@termless/core")
 
   const recording = parseAsciicast(source)
   const cols = opts.cols || recording.header.width
@@ -512,7 +513,7 @@ export async function playAction(
   // If tape has a Shell setting, spawn a real PTY and type into it
   if (shell) {
     const { createTerminal } = await import("../../../src/terminal/terminal.ts")
-    const { backend } = await import("../../../src/backend/backends.ts")
+    const { backend } = await import("@termless/core")
     const cols = opts.cols || Number(tape.settings.Width) || 80
     const rows = opts.rows || Number(tape.settings.Height) || 24
 

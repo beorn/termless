@@ -35,7 +35,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
 import { parseTape } from "../../../src/recording/tape/parser.ts"
-import { executeTape } from "../../../src/recording/tape/executor.ts"
+import { executeTape } from "@termless/core"
 import { overlayKeystroke } from "../../../src/recording/tape/overlay.ts"
 import { resolveOutputTargets } from "./output-targets.ts"
 import { writeOutputs, type CapturedSession } from "./rec-writer.ts"
@@ -558,7 +558,7 @@ async function interactiveRecord(
 
   // Headless terminal that mirrors PTY output — the source for frame capture.
   const { createTerminal } = await import("../../../src/terminal/terminal.ts")
-  const { backend } = await import("../../../src/backend/backends.ts")
+  const { backend } = await import("@termless/core")
   const b = await backend("ghostty")
   const headlessTerminal = createTerminal({ backend: b, cols: gridCols, rows: gridRows })
 

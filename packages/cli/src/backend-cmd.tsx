@@ -23,15 +23,9 @@ import { execSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import {
-  manifest as getManifest,
-  backends,
-  entry,
-  isReady,
-  getInstalledVersion,
-  detectPackageManager,
-  buildBackend,
-} from "../../../src/backend/backends.ts"
+import { manifest as getManifest, backends, entry, isReady, buildBackend } from "@termless/core"
+import { getInstalledVersion, detectPackageManager } from "../../../src/backend/backends.ts"
+import { findPackageRoot } from "../../../src/package-root.ts"
 import { printComponent } from "./render.tsx"
 import { Header, StatusLine, Summary, BackendsTable, type BackendRow } from "./ui.tsx"
 
@@ -413,8 +407,8 @@ export async function updateAction(opts: { apply?: boolean } = {}): Promise<void
 
     if (opts.apply) {
       // Read the raw backends.json, update versions, write back
-      const __dirname = dirname(fileURLToPath(import.meta.url))
-      const manifestPath = join(__dirname, "..", "..", "..", "backends.json")
+      const coreRoot = findPackageRoot(dirname(fileURLToPath(import.meta.resolve("@termless/core"))), "@termless/core")
+      const manifestPath = join(coreRoot, "backends.json")
       const raw = JSON.parse(readFileSync(manifestPath, "utf-8")) as any
 
       for (const r of updatable) {
