@@ -40,6 +40,8 @@ bun run postbuild:native
 Published packages must not include `native/target`; platform binaries belong
 in napi-rs optional packages or release artifacts, not in the main tarball.
 
+The main npm package includes the JavaScript wrapper and declarations; provide a matching native artifact separately. It has no npm source-build fallback.
+
 ## Usage
 
 ```ts

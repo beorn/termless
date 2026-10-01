@@ -24,11 +24,7 @@
     "directory": "packages/swash-render"
   },
   "files": [
-    "dist",
-    "native/Cargo.lock",
-    "native/Cargo.toml",
-    "native/build.rs",
-    "native/src"
+    "dist"
   ],
   "type": "module",
   "exports": {

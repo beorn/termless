@@ -24,7 +24,8 @@
     "directory": "packages/alacritty"
   },
   "files": [
-    "dist"
+    "dist",
+    "termless-alacritty-native.node"
   ],
   "type": "module",
   "exports": {

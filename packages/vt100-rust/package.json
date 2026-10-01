@@ -25,11 +25,7 @@
   },
   "files": [
     "dist",
-    "*.node",
-    "native/src",
-    "native/Cargo.toml",
-    "native/Cargo.lock",
-    "native/build.rs"
+    "termless-vt100-rust.node"
   ],
   "type": "module",
   "exports": {
