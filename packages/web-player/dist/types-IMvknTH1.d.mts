@@ -1,5 +1,4 @@
 import { ITerminalOptions, Terminal } from "@xterm/xterm";
-
 //#region src/types.d.ts
 type PlaybackFormat = "asciicast" | "tape";
 type PlaybackEvent = {
@@ -88,4 +87,4 @@ interface TermlessPlayer extends PlaybackController {
 }
 //#endregion
 export { PlaybackEvent as a, PlaybackSink as c, TermlessPlayer as d, TermlessPlayerOptions as f, PlaybackControllerOptions as i, PlaybackState as l, CompiledPlayback as n, PlaybackFormat as o, PlaybackController as r, PlaybackRunOptions as s, CompilePlaybackOptions as t, PlaybackStatus as u };
-//# sourceMappingURL=types-DevCHuwl.d.mts.map
+//# sourceMappingURL=types-IMvknTH1.d.mts.map

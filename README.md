@@ -312,6 +312,14 @@ On Node.js, PTY support requires `node-pty` as an optional peer dependency. If n
 
 Most test suites start with `@termless/test`. Add backend packages for multi-backend testing, `@termless/peekaboo` for real terminal automation, or `@termless/web-player` when publishing recordings in browser docs.
 
+`@termless/web-player/browser` creates a player synchronously. Browser bundlers use
+the static xterm.js entry; Node and Bun load xterm.js on the first call that needs
+a default terminal. Importing the entry or passing an existing `terminal` does
+not load xterm.js in Node or Bun. Creating a default terminal still requires a
+browser DOM. With a DOM shim under Bun, xterm.js can retain a process listener
+even after player disposal; import-only checks do not establish natural process
+exit after default-terminal creation.
+
 ## Multi-Backend Testing
 
 Test your TUI against multiple terminal emulators with a single test suite. Write tests once, configure backends via vitest workspace:

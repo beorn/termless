@@ -1,4 +1,6 @@
+import type { Terminal } from "@xterm/xterm"
 import { describe, expect, test, vi } from "vitest"
+import { createTermlessPlayer } from "../src/browser.server.ts"
 import { compilePlaybackSource, createPlaybackController } from "../src/index.ts"
 import type { PlaybackEvent } from "../src/index.ts"
 
@@ -124,5 +126,34 @@ describe("createPlaybackController", () => {
     expect(sink.write).toHaveBeenCalledWith("a")
     expect(onInput).not.toHaveBeenCalled()
     expect(controller.state()).toMatchObject({ status: "idle", currentTimeMs: 100 })
+  })
+})
+
+describe("createTermlessPlayer", () => {
+  test("synchronously replays into a caller-owned terminal without opening or disposing it", async () => {
+    const terminal = {
+      open: vi.fn(),
+      dispose: vi.fn(),
+      reset: vi.fn(),
+      resize: vi.fn(),
+      write: vi.fn(),
+    }
+    const onMarker = vi.fn()
+    const cast = ['{"version":2,"width":12,"height":4}', '[0,"o","hello"]', '[0,"m","done"]'].join("\n")
+    const player = createTermlessPlayer({} as HTMLElement, cast, {
+      terminal: terminal as unknown as Terminal,
+      onMarker,
+    })
+
+    expect(player.terminal).toBe(terminal)
+    expect(player.playback.cols).toBe(12)
+    expect(terminal.open).not.toHaveBeenCalled()
+    await player.play({ speed: Infinity })
+    expect(terminal.resize).toHaveBeenCalledWith(12, 4)
+    expect(terminal.write).toHaveBeenCalledWith("hello")
+    expect(onMarker).toHaveBeenCalledWith({ at: 0, type: "marker", label: "done" })
+    player.dispose()
+    expect(player.state().status).toBe("stopped")
+    expect(terminal.dispose).not.toHaveBeenCalled()
   })
 })

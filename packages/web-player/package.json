@@ -28,7 +28,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./browser": "./src/browser.ts"
+    "./browser": {
+      "types": "./src/browser.ts",
+      "browser": "./src/browser.ts",
+      "bun": "./src/browser.server.ts",
+      "node": "./src/browser.server.ts",
+      "default": "./src/browser.ts"
+    }
   },
   "publishConfig": {
     "access": "public",
@@ -39,7 +45,10 @@
       },
       "./browser": {
         "types": "./dist/browser.d.mts",
-        "import": "./dist/browser.mjs"
+        "browser": "./dist/browser.mjs",
+        "bun": "./dist/browser.server.mjs",
+        "node": "./dist/browser.server.mjs",
+        "default": "./dist/browser.mjs"
       }
     }
   },
@@ -54,7 +63,8 @@
     "dts": true,
     "entry": [
       "src/index.ts",
-      "src/browser.ts"
+      "src/browser.ts",
+      "src/browser.server.ts"
     ],
     "format": "esm"
   },

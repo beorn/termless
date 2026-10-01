@@ -1,34 +1,9 @@
-import { r as compilePlaybackSource, t as createPlaybackController } from "./controller-XhcbLJvH.mjs";
+import { t as createPlayerFactory } from "./player-BYFGG-d9.mjs";
 import xterm from "@xterm/xterm";
 //#region src/browser.ts
-const { Terminal: Terminal$1 } = xterm;
+const createPlayer = createPlayerFactory(() => xterm.Terminal);
 function createTermlessPlayer(element, source, options = {}) {
-	const playback = typeof source === "string" ? compilePlaybackSource(source, options) : source;
-	const providedTerminal = options.terminal;
-	const terminal = providedTerminal ?? new Terminal$1({
-		cols: playback.cols,
-		rows: playback.rows,
-		convertEol: true,
-		...options.xtermOptions
-	});
-	if (!providedTerminal) terminal.open(element);
-	const controller = createPlaybackController(playback, {
-		reset: () => terminal.reset(),
-		resize: (cols, rows) => terminal.resize(cols, rows),
-		write: (data) => terminal.write(data)
-	}, options);
-	const dispose = () => {
-		controller.dispose();
-		if (!providedTerminal) terminal.dispose();
-	};
-	const player = {
-		...controller,
-		dispose,
-		terminal,
-		playback
-	};
-	if (options.autoplay ?? false) player.play();
-	return player;
+	return createPlayer(element, source, options);
 }
 //#endregion
 export { createTermlessPlayer };
