@@ -162,6 +162,26 @@
     ],
     "checks": [
       {
+        "package": "@termless/core",
+        "runner": "node",
+        "args": [
+          "tests/packed-node-smoke.mjs"
+        ],
+        "files": [
+          "tests/packed-node-smoke.mjs"
+        ]
+      },
+      {
+        "package": "@termless/libvterm",
+        "runner": "node",
+        "args": [
+          "tests/packed-libvterm-node-smoke.mjs"
+        ],
+        "files": [
+          "tests/packed-libvterm-node-smoke.mjs"
+        ]
+      },
+      {
         "package": "@termless/test",
         "runner": "vitest",
         "args": [
