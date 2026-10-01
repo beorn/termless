@@ -6,7 +6,7 @@
  * import { backend } from "termless"
  *
  * const b = await backend("ghostty")
- * const b = await backend("xtermjs", { version: "5.4.0" })
+ * const b = await backend("xtermjs")
  * ```
  */
 
@@ -191,7 +191,7 @@ export function buildBackend(name: string): void {
  * @example
  * ```typescript
  * const b = await backend("ghostty")
- * const b = await backend("xtermjs", { version: "5.4.0" })
+ * const b = await backend("xtermjs")
  * ```
  */
 export async function backend(
@@ -208,9 +208,18 @@ export async function backend(
   const type = backendTypes[entry.type]
   if (!type) throw new Error(`Unknown backend type "${entry.type}" for "${name}"`)
 
-  // Version-pinned resolution
+  // A different version cannot be loaded by this process's package resolver:
+  // NODE_PATH does not override the package's own dependency graph.
   if (opts?.version && opts.version !== entry.version) {
-    return resolveVersioned(name, entry, type, opts.version, opts)
+    if (entry.type === "native") {
+      throw new Error(
+        `Version-pinned resolution for native backend "${name}" requires nix.\n` +
+          `Run: nix develop .#${name}-${opts.version.replace(/\./g, "_")}`,
+      )
+    }
+    throw new Error(
+      `Backend "${name}" cannot select ${opts.version}; its pinned upstream release is ${entry.version ?? "not-applicable"}`,
+    )
   }
 
   // Check if package is importable
@@ -268,50 +277,15 @@ export async function createTerminalByName(
 }
 
 // ═══════════════════════════════════════════════════════
-// Version-pinned resolution
+// Version cache for explicit external callers
 // ═══════════════════════════════════════════════════════
 
 const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "termless", "backends")
 
-async function resolveVersioned(
-  name: string,
-  entry: BackendEntry,
-  type: BackendType,
-  version: string,
-  opts?: Partial<TerminalOptions>,
-): Promise<TerminalBackend> {
-  if (entry.type === "native") {
-    throw new Error(
-      `Version-pinned resolution for native backend "${name}" requires nix.\n` +
-        `Run: nix develop .#${name}-${version.replace(/\./g, "_")}`,
-    )
-  }
-
-  if (!entry.upstream) {
-    throw new Error(`Backend "${name}" has no upstream to version-pin.`)
-  }
-
-  const cacheDir = ensureCachedVersion(entry.upstream, version)
-
-  const origNodePath = process.env.NODE_PATH
-  process.env.NODE_PATH = join(cacheDir, "node_modules") + (origNodePath ? `:${origNodePath}` : "")
-
-  try {
-    return await type.resolve(entry.package, opts)
-  } finally {
-    if (origNodePath) process.env.NODE_PATH = origNodePath
-    else delete process.env.NODE_PATH
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-// Version cache (shared by backend() and census)
-// ═══════════════════════════════════════════════════════
-
 /**
  * Install an upstream package at a specific version to the cache directory.
- * Returns the cache dir path (contains node_modules/).
- * Shared by backend() version-pinned resolution and census versioned runs.
+ * Returns the cache dir path (contains node_modules/). No Termless production
+ * resolver calls this helper; backend() does not support non-default versions.
  */
 export function ensureCachedVersion(upstream: string, version: string): string {
   const cacheDir = join(CACHE_DIR, `${upstream.replace(/[/@]/g, "_")}-${version}`)

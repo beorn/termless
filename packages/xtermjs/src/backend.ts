@@ -572,7 +572,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "xterm",
-    version: "5.5.0",
+    version: "6.0.0",
     truecolor: true,
     kittyKeyboard: false,
     kittyGraphics: false,

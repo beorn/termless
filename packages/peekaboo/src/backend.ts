@@ -592,7 +592,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
 
   const capabilities: TerminalCapabilities = {
     name: "peekaboo",
-    version: "0.1.0",
+    version: "not-applicable",
     // Data capabilities match vterm since we delegate to it
     truecolor: true,
     kittyKeyboard: false,

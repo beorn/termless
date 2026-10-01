@@ -340,7 +340,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
 
   const capabilities: TerminalCapabilities = {
     name: "alacritty",
-    version: "0.25.1",
+    version: "0.26.0",
     truecolor: true,
     kittyKeyboard: true, // alacritty_terminal supports kitty keyboard protocol
     kittyGraphics: false,

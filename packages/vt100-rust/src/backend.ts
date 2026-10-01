@@ -338,7 +338,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
 
   const capabilities: TerminalCapabilities = {
     name: "vt100-rust",
-    version: "0.1.0",
+    version: "0.16.2",
     truecolor: true,
     kittyKeyboard: false,
     kittyGraphics: false,

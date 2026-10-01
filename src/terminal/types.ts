@@ -74,6 +74,7 @@ export interface KeyDescriptor {
 
 export interface TerminalCapabilities {
   name: string
+  /** `capabilities.version` is the upstream engine release pinned by `upstreamVersion` in `backends.json` for the default install (`"not-applicable"` without an upstream), not the wrapper release or proof of execution; non-default installs are outside this claim and a run's `runtimeIdentity` supplies execution evidence. */
   version: string
   truecolor: boolean
   kittyKeyboard: boolean

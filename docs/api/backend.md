@@ -54,7 +54,7 @@ Describes what features a backend supports. Terminal capability data across real
 ```typescript
 interface TerminalCapabilities {
   name: string // e.g. "xterm"
-  version: string // e.g. "5.5.0"
+  version: string // upstream engine release pinned by this backend
   truecolor: boolean // 24-bit RGB colors
   kittyKeyboard: boolean // Kitty keyboard protocol
   kittyGraphics: boolean // Kitty graphics protocol
@@ -66,6 +66,8 @@ interface TerminalCapabilities {
   extensions: Set<string> // Optional extension identifiers
 }
 ```
+
+`capabilities.version` is the upstream engine release pinned by `upstreamVersion` in `backends.json` for the default install (`"not-applicable"` without an upstream), not the wrapper release or proof of execution; non-default installs are outside this claim and a run's `runtimeIdentity` supplies execution evidence. A request for a non-default `backend(name, { version })` is refused.
 
 ## Available Backends
 
@@ -157,7 +159,7 @@ export function createMyBackend(): TerminalBackend {
 
     capabilities: {
       name: "my-backend",
-      version: "1.0.0",
+      version: "not-applicable",
       truecolor: true,
       kittyKeyboard: false,
       kittyGraphics: false,

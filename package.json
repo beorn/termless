@@ -182,6 +182,16 @@
         ]
       },
       {
+        "package": "@termless/ghostty-native",
+        "runner": "node",
+        "args": [
+          "tests/packed-ghostty-native-node-smoke.mjs"
+        ],
+        "files": [
+          "tests/packed-ghostty-native-node-smoke.mjs"
+        ]
+      },
+      {
         "package": "@termless/test",
         "runner": "vitest",
         "args": [

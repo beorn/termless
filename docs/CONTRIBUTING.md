@@ -228,9 +228,9 @@ All backends implement `TerminalBackend` (defined in `src/types.ts`). The interf
 
 #### Capabilities (1 property)
 
-| Property       | Type                            | Description                                                                                                                                                                                                                                          |
-| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `capabilities` | `readonly TerminalCapabilities` | Static capabilities: `name`, `version`, `truecolor`, `kittyKeyboard`, `kittyGraphics`, `sixel`, `osc8Hyperlinks`, `semanticPrompts`, `unicode` version, `reflow`, and `extensions` (a `Set<string>` for optional interfaces like `"dirtyTracking"`). |
+| Property       | Type                            | Description                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `capabilities` | `readonly TerminalCapabilities` | Static capabilities: `name`, pinned upstream engine `version` (or `"not-applicable"` when there is no upstream), `truecolor`, `kittyKeyboard`, `kittyGraphics`, `sixel`, `osc8Hyperlinks`, `semanticPrompts`, `unicode` version, `reflow`, and `extensions` (a `Set<string>` for optional interfaces like `"dirtyTracking"`). The version does not attest to what executed; run documents carry `runtimeIdentity`. |
 
 ### Cell Format
 

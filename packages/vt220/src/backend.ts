@@ -244,7 +244,7 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "vt220",
-    version: "0.1.0",
+    version: "0.7.0",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,

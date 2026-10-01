@@ -11,7 +11,7 @@
  * import { backend } from "termless/backends"
  *
  * const b = await backend("vterm")
- * const b2 = await backend("ghostty", { version: "1.2.3" })
+ * // A different release is refused; install the desired release through a supported package setup.
  * ```
  */
 

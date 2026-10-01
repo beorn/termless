@@ -342,7 +342,7 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
 
   const capabilities: TerminalCapabilities = {
     name: "wezterm",
-    version: "0.1.0",
+    version: "0.1.0-fork.5",
     truecolor: true,
     kittyKeyboard: true,
     kittyGraphics: false, // Not available in headless mode

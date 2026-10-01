@@ -262,7 +262,7 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "vt100",
-    version: "0.1.0",
+    version: "0.7.0",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,

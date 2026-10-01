@@ -26,7 +26,8 @@
     "directory": "packages/ghostty-native"
   },
   "files": [
-    "dist"
+    "dist",
+    "termless-ghostty-native.node"
   ],
   "type": "module",
   "exports": {

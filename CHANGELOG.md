@@ -7,6 +7,7 @@ This candidate also includes the Ghostty font fixes prepared in the unpublished
 
 ### Changed
 
+- `TerminalCapabilities.version` now reports the upstream engine release pinned by the backend in `backends.json`. Backends without an upstream report `"not-applicable"`; requesting a non-default backend version is refused because it cannot be loaded reliably by the package resolver.
 - `@termless/cli` now requires Zod 4 (`^4.6.5`) for its MCP tool schemas;
   applications that supply Zod 3 must upgrade that dependency.
 - `@termless/wezterm` reports `osc8Hyperlinks: false`. Its native cell bridge
@@ -26,6 +27,7 @@ import under Node/Bun should account for these changed values and exports.
 
 ### Fixed
 
+- The `@termless/ghostty-native` archive now includes the native addon required to initialize its installed backend.
 - `@termless/libvterm` rejects unknown raw underline codes with the code and
   cell position instead of treating them as no underline.
 

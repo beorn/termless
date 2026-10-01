@@ -484,7 +484,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
 
   const capabilities: TerminalCapabilities = {
     name: "kitty",
-    version: "0.1.0",
+    version: "0.49.2",
     truecolor: true,
     kittyKeyboard: true,
     kittyGraphics: true,
