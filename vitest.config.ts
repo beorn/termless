@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
+    maxWorkers: 2,
     // Two production-scale cases measured past vitest's 5 s default on the
     // slower CI runners (2026-09-01/02, termless PR #4/#5): the vterm
     // deep-scrollback reflow round-trip at 5.2–5.5 s and the ZIP64
