@@ -166,6 +166,7 @@ describe("verified archive handoff", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {})
     // Node needs the fake global; Bun's real global cannot be replaced.
     if (typeof Bun === "undefined") vi.stubGlobal("Bun", { spawn: vi.fn(), sleep: vi.fn() })
+    vi.spyOn(Bun, "sleep").mockResolvedValue(undefined)
     vi.spyOn(Bun, "spawn").mockImplementation((args) => {
       const command = args as string[]
       commands.push(command)
