@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "@napi-rs/canvas": "^1.0.9",
     "@resvg/resvg-js": "^2.6.0",
     "@silvery/commander": "^0.18.2",
     "@termless/vterm": "^0.10.0",
@@ -61,7 +62,8 @@
     "@termless/ghostty": "^0.10.0",
     "@termless/peekaboo": "^0.10.0",
     "@termless/vt100": "^0.10.0",
-    "@termless/xtermjs": "^0.10.0"
+    "@termless/xtermjs": "^0.10.0",
+    "playwright": "^1.59.0"
   },
   "peerDependenciesMeta": {
     "@termless/ghostty": {
@@ -71,6 +73,9 @@
       "optional": true
     },
     "@termless/peekaboo": {
+      "optional": true
+    },
+    "playwright": {
       "optional": true
     }
   },

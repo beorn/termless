@@ -69,6 +69,7 @@
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.12.1",
+        "@napi-rs/canvas": "^1.0.9",
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.18.2",
         "@termless/vterm": "^0.10.0",
@@ -83,11 +84,13 @@
         "@termless/peekaboo": "^0.10.0",
         "@termless/vt100": "^0.10.0",
         "@termless/xtermjs": "^0.10.0",
+        "playwright": "^1.59.0",
       },
       "optionalPeers": [
         "@termless/ghostty",
         "@termless/peekaboo",
         "@termless/vt100",
+        "playwright",
       ],
     },
     "packages/ghostty": {
@@ -150,10 +153,18 @@
     "packages/viterm": {
       "name": "@termless/test",
       "version": "0.10.0",
+      "optionalDependencies": {
+        "@napi-rs/canvas": "^1.0.9",
+        "@resvg/resvg-js": "^2.6.2",
+      },
       "peerDependencies": {
         "@termless/core": "^0.10.0",
+        "playwright": "^1.59.0",
         "vitest": ">=2.0.0",
       },
+      "optionalPeers": [
+        "playwright",
+      ],
     },
     "packages/vt100": {
       "name": "@termless/vt100",
@@ -2044,6 +2055,14 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
+    "@termless/cli/@termless/core": ["@termless/core@root:", {}],
+
+    "@termless/test/@termless/core": ["@termless/core@root:", {}],
+
+    "@termless/vterm/@termless/core": ["@termless/core@root:", {}],
+
+    "@termless/xtermjs/@termless/core": ["@termless/core@root:", {}],
+
     "@verdaccio/logger-prettify/pino-abstract-transport": ["pino-abstract-transport@1.2.0", "", { "dependencies": { "readable-stream": "^4.0.0", "split2": "^4.0.0" } }, "sha512-Guhh8EZfPCfH+PMXAb6rKOjGQEoy0xlAIn+irODG5kgfYV+BQ0rGYYWTIel3P5mmyXqkYkPmdIkywsn6QKUR1Q=="],
 
     "@verdaccio/logger-prettify/sonic-boom": ["sonic-boom@3.8.1", "", { "dependencies": { "atomic-sleep": "^1.0.0" } }, "sha512-y4Z8LCDBuum+PBP3lSV7RHrXscqksve/bi0as7mhwVnBW+/wUqKT/2Kb7um8yqcFy0duYbbPxzt89Zy2nOCaxg=="],
@@ -2112,11 +2131,7 @@
 
     "silvery/@silvery/commander": ["@silvery/commander@0.24.0", "", { "dependencies": { "@silvery/ansi": "0.24.0", "commander": ">=15.0.0", "zod": ">=3.0.0" } }, "sha512-/Hv3GyLppOK+uA+TMvTLwiNNSYu2rb9axzs+f8OgQtqLA9RdV3KxXV0+RMim1hpMnuxt/DO2H6lQkjzbn/syng=="],
 
-    "silvery/@termless/core": ["@termless/core@root:", {}],
-
     "string_decoder/safe-buffer": ["safe-buffer@5.1.2", "", {}, "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="],
-
-    "termless/@termless/core": ["@termless/core@root:", {}],
 
     "tinyglobby/picomatch": ["picomatch@4.0.5", "", {}, "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A=="],
 
