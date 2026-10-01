@@ -1,6 +1,6 @@
 {
   "name": "@termless/alacritty",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "Alacritty backend for termless — alacritty_terminal via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "alacritty",
@@ -47,7 +47,7 @@
     "@napi-rs/cli": "3.10.5"
   },
   "peerDependencies": {
-    "@termless/core": "^0.9.2"
+    "@termless/core": "^0.10.0"
   },
   "napi": {
     "binaryName": "termless-alacritty-native",

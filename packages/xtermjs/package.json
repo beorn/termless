@@ -1,6 +1,6 @@
 {
   "name": "@termless/xtermjs",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "xterm.js backend for termless — headless terminal emulation via @xterm/headless",
   "keywords": [
     "ansi",
@@ -45,7 +45,7 @@
     "@xterm/headless": "^6.0.0"
   },
   "peerDependencies": {
-    "@termless/core": "^0.9.2",
+    "@termless/core": "^0.10.0",
     "silvery": ">=0.4.2"
   },
   "peerDependenciesMeta": {

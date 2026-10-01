@@ -1,18 +1,44 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (unreleased)
+
+This candidate also includes the Ghostty font fixes prepared in the unpublished
+0.9.2 draft below.
 
 ### Changed
 
 - `@termless/cli` now requires Zod 4 (`^4.6.5`) for its MCP tool schemas;
   applications that supply Zod 3 must upgrade that dependency.
+- `@termless/wezterm` reports `osc8Hyperlinks: false`. Its native cell bridge
+  does not expose parsed hyperlink URIs, so the adapter cannot provide the
+  OSC 8 metadata that a `true` capability promises.
+- `@termless/libvterm` reports unobserved `getCursor().visible` and `.style` as
+  `null` instead of inventing `true` and `"block"` values.
+- The public `encodePng()` result is a `Uint8Array` of PNG bytes rather than an
+  `ArrayBuffer`.
+- `@termless/web-player/browser` resolves a server-safe entry in Node and Bun;
+  browser bundlers continue to use the browser entry. The server entry loads
+  xterm only when `createTermlessPlayer()` needs to create a terminal.
 
-## 0.9.2 - 2026-09-26 (`@termless/ghostty` only)
+Code that assumed OSC 8 support from WezTerm, non-null libvterm cursor
+properties, an `ArrayBuffer` PNG result, or the browser entry's static xterm
+import under Node/Bun should account for these changed values and exports.
 
 ### Fixed
 
-- A published `@termless/ghostty` finds the bundled fonts. They ship once, in
-  `@termless/core`, and the ghostty build (which inlines the font module into
+- `@termless/libvterm` rejects unknown raw underline codes with the code and
+  cell position instead of treating them as no underline.
+
+## Unpublished 0.9.2 draft - 2026-09-26 (`@termless/ghostty` only)
+
+Neither `@termless/core` nor `@termless/ghostty` 0.9.2 was published. These
+prepared fixes are carried into the 0.10.0 candidate; the dated draft is
+retained to explain their origin.
+
+### Fixed
+
+- `@termless/ghostty` finds the bundled fonts. `@termless/core` owns the font
+  bundle, and the ghostty build (which inlines the font module into
   its own `dist/`) now probes from where `@termless/core` resolves as well as
   upward from itself. In 0.9.1 no ancestor of its `dist/` held them, so every
   canvas render measured a zero-width cell and threw a `RangeError` on a
