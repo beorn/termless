@@ -5,14 +5,13 @@
  * ```typescript
  * import { backend } from "termless"
  *
- * const b = await backend("ghostty")
- * const b = await backend("xtermjs")
+ * const ghostty = await backend("ghostty")
+ * const xtermjs = await backend("xtermjs")
  * ```
  */
 
-import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "node:fs"
+import { readFileSync, existsSync, readdirSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import type { TerminalBackend, TerminalOptions, TestTerminal } from "../terminal/types.ts"
@@ -190,8 +189,8 @@ export function buildBackend(name: string): void {
  *
  * @example
  * ```typescript
- * const b = await backend("ghostty")
- * const b = await backend("xtermjs")
+ * const ghostty = await backend("ghostty")
+ * const xtermjs = await backend("xtermjs")
  * ```
  */
 export async function backend(
@@ -274,32 +273,6 @@ export async function createTerminalByName(
 ): Promise<TestTerminal> {
   const b = await backend(name, opts)
   return createTerminal({ backend: b, ...opts })
-}
-
-// ═══════════════════════════════════════════════════════
-// Version cache for explicit external callers
-// ═══════════════════════════════════════════════════════
-
-const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "termless", "backends")
-
-/**
- * Install an upstream package at a specific version to the cache directory.
- * Returns the cache dir path (contains node_modules/). No Termless production
- * resolver calls this helper; backend() does not support non-default versions.
- */
-export function ensureCachedVersion(upstream: string, version: string): string {
-  const cacheDir = join(CACHE_DIR, `${upstream.replace(/[/@]/g, "_")}-${version}`)
-
-  if (!existsSync(join(cacheDir, "node_modules"))) {
-    mkdirSync(cacheDir, { recursive: true })
-    writeFileSync(
-      join(cacheDir, "package.json"),
-      JSON.stringify({ private: true, dependencies: { [upstream]: version } }),
-    )
-    execSync("bun install --no-save", { cwd: cacheDir, stdio: "pipe" })
-  }
-
-  return cacheDir
 }
 
 // ═══════════════════════════════════════════════════════

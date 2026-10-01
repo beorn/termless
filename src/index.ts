@@ -208,16 +208,7 @@ export type { MockTimerController } from "./terminal/timer.ts"
 export { pushWarning, drainWarnings, hasWarnings, clearWarnings } from "./terminal/warnings.ts"
 
 // Backend registry (core — user-facing)
-export {
-  backend,
-  isReady,
-  backends,
-  entry,
-  manifest,
-  buildBackend,
-  createTerminalByName,
-  ensureCachedVersion,
-} from "./backend/backends.ts"
+export { backend, isReady, backends, entry, manifest, buildBackend, createTerminalByName } from "./backend/backends.ts"
 export type { BackendEntry, Manifest, ResolveOptions } from "./backend/backends.ts"
 
 // Tape format (VHS .tape parser, executor, comparison)

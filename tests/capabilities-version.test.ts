@@ -3,25 +3,9 @@
  * @level l1
  * @consumer Termless backend selection and capability metadata
  * @testonly none
- * @reach registry actual backend factories, isolated version cache
+ * @reach registry actual backend factories and version refusal
  */
-import { afterAll, describe, expect, test } from "vitest"
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { randomUUID } from "node:crypto"
-
-// The resolver captures its cache root at module load. Give it a private root
-// before importing any production module so a refusal test can detect writes.
-const cacheRoot = mkdtempSync(join(tmpdir(), "termless-capability-version-"))
-const priorXdgCacheHome = process.env.XDG_CACHE_HOME
-process.env.XDG_CACHE_HOME = cacheRoot
-
-afterAll(() => {
-  if (priorXdgCacheHome === undefined) delete process.env.XDG_CACHE_HOME
-  else process.env.XDG_CACHE_HOME = priorXdgCacheHome
-  rmSync(cacheRoot, { recursive: true, force: true })
-})
+import { describe, expect, test } from "vitest"
 
 describe("backend capability version contract", () => {
   test("every manifest backend reports its pinned upstream release", async () => {
@@ -49,20 +33,14 @@ describe("backend capability version contract", () => {
     }
   })
 
-  test("a non-default version is refused before its isolated cache can be created", async () => {
+  test("a non-default version is refused with the backend, requested release and pinned release", async () => {
     const registry = await import("../src/backend/backends.ts")
     const pinnedVersion = registry.entry("xtermjs")!.version!
-    const requestedVersion = `0.0.0-c10.${randomUUID().replaceAll("-", "")}`
-    const cachePath = join(cacheRoot, "termless", "backends", `npm:_xterm_headless-${requestedVersion}`)
-    const cacheParent = join(cacheRoot, "termless", "backends")
-    mkdirSync(cacheParent, { recursive: true })
-    const sentinel = "must remain untouched"
-    writeFileSync(cachePath, sentinel)
+    const requestedVersion = "0.0.0-c10"
 
     await expect(registry.backend("xtermjs", { version: requestedVersion })).rejects.toThrow(
       `Backend "xtermjs" cannot select ${requestedVersion}; its pinned upstream release is ${pinnedVersion}`,
     )
-    expect(readFileSync(cachePath, "utf8")).toBe(sentinel)
 
     await expect(registry.backend("alacritty", { version: "0.25.0" })).rejects.toThrow(
       'Version-pinned resolution for native backend "alacritty" requires nix.',

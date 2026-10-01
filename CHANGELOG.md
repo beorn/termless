@@ -8,6 +8,8 @@ This candidate also includes the Ghostty font fixes prepared in the unpublished
 ### Changed
 
 - `TerminalCapabilities.version` now reports the upstream engine release pinned by the backend in `backends.json`. Backends without an upstream report `"not-applicable"`; requesting a non-default backend version is refused because it cannot be loaded reliably by the package resolver.
+- The obsolete `ensureCachedVersion` cache installer and its public re-exports
+  are removed; the backend resolver does not load cached alternate releases.
 - `@termless/cli` now requires Zod 4 (`^4.6.5`) for its MCP tool schemas;
   applications that supply Zod 3 must upgrade that dependency.
 - `@termless/wezterm` reports `osc8Hyperlinks: false`. Its native cell bridge
@@ -21,9 +23,10 @@ This candidate also includes the Ghostty font fixes prepared in the unpublished
   browser bundlers continue to use the browser entry. The server entry loads
   xterm only when `createTermlessPlayer()` needs to create a terminal.
 
-Code that assumed OSC 8 support from WezTerm, non-null libvterm cursor
-properties, an `ArrayBuffer` PNG result, or the browser entry's static xterm
-import under Node/Bun should account for these changed values and exports.
+Code that assumed alternate-version resolution or imported `ensureCachedVersion`,
+OSC 8 support from WezTerm, non-null libvterm cursor properties, an `ArrayBuffer`
+PNG result, or the browser entry's static xterm import under Node/Bun should
+account for these changed values and exports.
 
 ### Fixed
 

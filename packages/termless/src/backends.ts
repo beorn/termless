@@ -15,15 +15,6 @@
  * ```
  */
 
-export {
-  backend,
-  backends,
-  buildBackend,
-  createTerminalByName,
-  ensureCachedVersion,
-  entry,
-  isReady,
-  manifest,
-} from "@termless/core"
+export { backend, backends, buildBackend, createTerminalByName, entry, isReady, manifest } from "@termless/core"
 
 export type { BackendEntry, Manifest, ResolveOptions } from "@termless/core"
