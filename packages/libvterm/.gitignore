@@ -1,3 +1,4 @@
 build/tmp/
-wasm/
+wasm/*
+!wasm/libvterm.d.ts
 node_modules/

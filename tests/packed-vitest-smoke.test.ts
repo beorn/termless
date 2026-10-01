@@ -23,8 +23,18 @@ describe("@termless/test packed artifact", () => {
 
   // Source-tree Vitest cannot resolve workspace peers through import.meta.resolve.
   // Only the source package declares this TS entry; isolated packed consumers run this case.
-  const consumer = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
-  const sourceWorkspace = consumer.name === "@termless/core" && consumer.exports?.["."] === "./src/index.ts"
+  const consumer: unknown = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  const consumerExports =
+    typeof consumer === "object" && consumer !== null && "exports" in consumer ? consumer.exports : undefined
+  const sourceWorkspace =
+    typeof consumer === "object" &&
+    consumer !== null &&
+    "name" in consumer &&
+    consumer.name === "@termless/core" &&
+    typeof consumerExports === "object" &&
+    consumerExports !== null &&
+    "." in consumerExports &&
+    consumerExports["."] === "./src/index.ts"
   test.skipIf(sourceWorkspace)("fixture default enumeration reads the public core registry", async () => {
     const name = `__packed_peer_probe_${process.pid}`
     const catalog = manifest()
