@@ -185,7 +185,8 @@
         "package": "@termless/ghostty-native",
         "runner": "node",
         "args": [
-          "tests/packed-ghostty-native-node-smoke.mjs"
+          "tests/packed-ghostty-native-node-smoke.mjs",
+          "@termless/ghostty-native"
         ],
         "files": [
           "tests/packed-ghostty-native-node-smoke.mjs"
@@ -200,6 +201,49 @@
         ],
         "files": [
           "tests/packed-vitest-smoke.test.ts"
+        ]
+      },
+      {
+        "package": "@termless/alacritty",
+        "runner": "node",
+        "args": [
+          "tests/packed-ghostty-native-node-smoke.mjs",
+          "@termless/alacritty"
+        ],
+        "files": [
+          "tests/packed-ghostty-native-node-smoke.mjs"
+        ]
+      },
+      {
+        "package": "@termless/wezterm",
+        "runner": "node",
+        "args": [
+          "tests/packed-ghostty-native-node-smoke.mjs",
+          "@termless/wezterm"
+        ],
+        "files": [
+          "tests/packed-ghostty-native-node-smoke.mjs"
+        ]
+      },
+      {
+        "package": "@termless/vt100-rust",
+        "runner": "node",
+        "args": [
+          "tests/packed-ghostty-native-node-smoke.mjs",
+          "@termless/vt100-rust"
+        ],
+        "files": [
+          "tests/packed-ghostty-native-node-smoke.mjs"
+        ]
+      },
+      {
+        "package": "@termless/cli",
+        "runner": "node",
+        "args": [
+          "tests/packed-cli-png-smoke.mjs"
+        ],
+        "files": [
+          "tests/packed-cli-png-smoke.mjs"
         ]
       }
     ]

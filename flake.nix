@@ -18,6 +18,13 @@
         };
       in
       {
+        # Release normalization tools, selected from this repository's flake.lock.
+        # nix shell .#native-tools --command bun run --cwd packages/alacritty build:native
+        packages.native-tools = pkgs.symlinkJoin {
+          name = "termless-native-tools";
+          paths = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf pkgs.binutils ];
+        };
+
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # JavaScript runtime + package manager
