@@ -22,7 +22,7 @@ import type { TapeFile } from "./parser.ts"
 import type { TerminalBackend } from "../../terminal/types.ts"
 import { executeTape, type TapeExecutorOptions } from "./executor.ts"
 import { screenshotPng } from "../../render/png.ts"
-import { pngCodec } from "../../render/png-codec.ts"
+import { encodePng, pngCodec } from "../../render/png-codec.ts"
 
 // =============================================================================
 // Types
@@ -343,11 +343,7 @@ function measureScreenshots(screenshots: BackendScreenshot[]): MeasuredScreensho
   })
 }
 
-function createPixelDiffOverlay(
-  baseline: BackendScreenshot,
-  target: BackendScreenshot,
-): PixelDiffOverlay {
-  const UPNG = pngCodec()
+function createPixelDiffOverlay(baseline: BackendScreenshot, target: BackendScreenshot): PixelDiffOverlay {
   const a = decodePng(baseline.png)
   const b = decodePng(target.png)
   const width = Math.max(a.width, b.width)
@@ -380,12 +376,11 @@ function createPixelDiffOverlay(
     }
   }
 
-  const png = UPNG.encode([output.buffer as ArrayBuffer], width, height, 0)
   return {
     backend: target.backend,
     width,
     height,
-    png: new Uint8Array(png),
+    png: encodePng({ width, height, data: output }),
     diffPixels,
     totalPixels: width * height,
   }

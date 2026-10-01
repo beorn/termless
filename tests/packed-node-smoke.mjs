@@ -119,6 +119,25 @@ assert.equal(image.width, 16)
 assert.equal(image.height, 16)
 assert.deepEqual(image.data, pixels)
 
+for (const [size, alpha] of [
+  [1, 0],
+  [1, 255],
+  [2, 0],
+  [2, 255],
+  [16, 0],
+]) {
+  const data = new Uint8Array(size * size * 4)
+  for (let index = 0; index < size * size; index++) {
+    data.set([index % 256, (index * 5) % 256, (index * 11) % 256, alpha], index * 4)
+  }
+  const png = encodePng({ width: size, height: size, data })
+  assert.deepEqual(Array.from(png.subarray(-8)), [73, 69, 78, 68, 174, 66, 96, 130], `${size}x${size} PNG IEND`)
+  const decoded = decodePngRgba(png)
+  assert.equal(decoded.width, size)
+  assert.equal(decoded.height, size)
+  assert.deepEqual(decoded.data, data, `${size}x${size} alpha=${alpha} RGBA`)
+}
+
 const result = await compareTape(parseTape('Type "hi"\nScreenshot'), {
   backends: [
     { name: "left", backend: createFixtureBackend() },
@@ -130,5 +149,6 @@ const result = await compareTape(parseTape('Type "hi"\nScreenshot'), {
 assert.equal(result.textMatch, true)
 assert.equal(result.screenshots.length, 2)
 assert.ok(result.screenshots.every((frame) => frame.text.includes("hi")))
+assert.ok(result.composedSvg)
 assert.match(result.composedSvg, /<svg\b/)
 assert.match(result.composedSvg, /data:image\/png;base64,/)

@@ -198,6 +198,18 @@ describe("diff mode", () => {
     expect(result.composedSvg).toContain("Pixel diff vs baseline")
     expect(result.composedSvg).toContain("changed pixels")
     expect(result.composedSvg).toContain("data-diff-overlay")
+    const base64 = /<image data-diff-overlay="true"[^>]*href="data:image\/png;base64,([^"]+)"/u.exec(
+      result.composedSvg ?? "",
+    )?.[1]
+    if (base64 === undefined) throw new Error("diff overlay PNG missing from composed SVG")
+    const bytes = Buffer.from(base64, "base64")
+    expect(Array.from(bytes.subarray(-8))).toEqual([73, 69, 78, 68, 174, 66, 96, 130])
+    const decoded = UPNG.decode(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+    )
+    const rgba = UPNG.toRGBA8(decoded)[0]
+    if (rgba === undefined) throw new Error("diff overlay PNG has no RGBA frame")
+    expect(new Uint8Array(rgba).filter((_, offset) => offset % 4 === 3)).toContain(220)
   })
 
   test("diff with single backend falls back to side-by-side", async () => {

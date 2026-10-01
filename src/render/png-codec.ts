@@ -65,6 +65,7 @@ export function decodePngRgba(png: Uint8Array): RgbaImage {
 export function encodePng(img: RgbaImage): Uint8Array {
   const UPNG = pngCodec()
   const ab = img.data.buffer.slice(img.data.byteOffset, img.data.byteOffset + img.data.byteLength) as ArrayBuffer
-  const encoded = UPNG.encode([ab], img.width, img.height, 0)
+  // upng-js's fixed output buffer can truncate small palette PNGs; truecolor avoids the PLTE/tRNS overhead.
+  const encoded = UPNG.encode([ab], img.width, img.height, 0, undefined, true)
   return new Uint8Array(encoded)
 }
