@@ -3,10 +3,7 @@
  *
  * Wraps alacritty_terminal (Rust) via napi-rs to implement the TerminalBackend
  * interface — same terminal emulation logic that runs in Alacritty, but headless.
- *
- * TODO: Build native module with `cd native && cargo build --release`
- * TODO: After building, the .node binary will be at native/target/release/
- * TODO: Wire up napi-rs build artifacts to the import below
+ * The prebuilt target is Linux x64 glibc.
  */
 
 import type {
@@ -21,6 +18,7 @@ import type {
   Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module types (from napi-rs)
@@ -79,33 +77,16 @@ interface NativeModule {
 
 let nativeModule: NativeModule | null = null
 
-/**
- * Load the native alacritty module. Must be called before creating backends.
- *
- * TODO: Once the native .node binary is built, this will import it.
- * For now, throws an error indicating the native module needs building.
- */
+/** Load the native alacritty module. Must be called before creating backends. */
 export function loadAlacrittyNative(): NativeModule {
   if (nativeModule) return nativeModule
-
-  try {
-    // TODO: Update this path once napi-rs build is configured
-    // The napi-rs CLI generates platform-specific binaries:
-    //   termless-alacritty-native.darwin-arm64.node
-    //   termless-alacritty-native.darwin-x64.node
-    //   termless-alacritty-native.linux-x64-gnu.node
-    //   etc.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    nativeModule = require("../termless-alacritty-native.node") as NativeModule
-    return nativeModule
-  } catch {
-    throw new Error(
-      "Alacritty native module not found. Build it first:\n" +
-        "  1. Install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh\n" +
-        "  2. cd packages/alacritty/native && cargo build --release\n" +
-        "  3. Copy target/release/libtermless_alacritty_native.dylib to termless-alacritty-native.node",
-    )
-  }
+  nativeModule = loadNativeAddon<NativeModule>({
+    callerUrl: import.meta.url,
+    packageName: "@termless/alacritty",
+    candidates: ["../termless-alacritty-native.node"],
+    prebuiltScope: "linux-x64-glibc only",
+  })
+  return nativeModule
 }
 
 // ═══════════════════════════════════════════════════════

@@ -5,8 +5,7 @@
  * Same terminal emulation as Ghostty,
  * but running natively (no WASM overhead).
  *
- * Requires the native module to be built first:
- *   cd packages/ghostty-native && bash build/build.sh
+ * The prebuilt target is Linux x64 glibc.
  */
 
 import type {
@@ -21,6 +20,7 @@ import type {
   Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module types (from Zig napigen)
@@ -97,41 +97,15 @@ interface NativeModule {
 
 let nativeModule: NativeModule | null = null
 
-/**
- * Try to load the native module WITHOUT throwing — null when it is absent or
- * unbuildable. Shared by the throwing loader and the availability probe so both
- * agree on the exact search paths. Caches on success.
- */
-function tryLoadGhosttyNative(): NativeModule | null {
-  if (nativeModule) return nativeModule
-
-  // Try multiple locations — the build script copies to the package root,
-  // and the Zig build system outputs to zig-out/lib/
-  const paths = ["../termless-ghostty-native.node", "../native/zig-out/lib/termless-ghostty-native.node"]
-
-  for (const p of paths) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      nativeModule = require(p) as NativeModule
-      return nativeModule
-    } catch {
-      // Try next path
-    }
-  }
-
-  return null
-}
-
 export function loadGhosttyNative(): NativeModule {
-  const m = tryLoadGhosttyNative()
-  if (m) return m
-
-  throw new Error(
-    "Ghostty native module not found. Build it first:\n" +
-      "  cd packages/ghostty-native && bash build/build.sh\n" +
-      "\n" +
-      "Requirements: Zig 0.15.2+ (available via nix: nix-shell -p zig)",
-  )
+  if (nativeModule) return nativeModule
+  nativeModule = loadNativeAddon<NativeModule>({
+    callerUrl: import.meta.url,
+    packageName: "@termless/ghostty-native",
+    candidates: ["../termless-ghostty-native.node", "../native/zig-out/lib/termless-ghostty-native.node"],
+    prebuiltScope: "linux-x64-glibc only",
+  })
+  return nativeModule
 }
 
 /**
@@ -141,7 +115,12 @@ export function loadGhosttyNative(): NativeModule {
  * the deliberate, announced inverse of a silent swallow.
  */
 export function isGhosttyNativeAvailable(): boolean {
-  return tryLoadGhosttyNative() !== null
+  try {
+    loadGhosttyNative()
+    return true
+  } catch {
+    return false
+  }
 }
 
 // ═══════════════════════════════════════════════════════

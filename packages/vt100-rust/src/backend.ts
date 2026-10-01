@@ -5,11 +5,7 @@
  * the TerminalBackend interface -- same VT parser used by many Rust terminal
  * projects, but headless via native Node addon.
  *
- * Requires the native module to be built first:
- *   cd packages/vt100-rust/native && cargo build --release
- *   cp target/release/libtermless_vt100_rust_native.dylib ../termless-vt100-rust.node
- *
- * TODO: Set up @napi-rs/cli build pipeline for cross-platform prebuilds.
+ * The prebuilt target is Linux x64 glibc.
  */
 
 import type {
@@ -23,6 +19,7 @@ import type {
   Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ===============================================================
 // Native module loading
@@ -93,18 +90,15 @@ export function loadVt100RustNative(): NativeModule {
   if (loadError) throw loadError
 
   try {
-    // Try loading the prebuilt native addon
-    // The .node file should be at packages/vt100-rust/termless-vt100-rust.node
-    const mod = require("../termless-vt100-rust.node") as NativeModule
-    nativeModule = mod
-    return mod
-  } catch (e) {
-    loadError = new Error(
-      "Failed to load vt100-rust native module. Build it first:\n" +
-        "  cd packages/vt100-rust/native && cargo build --release\n" +
-        "  cp target/release/libtermless_vt100_rust_native.dylib ../termless-vt100-rust.node\n" +
-        `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
-    )
+    nativeModule = loadNativeAddon<NativeModule>({
+      callerUrl: import.meta.url,
+      packageName: "@termless/vt100-rust",
+      candidates: ["../termless-vt100-rust.node"],
+      prebuiltScope: "linux-x64-glibc only",
+    })
+    return nativeModule
+  } catch (error) {
+    loadError = error as Error
     throw loadError
   }
 }

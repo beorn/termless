@@ -1,7 +1,7 @@
 /**
  * The single native / CommonJS-addon load seam for @termless/core.
  *
- * `createRequire` is kept here DELIBERATELY — these are the two cases the
+ * `createRequire` is kept here DELIBERATELY — these are the cases the
  * ESM-only migration cannot convert, centralized so the package has exactly ONE
  * createRequire site (this file, the sole @termless/core entry on
  * check-no-createrequire.sh):
@@ -11,7 +11,10 @@
  *     import()` is not an option and node-pty is not a node builtin (so
  *     `process.getBuiltinModule` doesn't apply either).
  *
- *  2. `resolveOptionalAsset()` — resolves an optional asset/module PATH (e.g.
+ *  2. `loadNativeAddon()` — tries caller-relative native candidates in order,
+ *     retaining each loader error for an actionable failure.
+ *
+ *  3. `resolveOptionalAsset()` — resolves an optional asset/module PATH (e.g.
  *     `@twemoji/svg/<key>.svg`) via Node resolution. The ESM equivalent
  *     `import.meta.resolve()` throws "not supported" under vitest's module
  *     runner — the environment these render paths are exercised in — so
@@ -22,6 +25,30 @@
 import { createRequire } from "node:module"
 
 const nativeRequire = createRequire(import.meta.url)
+
+/** Load a native addon from caller-relative candidates without static `.node` imports. */
+export function loadNativeAddon<T>(options: {
+  callerUrl: string
+  packageName: string
+  candidates: readonly string[]
+  prebuiltScope: string
+}): T {
+  const requireFromCaller = createRequire(options.callerUrl)
+  const errors: string[] = []
+  for (const candidate of options.candidates) {
+    try {
+      return requireFromCaller(candidate) as T
+    } catch (error) {
+      errors.push(`  - ${candidate}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  throw new Error(
+    `Failed to load ${options.packageName} native module on ${process.platform}/${process.arch}.\n` +
+      `Prebuilt scope: ${options.prebuiltScope}\n` +
+      `Tried:\n${options.candidates.map((candidate) => `  - ${candidate}`).join("\n")}\n` +
+      `Load attempts:\n${errors.join("\n")}`,
+  )
+}
 
 /** Minimal interface matching what we use from node-pty's IPty. */
 export interface NodePtyInstance {

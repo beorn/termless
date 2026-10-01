@@ -5,11 +5,7 @@
  * to implement the TerminalBackend interface — same VT parser that powers the
  * WezTerm terminal emulator, but headless via native Node addon.
  *
- * Requires the native module to be built first:
- *   cd packages/wezterm/native && cargo build --release
- *   cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node
- *
- * TODO: Set up @napi-rs/cli build pipeline for cross-platform prebuilds.
+ * The prebuilt target is Linux x64 glibc.
  */
 
 import type {
@@ -23,6 +19,7 @@ import type {
   Color,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module loading
@@ -93,18 +90,15 @@ export function loadWeztermNative(): NativeModule {
   if (loadError) throw loadError
 
   try {
-    // Try loading the prebuilt native addon
-    // The .node file should be at packages/wezterm/termless-wezterm.node
-    const mod = require("../termless-wezterm.node") as NativeModule
-    nativeModule = mod
-    return mod
-  } catch (e) {
-    loadError = new Error(
-      "Failed to load wezterm native module. Build it first:\n" +
-        "  cd packages/wezterm/native && cargo build --release\n" +
-        "  cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node\n" +
-        `\nOriginal error: ${e instanceof Error ? e.message : String(e)}`,
-    )
+    nativeModule = loadNativeAddon<NativeModule>({
+      callerUrl: import.meta.url,
+      packageName: "@termless/wezterm",
+      candidates: ["../termless-wezterm.node"],
+      prebuiltScope: "linux-x64-glibc only",
+    })
+    return nativeModule
+  } catch (error) {
+    loadError = error as Error
     throw loadError
   }
 }

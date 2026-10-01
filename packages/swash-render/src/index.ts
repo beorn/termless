@@ -14,13 +14,11 @@
  * the cell grid (it feeds both canvas and resvg), so the public entry point
  * here is {@link renderCells}: a {@link Terminal} in, RGBA out.
  *
- * The native `.node` binary must be built first (phase 1 ships macOS-arm64;
- * cross-platform prebuilds are a later phase):
- *
- *   cd packages/swash-render && bun run build:native && bun run postbuild:native
+ * The main package does not bundle a prebuilt addon; matching platform
+ * artifacts are separate optional packages.
  */
 
-import { requireNativeAddon } from "./load-native.ts"
+import { loadNativeAddon } from "../../../src/load-native.ts"
 import { bundledFontFiles } from "../../../src/render/fonts.ts"
 import { readFileSync, existsSync } from "node:fs"
 import type { Terminal, Cell, Color } from "../../../src/terminal/types.ts"
@@ -149,43 +147,25 @@ export function _resetSwashRenderNativeForTesting(): void {
 }
 
 /**
- * Load the native swash-render `.node` addon. Throws a clear, actionable
- * error if the binary is missing. Supports the legacy local build
- * (`termless-swash-render.node`), napi-rs platform-suffixed prebuilds, and the
- * optional platform-package layout used by napi-rs native packages.
+ * Load the native swash-render `.node` addon from a local binary or the
+ * matching optional platform package.
  */
 export function loadSwashRenderNative(): NativeModule {
   if (nativeModule) return nativeModule
   if (loadError) throw loadError
-  const errors: string[] = []
   const override = process.env.NAPI_RS_NATIVE_LIBRARY_PATH
-  if (override) {
-    try {
-      nativeModule = requireNativeAddon<NativeModule>(override)
-      return nativeModule
-    } catch (e) {
-      errors.push(`${override}: ${e instanceof Error ? e.message : String(e)}`)
-    }
+  try {
+    nativeModule = loadNativeAddon<NativeModule>({
+      callerUrl: import.meta.url,
+      packageName: "@termless/swash-render",
+      candidates: [...(override ? [override] : []), ...nativeLoadCandidates()],
+      prebuiltScope: "no prebuild in the main package; matching platform artifacts are separate optional packages",
+    })
+    return nativeModule
+  } catch (error) {
+    loadError = error as Error
+    throw loadError
   }
-  for (const candidate of nativeLoadCandidates()) {
-    try {
-      nativeModule = requireNativeAddon<NativeModule>(candidate)
-      return nativeModule
-    } catch (e) {
-      errors.push(`${candidate}: ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
-  const tried = nativeLoadCandidates()
-    .map((c) => `  - ${c}`)
-    .join("\n")
-  const original = errors.length ? `\n\nLoad attempts:\n${errors.map((e) => `  - ${e}`).join("\n")}` : ""
-  loadError = new Error(
-    "Failed to load @termless/swash-render native module.\n" +
-      "Install the matching optional prebuild package, or build a local prebuild:\n" +
-      "  cd packages/swash-render && bun run build:prebuild\n\n" +
-      `Tried:\n${tried}${original}`,
-  )
-  throw loadError
 }
 
 /** Whether the native swash binding is present and loadable. */
