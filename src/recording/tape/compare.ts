@@ -127,15 +127,15 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
       break
 
     case "side-by-side":
-      composedSvg = await composeSideBySide(screenshots)
+      composedSvg = composeSideBySide(screenshots)
       break
 
     case "grid":
-      composedSvg = await composeGrid(screenshots)
+      composedSvg = composeGrid(screenshots)
       break
 
     case "diff":
-      composedSvg = await composeDiff(screenshots)
+      composedSvg = composeDiff(screenshots)
       break
   }
 
@@ -150,10 +150,10 @@ export async function compareTape(tape: TapeFile, options: CompareOptions): Prom
  * Compose screenshots horizontally with backend name headers.
  * Generates a wrapper SVG that embeds individual PNGs at their decoded dimensions.
  */
-async function composeSideBySide(screenshots: BackendScreenshot[]): Promise<string> {
+function composeSideBySide(screenshots: BackendScreenshot[]): string {
   if (screenshots.length === 0) return "<svg></svg>"
 
-  const measured = await measureScreenshots(screenshots)
+  const measured = measureScreenshots(screenshots)
   const headerHeight = 30
   const gap = 10
 
@@ -185,10 +185,10 @@ async function composeSideBySide(screenshots: BackendScreenshot[]): Promise<stri
 /**
  * Compose screenshots in a grid layout (2 columns).
  */
-async function composeGrid(screenshots: BackendScreenshot[]): Promise<string> {
+function composeGrid(screenshots: BackendScreenshot[]): string {
   if (screenshots.length === 0) return "<svg></svg>"
 
-  const measured = await measureScreenshots(screenshots)
+  const measured = measureScreenshots(screenshots)
   const headerHeight = 30
   const gap = 10
   const gridCols = 2
@@ -226,15 +226,15 @@ async function composeGrid(screenshots: BackendScreenshot[]): Promise<string> {
 /**
  * Compose diff view — show screenshots side by side with pixel diff overlays below.
  */
-async function composeDiff(screenshots: BackendScreenshot[]): Promise<string> {
+function composeDiff(screenshots: BackendScreenshot[]): string {
   if (screenshots.length < 2) return composeSideBySide(screenshots)
 
-  const measured = await measureScreenshots(screenshots)
+  const measured = measureScreenshots(screenshots)
   const headerHeight = 30
   const diffHeaderHeight = 50
   const gap = 10
   const baseline = screenshots[0]!
-  const overlays = await Promise.all(screenshots.slice(1).map((s) => createPixelDiffOverlay(baseline, s)))
+  const overlays = screenshots.slice(1).map((s) => createPixelDiffOverlay(baseline, s))
 
   const screenshotWidth = measured.reduce((sum, s) => sum + s.width, 0) + (measured.length - 1) * gap
   const screenshotHeight = Math.max(...measured.map((s) => s.height))
@@ -343,12 +343,13 @@ function measureScreenshots(screenshots: BackendScreenshot[]): MeasuredScreensho
   })
 }
 
-async function createPixelDiffOverlay(
+function createPixelDiffOverlay(
   baseline: BackendScreenshot,
   target: BackendScreenshot,
-): Promise<PixelDiffOverlay> {
+): PixelDiffOverlay {
   const UPNG = pngCodec()
-  const [a, b] = await Promise.all([decodePng(baseline.png), decodePng(target.png)])
+  const a = decodePng(baseline.png)
+  const b = decodePng(target.png)
   const width = Math.max(a.width, b.width)
   const height = Math.max(a.height, b.height)
   const output = new Uint8Array(width * height * 4)
