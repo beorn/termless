@@ -1,7 +1,7 @@
 {
   "name": "@termless/core",
   "version": "0.9.2",
-  "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
+  "description": "Headless terminal testing library \u2014 like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
     "cross-terminal",
@@ -159,6 +159,19 @@
       "@termless/wezterm",
       "@termless/xtermjs",
       "termless"
+    ],
+    "checks": [
+      {
+        "package": "@termless/test",
+        "runner": "vitest",
+        "args": [
+          "run",
+          "tests/packed-vitest-smoke.test.ts"
+        ],
+        "files": [
+          "tests/packed-vitest-smoke.test.ts"
+        ]
+      }
     ]
   }
 }

@@ -24,6 +24,7 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { existsSync } from "node:fs"
+import { findPackageRoot } from "../package-root.ts"
 
 /** Family names the bundled fonts are registered under (CSS `font-family`). */
 export const BUNDLED_PRIMARY_FAMILY = "TermlessMono"
@@ -59,32 +60,34 @@ export const BUNDLED_FONTS: readonly BundledFont[] = [
  *   - published: `<pkg>/dist/index.mjs`       → `<pkg>/assets/fonts`
  *
  * In dev the file sits two levels deep (`src/render/`), in a published build
- * one level deep (`dist/`). We probe upward for the first ancestor that has
- * an `assets/fonts` child so both layouts resolve without a build-time guess.
+ * one level deep (`dist/`). The shared root resolver matches the owning
+ * package's name, so both layouts resolve without a build-time guess.
  *
  * A published backend package (`@termless/ghostty`) bundles this module into
- * its own `dist/`, where no ancestor holds the fonts: they ship only in
- * `@termless/core`, its peer dependency. So the probe runs again from where
+ * its own `dist/`, whose package identity does not match core: fonts ship only
+ * in `@termless/core`, its peer dependency. So the lookup runs again from where
  * `@termless/core` itself resolves.
  */
 export function bundledFontsDir(): string {
   const found = findFontsUpward(dirname(fileURLToPath(import.meta.url))) ?? findFontsUpward(coreEntryDir())
   if (found !== undefined) return found
-  // Fall back to the dev layout (`src/render/` → two levels up) so callers
-  // get a deterministic path even when the assets are absent.
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets", "fonts")
+  // Missing font files remain optional, but their path must belong to core.
+  const root = findPackageRoot(coreEntryDir() ?? dirname(fileURLToPath(import.meta.url)), "@termless/core")
+  return join(root, "assets", "fonts")
 }
 
-/** The first `assets/fonts` directory at `start` or up to three ancestors above it. */
+/** The fonts directory of the name-matched core package owning `start`. */
 export function findFontsUpward(start: string | undefined): string | undefined {
   if (start === undefined) return undefined
-  let here = start
-  for (let i = 0; i < 4; i++) {
-    const candidate = join(here, "assets", "fonts")
-    if (existsSync(candidate)) return candidate
-    here = dirname(here)
+  let root: string
+  try {
+    root = findPackageRoot(start, "@termless/core")
+  } catch {
+    // silent-fallback-allow: an inlined backend must try its required core peer next; bundledFontsDir reports both absent roots.
+    return undefined
   }
-  return undefined
+  const candidate = join(root, "assets", "fonts")
+  return existsSync(candidate) ? candidate : undefined
 }
 
 /** The directory `@termless/core`'s entry resolves to from here, or undefined when it does not resolve. */

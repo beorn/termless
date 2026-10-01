@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, test } from "vitest"
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { bundledFontsDir, findFontsUpward } from "../../src/render/fonts.ts"
@@ -23,6 +23,7 @@ describe("findFontsUpward", () => {
       const core = join(root, "node_modules", "@termless", "core")
       mkdirSync(join(core, "assets", "fonts"), { recursive: true })
       mkdirSync(join(core, "dist"), { recursive: true })
+      writeFileSync(join(core, "package.json"), JSON.stringify({ name: "@termless/core" }))
       expect(findFontsUpward(join(core, "dist"))).toBe(join(core, "assets", "fonts"))
     } finally {
       rmSync(root, { recursive: true, force: true })

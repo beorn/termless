@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 import type { TerminalBackend, TerminalOptions, TestTerminal } from "../terminal/types.ts"
 import { createTerminal } from "../terminal/terminal.ts"
+import { findPackageRoot } from "../package-root.ts"
 
 // ═══════════════════════════════════════════════════════
 // Manifest
@@ -49,16 +50,12 @@ export interface Manifest {
   backends: Record<string, BackendEntry>
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-// `backends.json` lives at the package root; this file is `src/backend/`.
-const PACKAGE_ROOT = join(__dirname, "..", "..")
-const MANIFEST_PATH = join(PACKAGE_ROOT, "backends.json")
-
 let _manifest: Manifest | null = null
 
 export function manifest(): Manifest {
   if (_manifest) return _manifest
-  const raw = JSON.parse(readFileSync(MANIFEST_PATH, "utf-8")) as any
+  const root = findPackageRoot(dirname(fileURLToPath(import.meta.url)), "@termless/core")
+  const raw = JSON.parse(readFileSync(join(root, "backends.json"), "utf-8")) as any
   // Normalize: map upstreamVersion → version for cleaner access
   const backends: Record<string, BackendEntry> = {}
   for (const [name, entry] of Object.entries(raw.backends) as [string, any][]) {
@@ -124,7 +121,7 @@ function runBuildScript(pkgDir: string): void {
   try {
     execSync(`bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
   } catch {
-    const flakeDir = PACKAGE_ROOT
+    const flakeDir = findPackageRoot(dirname(fileURLToPath(import.meta.url)), "@termless/core")
     if (existsSync(join(flakeDir, "flake.nix"))) {
       execSync(`nix develop ${flakeDir} --command bash build/build.sh`, { cwd: pkgDir, stdio: "inherit" })
     } else {
@@ -338,18 +335,7 @@ export function ensureCachedVersion(upstream: string, version: string): string {
 function findPackageDir(packageName: string): string | null {
   try {
     const resolved = fileURLToPath(import.meta.resolve(packageName))
-    let dir = dirname(resolved)
-    for (let i = 0; i < 10; i++) {
-      if (existsSync(join(dir, "package.json"))) {
-        try {
-          const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")) as any
-          if (pkg.name === packageName) return dir
-        } catch {}
-      }
-      const parent = dirname(dir)
-      if (parent === dir) break
-      dir = parent
-    }
+    return findPackageRoot(dirname(resolved), packageName)
   } catch {}
   return null
 }
