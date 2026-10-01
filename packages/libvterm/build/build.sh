@@ -82,6 +82,7 @@ emcc -O2 \
   -s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "getValue", "setValue", "UTF8ToString", "stringToUTF8", "lengthBytesUTF8"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
   -s EXPORT_NAME="createLibvtermModule" \
   -s ENVIRONMENT='node' \
   -o "$WASM_DIR/libvterm.js"

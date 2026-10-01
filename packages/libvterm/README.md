@@ -20,6 +20,10 @@ The build generates `wasm/libvterm.js`, `wasm/libvterm.wasm`, and a receipt bind
 their hashes to the committed build inputs. Uncommitted build inputs prevent
 receipt generation; diagnostic binaries from such a build are not attested.
 
+This generated loader targets Node.js: the pinned build uses
+`ENVIRONMENT=node`, and the adapter loads its assets with `node:fs` and
+`node:crypto`. The package does not claim a browser runtime for this backend.
+
 ## Usage
 
 New backend instances start in UTF-8 mode, matching the bytes supplied through
