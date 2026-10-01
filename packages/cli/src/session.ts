@@ -125,6 +125,7 @@ export function createSessionManager(): SessionManager {
     // shape, cursor visibility and narrowing reflow.
     const backendName: SessionBackend = opts.backend ?? "vterm"
 
+    // oxlint-disable-next-line typescript/no-deprecated -- Session creation uses the legacy backend lifecycle until unterm phase A4.
     const backend: TerminalBackend = await resolveBackend(backendName)
     const terminal = createTerminal({ backend, cols, rows, onAfterWrite: opts.onAfterWrite })
 
@@ -234,6 +235,7 @@ export function createSessionManager(): SessionManager {
  * dangerous: every downstream assertion passes and the only symptom is that the
  * emulator under test is not the one that was named.
  */
+// oxlint-disable-next-line typescript/no-deprecated -- Backend factories retain the legacy lifecycle until unterm phase A4.
 async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
   switch (name) {
     case "xtermjs":
@@ -264,6 +266,7 @@ async function resolveBackend(name: SessionBackend): Promise<TerminalBackend> {
 }
 
 /** The production engine (@si/vterm/21016), and the default when no backend is named. */
+// oxlint-disable-next-line typescript/no-deprecated -- Vterm resolves through the legacy backend lifecycle until unterm phase A4.
 async function resolveVterm(): Promise<TerminalBackend> {
   const mod = await import("@termless/vterm")
   return mod.resolve()
@@ -276,7 +279,9 @@ async function waitForContent(terminal: TestTerminal, timeout: number): Promise<
   while (Date.now() - start < timeout) {
     const text = terminal.getText().trim()
     if (text.length > 0) return
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
+    await new Promise((resolve) => {
+      setTimeout(resolve, POLL_INTERVAL)
+    })
   }
   throw new Error(`Timeout waiting for content after ${timeout}ms`)
 }

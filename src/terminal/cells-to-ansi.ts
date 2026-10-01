@@ -133,7 +133,9 @@ function nonDefault(s: SgrState): boolean {
  * After the cells are emitted, the cursor is repositioned via CSI H so callers
  * that re-enable the cursor see it where the source terminal had it.
  */
+// oxlint-disable-next-line typescript/no-deprecated -- The public Terminal read contract remains until unterm phase A4.
 export function cellsToAnsi(terminal: Terminal, opts: { rows?: number; cols?: number } = {}): string {
+  // oxlint-disable-next-line typescript/no-deprecated -- Runtime Terminal adapters expose getLines until unterm phase A4.
   const lines = terminal.getLines()
   const rowCount = opts.rows ?? lines.length
   // Use only the last `rowCount` rows to match a screen-shaped render.
@@ -177,8 +179,10 @@ export function cellsToAnsi(terminal: Terminal, opts: { rows?: number; cols?: nu
   // Trailing reset.
   out += "\x1b[0m"
   // Position cursor.
+  // oxlint-disable-next-line typescript/no-deprecated -- Runtime cursors retain x/y aliases until unterm phase A4.
   if (cursor && cursor.x >= 0 && cursor.y >= 0) {
     // ANSI is 1-indexed.
+    // oxlint-disable-next-line typescript/no-deprecated -- Runtime cursors retain x/y aliases until unterm phase A4.
     out += `\x1b[${cursor.y + 1};${cursor.x + 1}H`
   }
   return out

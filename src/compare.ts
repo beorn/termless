@@ -195,7 +195,14 @@ export async function captureCrossRenderer(
   let svgDim: { width: number; height: number } | null = null
   // Parse <svg width="X" height="Y"> from the SVG string for logical dim.
   const m = svgString.match(/<svg[^>]+width="(\d+)"[^>]+height="(\d+)"/)
-  if (m) svgDim = { width: Number.parseInt(m[1]!, 10), height: Number.parseInt(m[2]!, 10) }
+  if (m) {
+    const width = m[1]
+    const height = m[2]
+    if (width === undefined || height === undefined) {
+      throw new Error("captureCrossRenderer: SVG size pattern matched without width and height groups")
+    }
+    svgDim = { width: Number.parseInt(width, 10), height: Number.parseInt(height, 10) }
+  }
   const peekDim = peekabooBytes ? pngDimensions(peekabooBytes) : null
 
   // Estimate logical dimensions by dividing by suspected DPR.
@@ -377,16 +384,22 @@ async function captureRealTerminal(opts: {
   // Poll for the new window.
   let newId: string | undefined
   for (let i = 0; i < 40 && !newId; i++) {
-    await new Promise((r) => setTimeout(r, 200))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 200)
+    })
     const idsNow = listWindowIds(opts.app)
     newId = idsNow.find((id) => !idsBefore.includes(id))
   }
 
   try {
-    await new Promise((r) => setTimeout(r, opts.waitMs))
+    await new Promise((resolve) => {
+      setTimeout(resolve, opts.waitMs)
+    })
 
     spawnSync("osascript", ["-e", `tell application "${bundle}" to activate`], { stdio: "ignore" })
-    await new Promise((r) => setTimeout(r, 300))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300)
+    })
 
     // Get the spawned window's CGWindowID via a Swift one-liner. This is
     // the macOS window-number used by `screencapture -l <id>` — captures
@@ -407,7 +420,11 @@ async function captureRealTerminal(opts: {
     // pre-launch CGWindowID set. Falls back to the highest id when the
     // diff is empty (shouldn't happen but defensive).
     const freshIds = cgIds.filter((id) => !cgIdsBefore.includes(id))
-    const cgId = (freshIds[0] ?? cgIds.sort((a, b) => Number(a) - Number(b)).pop())!.toString()
+    const candidateCgId = freshIds[0] ?? cgIds.sort((a, b) => Number(a) - Number(b)).pop()
+    if (candidateCgId === undefined) {
+      throw new Error(`captureRealTerminal: no ${bundle} window id available after launch`)
+    }
+    const cgId = candidateCgId.toString()
     const outPath = join(tmpDir, "capture.png")
     const cap = spawnSync("screencapture", ["-l", cgId, "-o", "-x", outPath], { stdio: ["ignore", "ignore", "pipe"] })
     if (cap.status !== 0) throw new Error(`screencapture -l ${cgId} failed: ${cap.stderr?.toString().trim()}`)
@@ -428,7 +445,9 @@ async function captureRealTerminal(opts: {
       // ignore
     }
     // Give close-on-exit a beat to fire.
-    await new Promise((r) => setTimeout(r, 400))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 400)
+    })
     if (newId) {
       const closeScript = `tell application "${bundle}" to close (every window whose id is ${newId})`
       spawnSync("osascript", ["-e", closeScript], { stdio: "ignore", timeout: 3000 })
