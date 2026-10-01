@@ -106,6 +106,44 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     }
   })
 
+  // AC2/C9: malformed ABI metadata must not be reported as a valid negative cell attribute.
+  // The ABI's pinned underline enum only defines 0..3; existing coverage exercises valid code 1.
+  // @failure Unknown libvterm underline ABI values silently become false
+  // @level l2
+  // @consumer TerminalBackend cell conversion
+  // @testonly none
+  test("rejects an invalid raw underline code with cell and ABI context", () => {
+    const realModule = wasmModule!
+    const mod = Object.create(realModule) as LibvtermModule
+    const realGetValue = realModule.getValue.bind(realModule)
+    let wordReads = 0
+    let underlineCode = 0
+    mod.getValue = (ptr, type) => {
+      if (wordReads++ === 3) return underlineCode
+      return realGetValue(ptr, type)
+    }
+
+    const backend = createLibvtermBackend(undefined, mod)
+    backend.init({ cols: 8, rows: 2 })
+    try {
+      for (const [code, expected] of [
+        [0, false],
+        [1, "single"],
+        [2, "double"],
+        [3, "curly"],
+      ] as const) {
+        underlineCode = code
+        wordReads = 0
+        expect(backend.getCell(1, 2).underline, `raw underline code ${code}`).toBe(expected)
+      }
+      underlineCode = 99
+      wordReads = 0
+      expect(() => backend.getCell(1, 2)).toThrow(/underline code 99.*cell \(1, 2\).*word 3/i)
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("feeds bytes through exported accessors without requiring HEAPU8", async () => {
     const backend: TerminalBackend = createLibvtermBackend(undefined, wasmModule!)
     backend.init?.({ cols: 80, rows: 24 })

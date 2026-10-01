@@ -81,6 +81,21 @@ function cellColor(type: number, r: number, g: number, b: number, defaultFlag: n
   return type & 1 ? indexedColor(r) : { r, g, b }
 }
 
+function underlineStyle(raw: number, row: number, col: number): Cell["underline"] {
+  switch (raw) {
+    case 0:
+      return false
+    case 1:
+      return "single"
+    case 2:
+      return "double"
+    case 3:
+      return "curly"
+    default:
+      throw new Error(`Invalid libvterm underline code ${raw} at cell (${row}, ${col}), flat ABI word 3`)
+  }
+}
+
 /** Convert a libvterm cell from the shim's fixed-width values. */
 function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, col: number, cellPtr: number): Cell {
   mod.vterm_screen_get_cell(screen, row, col, cellPtr)
@@ -97,7 +112,7 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
     bold: raw.bold,
     dim: false, // libvterm doesn't expose dim/faint in its cell attrs
     italic: raw.italic,
-    underline: ([false, "single", "double", "curly"] as const)[raw.underline] ?? false,
+    underline: underlineStyle(raw.underline, row, col),
     underlineColor: null,
     strikethrough: raw.strike,
     inverse: raw.reverse,
