@@ -99,12 +99,23 @@ let nativeModule: NativeModule | null = null
 
 export function loadGhosttyNative(): NativeModule {
   if (nativeModule) return nativeModule
-  nativeModule = loadNativeAddon<NativeModule>({
-    callerUrl: import.meta.url,
-    packageName: "@termless/ghostty-native",
-    candidates: ["../termless-ghostty-native.node", "../native/zig-out/lib/termless-ghostty-native.node"],
-    prebuiltScope: "linux-x64-glibc only",
-  })
+  try {
+    nativeModule = loadNativeAddon<NativeModule>({
+      callerUrl: import.meta.url,
+      packageName: "@termless/ghostty-native",
+      candidates: ["../termless-ghostty-native.node", "../native/zig-out/lib/termless-ghostty-native.node"],
+      prebuiltScope: "linux-x64-glibc only",
+    })
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause)
+    throw new Error(
+      `${detail}\n\n` +
+        `Build it first from a full Termless source checkout:\n` +
+        `  cd packages/ghostty-native && bash build/build.sh\n` +
+        `Published packages omit build sources; use the portable @termless/ghostty backend as an alternative.`,
+      { cause },
+    )
+  }
   return nativeModule
 }
 

@@ -14,11 +14,28 @@ describe("isGhosttyNativeAvailable", () => {
     expect(typeof isGhosttyNativeAvailable()).toBe("boolean")
   })
 
-  test("agrees with loadGhosttyNative: available ⇒ load succeeds, absent ⇒ load throws 'Build it first'", () => {
+  test("agrees with loadGhosttyNative and keeps absence diagnostics actionable", () => {
     if (isGhosttyNativeAvailable()) {
       expect(() => loadGhosttyNative()).not.toThrow()
     } else {
-      expect(() => loadGhosttyNative()).toThrow(/Build it first/)
+      let failure: unknown
+      try {
+        loadGhosttyNative()
+      } catch (error) {
+        failure = error
+      }
+      expect(failure).toBeInstanceOf(Error)
+      const error = failure as Error & { cause?: unknown }
+      expect(error.message).toContain("Build it first from a full Termless source checkout")
+      expect(error.message).toContain("cd packages/ghostty-native && bash build/build.sh")
+      expect(error.message).toContain("Published packages omit build sources")
+      expect(error.message).toContain("Tried:")
+      expect(error.message).toContain("Load attempts:")
+      expect(error.cause).toBeInstanceOf(Error)
+      const cause = error.cause as Error
+      expect(error.message.startsWith(cause.message)).toBe(true)
+      expect(cause.message).toContain("../termless-ghostty-native.node")
+      expect(cause.message).toContain("../native/zig-out/lib/termless-ghostty-native.node")
     }
   })
 })
