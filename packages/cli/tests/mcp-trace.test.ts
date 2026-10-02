@@ -138,7 +138,12 @@ describe("session manager — FrameTracer integration (MCP tool surface)", () =>
     const manager = createSessionManager()
     try {
       const stubPng = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])
-      const renderFn = async (): Promise<Uint8Array> => stubPng
+      const renderFn = async (): Promise<Uint8Array> => {
+        // Model async rendering plus persistence taking longer than the old
+        // fixed 60ms gaps on a loaded Windows runner.
+        await new Promise((resolve) => setTimeout(resolve, 80))
+        return stubPng
+      }
 
       let tracer: ReturnType<typeof createFrameTracer> | null = null
       const { id, terminal } = await manager.createSession({
@@ -151,11 +156,13 @@ describe("session manager — FrameTracer integration (MCP tool surface)", () =>
 
       // Three distinct frames.
       terminal.feed("\x1b[2J\x1b[Hfirst")
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      // Captures include async render + file persistence; wait for each frame
+      // before feeding the next distinct state rather than guessing a delay.
+      await vi.waitFor(() => expect(tracer.framesSinceSeq(0)).toHaveLength(1), { timeout: 5000 })
       terminal.feed("\x1b[2J\x1b[Hsecond")
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      await vi.waitFor(() => expect(tracer.framesSinceSeq(0)).toHaveLength(2), { timeout: 5000 })
       terminal.feed("\x1b[2J\x1b[Hthird")
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      await vi.waitFor(() => expect(tracer.framesSinceSeq(0)).toHaveLength(3), { timeout: 5000 })
 
       const all = tracer.framesSinceSeq(0)
       expect(all.length).toBe(3)
