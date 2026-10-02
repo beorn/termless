@@ -27,7 +27,7 @@
         "silvery": "^0.24.0",
         "tsdown": "0.22.13",
         "typescript": "^5.9.3",
-        "verify-publishable": "github:beorn/verify-publishable#8c1406b3605e7ff720b1962777f097859ce385b3",
+        "verify-publishable": "github:beorn/verify-publishable#b5fab87e04a430a2f1fee8ded3fd15d69cf459dd",
         "vitepress": "^1.6.4",
         "vitepress-enrich": "^0.4.0",
         "vitepress-plugin-llms": "1.14.0",
@@ -44,7 +44,7 @@
         "upng-js": "^2.1.0",
       },
       "peerDependencies": {
-        "@termless/ghostty": "^0.10.0",
+        "@termless/ghostty": "^0.10.1",
         "node-pty": ">=1.0.0",
       },
       "optionalPeers": [
@@ -54,17 +54,17 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "bin": {
         "termless": "./bin/termless.ts",
       },
@@ -73,18 +73,18 @@
         "@napi-rs/canvas": "^1.0.9",
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.18.2",
-        "@termless/vterm": "^0.10.0",
+        "@termless/vterm": "^0.10.1",
         "loggily": "^0.10.2",
         "react": "^19.0.0",
         "silvery": "^0.24.0",
         "zod": "^4.6.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
-        "@termless/ghostty": "^0.10.0",
-        "@termless/peekaboo": "^0.10.0",
-        "@termless/vt100": "^0.10.0",
-        "@termless/xtermjs": "^0.10.0",
+        "@termless/core": "^0.10.1",
+        "@termless/ghostty": "^0.10.1",
+        "@termless/peekaboo": "^0.10.1",
+        "@termless/vt100": "^0.10.1",
+        "@termless/xtermjs": "^0.10.1",
         "playwright": "^1.59.0",
       },
       "optionalPeers": [
@@ -96,70 +96,70 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@napi-rs/canvas": "1.0.9",
         "ghostty-web": "^0.4.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
-        "@termless/vterm": "^0.10.0",
+        "@termless/core": "^0.10.1",
+        "@termless/vterm": "^0.10.1",
       },
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/termless": {
       "name": "termless",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@termless/core": "workspace:*",
       },
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "optionalDependencies": {
         "@napi-rs/canvas": "^1.0.9",
         "@resvg/resvg-js": "^2.6.2",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
         "playwright": "^1.59.0",
         "vitest": ">=2.0.0",
       },
@@ -169,34 +169,34 @@
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "vt100.js": "0.7.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "vt220.js": "0.7.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "vterm.js": "^0.7.0",
       },
@@ -204,35 +204,35 @@
         "@termless/xtermjs": "workspace:*",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.0",
+        "@termless/core": "^0.10.1",
         "silvery": ">=0.4.2",
       },
       "optionalPeers": [
@@ -1970,7 +1970,7 @@
 
     "verdaccio-htpasswd": ["verdaccio-htpasswd@13.1.3", "", { "dependencies": { "@verdaccio/core": "8.3.0", "@verdaccio/file-locking": "13.1.0", "apache-md5": "1.1.8", "bcryptjs": "2.4.3", "debug": "4.4.3", "http-errors": "2.0.1", "unix-crypt-td-js": "1.1.4" } }, "sha512-q2od2foCPblMasnUdKPLcNYXN5iXW0Q9Imh58qTpNsvCeYGtlfMqyC+aO+/0wtTGkD+H+mWfbqtb/8G9TMc0DQ=="],
 
-    "verify-publishable": ["verify-publishable@github:beorn/verify-publishable#8c1406b", { "dependencies": { "@arethetypeswrong/cli": "0.18.5", "pnpm": "9.15.9", "publint": "0.3.24", "verdaccio": "6.10.2" }, "bin": { "verify-publishable": "bin/verify-publishable" } }, "beorn-verify-publishable-8c1406b", "sha512-CDhZ78k4YtCKP1Ddr63e7Lyo2wGe1mNhOFl8QuBCU1KgeWtB9DluJWCNOt1fbaultyzf009N2ov2S2zmGhuXug=="],
+    "verify-publishable": ["verify-publishable@github:beorn/verify-publishable#b5fab87", { "dependencies": { "@arethetypeswrong/cli": "0.18.5", "pnpm": "9.15.9", "publint": "0.3.24", "verdaccio": "6.10.2" }, "bin": { "verify-publishable": "bin/verify-publishable" } }, "beorn-verify-publishable-b5fab87", "sha512-Ux1E6HU4HV/UsOUuM3Y2yP1VN5qywep+8FnjnoWW9Nz/SUm/Pw+i3ZiXSd1wnRPJtlg9Xj8MnkxQn709QBcMMw=="],
 
     "verkit": ["verkit@0.1.2", "", {}, "sha512-WqkT8n3hqizuCu71W3bUzf5fjBmkbXcudsehe/NbxA8PgqoKnSOY5K0Ba2ckg1qaRaSpSz7as/n9K1R9JXjQKg=="],
 
@@ -2056,8 +2056,6 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
-    "@termless/test/@termless/core": ["@termless/core@root:", {}],
-
     "@verdaccio/logger-prettify/pino-abstract-transport": ["pino-abstract-transport@1.2.0", "", { "dependencies": { "readable-stream": "^4.0.0", "split2": "^4.0.0" } }, "sha512-Guhh8EZfPCfH+PMXAb6rKOjGQEoy0xlAIn+irODG5kgfYV+BQ0rGYYWTIel3P5mmyXqkYkPmdIkywsn6QKUR1Q=="],
 
     "@verdaccio/logger-prettify/sonic-boom": ["sonic-boom@3.8.1", "", { "dependencies": { "atomic-sleep": "^1.0.0" } }, "sha512-y4Z8LCDBuum+PBP3lSV7RHrXscqksve/bi0as7mhwVnBW+/wUqKT/2Kb7um8yqcFy0duYbbPxzt89Zy2nOCaxg=="],
@@ -2126,7 +2124,11 @@
 
     "silvery/@silvery/commander": ["@silvery/commander@0.24.0", "", { "dependencies": { "@silvery/ansi": "0.24.0", "commander": ">=15.0.0", "zod": ">=3.0.0" } }, "sha512-/Hv3GyLppOK+uA+TMvTLwiNNSYu2rb9axzs+f8OgQtqLA9RdV3KxXV0+RMim1hpMnuxt/DO2H6lQkjzbn/syng=="],
 
+    "silvery/@termless/core": ["@termless/core@root:", {}],
+
     "string_decoder/safe-buffer": ["safe-buffer@5.1.2", "", {}, "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="],
+
+    "termless/@termless/core": ["@termless/core@root:", {}],
 
     "tinyglobby/picomatch": ["picomatch@4.0.5", "", {}, "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A=="],
 

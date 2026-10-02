@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
@@ -93,7 +93,7 @@
     "silvery": "^0.24.0",
     "tsdown": "0.22.13",
     "typescript": "^5.9.3",
-    "verify-publishable": "github:beorn/verify-publishable#8c1406b3605e7ff720b1962777f097859ce385b3",
+    "verify-publishable": "github:beorn/verify-publishable#b5fab87e04a430a2f1fee8ded3fd15d69cf459dd",
     "vitepress": "^1.6.4",
     "vitepress-enrich": "^0.4.0",
     "vitepress-plugin-llms": "1.14.0",
@@ -101,7 +101,7 @@
     "vue": "3.5.43"
   },
   "peerDependencies": {
-    "@termless/ghostty": "^0.10.0",
+    "@termless/ghostty": "^0.10.1",
     "node-pty": ">=1.0.0"
   },
   "peerDependenciesMeta": {
@@ -248,6 +248,7 @@
         ]
       }
     ],
-    "build": "nix shell .#native-tools --command bash -euc 'export CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-2}\"; for package in alacritty wezterm vt100-rust; do bun run --cwd \"packages/$package\" build:native; done; bash packages/ghostty-native/build/build.sh; bash packages/libvterm/build/build.sh; bun run build'"
+    "build": "nix shell .#native-tools --command bash -euc 'export CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-2}\"; for package in alacritty wezterm vt100-rust; do bun run --cwd \"packages/$package\" build:native; done; bash packages/ghostty-native/build/build.sh; bash packages/libvterm/build/build.sh; bun run build'",
+    "buildTimeoutMs": 1200000
   }
 }
