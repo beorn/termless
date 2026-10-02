@@ -1,4 +1,4 @@
-# vendor-kit: verify@aabd16b00fd9 — generated; edit km/packages/km-infra/vendor-kit/templates/verify.yml in km, then re-sync
+# vendor-kit: verify@14ce6686167c — generated; edit km/packages/km-infra/vendor-kit/templates/verify.yml in km, then re-sync
 name: Verify
 
 # Light per-push gate: the suite + build must stay green on main so a release
@@ -39,4 +39,3 @@ jobs:
           node-version: "24"
       - name: Verify the packages this repository would publish
         uses: beorn/verify-publishable@208fac58810b31b9cf4b1b0ec0eae45f85d0e74c
-
