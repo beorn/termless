@@ -1,4 +1,4 @@
-# vendor-kit: release@5e63caa7a9e2 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@9c48520cf488 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -90,6 +90,11 @@ jobs:
           writeFileSync(join(process.env.RUNNER_TEMP, 'release-plan.json'), JSON.stringify(plan))
           NODE
 
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3
+        with:
+          github_access_token: ${{ github.token }}
+          extra_nix_config: |
+            experimental-features = nix-command flakes
       - run: bun install --frozen-lockfile
       - run: bun run test
       - run: mkdir "$RUNNER_TEMP/verified-tarballs"

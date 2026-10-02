@@ -3,6 +3,8 @@
   "vars": {
     "testCommand": "bun run test",
     "bunVersion": "1.3.14",
+    "verifyTimeoutMinutes": "30",
+    "setupStep": "      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3\n        with:\n          github_access_token: ${{ github.token }}\n          extra_nix_config: |\n            experimental-features = nix-command flakes\n",
     "linksCronMinute": "30",
     "linksExtraTargets": "            'packages/*/README.md'\n",
     "linksExtraExcludes": "            --exclude '^https://asciinema\\.org/?$'\n"
