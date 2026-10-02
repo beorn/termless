@@ -4,7 +4,14 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { PUBLISH_ORDER, publishWorkspaces, validatePublishOrder } from "../scripts/publish-workspaces.ts"
+import {
+  PUBLISH_ORDER,
+  RECEIPT_FILE,
+  prepareWorkspaces,
+  publishPrepared,
+  publishWorkspaces,
+  validatePublishOrder,
+} from "../scripts/publish-workspaces.ts"
 
 async function withWorkspaceManifests(run: (root: string) => Promise<void>): Promise<void> {
   const source = resolve(import.meta.dirname, "..")
@@ -155,11 +162,13 @@ describe("verified archive handoff", () => {
   const child = (exitCode: number, stdout = "", stderr = "") =>
     ({ exited: Promise.resolve(exitCode), stdout: stream(stdout), stderr: stream(stderr) }) as never
 
-  async function capturePublish(mode: "valid" | "missing" | "digest") {
+  async function capturePublish(mode: "valid" | "missing" | "digest" | "same-bytes" | "other-bytes") {
     const root = resolve(import.meta.dirname, "..")
     const inventory = await validatePublishOrder(root)
     const target = inventory[0]!
     const commands: string[][] = []
+    const cwds: string[] = []
+    const integrity = new Map<string, string>()
     let outputDir = ""
     let verifiedPath = ""
     let published = false
@@ -167,9 +176,10 @@ describe("verified archive handoff", () => {
     // Node needs the fake global; Bun's real global cannot be replaced.
     if (typeof Bun === "undefined") vi.stubGlobal("Bun", { spawn: vi.fn(), sleep: vi.fn() })
     vi.spyOn(Bun, "sleep").mockResolvedValue(undefined)
-    vi.spyOn(Bun, "spawn").mockImplementation((args) => {
+    vi.spyOn(Bun, "spawn").mockImplementation((args, options) => {
       const command = args as string[]
       commands.push(command)
+      cwds.push(String((options as { cwd?: string } | undefined)?.cwd))
       if (command[0] === "bunx" && command.includes("verify-publishable")) {
         outputDir = command[command.indexOf("--output-dir") + 1]!
         const packages = inventory.map(({ name, version }, index) => {
@@ -178,6 +188,7 @@ describe("verified archive handoff", () => {
           writeFileSync(tarballPath, bytes)
           if (name === target.name) verifiedPath = tarballPath
           const sha512 = `sha512-${createHash("sha512").update(bytes).digest("base64")}`
+          integrity.set(name, sha512)
           return { name, version, tarballPath, sha512 }
         })
         if (mode === "missing") packages.pop()
@@ -186,7 +197,14 @@ describe("verified archive handoff", () => {
       }
       if (command[0] === "npm" && command[1] === "view") {
         const nameVersion = command[2]!
-        if (nameVersion === `${target.name}@${target.version}` && !published) return child(1, "", "E404")
+        const name = nameVersion.slice(0, nameVersion.lastIndexOf("@"))
+        const isTarget = nameVersion === `${target.name}@${target.version}`
+        const onRegistry = !isTarget || published || mode === "same-bytes" || mode === "other-bytes"
+        if (!onRegistry) return child(1, "", "E404")
+        if (command[3] === "dist.integrity") {
+          const other = `sha512-${Buffer.alloc(64, 1).toString("base64")}`
+          return child(0, JSON.stringify(isTarget && mode === "other-bytes" ? other : integrity.get(name)))
+        }
         return child(0, JSON.stringify(nameVersion.slice(nameVersion.lastIndexOf("@") + 1)))
       }
       if (command[0] === "pnpm" && command[1] === "publish") {
@@ -200,6 +218,7 @@ describe("verified archive handoff", () => {
       root,
       target,
       commands,
+      cwds,
       log,
       get outputDir() {
         return outputDir
@@ -210,24 +229,76 @@ describe("verified archive handoff", () => {
     }
   }
 
-  test("publishes exactly the verified tarball and removes the handoff directory", async () => {
+  const registryCommands = (fixture: Awaited<ReturnType<typeof capturePublish>>) =>
+    fixture.commands
+      .map((command, index) => ({ command, cwd: fixture.cwds[index]! }))
+      .filter(({ command: [binary, verb] }) => (binary === "npm" && verb === "view") || binary === "pnpm")
+
+  test("publishes exactly the verified tarball and keeps the checked archives and receipt", async () => {
     const fixture = await capturePublish("valid")
     await publishWorkspaces(fixture.root)
     const publications = fixture.commands.filter(([binary, verb]) => binary === "pnpm" && verb === "publish")
     expect(publications).toHaveLength(1)
     expect(publications[0]![2]).toBe(fixture.verifiedPath)
     expect(fixture.commands.some(([binary, arg]) => binary === "bunx" && arg === "tsdown")).toBe(false)
-    expect(existsSync(fixture.outputDir)).toBe(false)
+    expect(existsSync(fixture.verifiedPath), "the published archive is kept").toBe(true)
+    expect(JSON.parse(await readFile(join(fixture.outputDir, RECEIPT_FILE), "utf8"))).toMatchObject({
+      schema: "verify-publishable/v1",
+    })
     expect(fixture.log).toHaveBeenCalledWith(`📦 Publishing ${fixture.target.name}@${fixture.target.version}`)
     expect(fixture.log).toHaveBeenCalledWith(`✓ ${fixture.target.name}@${fixture.target.version} resolves from npm`)
-    expect(fixture.log).toHaveBeenCalledTimes(PUBLISH_ORDER.length + 1)
+    await rm(fixture.outputDir, { recursive: true, force: true })
+  })
+
+  // npm in a package directory applies the workspace's devEngines and exits EBADDEVENGINES before the registry; the
+  // same read from a neutral directory reaches it (reproduced from the release tree, 2026-10-02).
+  test("every registry read and publish runs from the neutral temp directory, never a workspace", async () => {
+    const fixture = await capturePublish("valid")
+    await publishWorkspaces(fixture.root)
+    const registry = registryCommands(fixture)
+    expect(registry.length).toBeGreaterThan(PUBLISH_ORDER.length)
+    for (const { command, cwd } of registry) {
+      expect(cwd, command.join(" ")).toBe(tmpdir())
+    }
+    await rm(fixture.outputDir, { recursive: true, force: true })
+  })
+
+  test("prepare keeps the checked bytes and publishes nothing; publish later sends those same bytes", async () => {
+    const fixture = await capturePublish("valid")
+    const dir = await mkdtemp(join(tmpdir(), "termless-prepared-"))
+    try {
+      await prepareWorkspaces(fixture.root, dir)
+      expect(fixture.commands.some(([binary]) => binary === "pnpm" || binary === "npm")).toBe(false)
+      await expect(prepareWorkspaces(fixture.root, dir), "a used directory is refused").rejects.toThrow(/not empty/u)
+      await publishPrepared(fixture.root, dir)
+      const publications = fixture.commands.filter(([binary, verb]) => binary === "pnpm" && verb === "publish")
+      expect(publications.map((command) => command[2])).toEqual([fixture.verifiedPath])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("an existing version counts as published only when the registry integrity equals the checked archive", async () => {
+    const same = await capturePublish("same-bytes")
+    await publishWorkspaces(same.root)
+    expect(same.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
+    expect(same.log).toHaveBeenCalledWith(
+      `⏭ ${same.target.name}@${same.target.version} already published with the checked integrity`,
+    )
+    await rm(same.outputDir, { recursive: true, force: true })
+    vi.restoreAllMocks()
+
+    const other = await capturePublish("other-bytes")
+    await expect(publishWorkspaces(other.root)).rejects.toThrow(/already published with different bytes/u)
+    expect(other.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
+    await rm(other.outputDir, { recursive: true, force: true })
   })
 
   test.each(["missing", "digest"] as const)("rejects %s verifier receipt before publishing", async (mode) => {
     const fixture = await capturePublish(mode)
     await expect(publishWorkspaces(fixture.root)).rejects.toThrow()
     expect(fixture.commands.some(([binary, verb]) => binary === "pnpm" && verb === "publish")).toBe(false)
-    expect(existsSync(fixture.outputDir)).toBe(false)
-    expect(fixture.log).not.toHaveBeenCalled()
+    expect(existsSync(join(fixture.outputDir, RECEIPT_FILE)), "the failed run's receipt is kept").toBe(true)
+    await rm(fixture.outputDir, { recursive: true, force: true })
   })
 })

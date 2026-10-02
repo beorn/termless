@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdtemp, readdir, readFile, realpath, rm, stat } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { isAbsolute, join, relative, resolve, sep } from "node:path"
 
@@ -143,16 +143,30 @@ async function run(args: string[], cwd: string): Promise<void> {
   if (exitCode !== 0) throw new Error(`${args.join(" ")} failed with exit code ${exitCode}`)
 }
 
-async function publishedVersion(name: string, version: string, cwd: string): Promise<string | null> {
-  const result = await runCapture(["npm", "view", `${name}@${version}`, "version", "--json"], cwd)
+/**
+ * Registry reads and publishes run from the system temp directory, never a workspace: from a package directory npm
+ * applies the workspace's devEngines and exits EBADDEVENGINES before it reaches the registry. The tarball path is
+ * absolute, so nothing needs the workspace as cwd.
+ */
+const REGISTRY_CWD = tmpdir()
+
+/** The receipt file a prepared output directory carries beside its archives. */
+export const RECEIPT_FILE = "verify-publishable-receipt.json"
+
+async function registryField(name: string, version: string, field: string): Promise<string | null> {
+  const result = await runCapture(["npm", "view", `${name}@${version}`, field, "--json"], REGISTRY_CWD)
   if (result.exitCode === 0) return JSON.parse(result.stdout) as string
   if (result.stderr.includes("E404")) return null
-  throw new Error(`npm view ${name}@${version} failed:\n${result.stderr}`)
+  throw new Error(`npm view ${name}@${version} ${field} failed (cwd ${REGISTRY_CWD}):\n${result.stderr}`)
 }
 
-async function waitForPublishedVersion(name: string, version: string, cwd: string): Promise<void> {
+async function publishedVersion(name: string, version: string): Promise<string | null> {
+  return registryField(name, version, "version")
+}
+
+async function waitForPublishedVersion(name: string, version: string): Promise<void> {
   for (let attempt = 1; attempt <= 15; attempt++) {
-    if ((await publishedVersion(name, version, cwd)) === version) return
+    if ((await publishedVersion(name, version)) === version) return
     await Bun.sleep(attempt * 1000)
   }
   throw new Error(`${name}@${version} did not resolve from npm after publish`)
@@ -178,20 +192,13 @@ async function validateArchive(archive: VerifiedArchive, outputDir: string): Pro
   }
 }
 
-async function verifiedArchives(
-  root: string,
+async function receiptArchives(
+  stdout: string,
+  stderr: string,
   outputDir: string,
   inventory: PublishableWorkspace[],
 ): Promise<Map<string, VerifiedArchive>> {
-  const result = await runCapture(
-    ["bunx", "--bun", "--no-install", "verify-publishable", "--output-dir", outputDir],
-    root,
-  )
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `verify-publishable failed (${result.exitCode}):\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-    )
-  }
+  const result = { stdout, stderr }
   let receipt: unknown
   try {
     receipt = JSON.parse(result.stdout)
@@ -239,32 +246,101 @@ async function verifiedArchives(
   return archives
 }
 
-export async function publishWorkspaces(root: string): Promise<void> {
+/**
+ * Pack and check every workspace into `outputDir` with the configured verifier, and keep its archives and its receipt
+ * there. The directory must be new or empty, so a receipt never mixes with bytes from another run. Nothing is
+ * published, and nothing is removed, on success or failure.
+ */
+export async function prepareWorkspaces(root: string, outputDir: string): Promise<Map<string, VerifiedArchive>> {
   const inventory = await validatePublishOrder(root)
-  const outputDir = await mkdtemp(join(tmpdir(), "termless-verified-publish-"))
-  try {
-    const archives = await verifiedArchives(root, outputDir, inventory)
-    const outputRoot = await realpath(outputDir)
-    for (const { dir, name, version } of inventory) {
-      const cwd = resolve(root, dir)
-      if ((await publishedVersion(name, version, cwd)) === version) {
-        console.log(`⏭ ${name}@${version} already published`)
-        continue
-      }
+  await mkdir(outputDir, { recursive: true })
+  const present = await readdir(outputDir)
+  if (present.length > 0) {
+    throw new Error(`prepare output directory is not empty: ${outputDir} (${present.slice(0, 5).join(", ")})`)
+  }
+  const result = await runCapture(
+    ["bunx", "--bun", "--no-install", "verify-publishable", "--output-dir", outputDir],
+    root,
+  )
+  await writeFile(join(outputDir, RECEIPT_FILE), result.stdout)
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `verify-publishable failed (${result.exitCode}); output kept in ${outputDir}:\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    )
+  }
+  const archives = await receiptArchives(result.stdout, result.stderr, outputDir, inventory)
+  console.log(`🧾 ${archives.size} checked archives and ${RECEIPT_FILE} kept in ${outputDir}`)
+  return archives
+}
 
-      const archive = archives.get(name)
-      if (!archive) throw new Error(`verified archive is missing for publish package: ${name}@${version}`)
-      await validateArchive(archive, outputRoot)
-      console.log(`📦 Publishing ${name}@${version}`)
-      await run(["pnpm", "publish", archive.tarballPath, "--access", "public", "--no-git-checks"], cwd)
-      await waitForPublishedVersion(name, version, cwd)
-      console.log(`✓ ${name}@${version} resolves from npm`)
+/**
+ * Publish the archives a prepared directory holds, in dependency order, revalidating each one's SHA-512 against the
+ * receipt immediately before its write. A version already on the registry counts as published only when its
+ * registry integrity equals the checked archive's; any other integrity stops the batch before the next write.
+ */
+export async function publishPrepared(root: string, outputDir: string): Promise<void> {
+  const inventory = await validatePublishOrder(root)
+  const stdout = await readFile(join(outputDir, RECEIPT_FILE), "utf8")
+  const archives = await receiptArchives(stdout, "", outputDir, inventory)
+  const outputRoot = await realpath(outputDir)
+  for (const { name, version } of inventory) {
+    const archive = archives.get(name)
+    if (!archive) throw new Error(`verified archive is missing for publish package: ${name}@${version}`)
+    await validateArchive(archive, outputRoot)
+    if ((await publishedVersion(name, version)) === version) {
+      const integrity = await registryField(name, version, "dist.integrity")
+      if (integrity !== archive.sha512) {
+        throw new Error(
+          `${name}@${version} is already published with different bytes: registry ${integrity ?? "(none)"}, checked ${archive.sha512}`,
+        )
+      }
+      console.log(`⏭ ${name}@${version} already published with the checked integrity`)
+      continue
     }
-  } finally {
-    await rm(outputDir, { recursive: true, force: true })
+    console.log(`📦 Publishing ${name}@${version}`)
+    await run(["pnpm", "publish", archive.tarballPath, "--access", "public", "--no-git-checks"], REGISTRY_CWD)
+    await waitForPublishedVersion(name, version)
+    console.log(`✓ ${name}@${version} resolves from npm`)
   }
 }
 
+/** Prepare into a new kept directory, then publish from it. The directory survives either outcome. */
+export async function publishWorkspaces(root: string, outputDir?: string): Promise<void> {
+  const dir = outputDir ?? (await mkdtemp(join(tmpdir(), "termless-verified-publish-")))
+  try {
+    await prepareWorkspaces(root, dir)
+    await publishPrepared(root, dir)
+  } finally {
+    console.log(`🗂 checked archives and receipt kept in ${dir}`)
+  }
+}
+
+/**
+ * `publish-workspaces.ts [--root <dir>] [--prepare <dir> | --publish <dir>]`. Bare, it prepares into a new directory
+ * and publishes. `--prepare` stops after the check; `--publish` publishes what an earlier `--prepare` kept.
+ */
+export async function main(argv: readonly string[]): Promise<void> {
+  const value = (flag: string): string | undefined => {
+    const index = argv.indexOf(flag)
+    if (index === -1) return undefined
+    const next = argv[index + 1]
+    if (next === undefined || next.startsWith("--")) throw new Error(`${flag} needs a directory`)
+    return resolve(next)
+  }
+  const known = new Set(["--root", "--prepare", "--publish"])
+  const unknown = argv.filter(
+    (arg, index) => arg.startsWith("--") && !known.has(arg) && !known.has(argv[index - 1] ?? ""),
+  )
+  if (unknown.length > 0) throw new Error(`unknown arguments: ${unknown.join(" ")}`)
+  const root = value("--root") ?? resolve(import.meta.dirname, "..")
+  const prepare = value("--prepare")
+  const publish = value("--publish")
+  if (prepare !== undefined && publish !== undefined) throw new Error("--prepare and --publish are separate runs")
+  if (prepare !== undefined) await prepareWorkspaces(root, prepare)
+  else if (publish !== undefined) await publishPrepared(root, publish)
+  else await publishWorkspaces(root)
+}
+
 if (import.meta.main) {
-  await publishWorkspaces(resolve(import.meta.dirname, ".."))
+  await main(process.argv.slice(2))
 }
