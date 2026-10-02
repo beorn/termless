@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.10.0 (unreleased)
+## 0.10.1 (unreleased)
+
+The 0.10.0 candidate did not reach npm; its prepared changes are carried into
+this release.
 
 This candidate also includes the Ghostty font fixes prepared in the unpublished
 0.9.2 draft below.
@@ -30,6 +33,9 @@ account for these changed values and exports.
 
 ### Fixed
 
+- Publishability verification allows up to 20 minutes per build step and retains
+  bounded build diagnostics. A stopped live diagnostic stream is reported
+  separately from the build result.
 - The `@termless/ghostty-native` archive now includes the native addon required to initialize its installed backend.
 - `@termless/libvterm` rejects unknown raw underline codes with the code and
   cell position instead of treating them as no underline.
