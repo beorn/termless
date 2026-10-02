@@ -246,6 +246,16 @@
         "files": [
           "tests/packed-cli-png-smoke.mjs"
         ]
+      },
+      {
+        "package": "@termless/ghostty",
+        "runner": "node",
+        "args": [
+          "tests/packed-ghostty-smoke.mjs"
+        ],
+        "files": [
+          "tests/packed-ghostty-smoke.mjs"
+        ]
       }
     ],
     "build": "nix shell .#native-tools --command bash -euc 'export CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-2}\"; for package in alacritty wezterm vt100-rust; do bun run --cwd \"packages/$package\" build:native; done; bash packages/ghostty-native/build/build.sh; bash packages/libvterm/build/build.sh; bun run build'",

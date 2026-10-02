@@ -152,3 +152,28 @@ assert.ok(result.screenshots.every((frame) => frame.text.includes("hi")))
 assert.ok(result.composedSvg)
 assert.match(result.composedSvg, /<svg\b/)
 assert.match(result.composedSvg, /data:image\/png;base64,/)
+
+// Verify that the installed @termless/core package includes its declared font assets
+import { existsSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const coreEntry = fileURLToPath(import.meta.resolve("@termless/core"))
+let coreDir = dirname(coreEntry)
+while (coreDir !== "/" && !existsSync(join(coreDir, "package.json"))) {
+  coreDir = dirname(coreDir)
+}
+const fontsDir = join(coreDir, "assets", "fonts")
+assert.ok(existsSync(fontsDir), `installed @termless/core must contain assets/fonts: ${fontsDir}`)
+
+const expectedFonts = [
+  "JetBrainsMono-Regular.ttf",
+  "JetBrainsMono-Bold.ttf",
+  "NotoSansSymbols2-Regular.ttf",
+  "SymbolsNerdFontMono-Regular.ttf",
+  "NotoEmoji-Regular.ttf",
+]
+for (const font of expectedFonts) {
+  const fontPath = join(fontsDir, font)
+  assert.ok(existsSync(fontPath), `installed @termless/core missing declared font asset: ${font}`)
+}
