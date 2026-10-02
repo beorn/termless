@@ -1,6 +1,8 @@
-name: Verify Publishable
+# vendor-kit: verify@36c5e019d500 — generated; edit km/packages/km-infra/vendor-kit/templates/verify.yml in km, then re-sync
+name: Verify
 
-# Local equivalent: `bunx --bun --no-install verify-publishable`.
+# Light per-push gate: the suite + build must stay green on main so a release
+# tag never discovers rot. Heavy checks belong in release.yml (pre-publish).
 
 on:
   push:
@@ -9,26 +11,23 @@ on:
     branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: verify-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-        with:
-          github_access_token: ${{ github.token }}
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.14"
-      - uses: actions/setup-node@v7
+          bun-version: 1.3.14
+      - run: bun install
+      - run: bun run test
+      - run: bun run build
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: bun install --frozen-lockfile
-      - name: Verify publishable
-        run: bunx --bun --no-install verify-publishable
+      - name: Verify the packages this repository would publish
+        uses: beorn/verify-publishable@657d9e882f07a886673f6f2f7bea9451b4fc698c
