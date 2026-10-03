@@ -71,7 +71,7 @@
     "vterm": {
       "package": "@termless/vterm",
       "upstream": "npm:vterm.js",
-      "upstreamVersion": "0.7.0",
+      "upstreamVersion": "0.7.1",
       "type": "js",
       "default": false,
       "label": "vterm",

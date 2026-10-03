@@ -1509,7 +1509,7 @@
 
     "vt220.js": ["vt220.js@0.7.0", "", {}, "sha512-LaQqE706HcI5JrP9GiZZ6k4ZAGzxG4ASydJP4NiRqmoFMom/sXU5kaXd+it4fFR2df+l2MyucY5CU2EgnaJBjQ=="],
 
-    "vterm.js": ["vterm.js@0.7.0", "", {}, "sha512-IBz5lvkkxUAWrARDAgoda9n43JYq0McOfOnrTuLZY0VjRZ8FWQR1WaLoTNH1TwkU/y8fJOdmveJkqUNP4PPdyw=="],
+    "vterm.js": ["vterm.js@0.7.1", "", {}, "sha512-XkJdSDA+AmDEd701CtUu2Kh5lGrPZFtk38Dfi46h6iW29FokFomT8npeQ4iCrH/MSM0vbsIwnNEhbF0aLt035w=="],
 
     "vue": ["vue@3.5.43", "", { "dependencies": { "@vue/compiler-dom": "3.5.43", "@vue/compiler-sfc": "3.5.43", "@vue/runtime-dom": "3.5.43", "@vue/server-renderer": "3.5.43", "@vue/shared": "3.5.43" }, "peerDependencies": { "typescript": "*" }, "optionalPeers": ["typescript"] }, "sha512-o5qZoksdnjIKvW1srZ3ab7pcDNYAerBjRe54D0LBLfRdCYFrSgBHVXokMas35czQc0//lmx4/tuY4ZNQ+Rf2Ng=="],
 
