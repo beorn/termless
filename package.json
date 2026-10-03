@@ -58,7 +58,7 @@
     "build": "tsdown && tsdown -W",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "ci": "bun vitest run",
+    "ci": "bun --bun vitest run",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "fix": "oxfmt --write .",
