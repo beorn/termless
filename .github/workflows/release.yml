@@ -1,4 +1,4 @@
-# vendor-kit: release@591f03640891 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@0add0084a95e — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -65,13 +65,15 @@ jobs:
           catch (error) { fail('invalid root manifest package.json: ' + String(error)) }
           const workspaces = root.workspaces === undefined ? [] : root.workspaces
           if (!Array.isArray(workspaces)) fail('workspaces must be an array of <dir>/* patterns')
-          const directories = workspaces.map(pattern => {
-            if (typeof pattern !== 'string' || !/^[^/*?\[\]{}!\\]+\/\*$/.test(pattern) || pattern.startsWith('.')) fail('unsupported workspace pattern ' + String(pattern))
-            return pattern.slice(0, -2)
-          })
+          const directories = [], exclusions = []
+          for (const pattern of workspaces) {
+            if (typeof pattern === 'string' && /^![^/*?\[\]{}!\\]+$/.test(pattern) && !pattern.slice(1).startsWith('.')) exclusions.push(pattern.slice(1))
+            else if (typeof pattern === 'string' && /^[^/*?\[\]{}!\\]+\/\*$/.test(pattern) && !pattern.startsWith('.')) directories.push(pattern.slice(0, -2))
+            else fail('unsupported workspace pattern ' + String(pattern) + ' in package.json')
+          }
           const paths = tracked.stdout.split('\0').filter(path => {
             const parts = path.split('/')
-            return path === 'package.json' || (parts.length === 3 && directories.includes(parts[0]) && parts[1] !== '' && parts[2] === 'package.json')
+            return path === 'package.json' || (parts.length === 3 && directories.includes(parts[0]) && !exclusions.includes(parts[0]) && parts[1] !== '' && parts[2] === 'package.json')
           })
           const manifests = paths.map(path => {
             try { return { path, value: JSON.parse(readFileSync(path, 'utf8')) } }
