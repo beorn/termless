@@ -57,6 +57,8 @@ emcc -O2 -I include -c "$SCRIPT_DIR/flat-api.c" -o "$BUILD_DIR/obj/flat-api.o"
 
 # Link into WASM module with exported functions
 mkdir -p "$WASM_DIR"
+# LLVM treats '%' in absolute output paths as a temporary-file placeholder.
+cd "$WASM_DIR"
 
 emcc -O2 \
   "$BUILD_DIR"/obj/*.o \
@@ -85,7 +87,7 @@ emcc -O2 \
   -s EXPORT_ES6=1 \
   -s EXPORT_NAME="createLibvtermModule" \
   -s ENVIRONMENT='node' \
-  -o "$WASM_DIR/libvterm.js"
+  -o libvterm.js
 
 bun "$SCRIPT_DIR/write-receipt.ts" "$BUILD_DIR/libvterm" "$WASM_DIR/libvterm.wasm" "$WASM_DIR/libvterm.js"
 
