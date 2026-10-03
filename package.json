@@ -1,6 +1,6 @@
 {
   "name": "@termless/core",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Headless terminal testing library — like Playwright, but for terminal apps. Cross-terminal conformance, composable selectors, 21+ Vitest matchers.",
   "keywords": [
     "ansi",
@@ -100,7 +100,7 @@
     "vue": "3.5.43"
   },
   "peerDependencies": {
-    "@termless/ghostty": "^0.10.1",
+    "@termless/ghostty": "^0.10.2",
     "node-pty": ">=1.0.0"
   },
   "peerDependenciesMeta": {

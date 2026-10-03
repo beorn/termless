@@ -1,6 +1,6 @@
 {
   "name": "@termless/web-player",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Browser xterm.js player for termless .cast and .tape recordings",
   "keywords": [
     "asciicast",
@@ -56,7 +56,7 @@
     "@xterm/xterm": "^6.0.0"
   },
   "peerDependencies": {
-    "@termless/core": "^0.10.1"
+    "@termless/core": "^0.10.2"
   },
   "tsdown": {
     "clean": true,

@@ -1,6 +1,6 @@
 {
   "name": "@termless/wezterm",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "WezTerm backend for termless — wezterm-term VT parser via napi-rs for cross-terminal TUI testing",
   "keywords": [
     "headless",
@@ -46,7 +46,7 @@
     "postbuild:native": "bash ../../scripts/copy-native-addon.sh libtermless_wezterm_native termless-wezterm.node"
   },
   "peerDependencies": {
-    "@termless/core": "^0.10.1"
+    "@termless/core": "^0.10.2"
   },
   "tsdown": {
     "clean": true,
