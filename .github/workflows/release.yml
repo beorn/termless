@@ -1,4 +1,4 @@
-# vendor-kit: release@80f845f6564f — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@493586266bbf — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -103,7 +103,7 @@ jobs:
       - run: mkdir "$RUNNER_TEMP/verified-tarballs"
       - name: Verify the repository and retain its exact tarballs
         id: verify
-        uses: beorn/verify-publishable@208fac58810b31b9cf4b1b0ec0eae45f85d0e74c
+        uses: beorn/verify-publishable@a109610a9ff0dc68ce4320ba464d3c89f69c50c7
         with:
           output-dir: ${{ runner.temp }}/verified-tarballs
       - name: Keep the verifier's report beside the tarballs
