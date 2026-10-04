@@ -23,3 +23,6 @@ sites/terminfo.dev/
 
 # Scratch recording artifacts — never commit (see @km/termless/record-gif-output-broken)
 /*.gif
+
+# Public source sibling checkouts used only by CI
+.ci-siblings/

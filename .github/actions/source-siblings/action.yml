@@ -1,0 +1,273 @@
+# vendor-kit: source-siblings@e519cbf1fd29 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
+name: Install named source siblings
+description: Test against public sibling commits without requiring a new npm release
+
+inputs:
+  manifest:
+    description: Source sibling commits beside package.json
+    required: false
+    default: source-siblings.json
+
+runs:
+  using: composite
+  steps:
+    # The consumer's own lock installs first, frozen, before any override (hh 27110, @cto 468f5ce5): a missing or stale
+    # lock fails here by Bun's own semantics, with the one cure, instead of as a raw ENOENT or a registry refusal later.
+    - name: Install the committed lock
+      shell: bash
+      run: |
+        set -euo pipefail
+        cure="keep each sibling's published range in package.json until it releases, and commit the bun.lock that resolves it; source-siblings.json's commit is what CI tests"
+        if [ ! -f bun.lock ]; then
+          echo "source-siblings: $PWD commits no bun.lock; $cure" >&2
+          exit 1
+        fi
+        for attempt in 1 2 3; do
+          if bun install --frozen-lockfile; then
+            exit 0
+          else
+            status=$?
+            echo "source-siblings: bun install --frozen-lockfile attempt ${attempt}/3 failed (exit ${status})" >&2
+            if [ "$attempt" -eq 3 ]; then
+              echo "source-siblings: the committed bun.lock does not install as committed; $cure" >&2
+              exit "$status"
+            fi
+            sleep $((attempt * 2))
+          fi
+        done
+    - name: Check out public sibling commits
+      shell: bash
+      env:
+        SOURCE_SIBLINGS_MANIFEST: ${{ inputs.manifest }}
+      run: |
+        set -euo pipefail
+        node --input-type=module <<'NODE'
+        import { existsSync, mkdirSync, readFileSync, readdirSync, lstatSync, statSync, writeFileSync } from "node:fs"
+        import { createHash } from "node:crypto"
+        import { basename, dirname, join, posix, relative, resolve } from "node:path"
+        import { spawnSync } from "node:child_process"
+
+        const workspaceIO = { existsSync, readFileSync, readdirSync, statSync, basename, dirname, join, relative }
+
+        function isRecord(value) {
+          return value !== null && typeof value === "object" && !Array.isArray(value);
+        }
+
+        function workspaceGlobs(repoDir) {
+          const pkgPath = workspaceIO.join(repoDir, "package.json");
+          if (!workspaceIO.existsSync(pkgPath))
+            return [];
+          const ws = JSON.parse(workspaceIO.readFileSync(pkgPath, "utf8")).workspaces;
+          if (Array.isArray(ws))
+            return ws.filter((w) => typeof w === "string");
+          if (isRecord(ws) && Array.isArray(ws.packages))
+            return ws.packages.filter((w) => typeof w === "string");
+          return [];
+        }
+
+        function workspaceGlobToRegExp(glob) {
+          const body = glob.replace(/\/+$/, "").split("/").map((seg) => seg === "**" ? ".*" : seg.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*")).join("/");
+          return new RegExp(`^${body}$`);
+        }
+
+        function isWorkspaceMember(relPath, globs) {
+          const target = relPath.replace(/\/+$/, "");
+          let member = !1;
+          for (const glob of globs) {
+            const negated = glob.startsWith("!");
+            if (workspaceGlobToRegExp(negated ? glob.slice(1) : glob).test(target))
+              member = !negated;
+          }
+          return member;
+        }
+
+        function* walkFiles(dir, skipDirs = WALK_SKIP_DIRS, extensions = LINT_EXTENSIONS) {
+          for (const entry of workspaceIO.readdirSync(dir)) {
+            if (skipDirs.has(entry) || entry.startsWith(".git"))
+              continue;
+            const full = workspaceIO.join(dir, entry);
+            if (workspaceIO.statSync(full).isDirectory())
+              yield* walkFiles(full, skipDirs, extensions);
+            else if (extensions.some((ext) => entry.endsWith(ext)))
+              yield full;
+          }
+        }
+
+        function sourceWorkspacePackages(repoDir) {
+          const packages = [
+            {
+              file: "package.json",
+              pkg: JSON.parse(workspaceIO.readFileSync(workspaceIO.join(repoDir, "package.json"), "utf8"))
+            }
+          ], globs = workspaceGlobs(repoDir);
+          if (globs.length === 0)
+            return packages;
+          for (const path of walkFiles(repoDir, new Set(["node_modules", ".ci-siblings"]), ["package.json"])) {
+            const file = workspaceIO.relative(repoDir, path).replaceAll("\\", "/");
+            if (file === "package.json" || workspaceIO.basename(file) !== "package.json" || !isWorkspaceMember(workspaceIO.dirname(file), globs))
+              continue;
+            packages.push({ file, pkg: JSON.parse(workspaceIO.readFileSync(path, "utf8")) });
+          }
+          return packages;
+        }
+
+        function sourceSiblingDeclarations(packages, name) {
+          const declarations = [];
+          for (const { file, pkg } of packages)
+            for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+              const dependencies = pkg[field];
+              if (!isRecord(dependencies) || !Object.hasOwn(dependencies, name))
+                continue;
+              const range = dependencies[name];
+              if (typeof range !== "string" || range.trim().length === 0 || /^(workspace|file|link):/.test(range))
+                throw Error(`source-siblings: ${file} ${field} declares ${name}@${String(range)}; needs a published dependency range`, { cause: { file } });
+              declarations.push({ file, range });
+            }
+          if (declarations.length === 0)
+            throw Error(`source-siblings: ${name} needs a published dependency range in root or active workspace package.json; checked ${packages.map((pkg) => pkg.file).join(", ")}`, { cause: { file: "package.json" } });
+          return declarations;
+        }
+
+        const root = process.cwd()
+        const manifestName = process.env.SOURCE_SIBLINGS_MANIFEST
+        if (!manifestName || manifestName.startsWith("/") || manifestName.split("/").includes("..")) {
+          throw new Error(`source-siblings: invalid manifest path ${JSON.stringify(manifestName)}`)
+        }
+        const manifestPath = resolve(root, manifestName)
+        const config = JSON.parse(readFileSync(manifestPath, "utf8"))
+        if (config.schema !== "vendor-kit/source-siblings/v1" || !Array.isArray(config.siblings) || config.siblings.length === 0) {
+          throw new Error(`source-siblings: ${manifestName} needs schema vendor-kit/source-siblings/v1 and a nonempty siblings array`)
+        }
+        const packagePath = join(root, "package.json")
+        const originalPackage = readFileSync(packagePath)
+        const originalLock = readFileSync(join(root, "bun.lock"))
+        const pkg = JSON.parse(originalPackage.toString("utf8"))
+        const sourcePackages = sourceWorkspacePackages(root)
+        const checkoutRoot = join(root, ".ci-siblings")
+        if (existsSync(checkoutRoot)) throw new Error("source-siblings: .ci-siblings already exists; refusing stale source")
+        mkdirSync(checkoutRoot)
+        writeFileSync(join(checkoutRoot, "package.original.json"), originalPackage)
+        writeFileSync(join(checkoutRoot, "bun.lock.original"), originalLock)
+        const names = new Set()
+
+        function git(args) {
+          const result = spawnSync("git", args, { cwd: root, stdio: "inherit" })
+          if (result.error || result.status !== 0) {
+            throw new Error(`source-siblings: git ${args.join(" ")} failed (${result.error?.message ?? result.status})`)
+          }
+        }
+
+        function runPhase(name, phase, command, args, cwd) {
+          const result = spawnSync(command, args, { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 })
+          if (result.stdout) process.stdout.write(result.stdout)
+          if (result.stderr) process.stderr.write(result.stderr)
+          if (result.error || result.status !== 0) {
+            throw new Error(`source-siblings: ${name} ${phase} failed; cwd=${cwd}; argv=${JSON.stringify([command, ...args])}; exit=${result.status}; signal=${result.signal}; error=${result.error?.message ?? "none"}; stderr=${result.stderr ?? ""}`)
+          }
+        }
+
+        for (const [index, sibling] of config.siblings.entries()) {
+          const { name, repository, commit, directory = ".", pack = false } = sibling ?? {}
+          if (typeof name !== "string" || !/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/.test(name) || names.has(name)) {
+            throw new Error(`source-siblings: invalid or duplicate package name ${JSON.stringify(name)}`)
+          }
+          if (typeof repository !== "string" || !/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(repository)) {
+            throw new Error(`source-siblings: ${name} has invalid public repository ${JSON.stringify(repository)}`)
+          }
+          if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) {
+            throw new Error(`source-siblings: ${name} needs a full lowercase commit SHA`)
+          }
+          if (typeof pack !== "boolean") {
+            throw new Error(`source-siblings: ${name} has invalid pack ${JSON.stringify(pack)}; expected a boolean`)
+          }
+          // A package below the repository root, such as one member of a monorepo, names its directory.
+          if (
+            typeof directory !== "string" ||
+            !/^[A-Za-z0-9._/-]+$/.test(directory) ||
+            directory.startsWith("/") ||
+            posix.normalize(directory) !== directory ||
+            directory.split("/").includes("..")
+          ) {
+            throw new Error(`source-siblings: ${name} has invalid directory ${JSON.stringify(directory)}; name a relative path inside ${repository}`)
+          }
+          sourceSiblingDeclarations(sourcePackages, name)
+          names.add(name)
+          const checkout = join(checkoutRoot, String(index))
+          git(["clone", "--filter=blob:none", "--single-branch", "--branch", "main", "--no-checkout", `https://github.com/${repository}.git`, checkout])
+          git(["-C", checkout, "merge-base", "--is-ancestor", commit, "refs/remotes/origin/main"])
+          git(["-C", checkout, "-c", "advice.detachedHead=false", "checkout", "--detach", commit])
+          const subdirectory = posix.normalize(directory).replace(/\/$/, "")
+          const where = subdirectory === "." ? `${repository}@${commit}` : `${repository}@${commit}:${subdirectory}`
+          const sourcePkg = JSON.parse(readFileSync(join(checkout, subdirectory, "package.json"), "utf8"))
+          if (sourcePkg.name !== name) throw new Error(`source-siblings: ${where} is ${sourcePkg.name}, expected ${name}`)
+          // A sibling that publishes built output (publishConfig) installs here as source. Bun runs that source, but a
+          // consumer whose own checks run its built output under Node cannot: Node refuses TypeScript under node_modules.
+          // engines.node cannot say which runtime the checks use, so this warns and changes no outcome (@cto 011d29a2).
+          if (!pack && sourcePkg.publishConfig !== undefined && pkg.engines?.node !== undefined) {
+            console.log(
+              `::warning title=source-siblings::${name} from ${where} publishes built output (publishConfig) but installs ` +
+                `here as source, and this package's engines declare node ${pkg.engines.node}; anything that runs it under ` +
+                `Node fails with ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING. Cure: consume ${name}'s release from npm, ` +
+                `or pack the sibling with publishConfig applied`,
+            )
+          }
+          pkg.overrides ??= {}
+          if (pack) {
+            if (!existsSync(join(checkout, "package.json")) || !existsSync(join(checkout, "bun.lock"))) {
+              throw new Error(`source-siblings: ${name} pack needs package.json and bun.lock in checkout root ${checkout}`)
+            }
+            if (typeof sourcePkg.version !== "string" || sourcePkg.version.length === 0) {
+              throw new Error(`source-siblings: ${name} pack needs a package version in ${where}`)
+            }
+            if (typeof sourcePkg.scripts?.build !== "string" || sourcePkg.scripts.build.trim().length === 0) {
+              throw new Error(`source-siblings: ${name} pack needs a nonempty build script in ${where}`)
+            }
+            const packageDir = join(checkout, subdirectory)
+            const packDir = join(checkoutRoot, `${index}-packed`)
+            mkdirSync(packDir)
+            runPhase(name, "install", "bun", ["install", "--frozen-lockfile"], checkout)
+            runPhase(name, "build", "bun", ["run", "build"], packageDir)
+            // One agreed pin with tools/release/release-package-manager.ts, checked by its owning test.
+            runPhase(name, "pack", "bunx", ["pnpm@9.15.9", "pack", "--pack-destination", packDir], packageDir)
+            const artifacts = readdirSync(packDir).filter((entry) => entry.endsWith(".tgz"))
+            if (artifacts.length !== 1 || !lstatSync(join(packDir, artifacts[0])).isFile()) {
+              throw new Error(`source-siblings: ${name} pack needs exactly one regular .tgz in ${packDir}; found ${JSON.stringify(artifacts)}`)
+            }
+            const artifact = artifacts[0]
+            const digest = createHash("sha256").update(readFileSync(join(packDir, artifact))).digest("hex")
+            pkg.overrides[name] = `file:./.ci-siblings/${index}-packed/${artifact}`
+            console.log(`source-siblings: ${name}@${sourcePkg.version} from ${where}; artifact=${artifact}; sha256=${digest}`)
+          } else {
+            pkg.overrides[name] = subdirectory === "." ? `file:./.ci-siblings/${index}` : `file:./.ci-siblings/${index}/${subdirectory}`
+            console.log(`source-siblings: ${name}@${sourcePkg.version} from ${where}`)
+          }
+        }
+        writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n")
+        NODE
+    - name: Install with named source siblings
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3; do
+          cp .ci-siblings/bun.lock.original bun.lock
+          if bun install; then
+            cp .ci-siblings/package.original.json package.json
+            cp .ci-siblings/bun.lock.original bun.lock
+            cmp package.json .ci-siblings/package.original.json || {
+              echo 'source-siblings: restored package.json differs from original' >&2
+              exit 1
+            }
+            cmp bun.lock .ci-siblings/bun.lock.original || {
+              echo 'source-siblings: restored bun.lock differs from original' >&2
+              exit 1
+            }
+            exit 0
+          else
+            status=$?
+            echo "source-siblings: bun install attempt ${attempt}/3 failed (exit ${status})" >&2
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+            sleep $((attempt * 2))
+          fi
+        done

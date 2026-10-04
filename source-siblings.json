@@ -1,0 +1,52 @@
+{
+  "schema": "vendor-kit/source-siblings/v1",
+  "siblings": [
+    {
+      "name": "@silvery/commander",
+      "repository": "beorn/silvery",
+      "commit": "922bc868c7e8b50a47094b27ccf4d135fb26129f",
+      "directory": "packages/commander",
+      "pack": true
+    },
+    {
+      "name": "loggily",
+      "repository": "beorn/loggily",
+      "commit": "2d7a37f2dc87b5bc421b25ccaf2dc10f3f8c167c",
+      "pack": true
+    },
+    {
+      "name": "silvery",
+      "repository": "beorn/silvery",
+      "commit": "922bc868c7e8b50a47094b27ccf4d135fb26129f",
+      "pack": true
+    },
+    {
+      "name": "vitepress-enrich",
+      "repository": "beorn/bearly",
+      "commit": "4661a112548ee052b303e5e09481344bb2da5d2b",
+      "directory": "packages/vitepress-enrich",
+      "pack": true
+    },
+    {
+      "name": "vt100.js",
+      "repository": "beorn/vterm",
+      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
+      "directory": "packages/vt100",
+      "pack": true
+    },
+    {
+      "name": "vt220.js",
+      "repository": "beorn/vterm",
+      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
+      "directory": "packages/vt220",
+      "pack": true
+    },
+    {
+      "name": "vterm.js",
+      "repository": "beorn/vterm",
+      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
+      "directory": "packages/vterm",
+      "pack": true
+    }
+  ]
+}

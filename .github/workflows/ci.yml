@@ -31,7 +31,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.14"
-      - run: bun install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/source-siblings
       - run: bun vitest run
       - run: bun run typecheck
 
@@ -57,7 +60,10 @@ jobs:
         with:
           bun-version: "1.3.14"
       - uses: dtolnay/rust-toolchain@stable
-      - run: bun install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/source-siblings
       - run: bun run --filter @termless/swash-render build:prebuild
       - run: bun run --filter @termless/swash-render check:packlist
       - run: bun vitest run packages/swash-render/tests/native-loader.test.ts packages/swash-render/tests/golden-frame.test.ts
@@ -89,7 +95,10 @@ jobs:
         with:
           bun-version: "1.3.14"
 
-      - run: bun install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/source-siblings
 
       # @napi-rs/canvas + ghostty-web smoke — proves the native binding loads
       # and produces real PNG bytes on this platform. Fails fast if NAPI
