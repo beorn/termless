@@ -34,9 +34,6 @@
     "dist"
   ],
   "type": "module",
-  "scripts": {
-    "build": "tsdown"
-  },
   "exports": {
     ".": "./src/index.ts",
     "./matchers": "./src/matchers.ts",
@@ -61,6 +58,9 @@
         "default": "./dist/fixture.mjs"
       }
     }
+  },
+  "scripts": {
+    "build": "tsdown"
   },
   "peerDependencies": {
     "@termless/core": "^0.10.2",

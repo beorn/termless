@@ -27,9 +27,6 @@
     "dist"
   ],
   "type": "module",
-  "scripts": {
-    "build": "tsdown"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
@@ -42,6 +39,9 @@
         "default": "./dist/index.mjs"
       }
     }
+  },
+  "scripts": {
+    "build": "tsdown"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.9",

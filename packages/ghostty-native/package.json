@@ -30,9 +30,6 @@
     "termless-ghostty-native.node"
   ],
   "type": "module",
-  "scripts": {
-    "build": "bash build/build.sh && tsdown"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
@@ -45,6 +42,9 @@
         "default": "./dist/index.mjs"
       }
     }
+  },
+  "scripts": {
+    "build": "bash build/build.sh && tsdown"
   },
   "peerDependencies": {
     "@termless/core": "^0.10.2"
