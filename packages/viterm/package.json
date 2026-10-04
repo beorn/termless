@@ -34,6 +34,9 @@
     "dist"
   ],
   "type": "module",
+  "scripts": {
+    "build": "tsdown"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./matchers": "./src/matchers.ts",

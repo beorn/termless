@@ -27,6 +27,9 @@
     "dist"
   ],
   "type": "module",
+  "scripts": {
+    "build": "tsdown"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
