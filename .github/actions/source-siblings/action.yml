@@ -1,4 +1,4 @@
-# vendor-kit: source-siblings@e519cbf1fd29 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
+# vendor-kit: source-siblings@53fbb89537ef — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
 name: Install named source siblings
 description: Test against public sibling commits without requiring a new npm release
 
@@ -228,14 +228,14 @@ runs:
             runPhase(name, "install", "bun", ["install", "--frozen-lockfile"], checkout)
             runPhase(name, "build", "bun", ["run", "build"], packageDir)
             // One agreed pin with tools/release/release-package-manager.ts, checked by its owning test.
-            runPhase(name, "pack", "bunx", ["pnpm@9.15.9", "pack", "--pack-destination", packDir], packageDir)
+            runPhase(name, "pack", "bunx", ["pnpm@11.20.0", "pack", "--pack-destination", packDir], packageDir)
             const artifacts = readdirSync(packDir).filter((entry) => entry.endsWith(".tgz"))
             if (artifacts.length !== 1 || !lstatSync(join(packDir, artifacts[0])).isFile()) {
               throw new Error(`source-siblings: ${name} pack needs exactly one regular .tgz in ${packDir}; found ${JSON.stringify(artifacts)}`)
             }
             const artifact = artifacts[0]
             const digest = createHash("sha256").update(readFileSync(join(packDir, artifact))).digest("hex")
-            pkg.overrides[name] = `file:./.ci-siblings/${index}-packed/${artifact}`
+            pkg.overrides[name] = `file:${join(packDir, artifact)}`
             console.log(`source-siblings: ${name}@${sourcePkg.version} from ${where}; artifact=${artifact}; sha256=${digest}`)
           } else {
             pkg.overrides[name] = subdirectory === "." ? `file:./.ci-siblings/${index}` : `file:./.ci-siblings/${index}/${subdirectory}`
