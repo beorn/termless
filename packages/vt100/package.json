@@ -41,6 +41,9 @@
       }
     }
   },
+  "scripts": {
+    "build": "tsdown"
+  },
   "dependencies": {
     "vt100.js": "0.7.0"
   },
