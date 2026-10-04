@@ -490,6 +490,8 @@ async function interactiveRecord(
   const outputEvents: Array<{ time: number; data: string }> = []
   let waitForMatched = false
   const startTime = Date.now()
+  // The progress timer can tick while asynchronous backend setup is pending.
+  let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
 
   // Window title with live timer (invisible in recording — only on real terminal).
   //
@@ -567,7 +569,6 @@ async function interactiveRecord(
   // host's stdin → PTY pipe stays intact, so Ctrl-D / Ctrl-C / typing all
   // reach the recorded child. `--live-chrome none` skips the overlay and
   // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
-  let liveView: import("./rec-live-overlay.tsx").RecLiveOverlayHandle | null = null
   if (useOverlay) {
     const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
     liveView = startRecLiveOverlay({

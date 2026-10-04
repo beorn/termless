@@ -6,7 +6,7 @@
  */
 
 import { spawn, spawnSync } from "node:child_process"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { describe, expect, test } from "vitest"
@@ -18,10 +18,23 @@ const longLivedChild = 'process.stdout.write("boot\\n"); setTimeout(() => {}, 10
 // duration/ending checks carry the timing contract. A cold `bun` start of the CLI on a
 // busy CI runner took >6s (run 36393893027 windows; 36319227249, 36317858271 ubuntu)
 // for a recording that takes ~1.4s locally, so the guard matches the early-exit row's 12s.
-function record(output: string, options: string[], childScript: string, timeout = 12_000) {
+function record(output: string, options: string[], childScript: string, timeout = 12_000, bunOptions: string[] = []) {
   return spawnSync(
     "bun",
-    [cli, "record", ...options, "--live-chrome", "none", "-o", output, "--", process.execPath, "-e", childScript],
+    [
+      ...bunOptions,
+      cli,
+      "record",
+      ...options,
+      "--live-chrome",
+      "none",
+      "-o",
+      output,
+      "--",
+      process.execPath,
+      "-e",
+      childScript,
+    ],
     { encoding: "utf8", timeout },
   )
 }
@@ -129,9 +142,28 @@ describe("interactive record timeout", () => {
     const dir = mkdtempSync(join(tmpdir(), "termless-record-image-timeout-"))
     const output = join(dir, "session.svg")
     try {
-      const result = record(output, ["--timeout", "1000"], longLivedChild)
+      // A progress tick can arrive while backend imports are still pending on a
+      // cold or busy runner. Replay that first tick at the next microtask so
+      // startup safety does not depend on completing before the one-second tick.
+      const preload = join(dir, "first-progress-tick.ts")
+      writeFileSync(
+        preload,
+        `
+const nativeInterval = globalThis.setInterval
+globalThis.setInterval = (callback, delay, ...args) => {
+  const interval = nativeInterval(callback, delay, ...args)
+  if (delay === 1000) queueMicrotask(() => {
+    process.stderr.write("Startup progress tick\\n")
+    callback(...args)
+  })
+  return interval
+}
+`,
+      )
+      const result = record(output, ["--timeout", "1000"], longLivedChild, 12_000, ["--preload", preload])
 
       expect(result.error).toBeUndefined()
+      expect(result.stderr).toContain("Startup progress tick")
       expect(result.status, result.stderr).toBe(0)
       expect(readFileSync(output, "utf8")).toContain("<svg")
       expect(result.stderr).toContain("Recording ended: timeout after 1000ms")
