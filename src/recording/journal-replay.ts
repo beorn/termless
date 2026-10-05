@@ -24,7 +24,7 @@ export interface JournalReplayTarget {
 }
 
 export interface JournalReplayEvent {
-  kind: "output" | "input" | "resize" | "lifecycle" | "truncation"
+  kind: "output" | "input" | "resize" | "lifecycle" | "truncation" | "gap"
   offset: number
   at: number
   /** base64 raw bytes for output/input events. */
@@ -35,6 +35,9 @@ export interface JournalReplayEvent {
   state?: string
   /** oldest retained offset for truncation markers. */
   retainedFromOffset?: number
+  /** dropped byte/chunk counts for gap markers (27478). */
+  droppedBytes?: number
+  droppedChunks?: number
 }
 
 export interface JournalReplayInput {
@@ -50,12 +53,14 @@ export interface JournalReplayResult {
   truncations: number[]
   /** Lifecycle states seen, in order (e.g. launching, awake, exited). */
   lifecycle: string[]
+  /** Output holes seen, in order — the screen is stale across each. */
+  gaps: { offset: number; droppedBytes: number; droppedChunks: number }[]
 }
 
 /** Replay journal events through a backend/terminal via its byte feed. */
 export function replayJournal(input: JournalReplayInput, target: JournalReplayTarget): JournalReplayResult {
   if (input.size !== undefined) target.resize(input.size.cols, input.size.rows)
-  const result: JournalReplayResult = { applied: 0, truncations: [], lifecycle: [] }
+  const result: JournalReplayResult = { applied: 0, truncations: [], lifecycle: [], gaps: [] }
   for (const event of input.events) {
     switch (event.kind) {
       case "output": {
@@ -78,6 +83,19 @@ export function replayJournal(input: JournalReplayInput, target: JournalReplayTa
       }
       case "lifecycle": {
         if (event.state !== undefined) result.lifecycle.push(event.state)
+        break
+      }
+      case "gap": {
+        if (event.droppedBytes === undefined || event.droppedChunks === undefined) {
+          throw new Error(`journal replay: gap at offset ${event.offset} missing dropped counts`)
+        }
+        // A gap cannot be repaired by replaying: the bytes are gone. Record it
+        // so a caller knows the screen is stale across this offset.
+        result.gaps.push({
+          offset: event.offset,
+          droppedBytes: event.droppedBytes,
+          droppedChunks: event.droppedChunks,
+        })
         break
       }
       case "input":
