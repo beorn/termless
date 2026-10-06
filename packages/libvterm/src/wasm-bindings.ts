@@ -7,6 +7,8 @@
 
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 
 export interface LibvtermModule {
   // Memory management
@@ -63,8 +65,11 @@ export async function initLibvterm(): Promise<LibvtermModule> {
   if (modulePromise) return modulePromise
 
   modulePromise = (async () => {
-    // Dynamic import of the Emscripten-generated JS loader
-    const generated: unknown = await import("../wasm/libvterm.js")
+    // Dynamic import of the Emscripten-generated JS loader. The indirect specifier keeps a bundler / static analyser
+    // from treating this gitignored build output as a hard dependency to resolve at build time; it still resolves
+    // against this module's URL, so an unbuilt tree fails loudly at initLibvterm.
+    const specifier = "../wasm/libvterm.js"
+    const generated: unknown = await import(specifier)
     if (
       typeof generated !== "object" ||
       generated === null ||
@@ -74,7 +79,9 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       throw new Error("Generated libvterm loader does not export a module factory")
     }
     const createModule = generated.default as (options: { locateFile(name: string): string }) => Promise<unknown>
-    const path = realpathSync(new URL("../wasm/libvterm.wasm", import.meta.url))
+    // Both artifact paths are indirect for the same reason: they are gitignored Emscripten build outputs a bundler
+    // cannot resolve from a clean tree. The .wasm path is still resolved against this module's URL.
+    const path = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), "../wasm/libvterm.wasm"))
     const sha256 = createHash("sha256").update(readFileSync(path)).digest("hex")
     let located = false
     const loaded: unknown = await createModule({

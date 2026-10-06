@@ -17,6 +17,7 @@ import { execSync } from "node:child_process"
 import type { TerminalBackend, TerminalOptions, TestTerminal } from "../terminal/types.ts"
 import { createTerminal } from "../terminal/terminal.ts"
 import { findPackageRoot } from "../package-root.ts"
+import { backendLoaders } from "./backend-loaders.ts"
 
 // ═══════════════════════════════════════════════════════
 // Manifest
@@ -104,11 +105,24 @@ function hasFilesWithExt(dir: string, ext: string, subdirs: string[] = []): bool
 }
 
 function resolveModule(pkg: string, opts?: Partial<TerminalOptions>) {
-  return async () => {
-    const mod = await import(pkg)
-    return typeof mod.resolve === "function"
-      ? mod.resolve(opts)
-      : mod[Object.keys(mod).find((k) => k.startsWith("create"))!](opts)
+  return async (): Promise<TerminalBackend> => {
+    // One literal loader per backend, so the bundler can trace it and everything it imports (27837, @cto 26cf4eaa).
+    const load = (backendLoaders as Record<string, (() => Promise<unknown>) | undefined>)[pkg]
+    if (load === undefined) {
+      throw new Error(
+        `no loader for backend package ${pkg}; add it to backendLoaders in src/backend/backend-loaders.ts`,
+      )
+    }
+    const mod = (await load()) as Record<string, unknown>
+    if (typeof mod.resolve === "function") {
+      return (mod.resolve as (opts?: Partial<TerminalOptions>) => TerminalBackend)(opts)
+    }
+    const createKey = Object.keys(mod).find((key) => key.startsWith("create"))
+    const create = createKey === undefined ? undefined : mod[createKey]
+    if (typeof create !== "function") {
+      throw new Error(`backend package ${pkg} exports neither resolve() nor a create*() factory`)
+    }
+    return (create as (opts?: Partial<TerminalOptions>) => TerminalBackend)(opts)
   }
 }
 
