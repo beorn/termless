@@ -1,4 +1,4 @@
-# vendor-kit: source-siblings@53fbb89537ef — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
+# vendor-kit: source-siblings@11913d645802 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
 name: Install named source siblings
 description: Test against public sibling commits without requiring a new npm release
 
@@ -35,6 +35,19 @@ runs:
             sleep $((attempt * 2))
           fi
         done
+    # #27893 (@cto option A): the checkout step below creates a repo-root .ci-siblings/ for its overrides and leaves
+    # it behind. A consumer that asserts a clean tree (terminfo.dev's site build) must not have to carry its own
+    # .gitignore line for that scratch, so ignore it locally through the repository's exclude file. Resolve the path
+    # with git instead of hard-coding .git/info/exclude: in a worktree or submodule .git is a file, and this is the
+    # one spelling that is correct in both. Idempotent, so a re-run appends nothing.
+    - name: Ignore the source-siblings scratch directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        exclude=$(git rev-parse --git-path info/exclude)
+        mkdir -p "$(dirname "$exclude")"
+        : >> "$exclude"
+        grep -qxF '.ci-siblings/' "$exclude" || printf '%s\n' '.ci-siblings/' >> "$exclude"
     - name: Check out public sibling commits
       shell: bash
       env:
