@@ -7,6 +7,7 @@
       "devDependencies": {
         "@termless/alacritty": "workspace:*",
         "@termless/ghostty": "workspace:*",
+        "@termless/ghostty-native": "workspace:*",
         "@termless/kitty": "workspace:*",
         "@termless/libvterm": "workspace:*",
         "@termless/peekaboo": "workspace:*",
@@ -1556,6 +1557,8 @@
     "@rolldown/binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.11.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw=="],
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
+
+    "@termless/ghostty-native/@termless/core": ["@termless/core@root:", {}],
 
     "@vue/compiler-core/entities": ["entities@7.0.1", "", {}, "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA=="],
 
