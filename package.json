@@ -73,6 +73,7 @@
   "devDependencies": {
     "@termless/alacritty": "workspace:*",
     "@termless/ghostty": "workspace:*",
+    "@termless/ghostty-native": "workspace:*",
     "@termless/kitty": "workspace:*",
     "@termless/libvterm": "workspace:*",
     "@termless/peekaboo": "workspace:*",

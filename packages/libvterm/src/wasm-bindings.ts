@@ -68,7 +68,9 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     // Dynamic import of the Emscripten-generated JS loader. The indirect specifier keeps a bundler / static analyser
     // from treating this gitignored build output as a hard dependency to resolve at build time; it still resolves
     // against this module's URL, so an unbuilt tree fails loudly at initLibvterm.
-    const specifier = "../wasm/libvterm.js"
+    // Joined at runtime: rolldown constant-folds a string constant back into the import, which then bypasses the
+    // `neverBundle` rule for this path and fails the build of a clean tree with UNRESOLVED_IMPORT.
+    const specifier = ["..", "wasm", "libvterm.js"].join("/")
     const generated: unknown = await import(specifier)
     if (
       typeof generated !== "object" ||
