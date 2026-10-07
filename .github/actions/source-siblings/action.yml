@@ -1,4 +1,4 @@
-# vendor-kit: source-siblings@11913d645802 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
+# vendor-kit: source-siblings@7e5cbb459e36 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
 name: Install named source siblings
 description: Test against public sibling commits without requiring a new npm release
 
@@ -179,6 +179,27 @@ runs:
           }
         }
 
+        // hh 23205 (@cto 3fe90387): a GitHub transport hiccup must not end the job, so only the network operations
+        // retry: the clone, the checkout's blob fetch from the partial clone, and a packed sibling's install. At most
+        // three attempts, NETWORK_BACKOFF_MS and then twice that apart, all within NETWORK_CAP_MS. Every failed attempt
+        // prints its error, and the last error is rethrown, so the step fails exactly as it did without the retry.
+        const NETWORK_ATTEMPTS = 3
+        const NETWORK_BACKOFF_MS = 5000
+        const NETWORK_CAP_MS = 300000
+        function network(label, operation) {
+          const started = Date.now()
+          for (let attempt = 1; ; attempt += 1) {
+            try {
+              return operation()
+            } catch (error) {
+              const delay = NETWORK_BACKOFF_MS * attempt
+              console.error(`source-siblings: ${label} attempt ${attempt}/${NETWORK_ATTEMPTS} failed: ${error instanceof Error ? error.message : String(error)}`)
+              if (attempt === NETWORK_ATTEMPTS || Date.now() - started + delay > NETWORK_CAP_MS) throw error
+              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay)
+            }
+          }
+        }
+
         for (const [index, sibling] of config.siblings.entries()) {
           const { name, repository, commit, directory = ".", pack = false } = sibling ?? {}
           if (typeof name !== "string" || !/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/.test(name) || names.has(name)) {
@@ -206,9 +227,13 @@ runs:
           sourceSiblingDeclarations(sourcePackages, name)
           names.add(name)
           const checkout = join(checkoutRoot, String(index))
-          git(["clone", "--filter=blob:none", "--single-branch", "--branch", "main", "--no-checkout", `https://github.com/${repository}.git`, checkout])
+          network(`${name} clone`, () => {
+            // git removes a clone it could not finish; a leftover would turn the next attempt into a different failure.
+            if (existsSync(checkout)) throw new Error(`source-siblings: a failed clone left ${checkout}; not cloning into it`)
+            git(["clone", "--filter=blob:none", "--single-branch", "--branch", "main", "--no-checkout", `https://github.com/${repository}.git`, checkout])
+          })
           git(["-C", checkout, "merge-base", "--is-ancestor", commit, "refs/remotes/origin/main"])
-          git(["-C", checkout, "-c", "advice.detachedHead=false", "checkout", "--detach", commit])
+          network(`${name} checkout`, () => git(["-C", checkout, "-c", "advice.detachedHead=false", "checkout", "--detach", commit]))
           const subdirectory = posix.normalize(directory).replace(/\/$/, "")
           const where = subdirectory === "." ? `${repository}@${commit}` : `${repository}@${commit}:${subdirectory}`
           const sourcePkg = JSON.parse(readFileSync(join(checkout, subdirectory, "package.json"), "utf8"))
@@ -238,7 +263,7 @@ runs:
             const packageDir = join(checkout, subdirectory)
             const packDir = join(checkoutRoot, `${index}-packed`)
             mkdirSync(packDir)
-            runPhase(name, "install", "bun", ["install", "--frozen-lockfile"], checkout)
+            network(`${name} install`, () => runPhase(name, "install", "bun", ["install", "--frozen-lockfile"], checkout))
             runPhase(name, "build", "bun", ["run", "build"], packageDir)
             // One agreed pin with tools/release/release-package-manager.ts, checked by its owning test.
             runPhase(name, "pack", "bunx", ["pnpm@11.20.0", "pack", "--pack-destination", packDir], packageDir)
