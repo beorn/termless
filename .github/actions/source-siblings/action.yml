@@ -1,4 +1,4 @@
-# vendor-kit: source-siblings@7e5cbb459e36 — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
+# vendor-kit: source-siblings@9aa937217f2b — generated; edit km/packages/km-infra/vendor-kit/templates/source-siblings-action.yml in km, then re-sync
 name: Install named source siblings
 description: Test against public sibling commits without requiring a new npm release
 
@@ -181,8 +181,9 @@ runs:
 
         // hh 23205 (@cto 3fe90387): a GitHub transport hiccup must not end the job, so only the network operations
         // retry: the clone, the checkout's blob fetch from the partial clone, and a packed sibling's install. At most
-        // three attempts, NETWORK_BACKOFF_MS and then twice that apart, all within NETWORK_CAP_MS. Every failed attempt
-        // prints its error, and the last error is rethrown, so the step fails exactly as it did without the retry.
+        // three attempts, NETWORK_BACKOFF_MS and then twice that apart. NETWORK_CAP_MS bounds only whether another
+        // attempt starts; a hanging attempt is bounded by the job timeout. Every failed attempt prints its error, and
+        // the last error is rethrown, so the step fails exactly as it did without the retry.
         const NETWORK_ATTEMPTS = 3
         const NETWORK_BACKOFF_MS = 5000
         const NETWORK_CAP_MS = 300000

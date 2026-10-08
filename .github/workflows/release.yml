@@ -1,4 +1,4 @@
-# vendor-kit: release@0add0084a95e — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@4d38de76d8e0 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -254,6 +254,24 @@ jobs:
             const row = record.packages[index]
             const current = 'sha512-' + createHash('sha512').update(readFileSync(item.path)).digest('base64')
             if (current !== item.digest) fail(item.name + '@' + item.version + ' tarball changed before publish')
+            // Retroactive tag guard (26541): a re-dispatched release for a name@version
+            // already on npm must SKIP, not fail E403. `npm view` exists -> notice + skip;
+            // any registry error other than E404 is a real fault and fails loud.
+            const probe = spawnSync('npm', ['view', item.name + '@' + item.version, 'version'], { encoding: 'utf8' })
+            const probeStdout = probe.stdout ?? ''
+            const probeStderr = probe.stderr ?? ''
+            if (probe.status === 0 && probeStdout.trim().length > 0) {
+              row.state = 'skipped_already_published'
+              row.detail = 'npm view returned ' + probeStdout.trim()
+              save()
+              console.log('::notice::' + item.name + '@' + item.version + ' already exists on npm; skipping publish (npm view -> ' + probeStdout.trim() + ')')
+              continue
+            }
+            if (probe.status !== 0 && !/\bE404\b/.test(probeStderr + probeStdout)) {
+              row.state = 'publish_precheck_failed'
+              save()
+              fail(item.name + '@' + item.version + ' npm view precheck failed with status ' + probe.status + ' (not E404): ' + (probeStderr + probeStdout).trim().slice(0, 500))
+            }
             const publish = spawnSync('npm', ['publish', item.path, '--access', 'public', '--ignore-scripts', '--provenance'], { cwd: process.env.RUNNER_TEMP, env: publishEnv, stdio: 'inherit' })
             if (publish.status !== 0) {
               row.state = 'publish_failed'
