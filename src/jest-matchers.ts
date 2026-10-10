@@ -340,8 +340,7 @@ declare module "vitest" {
   interface Matchers<T = any> {
     toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-  interface Assertion<T = any> {
-    toMatchAcrossRenderers(options?: ToMatchAcrossRenderersOptions): Promise<void>
-  }
+  // Do not declare Assertion here. vitest only re-exports Assertion from
+  // @vitest/expect, so a "vitest" Assertion interface is a fresh unmerged type
+  // and hides toMatchSnapshot / toMatchInlineSnapshot (22992).
 }
