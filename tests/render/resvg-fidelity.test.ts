@@ -78,7 +78,7 @@ async function loadCanvas(): Promise<typeof import("@napi-rs/canvas")> {
  */
 const TWEMOJI_AVAILABLE = (() => {
   try {
-    createRequire(import.meta.url).resolve("@twemoji/svg")
+    createRequire(import.meta.url).resolve("@twemoji/svg/package.json")
     return true
   } catch {
     return false
