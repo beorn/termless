@@ -36,9 +36,7 @@ import { afterEach, describe, expect, test } from "vitest"
 import { createRenderer } from "@silvery/test"
 import { ScopeProvider } from "silvery"
 import { createScope } from "@silvery/scope"
-import { createCellBuffer, type MutableCellBuffer } from "@silvery/ag/viewport-buffer"
-import type { Cell } from "@silvery/ag/types"
-import type { IslandGuest, IslandHandle, IslandOutputOwner, IslandSizeOwner } from "@silvery/ag/island-types"
+import { createFakeIslandGuest } from "@silvery/ag/testing/fake-island-guest"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
 const cleanups: Array<() => Promise<void>> = []
@@ -48,68 +46,6 @@ afterEach(async () => {
     await cleanups.pop()?.()
   }
 })
-
-/**
- * Mock IslandGuest that blits a uniform `fill`-char buffer with a bg color.
- * This is the surface-regression fixture's stand-in for the real xtermGuest;
- * the test verifies what the OVERLAY ROOT paints (host cell coverage, chrome
- * letterbox, no overflow), independent of which IslandGuest provides the
- * inner cells.
- */
-function fillBuffer(buf: MutableCellBuffer, fill: string): MutableCellBuffer {
-  const cell: Cell = {
-    char: fill,
-    fg: null,
-    bg: "#008000",
-    attrs: {},
-    wide: false,
-    continuation: false,
-  }
-  for (let r = 0; r < buf.rows; r++) {
-    for (let c = 0; c < buf.cols; c++) buf.setCell(c, r, cell)
-  }
-  return buf
-}
-
-function mockGuest(fill = "X"): IslandGuest {
-  const subscribers = new Set<() => void>()
-  return {
-    init(ctx) {
-      let cols = ctx.cols
-      let rows = ctx.rows
-      const buf = fillBuffer(createCellBuffer(cols, rows), fill)
-      const size: IslandSizeOwner = {
-        get cols() {
-          return cols
-        },
-        get rows() {
-          return rows
-        },
-        subscribe: () => () => {},
-        requestResize(nextCols, nextRows) {
-          cols = nextCols
-          rows = nextRows
-        },
-      }
-      const output: IslandOutputOwner = {
-        buffer: buf,
-        cursor: null,
-        cursorVisible: false,
-        subscribe(listener) {
-          subscribers.add(listener)
-          return () => subscribers.delete(listener)
-        },
-        writeCells() {},
-        invalidateAll() {
-          for (const listener of subscribers) listener()
-        },
-      }
-      const handle: IslandHandle = { size, output, dispose() {} }
-      ctx.emit({ type: "ready" })
-      return Promise.resolve(handle)
-    },
-  }
-}
 
 async function flushIslandMount(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0))
@@ -123,7 +59,7 @@ async function flushIslandMount(): Promise<void> {
  */
 async function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
   const grid = clampGridToHost(hostCols, hostRows, style)
-  const guest = mockGuest()
+  const guest = createFakeIslandGuest()
   const store = createOverlayStore({ revision: 0, elapsedMs: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
   const scope = createScope("rec-overlay-island-test")
