@@ -35,7 +35,7 @@
         "vue": "3.5.43",
       },
       "optionalDependencies": {
-        "@napi-rs/canvas": "^1.0.9",
+        "@napi-rs/canvas": "1.0.9",
         "@resvg/resvg-js": "^2.6.2",
         "@twemoji/svg": "^15.0.0",
         "ghostty-web": "^0.4.0",
@@ -70,7 +70,7 @@
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "1.32.1",
-        "@napi-rs/canvas": "^1.0.9",
+        "@napi-rs/canvas": "1.0.9",
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.18.2",
         "@termless/vterm": "^0.10.2",
@@ -155,7 +155,7 @@
       "name": "@termless/test",
       "version": "0.10.2",
       "optionalDependencies": {
-        "@napi-rs/canvas": "^1.0.9",
+        "@napi-rs/canvas": "1.0.9",
         "@resvg/resvg-js": "^2.6.2",
       },
       "peerDependencies": {
@@ -1559,6 +1559,8 @@
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
     "@termless/cli/@termless/core": ["@termless/core@root:", {}],
+
+    "@termless/test/@termless/core": ["@termless/core@root:", {}],
 
     "@termless/vterm/@termless/core": ["@termless/core@root:", {}],
 
