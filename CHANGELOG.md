@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- `@termless/cli` pins its native canvas dependency to 1.0.9, the version already resolved by the lockfile.
+- `@termless/test` pins its optional native canvas dependency to 1.0.9, the version already resolved by the lockfile.
 - Complete the coordinated release with all 18 public packages at 0.10.2.
   Only `@termless/core@0.10.1` reached npm; the other 17 members did not.
 - The earlier core publication used older metadata and package configuration:
