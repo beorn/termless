@@ -43,7 +43,7 @@
         "upng-js": "^2.1.0",
       },
       "peerDependencies": {
-        "@termless/ghostty": "^0.10.1",
+        "@termless/ghostty": "^0.10.2",
         "node-pty": ">=1.0.0",
       },
       "optionalPeers": [
@@ -53,17 +53,17 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "bin": {
         "termless": "./bin/termless.ts",
       },
@@ -72,18 +72,18 @@
         "@napi-rs/canvas": "^1.0.9",
         "@resvg/resvg-js": "^2.6.0",
         "@silvery/commander": "^0.18.2",
-        "@termless/vterm": "^0.10.1",
+        "@termless/vterm": "^0.10.2",
         "loggily": "^0.10.2",
         "react": "^19.0.0",
         "silvery": "^0.24.0",
         "zod": "^4.6.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
-        "@termless/ghostty": "^0.10.1",
-        "@termless/peekaboo": "^0.10.1",
-        "@termless/vt100": "^0.10.1",
-        "@termless/xtermjs": "^0.10.1",
+        "@termless/core": "^0.10.2",
+        "@termless/ghostty": "^0.10.2",
+        "@termless/peekaboo": "^0.10.2",
+        "@termless/vt100": "^0.10.2",
+        "@termless/xtermjs": "^0.10.2",
         "playwright": "^1.59.0",
       },
       "optionalPeers": [
@@ -95,70 +95,70 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "@napi-rs/canvas": "1.0.9",
         "ghostty-web": "^0.4.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
-        "@termless/vterm": "^0.10.1",
+        "@termless/core": "^0.10.2",
+        "@termless/vterm": "^0.10.2",
       },
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/termless": {
       "name": "termless",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "@termless/core": "workspace:*",
       },
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "optionalDependencies": {
         "@napi-rs/canvas": "^1.0.9",
         "@resvg/resvg-js": "^2.6.2",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
         "playwright": "^1.59.0",
         "vitest": ">=2.0.0",
       },
@@ -168,34 +168,34 @@
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "vt100.js": "0.7.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "vt220.js": "0.7.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "vterm.js": "^0.7.0",
       },
@@ -203,35 +203,35 @@
         "@termless/xtermjs": "workspace:*",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.1",
+        "@termless/core": "^0.10.2",
         "silvery": ">=0.4.2",
       },
       "optionalPeers": [

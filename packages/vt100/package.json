@@ -1,6 +1,6 @@
 {
   "name": "@termless/vt100",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Pure TypeScript VT100 backend for termless — zero-dependency terminal emulator for TUI testing",
   "keywords": [
     "ansi-parser",
@@ -45,7 +45,7 @@
     "vt100.js": "0.7.0"
   },
   "peerDependencies": {
-    "@termless/core": "^0.10.1"
+    "@termless/core": "^0.10.2"
   },
   "tsdown": {
     "clean": true,

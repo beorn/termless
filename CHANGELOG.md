@@ -1,6 +1,23 @@
 # Changelog
 
-## 0.10.1 (unreleased)
+## 0.10.2 (unreleased)
+
+### Fixed
+
+- Complete the coordinated release with all 18 public packages at 0.10.2.
+  Only `@termless/core@0.10.1` reached npm; the other 17 members did not.
+- The earlier core publication used older metadata and package configuration:
+  its archive pins vterm.js 0.7.0 and an older verifier configuration. The
+  qualified archive pins vterm.js 0.7.1 and the current packaging checks.
+  Their compiled payloads match, but these metadata differences make the
+  archives differ in bytes and SHA-512; immutable 0.10.1 cannot be reused.
+- Carry the already-landed vterm.js 0.7.1 corpus metadata and lock correction,
+  and the libvterm native builder repair for checkout paths containing `%`.
+
+The prepared changes in the earlier candidate notes below remain included.
+This carrier changes release metadata; it introduces no additional API changes.
+
+## 0.10.1 (partial release)
 
 The 0.10.0 candidate did not reach npm; its prepared changes are carried into
 this release.
