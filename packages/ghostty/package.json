@@ -44,7 +44,7 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@napi-rs/canvas": "1.0.9",
+    "@napi-rs/canvas": "1.0.11",
     "ghostty-web": "^0.4.0"
   },
   "peerDependencies": {

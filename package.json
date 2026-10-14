@@ -113,7 +113,7 @@
     }
   },
   "optionalDependencies": {
-    "@napi-rs/canvas": "1.0.9",
+    "@napi-rs/canvas": "1.0.11",
     "@resvg/resvg-js": "^2.6.2",
     "@twemoji/svg": "^15.0.0",
     "ghostty-web": "^0.4.0",
