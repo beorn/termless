@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
+    // vitest 5 defaults clearMocks to true (v4 was false); pin v4 behaviour (29257).
+    clearMocks: false,
     maxWorkers: 2,
     // Two production-scale cases measured past vitest's 5 s default on the
     // slower CI runners (2026-09-01/02, termless PR #4/#5): the vterm
