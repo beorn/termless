@@ -85,7 +85,7 @@
     "@termless/wezterm": "workspace:*",
     "@termless/xtermjs": "workspace:*",
     "@types/bun": "1.4.3",
-    "@types/node": "^25.9.4",
+    "@types/node": "26.6.5",
     "@types/react": "^19.2.14",
     "@vitest/expect": "5.0.4",
     "@vue/server-renderer": "3.5.43",
