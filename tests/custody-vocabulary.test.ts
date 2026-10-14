@@ -10,7 +10,7 @@
  *
  * Scope: this repository's own docs and source, not a sibling package or the
  * hab side, which are free to use the term for their own concept.
- * @reach fs-walk vendor/termless/README.md vendor/termless/CLAUDE.md vendor/termless/docs/** vendor/termless/src/** vendor/termless/packages/*\/src/** vendor/termless/packages/*\/README.md
+ * @reach fs-walk vendor/termless/README.md vendor/termless/AGENTS.md vendor/termless/docs/** vendor/termless/src/** vendor/termless/packages/*\/src/** vendor/termless/packages/*\/README.md
  */
 
 import { describe, expect, test } from "vitest"
@@ -51,7 +51,7 @@ const isTypeScript = (path: string): boolean => extname(path) === ".ts"
 function vocabularyFiles(): string[] {
   const files: string[] = []
 
-  for (const name of ["README.md", "CLAUDE.md"]) {
+  for (const name of ["README.md", "AGENTS.md"]) {
     const full = join(REPO_ROOT, name)
     if (existsSync(full)) files.push(full)
   }
@@ -78,7 +78,7 @@ describe("custody vocabulary", () => {
   test("covers a non-trivial surface (a silent empty scan would hide every real hit)", () => {
     const files = vocabularyFiles()
     expect(files).toContain(join(REPO_ROOT, "README.md"))
-    expect(files).toContain(join(REPO_ROOT, "CLAUDE.md"))
+    expect(files).toContain(join(REPO_ROOT, "AGENTS.md"))
     expect(files.some((f) => f.startsWith(join(REPO_ROOT, "docs") + sep) && f.endsWith(".md"))).toBe(true)
     expect(files.some((f) => f.startsWith(join(REPO_ROOT, "src") + sep) && f.endsWith(".ts"))).toBe(true)
     expect(files.some((f) => f.startsWith(join(REPO_ROOT, "packages") + sep) && f.endsWith(".ts"))).toBe(true)

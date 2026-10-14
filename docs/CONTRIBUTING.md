@@ -118,7 +118,7 @@ export { create<Name>Backend } from "./backend.ts"
 
 **`packages/<name>/tests/backend.test.ts`** -- unit tests covering lifecycle, text I/O, colors, attributes, cursor, modes, key encoding, scrollback, resize, reset, wide characters, and capabilities.
 
-**`packages/<name>/tests/CLAUDE.md`** -- test scope documentation. Follow the pattern from `packages/xtermjs/tests/CLAUDE.md`: describe what to test here, what NOT to test here (cross-backend goes in root `tests/`, matchers go in @termless/test), patterns, and ad-hoc testing commands.
+**`packages/<name>/tests/AGENTS.md`** -- test scope documentation. Follow the pattern from `packages/xtermjs/tests/AGENTS.md`: describe what to test here, what NOT to test here (cross-backend goes in root `tests/`, matchers go in @termless/test), patterns, and ad-hoc testing commands.
 
 #### 2. Registration (modify existing files)
 
@@ -173,7 +173,7 @@ const backends: [string, BackendFactory][] = [
 #### 3. Documentation (modify existing files)
 
 - **`README.md`** -- add row to the Packages table
-- **`CLAUDE.md`** -- add row to the Packages table and update the Architecture diagram
+- **`AGENTS.md`** -- add row to the Packages table and update the Architecture diagram
 - **`CONTRIBUTING.md`** -- add row to the Packages table (below)
 - **`CHANGELOG.md`** -- add a section under the current version
 - **`docs/guide/multi-backend.md`** -- add a setup file example for the new backend
