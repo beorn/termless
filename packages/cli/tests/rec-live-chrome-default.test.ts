@@ -29,6 +29,7 @@
  * still appears for bare `rec`. Passing `--chrome` MUST keep implying a
  * matching `--live-chrome` style, unless the user explicitly passes
  * `--live-chrome none`.
+ * @source-grep the live-chrome default contract (15551/15646-islands): record-cmd.ts's --live-chrome defaults to a centered macOS chrome unless --chrome pins a style (--live-chrome none is the explicit opt-out), and rec-live-overlay.tsx carries the island overlay
  */
 
 import { describe, expect, test } from "vitest"

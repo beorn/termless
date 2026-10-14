@@ -23,6 +23,7 @@
  * A sibling test covers the fleet pane tool separately — a recording overlay
  * and a live agent pane are different surfaces, and one test passing would say
  * nothing about the other.
+ * @source-grep vterm is the sole production shell guest (21016, Track 2): rec-live-overlay.tsx imports the vterm guest, not xtermGuest — a dependency assertion no behavioural test can see, since both satisfy the same IslandGuest contract
  */
 
 import { readFileSync } from "node:fs"

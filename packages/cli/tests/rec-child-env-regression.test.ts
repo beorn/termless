@@ -20,6 +20,7 @@
  *    against is "someone refactors record-cmd.ts and quietly drops the env
  *    arg", and the source check catches that without spinning up a full PTY
  *    in a non-TTY test environment.
+ * @source-grep the rec child-env contract (15621): record-cmd.ts's REC_CHILD_ENV is frozen and lists exactly the generic recording-mode keys, and the spawnPty call site injects recordingChildEnv()
  */
 
 import { describe, expect, test } from "vitest"

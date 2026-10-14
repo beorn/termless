@@ -1,3 +1,4 @@
+// @source-grep the REC-indicator pulse contract: rec-live-overlay.tsx drives it through usePulse(intervalMs: 500), never a blinkTick/blinkTimer or a setInterval blink (the overlay is an Island boundary, not a timer)
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import React from "react"
