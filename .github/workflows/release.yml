@@ -1,4 +1,4 @@
-# vendor-kit: release@490be10a3631 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@d3ab88b42a6f — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -144,12 +144,15 @@ jobs:
           const dir = realpathSync(root)
           const plan = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'release-plan.json'), 'utf8'))
           const verified = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'verified.json'), 'utf8'))
-          if (verified.schema !== 'verify-publishable/v1' || verified.ok !== true || !Array.isArray(verified.packages) || verified.packages.length !== plan.length) fail('verifier did not report the exact passed package set')
+          if (verified.schema !== 'verify-publishable/v1' || verified.ok !== true || !Array.isArray(verified.packages) || verified.packages.length === 0) fail('verifier did not report a nonempty passed package set')
           const files = new Set()
-          for (const { name, version } of plan) {
-            const matches = verified.packages.filter(item => item.name === name && item.version === version)
-            if (matches.length !== 1) fail(name + '@' + version + ' has ' + matches.length + ' verified artifacts')
-            const artifact = matches[0]
+          // The verifier covers the repository; the ordered plan selects publication only.
+          const reportedNames = new Set()
+          for (const artifact of verified.packages) {
+            if (!artifact || typeof artifact.name !== 'string' || !artifact.name || typeof artifact.version !== 'string' || !artifact.version) fail('invalid reported package identity')
+            const { name, version } = artifact
+            if (reportedNames.has(name)) fail('duplicate reported package ' + name)
+            reportedNames.add(name)
             if (typeof artifact.tarballPath !== 'string' || !isAbsolute(artifact.tarballPath) || typeof artifact.sha512 !== 'string') fail(name + '@' + version + ' has no retained absolute tarball path or SHA-512')
             const file = basename(artifact.tarballPath)
             if (!file.endsWith('.tgz') || files.has(file)) fail('invalid or colliding tarball ' + file)
@@ -162,6 +165,10 @@ jobs:
             files.add(file)
           }
           if (JSON.stringify(readdirSync(dir).sort()) !== JSON.stringify([...files].sort())) fail('retained file set differs from plan')
+          for (const { name, version } of plan) {
+            const matches = verified.packages.filter(item => item.name === name && item.version === version)
+            if (matches.length !== 1) fail(name + '@' + version + ' has ' + matches.length + ' verified artifacts')
+          }
           NODE
       - name: Retain the report, plan and verified tarballs
         id: artifacts
@@ -218,15 +225,18 @@ jobs:
           const plan = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'release-plan.json'), 'utf8'))
           if (JSON.stringify(plan) !== JSON.stringify(requested)) fail('uploaded ordered plan differs from dispatch packages')
           const verified = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'verified.json'), 'utf8'))
-          if (verified.schema !== 'verify-publishable/v1' || verified.ok !== true || !Array.isArray(verified.packages) || verified.packages.length !== plan.length) fail('verifier did not report the exact passed package set')
+          if (verified.schema !== 'verify-publishable/v1' || verified.ok !== true || !Array.isArray(verified.packages) || verified.packages.length === 0) fail('verifier did not report a nonempty passed package set')
           const root = join(process.env.RUNNER_TEMP, 'verified-tarballs')
           if (!lstatSync(root).isDirectory() || lstatSync(root).isSymbolicLink()) fail('tarball directory must be a regular directory')
           const outputDir = realpathSync(root)
           const files = new Set()
-          const artifacts = plan.map(({ name, version }) => {
-            const matches = verified.packages.filter(item => item.name === name && item.version === version)
-            if (matches.length !== 1) fail(name + '@' + version + ' has ' + matches.length + ' verified artifacts')
-            const artifact = matches[0]
+          // Validate every transported artifact before selecting the ordered publication subset.
+          const reportedNames = new Set()
+          const verifiedArtifacts = verified.packages.map(artifact => {
+            if (!artifact || typeof artifact.name !== 'string' || !artifact.name || typeof artifact.version !== 'string' || !artifact.version) fail('invalid reported package identity')
+            const { name, version } = artifact
+            if (reportedNames.has(name)) fail('duplicate reported package ' + name)
+            reportedNames.add(name)
             if (typeof artifact.tarballPath !== 'string' || typeof artifact.sha512 !== 'string') fail(name + '@' + version + ' has no retained tarball or SHA-512')
             if (!isAbsolute(artifact.tarballPath)) fail(name + '@' + version + ' retained path metadata must be absolute')
             const file = basename(artifact.tarballPath)
@@ -243,6 +253,11 @@ jobs:
             return { name, version, path, digest }
           })
           if (JSON.stringify(readdirSync(outputDir).sort()) !== JSON.stringify([...files].sort())) fail('retained file set differs from plan')
+          const artifacts = plan.map(({ name, version }) => {
+            const matches = verifiedArtifacts.filter(item => item.name === name && item.version === version)
+            if (matches.length !== 1) fail(name + '@' + version + ' has ' + matches.length + ' verified artifacts')
+            return matches[0]
+          })
           const recordPath = join(process.env.RUNNER_TEMP, 'release-record.json')
           const record = { schema: 'hh-release-run/v1', repository: process.env.GITHUB_REPOSITORY, workflow: process.env.GITHUB_WORKFLOW_REF, ref: process.env.GITHUB_REF, commit: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, packages: artifacts.map(({ name, version, digest }) => ({ name, version, digest, state: 'not_published', publishedAt: null, firstServedAt: null, detail: null })) }
           const save = () => writeFileSync(recordPath, JSON.stringify(record, null, 2) + '\n')
