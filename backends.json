@@ -44,7 +44,7 @@
     "vt100": {
       "package": "@termless/vt100",
       "upstream": "npm:vt100.js",
-      "upstreamVersion": "0.7.0",
+      "upstreamVersion": "0.7.1",
       "type": "js",
       "default": true,
       "label": "vt100",
@@ -61,7 +61,7 @@
     "vt220": {
       "package": "@termless/vt220",
       "upstream": "npm:vt220.js",
-      "upstreamVersion": "0.7.0",
+      "upstreamVersion": "0.7.1",
       "type": "js",
       "default": false,
       "label": "vt220",

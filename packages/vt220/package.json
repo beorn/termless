@@ -42,7 +42,7 @@
     }
   },
   "dependencies": {
-    "vt220.js": "0.7.0"
+    "vt220.js": "0.7.1"
   },
   "peerDependencies": {
     "@termless/core": "^0.10.2"
