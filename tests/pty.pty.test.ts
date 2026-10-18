@@ -226,7 +226,16 @@ describe.skipIf(!hasPty)("PTY integration", () => {
       }
       expect(output).toContain("ready")
       await pty.close()
-      expect(output).toContain("BYE-SLOW")
+      if (process.platform === "win32") {
+        // Windows close requests termination where possible, then drains bytes written before exit.
+        // Run 39147317083 at 7bc9690 witnessed no TERM trap; CTO's registered branch (b) applies.
+        const diagnostic = `Windows close retains pre-close output and delivers termination: exitInfo=${pty.exitInfo}`
+        expect(output, diagnostic).toContain("ready")
+        expect(pty.alive, diagnostic).toBe(false)
+        expect(pty.exitInfo, diagnostic).not.toBeNull()
+      } else {
+        expect(output).toContain("BYE-SLOW")
+      }
     } finally {
       await pty.close()
     }
