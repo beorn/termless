@@ -31,12 +31,11 @@
  * Pairs with `rec-live-overlay.test.ts` (pure size-helper unit tests).
  */
 
+import { PassThrough } from "node:stream"
 import React from "react"
 import { afterEach, describe, expect, test } from "vitest"
-import { createRenderer } from "@silvery/test"
-import { ScopeProvider } from "silvery"
-import { createScope } from "@silvery/scope"
-import { createFakeIslandGuest } from "@silvery/ag/testing/fake-island-guest"
+import { createRenderer } from "silvery/test"
+import { vtermGuest } from "@termless/vterm"
 import { Overlay, chromeTokens, createOverlayStore, clampGridToHost } from "../src/rec-live-overlay.tsx"
 
 const cleanups: Array<() => Promise<void>> = []
@@ -59,20 +58,20 @@ async function flushIslandMount(): Promise<void> {
  */
 async function renderOverlay(hostCols: number, hostRows: number, style: "macos" | "windows" | "none") {
   const grid = clampGridToHost(hostCols, hostRows, style)
-  const guest = createFakeIslandGuest()
+  const output = new PassThrough()
+  const guest = vtermGuest({ cols: grid.cols, rows: grid.rows, child: { stdout: output }, modes: {} })
   const store = createOverlayStore({ revision: 0, elapsedMs: 0 })
   const render = createRenderer({ cols: hostCols, rows: hostRows })
-  const scope = createScope("rec-overlay-island-test")
   const tree = () => (
-    <ScopeProvider scope={scope}>
-      <Overlay guest={guest} cols={grid.cols} rows={grid.rows} title="rec" preset={chromeTokens(style)} store={store} />
-    </ScopeProvider>
+    <Overlay guest={guest} cols={grid.cols} rows={grid.rows} title="rec" preset={chromeTokens(style)} store={store} />
   )
   const app = render(tree())
   cleanups.push(async () => {
     app.unmount()
-    await scope[Symbol.asyncDispose]()
+    output.destroy()
   })
+  await flushIslandMount()
+  output.write("X".repeat(grid.cols))
   await flushIslandMount()
   app.rerender(tree())
   return { app, grid }
