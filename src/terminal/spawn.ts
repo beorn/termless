@@ -69,8 +69,9 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
   const { argv, cols, rows, cwd, env, onData } = options
   const diagnose = argv.length === 3 && argv[0] === "echo" && argv[1] === "hello world" && argv[2] === "foo bar"
 
-  if (diagnose)
+  if (diagnose) {
     console.info("PTY_DIAG", JSON.stringify({ kind: "spawn", at: performance.now(), argv, bun: Bun.version }))
+  }
   const proc = Bun.spawn(argv, {
     cwd,
     env: { ...process.env, ...env },
@@ -78,7 +79,7 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
       cols,
       rows,
       data: (_terminal: unknown, data: Uint8Array) => {
-        if (diagnose)
+        if (diagnose) {
           console.info(
             "PTY_DIAG",
             JSON.stringify({
@@ -88,15 +89,17 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
               hex: Buffer.from(data).toString("hex"),
             }),
           )
+        }
         try {
           onData(data)
           if (diagnose) console.info("PTY_DIAG", JSON.stringify({ kind: "forwarded", at: performance.now() }))
         } catch (error) {
-          if (diagnose)
+          if (diagnose) {
             console.error(
               "PTY_DIAG",
               JSON.stringify({ kind: "forward-error", at: performance.now(), error: String(error) }),
             )
+          }
           // Swallow callback errors to prevent crashing the event loop.
         }
       },
