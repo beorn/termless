@@ -6,6 +6,9 @@
  */
 
 import { describe, test, expect } from "vitest"
+import { existsSync, mkdtempSync, readFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { createTerminal } from "../src/terminal/terminal.ts"
 import { spawnPty } from "../src/terminal/pty.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
@@ -209,13 +212,22 @@ describe.skipIf(!hasPty)("PTY integration", () => {
    * @consumer PTY close and interactive recording final-output capture.
    */
   test("close keeps output from a TERM handler that takes 500 ms", { timeout: 10_000 }, async () => {
+    // Branch-only diagnostic: retain the files independently of PTY output.
+    const diagnosticDir = mkdtempSync(join(tmpdir(), "termless-close-diagnostic-"))
     let output = ""
+    const capturedChunks: Uint8Array[] = []
     const pty = spawnPty({
-      command: ["bash", "-c", "trap 'sleep 0.5; echo BYE-SLOW; exit 0' TERM; echo ready; while :; do sleep 0.05; done"],
+      command: [
+        "bash",
+        "-c",
+        "trap 'echo before > handler-before; sleep 0.5; echo after > handler-after; echo BYE-SLOW; exit 0' TERM; echo ready > child-ready; echo ready; while :; do sleep 0.05; done",
+      ],
       cols: 80,
       rows: 24,
+      cwd: diagnosticDir,
       env: {},
       onData: (data) => {
+        capturedChunks.push(Uint8Array.from(data))
         output += new TextDecoder().decode(data)
       },
     })
@@ -225,8 +237,26 @@ describe.skipIf(!hasPty)("PTY integration", () => {
         await new Promise((resolve) => setTimeout(resolve, 10))
       }
       expect(output).toContain("ready")
+      const closeStarted = performance.now()
       await pty.close()
-      expect(output).toContain("BYE-SLOW")
+      const marker = (name: string) => {
+        const path = join(diagnosticDir, name)
+        return existsSync(path) ? readFileSync(path, "utf8") : null
+      }
+      const diagnostic = JSON.stringify({
+        platform: process.platform,
+        runtime: process.versions,
+        diagnosticDir,
+        childReady: marker("child-ready"),
+        handlerBefore: marker("handler-before"),
+        handlerAfter: marker("handler-after"),
+        closeElapsedMs: performance.now() - closeStarted,
+        exitInfo: pty.exitInfo,
+        signalAndEscalation: "not exposed by PtyHandle; production unchanged",
+        rawCapturedBytes: Buffer.concat(capturedChunks),
+        output,
+      })
+      expect(output, diagnostic).toContain("BYE-SLOW")
     } finally {
       await pty.close()
     }
