@@ -11,7 +11,7 @@ export default defineConfig({
     // 70,000-entry archive round-trip at 6.2 s. A hung test still fails —
     // twenty seconds is a budget for real work, not a tolerance for silence.
     testTimeout: 20_000,
-    include: ["tests/**/*.test.ts", "packages/*/tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "packages/*/tests/**/*.test.ts", "packages/*/tests/**/*.test.tsx"],
     exclude: [
       "**/*.slow.test.ts",
       "**/*.slow.spec.ts",
