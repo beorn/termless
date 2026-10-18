@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: "24"
       - uses: ./.github/actions/source-siblings
-      - run: bun vitest run
+      - run: bun run ci
       - run: bun run typecheck
 
   # Swash native prebuild gate — proves the napi-rs addon builds and loads on
