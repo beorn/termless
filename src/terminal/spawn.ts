@@ -67,8 +67,10 @@ export async function preloadNodePty(): Promise<void> {
 
 function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
   const { argv, cols, rows, cwd, env, onData } = options
+  const diagnose = argv.length === 3 && argv[0] === "echo" && argv[1] === "hello world" && argv[2] === "foo bar"
 
-  console.info("PTY_DIAG", JSON.stringify({ kind: "spawn", at: performance.now(), argv, bun: Bun.version }))
+  if (diagnose)
+    console.info("PTY_DIAG", JSON.stringify({ kind: "spawn", at: performance.now(), argv, bun: Bun.version }))
   const proc = Bun.spawn(argv, {
     cwd,
     env: { ...process.env, ...env },
@@ -76,34 +78,38 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
       cols,
       rows,
       data: (_terminal: unknown, data: Uint8Array) => {
-        console.info(
-          "PTY_DIAG",
-          JSON.stringify({
-            kind: "raw",
-            at: performance.now(),
-            bytes: data.byteLength,
-            hex: Buffer.from(data).toString("hex"),
-          }),
-        )
+        if (diagnose)
+          console.info(
+            "PTY_DIAG",
+            JSON.stringify({
+              kind: "raw",
+              at: performance.now(),
+              bytes: data.byteLength,
+              hex: Buffer.from(data).toString("hex"),
+            }),
+          )
         try {
           onData(data)
-          console.info("PTY_DIAG", JSON.stringify({ kind: "forwarded", at: performance.now() }))
+          if (diagnose) console.info("PTY_DIAG", JSON.stringify({ kind: "forwarded", at: performance.now() }))
         } catch (error) {
-          console.error(
-            "PTY_DIAG",
-            JSON.stringify({ kind: "forward-error", at: performance.now(), error: String(error) }),
-          )
+          if (diagnose)
+            console.error(
+              "PTY_DIAG",
+              JSON.stringify({ kind: "forward-error", at: performance.now(), error: String(error) }),
+            )
           // Swallow callback errors to prevent crashing the event loop.
         }
       },
     },
   })
-  console.info("PTY_DIAG", JSON.stringify({ kind: "spawn-returned", at: performance.now(), pid: proc.pid }))
-  void proc.exited.then(
-    (code) => console.info("PTY_DIAG", JSON.stringify({ kind: "exit", at: performance.now(), code })),
-    (error) =>
-      console.error("PTY_DIAG", JSON.stringify({ kind: "exit-error", at: performance.now(), error: String(error) })),
-  )
+  if (diagnose) {
+    console.info("PTY_DIAG", JSON.stringify({ kind: "spawn-returned", at: performance.now(), pid: proc.pid }))
+    void proc.exited.then(
+      (code) => console.info("PTY_DIAG", JSON.stringify({ kind: "exit", at: performance.now(), code })),
+      (error) =>
+        console.error("PTY_DIAG", JSON.stringify({ kind: "exit-error", at: performance.now(), error: String(error) })),
+    )
+  }
 
   const pty = proc.terminal as {
     write: (data: string) => void
@@ -119,7 +125,7 @@ function spawnBunPty(options: PortablePtySpawnOptions): PortablePtyProcess {
       pty.resize(newCols, newRows)
     },
     closePty(): void {
-      console.info("PTY_DIAG", JSON.stringify({ kind: "close", at: performance.now(), pid: proc.pid }))
+      if (diagnose) console.info("PTY_DIAG", JSON.stringify({ kind: "close", at: performance.now(), pid: proc.pid }))
       try {
         pty.close()
       } catch {
