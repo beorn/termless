@@ -193,7 +193,7 @@ globalThis.setInterval = (callback, delay, ...args) => {
               "--",
               process.execPath,
               "-e",
-              'process.stdout.write("boot\\n"); process.on("SIGTERM", () => { process.stdout.write("tail\\n"); process.exit(0) }); setInterval(() => {}, 1000)',
+              'process.on("SIGTERM", () => { process.stdout.write("tail\\n"); process.exit(0) }); process.stdout.write("boot\\n"); setInterval(() => {}, 1000)',
             ],
             { stdio: ["ignore", "pipe", "pipe"] },
           )
