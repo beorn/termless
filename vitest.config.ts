@@ -11,7 +11,7 @@ export default defineConfig({
     // 70,000-entry archive round-trip at 6.2 s. A hung test still fails —
     // twenty seconds is a budget for real work, not a tolerance for silence.
     testTimeout: 20_000,
-    include: ["tests/**/*.test.ts", "packages/*/tests/**/*.test.ts", "packages/*/tests/**/*.test.tsx"],
+    include: ["tests/**/*.test.ts", "packages/*/tests/**/*.test.ts"],
     exclude: [
       "**/*.slow.test.ts",
       "**/*.slow.spec.ts",
@@ -26,6 +26,12 @@ export default defineConfig({
       "packages/cli/tests/rec-live-overlay.test.ts",
       "packages/cli/tests/rec-live-overlay-pulse.test.ts",
       "packages/cli/tests/backends.test.ts",
+      // The three rec-* .test.tsx regressions (29640) are the same family as
+      // the entries above: they import silvery/@silvery/test, which need Bun.
+      // Listing them keeps a future include pattern from collecting them here.
+      "packages/cli/tests/rec-bg-conflict-regression.test.tsx",
+      "packages/cli/tests/rec-input-kitty-regression.test.tsx",
+      "packages/cli/tests/rec-overlay-surface-regression.test.tsx",
     ],
   },
 })
