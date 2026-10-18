@@ -113,12 +113,37 @@ describe.skipIf(!hasPty)("PTY integration", () => {
   })
 
   test("spawn preserves arguments with spaces (no shell injection)", async () => {
-    const term = createXterm()
+    const backend = createXtermBackend()
+    const term = createTerminal({
+      backend,
+      cols: 80,
+      rows: 24,
+      onAfterWrite: (data) =>
+        console.info(
+          "PTY_DIAG",
+          JSON.stringify({
+            kind: "after-write",
+            at: performance.now(),
+            bytes: data.byteLength,
+            screen: backend.getText(),
+          }),
+        ),
+    })
     try {
       // Arguments with spaces should be passed as-is, not split by shell
       await term.spawn(["echo", "hello world", "foo bar"])
       await expect(term.screen).toContainText("hello world foo bar", { timeout: 5000 })
     } finally {
+      console.info(
+        "PTY_DIAG",
+        JSON.stringify({
+          kind: "final-screen",
+          at: performance.now(),
+          screen: backend.getText(),
+          alive: term.alive,
+          exitInfo: term.exitInfo,
+        }),
+      )
       await term.close()
     }
   })

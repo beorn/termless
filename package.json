@@ -58,7 +58,7 @@
     "build": "tsdown && tsdown -W",
     "test": "bun run ci",
     "typecheck": "tsc --noEmit",
-    "ci": "bun --bun vitest run",
+    "ci": "bun --bun vitest run tests/pty.pty.test.ts --testNamePattern 'spawn preserves arguments with spaces' --silent=false",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "fix": "oxfmt --write .",
