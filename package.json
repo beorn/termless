@@ -56,7 +56,7 @@
   },
   "scripts": {
     "build": "tsdown && tsdown -W",
-    "test": "vitest run",
+    "test": "bun run ci",
     "typecheck": "tsc --noEmit",
     "ci": "bun --bun vitest run",
     "fmt": "oxfmt --write .",
