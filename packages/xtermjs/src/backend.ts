@@ -46,7 +46,7 @@ import type {
   TerminalCapabilities,
   Color,
 } from "@termless/core"
-import { encodeKeyToAnsi, scanWindowOpQueries } from "@termless/core"
+import { encodeKeyToAnsi } from "@termless/core"
 import { resolveXtermCellHyperlink, type XtermLinkCore } from "./xterm-link.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -214,38 +214,9 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     }
   }
 
-  /**
-   * Standard cell metrics used for the synthetic 14t (text-area pixel
-   * size) response. xterm.js headless has no real window, so it can't
-   * report pixel dimensions on its own. Real terminals (xterm.js in
-   * VSCode, Ghostty, etc.) answer CSI 14t with the actual rendered
-   * text-area pixel size — silvery's `resolveMouseOption()` divides
-   * pixel dims by cell dims to obtain cell size for SGR-Pixels (1016)
-   * mouse coordinate translation.
-   *
-   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt on a 96 DPI
-   * display. The exact value isn't load-bearing — what matters is the
-   * ratio matches the backend's cell grid, which is invariant for a
-   * headless emulator (one cell = one cell).
-   */
-  const CELL_W_PX = 8
-  const CELL_H_PX = 17
-
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     const text = decoder.decode(data, { stream: true })
-
-    // Synthesize 14t responses out-of-band BEFORE writing the bytes to
-    // xterm.js (which would drop them as unhandled when the default
-    // implementation reports 0;0).
-    if (backend.onResponse) {
-      scanWindowOpQueries(text, (query) => {
-        if (query !== "14t") return
-        const heightPx = t.rows * CELL_H_PX
-        const widthPx = t.cols * CELL_W_PX
-        backend.onResponse?.(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      })
-    }
 
     // xterm.js write() is async — use internal writeSync for immediate buffer updates
     writeSync(t, text)

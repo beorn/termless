@@ -59,7 +59,6 @@ const BLANK_CELL: Cell = {
  */
 export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend & HyperlinkExtension {
   let screen: Screen | null = null
-  let unsubscribeParser: (() => void) | null = null
 
   function ensureScreen(): Screen {
     if (!screen) throw new Error("vterm backend not initialized — call init() first")
@@ -67,7 +66,6 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
   }
 
   function init(options: TerminalOptions): void {
-    unsubscribeParser?.()
     screen = createScreen({
       cols: options.cols,
       rows: options.rows,
@@ -79,15 +77,9 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
         }
       },
     })
-    unsubscribeParser = screen.tapParser((event) => {
-      if (event.kind !== "csi" || event.final !== "n" || event.prefix !== "?" || event.params[0] !== 996) return
-      backend.onResponse?.(new TextEncoder().encode("\x1b[?997;1n"))
-    })
   }
 
   function destroy(): void {
-    unsubscribeParser?.()
-    unsubscribeParser = null
     screen = null
   }
 

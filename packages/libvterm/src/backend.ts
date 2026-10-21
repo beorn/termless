@@ -232,25 +232,6 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     }
   }
 
-  /**
-   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
-   * responses. The libvterm backend (neovim's libvterm via WASM) is a
-   * pure cell-grid emulator — there's no native window-pixel concept,
-   * so we synthesize 14t/18t from `rows × cols × typical cell metrics`.
-   * silvery's `resolveMouseOption()` divides pixel coords by cell metrics
-   * to recover cell coords for SGR-Pixels (1016) mouse hit-testing.
-   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt 96 DPI —
-   * what matters is the ratio matches the backend's cell grid
-   * (one cell = one cell, invariant).
-   */
-  const CELL_W_PX = 8
-  const CELL_H_PX = 17
-
-  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
-  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
-  const CSI_14t_RE = /\x1b\[14t/g
-  const CSI_18t_RE = /\x1b\[18t/g
-
   function feed(data: Uint8Array): void {
     const m = ensureInit()
 
@@ -274,22 +255,6 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
         backend.onResponse(readBytes(m, outBuf, bytesRead))
       }
       m._free(outBuf)
-    }
-
-    // Synthesize CSI 14t / 18t window-op probe responses from our
-    // tracked cell grid (libvterm has no window-pixel concept).
-    if (backend.onResponse) {
-      const text = new TextDecoder().decode(data)
-      CSI_14t_RE.lastIndex = 0
-      while (CSI_14t_RE.exec(text) !== null) {
-        const heightPx = rows * CELL_H_PX
-        const widthPx = cols * CELL_W_PX
-        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      }
-      CSI_18t_RE.lastIndex = 0
-      while (CSI_18t_RE.exec(text) !== null) {
-        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
-      }
     }
   }
 
@@ -409,33 +374,9 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   function getMode(_mode: Mode): boolean {
     // libvterm's C API doesn't expose terminal modes directly through
-    // simple function calls. A full implementation would require
-    // setting up state callbacks to track mode changes.
-    // For now, return sensible defaults.
-    switch (_mode) {
-      case "altScreen":
-        return false // Would need callback tracking
-      case "cursorVisible":
-        return true
-      case "bracketedPaste":
-        return false
-      case "applicationCursor":
-        return false
-      case "applicationKeypad":
-        return false
-      case "autoWrap":
-        return true // Default on in most terminals
-      case "mouseTracking":
-        return false
-      case "focusTracking":
-        return false
-      case "originMode":
-        return false
-      case "insertMode":
-        return false
-      case "reverseVideo":
-        return false
-    }
+    // simple function calls; return null when state cannot be read from
+    // the engine rather than fabricating hard-coded boolean defaults.
+    return null as unknown as boolean
   }
 
   function getTitle(): string {

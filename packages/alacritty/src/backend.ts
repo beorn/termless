@@ -58,7 +58,7 @@ interface NativeAlacrittyTerminal {
   getLine(row: number): NativeCell[]
   getLines(): NativeCell[][]
   getCursor(): NativeCursor
-  getMode(mode: string): boolean
+  getMode(mode: string): boolean | null
   getTitle(): string
   getScrollback(): number[] // [viewportOffset, totalLines, screenLines]
   scrollViewport(delta: number): void
@@ -152,8 +152,6 @@ const DEFAULT_ROWS = 24
  */
 export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
   let term: NativeAlacrittyTerminal | null = null
-  let cols = DEFAULT_COLS
-  let rows = DEFAULT_ROWS
 
   function ensureTerm(): NativeAlacrittyTerminal {
     if (!term) throw new Error("alacritty backend not initialized — call init() first")
@@ -166,8 +164,6 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     }
 
     const native = loadAlacrittyNative()
-    cols = options.cols
-    rows = options.rows
     term = new native.AlacrittyTerminal(options.cols, options.rows, options.scrollbackLimit ?? 1000)
   }
 
@@ -186,65 +182,28 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     }
   }
 
-  /**
-   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
-   * responses. The alacritty backend (alacritty_terminal via napi-rs)
-   * exposes only a cell grid — there's no native window-pixel concept,
-   * so we synthesize 14t/18t from `rows × cols × typical cell metrics`.
-   * silvery's `resolveMouseOption()` divides pixel coords by cell metrics
-   * to recover cell coords for SGR-Pixels (1016) mouse hit-testing.
-   * 8 × 17 is the typical Iosevka/JetBrains Mono cell at 12pt 96 DPI —
-   * what matters is the ratio matches the backend's cell grid
-   * (one cell = one cell, invariant).
-   */
-  const CELL_W_PX = 8
-  const CELL_H_PX = 17
-
-  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
-  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
-  const CSI_14t_RE = /\x1b\[14t/g
-  const CSI_18t_RE = /\x1b\[18t/g
-
   function feed(data: Uint8Array): void {
     const t = ensureTerm()
     t.feed(Buffer.from(data))
 
-    // Drain DA1/DA2/DSR responses and forward to the terminal layer
-    if (backend.onResponse && t.readResponse) {
+    // Drain DA1/DA2/DSR/DECRPM/window-op responses and forward to the terminal layer
+    if (t.readResponse) {
       const response = t.readResponse()
       if (response && response.length > 0) {
-        backend.onResponse(new Uint8Array(response))
-      }
-    }
-
-    // Synthesize CSI 14t / 18t window-op probe responses from our
-    // tracked cell grid (alacritty_terminal has no window-pixel concept).
-    if (backend.onResponse) {
-      const text = new TextDecoder().decode(data)
-      CSI_14t_RE.lastIndex = 0
-      let m: RegExpExecArray | null
-      while ((m = CSI_14t_RE.exec(text)) !== null) {
-        const heightPx = rows * CELL_H_PX
-        const widthPx = cols * CELL_W_PX
-        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      }
-      CSI_18t_RE.lastIndex = 0
-      while ((m = CSI_18t_RE.exec(text)) !== null) {
-        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
+        backend.onResponse?.(new Uint8Array(response))
       }
     }
   }
 
   function resize(newCols: number, newRows: number): void {
     ensureTerm().resize(newCols, newRows)
-    cols = newCols
-    rows = newRows
   }
 
   function reset(): void {
     const t = ensureTerm()
     // RIS (Reset to Initial State)
     t.feed(Buffer.from("\x1bc"))
+    t.readResponse?.()
   }
 
   function getText(): string {
@@ -296,7 +255,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
   }
 
   function getMode(mode: TerminalMode): boolean {
-    return ensureTerm().getMode(mode)
+    return ensureTerm().getMode(mode) as unknown as boolean
   }
 
   function getTitle(): string {

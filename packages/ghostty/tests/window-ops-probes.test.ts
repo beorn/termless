@@ -28,23 +28,9 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describe("window-op probe responses — ghostty backend", () => {
-  test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
+  test("does not synthesize constant CSI 14t or mirror CSI 18t responses when ghostty-web is silent", async () => {
     await initGhostty()
-    const responses = await probeBackend(createGhosttyBackend(), "\x1b[14t")
-    const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))
-    expect(pixelResponse, `no CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_4_TEXT_AREA_PIXELS_RE.exec(pixelResponse!)!
-    expect(Number(m[1])).toBeGreaterThan(24)
-    expect(Number(m[2])).toBeGreaterThan(80)
-  })
-
-  test("answers CSI 18t with text-area cell count (CSI 8;h;w t)", async () => {
-    await initGhostty()
-    const responses = await probeBackend(createGhosttyBackend(), "\x1b[18t")
-    const cellResponse = responses.find((r) => CSI_8_TEXT_AREA_CELLS_RE.test(r))
-    expect(cellResponse, `no CSI 8;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_8_TEXT_AREA_CELLS_RE.exec(cellResponse!)!
-    expect(Number(m[1])).toBe(24)
-    expect(Number(m[2])).toBe(80)
+    expect(await probeBackend(createGhosttyBackend(), "\x1b[14t")).toEqual([])
+    expect(await probeBackend(createGhosttyBackend(), "\x1b[18t")).toEqual([])
   })
 })

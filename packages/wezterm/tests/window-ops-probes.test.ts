@@ -43,20 +43,16 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describeNative(`window-op probe responses — wezterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
-  test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
+  test("does not synthesize a positive-pixel CSI 14t response in headless mode", async () => {
     const responses = await probeBackend(createWeztermBackend(), "\x1b[14t")
-    const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))
-    expect(pixelResponse, `no CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_4_TEXT_AREA_PIXELS_RE.exec(pixelResponse!)!
-    const height = Number(m[1])
-    const width = Number(m[2])
-    expect(height).toBeGreaterThan(24)
-    expect(width).toBeGreaterThan(80)
-    expect(width % 80).toBe(0)
-    expect(height % 24).toBe(0)
+    const positivePixelResponse = responses.find((r) => /^\x1b\[4;[1-9]\d*;[1-9]\d*t$/.test(r))
+    expect(
+      positivePixelResponse,
+      `unexpected positive-pixel CSI 4;h;w t response in ${JSON.stringify(responses)}`,
+    ).toBeUndefined()
   })
 
-  test("answers CSI 18t with text-area cell count (CSI 8;h;w t)", async () => {
+  test("answers CSI 18t with text-area cell count (CSI 8;h;w t) from wezterm-term", async () => {
     const responses = await probeBackend(createWeztermBackend(), "\x1b[18t")
     const cellResponse = responses.find((r) => CSI_8_TEXT_AREA_CELLS_RE.test(r))
     expect(cellResponse, `no CSI 8;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()

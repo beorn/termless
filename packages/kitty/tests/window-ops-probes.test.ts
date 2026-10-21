@@ -88,26 +88,47 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     backend.destroy()
   })
 
-  test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
-    const responses = await probeBackend(createKittyBackend(), "\x1b[14t")
-    const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))
-    expect(pixelResponse, `no CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_4_TEXT_AREA_PIXELS_RE.exec(pixelResponse!)!
-    const height = Number(m[1])
-    const width = Number(m[2])
-    expect(height).toBeGreaterThan(24)
-    expect(width).toBeGreaterThan(80)
-    expect(width % 80).toBe(0)
-    expect(height % 24).toBe(0)
+  test("does not synthesize positive-pixel CSI 14t/16t responses in headless bridge", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    backend.feed(new TextEncoder().encode("\x1b[14t\x1b[16t"))
+    expect(responses, "feed() must not synthesize 14t before bridge replay").toEqual([])
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[4;0;0t\x1b[6;0;0t")
+    backend.destroy()
   })
 
-  test("answers CSI 18t with text-area cell count (CSI 8;h;w t)", async () => {
-    const responses = await probeBackend(createKittyBackend(), "\x1b[18t")
-    const cellResponse = responses.find((r) => CSI_8_TEXT_AREA_CELLS_RE.test(r))
-    expect(cellResponse, `no CSI 8;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_8_TEXT_AREA_CELLS_RE.exec(cellResponse!)!
-    expect(Number(m[1])).toBe(24)
-    expect(Number(m[2])).toBe(80)
+  test("answers CSI 18t from Kitty's Screen engine on snapshot replay without adapter mirror duplication", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    backend.feed(new TextEncoder().encode("\x1b[18t"))
+    expect(responses, "feed() must not synthesize 18t from the adapter mirror").toEqual([])
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[8;24;80t")
+    backend.destroy()
+  })
+
+  test("returns null from getMode for modes not exposed by Kitty's Python Screen API and forwards DECRPM", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    backend.feed(new TextEncoder().encode("\x1b[?1000h\x1b[?1000$p\x1b[?1003h\x1b[?1003$p\x1b[?1006h\x1b[?1006$p"))
+    expect(backend.getMode("altScreen")).toBe(false)
+    expect(backend.getMode("cursorVisible")).toBe(true)
+    expect(backend.getMode("autoWrap")).toBeNull()
+    expect(backend.getMode("mouseTracking")).toBeNull()
+    expect(backend.getMode("reverseVideo")).toBeNull()
+    expect(backend.getMode("applicationKeypad")).toBeNull()
+    expect(backend.getMode("originMode")).toBeNull()
+    expect(backend.getMode("insertMode")).toBeNull()
+    expect(backend.getMode("sgrMouse" as never)).toBeNull()
+    expect(responses.join("")).toBe("\x1b[?1000;1$y\x1b[?1003;1$y\x1b[?1006;1$y")
+    backend.destroy()
   })
 
   /**

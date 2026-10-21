@@ -30,25 +30,23 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describe("window-op probe responses — vt100 backend", () => {
-  test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
+  test("does not synthesize a constant-factor CSI 14t pixel response", async () => {
     const responses = await probeBackend(createVt100Backend(), "\x1b[14t")
     const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))
-    expect(pixelResponse, `no CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_4_TEXT_AREA_PIXELS_RE.exec(pixelResponse!)!
-    const height = Number(m[1])
-    const width = Number(m[2])
-    expect(height).toBeGreaterThan(24)
-    expect(width).toBeGreaterThan(80)
-    expect(width % 80).toBe(0)
-    expect(height % 24).toBe(0)
+    expect(pixelResponse, `unexpected synthetic CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeUndefined()
   })
 
-  test("answers CSI 18t with text-area cell count (CSI 8;h;w t)", async () => {
-    const responses = await probeBackend(createVt100Backend(), "\x1b[18t")
-    const cellResponse = responses.find((r) => CSI_8_TEXT_AREA_CELLS_RE.test(r))
-    expect(cellResponse, `no CSI 8;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_8_TEXT_AREA_CELLS_RE.exec(cellResponse!)!
-    expect(Number(m[1])).toBe(24)
-    expect(Number(m[2])).toBe(80)
+  test("answers CSI 18t from engine screen dimensions in input order before subsequent DA1", async () => {
+    const backend = createVt100Backend()
+    const responses = await probeBackend(backend, "\x1b[18t\x1b[c")
+    expect(responses.join("")).toBe("\x1b[8;24;80t\x1b[?1;2c")
+
+    backend.resize(132, 30)
+    const resizedResponses: string[] = []
+    backend.onResponse = (b: Uint8Array): void => {
+      resizedResponses.push(new TextDecoder().decode(b))
+    }
+    backend.feed(new TextEncoder().encode("\x1b[18t\x1b[c"))
+    expect(resizedResponses.join("")).toBe("\x1b[8;30;132t\x1b[?1;2c")
   })
 })

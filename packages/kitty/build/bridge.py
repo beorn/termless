@@ -223,17 +223,14 @@ def make_snapshot():
     # Title
     title = callbacks.title if callbacks else ""
 
-    # Modes
+    # Modes (only expose modes backed by Kitty Python Screen properties;
+    # modes without a Python Screen getter stay absent so getMode returns null)
     modes = {
         "altScreen": screen.is_using_alternate_linebuf(),
         "bracketedPaste": screen.in_bracketed_paste_mode,
         "applicationCursor": screen.cursor_key_mode,
         "cursorVisible": screen.cursor_visible,
         "focusTracking": screen.focus_tracking_enabled,
-        "autoWrap": True,  # kitty always has auto-wrap on by default
-        # mouseTracking and reverseVideo not easily accessible from Python API
-        "mouseTracking": False,
-        "reverseVideo": False,
     }
 
     # Scrollback
@@ -283,7 +280,8 @@ def handle_command(cmd):
         set_options(defaults)
         callbacks = Callbacks()
         # Screen(callbacks, lines, cols, scrollback, cell_width, cell_height, window_id, test_child)
-        screen = Screen(callbacks, rows, cols, scrollback_limit, 10, 20, 0, callbacks)
+        # Pass 0x0 cell dimensions so headless Screen does not invent pixel metrics for CSI 14t/16t.
+        screen = Screen(callbacks, rows, cols, scrollback_limit, 0, 0, 0, callbacks)
         return {"ok": True}
 
     elif op == "feed":

@@ -349,33 +349,11 @@ export function createGhosttyBackend(
     }
   }
 
-  /**
-   * Standard cell metrics used for synthetic CSI 14t / 18t window-op
-   * responses. ghostty-web (WASM) doesn't natively report a window pixel
-   * size or text-area cell count because it has no real window.
-   *
-   * Real Ghostty.app answers these probes with the actual rendered
-   * dimensions; for the WASM backend we synthesize equivalent responses
-   * from the configured rows/cols × typical Iosevka/JetBrains Mono cell
-   * (8px × 17px @ 12pt 96 DPI). silvery's `resolveMouseOption()` divides
-   * pixel coords by cell metrics to recover cell coordinates from
-   * SGR-Pixels (1016) mouse events — what matters is the ratio matches
-   * the backend's cell grid (one cell = one cell, invariant).
-   */
-  const CELL_W_PX = 8
-  const CELL_H_PX = 17
-
-  // CSI 14t = text-area pixel-size query; reply CSI 4;h;w t
-  // CSI 18t = text-area cell-size query; reply CSI 8;h;w t
-  const CSI_14t_RE = /\x1b\[14t/g
-  const CSI_18t_RE = /\x1b\[18t/g
-
   function feed(data: Uint8Array): void {
     // ghostty-web's write() RangeErrors on a zero-length buffer; zero bytes
     // is a semantic no-op for every other backend, so keep parity here.
     if (data.length === 0) return
     const t = ensureTerm()
-    const text = new TextDecoder().decode(data)
 
     withWarningCapture(() => {
       t.write(data)
@@ -389,18 +367,6 @@ export function createGhosttyBackend(
         if (response) {
           backend.onResponse(new TextEncoder().encode(response))
         }
-      }
-      // Synthesize 14t / 18t responses if ghostty-web didn't already
-      // (it currently doesn't — see backend doc above).
-      CSI_14t_RE.lastIndex = 0
-      while (CSI_14t_RE.exec(text) !== null) {
-        const heightPx = rows * CELL_H_PX
-        const widthPx = cols * CELL_W_PX
-        backend.onResponse(new TextEncoder().encode(`\x1b[4;${heightPx};${widthPx}t`))
-      }
-      CSI_18t_RE.lastIndex = 0
-      while (CSI_18t_RE.exec(text) !== null) {
-        backend.onResponse(new TextEncoder().encode(`\x1b[8;${rows};${cols}t`))
       }
     }
   }
@@ -576,7 +542,7 @@ export function createGhosttyBackend(
       case "applicationCursor":
         return t.getMode(1) // DECCKM
       case "applicationKeypad":
-        return t.getMode(66, true) // DECNKM (ANSI mode)
+        return t.getMode(66) // DECNKM (DEC private mode 66)
       case "autoWrap":
         return t.getMode(7) // DECAWM
       case "mouseTracking":

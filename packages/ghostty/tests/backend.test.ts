@@ -271,6 +271,15 @@ describe("ghostty backend", () => {
       // Auto wrap is ON by default
       expect(backend.getMode("autoWrap")).toBe(true)
     })
+
+    test("detects application keypad mode (DEC mode 66)", () => {
+      backend = createBackend()
+      expect(backend.getMode("applicationKeypad")).toBe(false)
+      feedText(backend, "\x1b[?66h") // Enable DECNKM (DEC private mode 66)
+      expect(backend.getMode("applicationKeypad")).toBe(true)
+      feedText(backend, "\x1b[?66l") // Disable DECNKM
+      expect(backend.getMode("applicationKeypad")).toBe(false)
+    })
   })
 
   describe("scrollback", () => {

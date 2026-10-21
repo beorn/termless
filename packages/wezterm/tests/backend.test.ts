@@ -238,8 +238,33 @@ describeNative("wezterm backend", () => {
       expect(backend.getMode("bracketedPaste")).toBe(true)
     })
 
-    test("auto wrap on by default", () => {
-      expect(backend.getMode("autoWrap")).toBe(true)
+    test("returns null for modes without public wezterm-term getters instead of scanner shadow state", () => {
+      backend.feed(encode("\x1b[?1h\x1b[?6h\x1b[?7l\x1b[?66h\x1b[?1004h\x1b[4h"))
+      for (const mode of [
+        "applicationCursor",
+        "applicationKeypad",
+        "autoWrap",
+        "focusTracking",
+        "originMode",
+        "insertMode",
+      ] as const) {
+        expect(backend.getMode(mode), `expected null for unobserved mode ${mode}`).toBeNull()
+      }
+      expect(backend.getMode("sgrMouse" as never)).toBeNull()
+    })
+  })
+
+  describe("responses", () => {
+    test("forwards DECRPM and DA1/DSR engine responses synchronously through onResponse", () => {
+      const responses: string[] = []
+      backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+
+      backend.feed(encode("\x1b[?2004h\x1b[?2004$p"))
+      backend.feed(encode("\x1b[?2004l\x1b[?2004$p"))
+      backend.feed(encode("\x1b[?1006h\x1b[?1006$p"))
+      backend.feed(encode("\x1b[5n"))
+
+      expect(responses).toEqual(["\x1b[?2004;1$y", "\x1b[?2004;2$y", "\x1b[?1006;1$y", "\x1b[0n"])
     })
   })
 

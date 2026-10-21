@@ -20,11 +20,12 @@ use napi_derive::napi;
 
 // ─── Event proxy ─────────────────────────────────────────
 
-/// Captures terminal events (title changes, bell, etc.) for JS consumption.
+/// Captures terminal events (title changes, bell, PTY responses) for JS consumption.
 #[derive(Clone)]
 struct EventProxy {
     title: Arc<Mutex<String>>,
     bell_count: Arc<Mutex<u32>>,
+    response_buf: Arc<Mutex<Vec<u8>>>,
 }
 
 impl EventProxy {
@@ -32,6 +33,7 @@ impl EventProxy {
         Self {
             title: Arc::new(Mutex::new(String::new())),
             bell_count: Arc::new(Mutex::new(0)),
+            response_buf: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -52,6 +54,11 @@ impl EventListener for EventProxy {
             Event::Bell => {
                 if let Ok(mut count) = self.bell_count.lock() {
                     *count += 1;
+                }
+            }
+            Event::PtyWrite(text) => {
+                if let Ok(mut buf) = self.response_buf.lock() {
+                    buf.extend_from_slice(text.as_bytes());
                 }
             }
             _ => {}
@@ -454,49 +461,58 @@ impl AlacrittyTerminal {
         }
     }
 
-    /// Check terminal mode by name.
+    /// Check terminal mode by name. Returns None when the mode is not exposed
+    /// on alacritty_terminal's TermMode bitflags (e.g. reverseVideo or unknown modes).
     #[napi]
-    pub fn get_mode(&self, mode: String) -> bool {
-        let term = match &self.term {
-            Some(t) => t,
-            None => return false,
-        };
-
+    pub fn get_mode(&self, mode: String) -> Option<bool> {
+        let term = self.term.as_ref()?;
         let term_mode = term.mode();
 
         match mode.as_str() {
-            "altScreen" => term_mode.contains(alacritty_terminal::term::TermMode::ALT_SCREEN),
+            "altScreen" => Some(term_mode.contains(alacritty_terminal::term::TermMode::ALT_SCREEN)),
             "cursorVisible" => {
-                term_mode.contains(alacritty_terminal::term::TermMode::SHOW_CURSOR)
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::SHOW_CURSOR))
             }
             "bracketedPaste" => {
-                term_mode.contains(alacritty_terminal::term::TermMode::BRACKETED_PASTE)
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::BRACKETED_PASTE))
             }
             "applicationCursor" => {
-                term_mode.contains(alacritty_terminal::term::TermMode::APP_CURSOR)
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::APP_CURSOR))
             }
             "applicationKeypad" => {
-                term_mode.contains(alacritty_terminal::term::TermMode::APP_KEYPAD)
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::APP_KEYPAD))
             }
-            "autoWrap" => term_mode.contains(alacritty_terminal::term::TermMode::LINE_WRAP),
-            "mouseTracking" => {
+            "autoWrap" => Some(term_mode.contains(alacritty_terminal::term::TermMode::LINE_WRAP)),
+            "mouseTracking" => Some(
                 term_mode.intersects(
                     alacritty_terminal::term::TermMode::MOUSE_REPORT_CLICK
                         | alacritty_terminal::term::TermMode::MOUSE_DRAG
                         | alacritty_terminal::term::TermMode::MOUSE_MOTION
                         | alacritty_terminal::term::TermMode::MOUSE_MODE,
-                )
-            }
+                ),
+            ),
             "focusTracking" => {
-                term_mode.contains(alacritty_terminal::term::TermMode::FOCUS_IN_OUT)
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::FOCUS_IN_OUT))
             }
-            "originMode" => term_mode.contains(alacritty_terminal::term::TermMode::ORIGIN),
-            "insertMode" => term_mode.contains(alacritty_terminal::term::TermMode::INSERT),
+            "originMode" => Some(term_mode.contains(alacritty_terminal::term::TermMode::ORIGIN)),
+            "insertMode" => Some(term_mode.contains(alacritty_terminal::term::TermMode::INSERT)),
             "reverseVideo" => {
-                // alacritty_terminal tracks SGR reverse per-cell, not as a global mode
-                false
+                // alacritty_terminal tracks SGR reverse per-cell, not as a global TermMode
+                None
             }
-            _ => false,
+            _ => None,
+        }
+    }
+
+    /// Drain pending terminal response bytes (DA1/DA2, DSR, DECRPM, window ops).
+    #[napi]
+    pub fn read_response(&self) -> Option<Buffer> {
+        let mut buf = self.proxy.response_buf.lock().ok()?;
+        if buf.is_empty() {
+            None
+        } else {
+            let bytes = std::mem::take(&mut *buf);
+            Some(Buffer::from(bytes))
         }
     }
 

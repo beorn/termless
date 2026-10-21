@@ -265,6 +265,27 @@ describeNative("alacritty backend", () => {
       feedText(backend, "\x1b[?1h") // Enable DECCKM
       expect(backend.getMode("applicationCursor")).toBe(true)
     })
+
+    test("returns null for modes not tracked by alacritty_terminal TermMode", () => {
+      backend = createBackend()
+      expect(backend.getMode("reverseVideo")).toBeNull()
+      expect(backend.getMode("sgrMouse" as never)).toBeNull()
+    })
+  })
+
+  describe("responses", () => {
+    test("forwards DECRPM and DA1/DSR engine responses through onResponse", () => {
+      backend = createBackend()
+      const responses: string[] = []
+      backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+
+      feedText(backend, "\x1b[?2004h\x1b[?2004$p")
+      feedText(backend, "\x1b[?2004l\x1b[?2004$p")
+      feedText(backend, "\x1b[c")
+      feedText(backend, "\x1b[5n")
+
+      expect(responses).toEqual(["\x1b[?2004;1$y", "\x1b[?2004;2$y", "\x1b[?6c", "\x1b[0n"])
+    })
   })
 
   describe("scrollback", () => {

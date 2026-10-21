@@ -76,7 +76,7 @@ describe("createVtermBackend", () => {
     backend.feed(new TextEncoder().encode("?996"))
     backend.feed(new TextEncoder().encode("n"))
 
-    expect(responses).toEqual(["\x1b[4;384;640t", "\x1b[8;24;80t", "\x1b[8;24;80t", "\x1b[?997;1n"])
+    expect(responses).toEqual(["\x1b[4;384;640t", "\x1b[8;24;80t", "\x1b[8;24;80t"])
     backend.destroy()
   })
 

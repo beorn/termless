@@ -1,8 +1,61 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::sync::Arc;
+use std::io::Write;
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize};
+
+const SYNC_BARRIER_TEXT: &str = "\x00__TERMLESS_WEZTERM_SYNC__\x00";
+
+struct ResponseBufferState {
+    buf: Vec<u8>,
+    expected_barrier: Option<Vec<u8>>,
+}
+
+#[derive(Clone)]
+struct SharedWriter {
+    inner: Arc<(Mutex<ResponseBufferState>, Condvar)>,
+}
+
+impl SharedWriter {
+    fn new() -> Self {
+        Self {
+            inner: Arc::new((
+                Mutex::new(ResponseBufferState {
+                    buf: Vec::new(),
+                    expected_barrier: None,
+                }),
+                Condvar::new(),
+            )),
+        }
+    }
+}
+
+impl Write for SharedWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        let (lock, _) = &*self.inner;
+        if let Ok(mut state) = lock.lock() {
+            state.buf.extend_from_slice(data);
+        }
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        let (lock, cvar) = &*self.inner;
+        if let Ok(mut state) = lock.lock() {
+            if let Some(ref barrier) = state.expected_barrier {
+                if state.buf.ends_with(barrier) {
+                    let new_len = state.buf.len() - barrier.len();
+                    state.buf.truncate(new_len);
+                    state.expected_barrier = None;
+                    cvar.notify_all();
+                }
+            }
+        }
+        Ok(())
+    }
+}
 
 // ═══════════════════════════════════════════════════════
 // Minimal config for headless use
@@ -73,17 +126,10 @@ pub struct NapiScrollback {
 #[napi]
 pub struct WeztermTerminal {
     term: Terminal,
+    writer: SharedWriter,
     cols: usize,
     rows: usize,
     title: String,
-    // Tracked modes that lack public getters in this wezterm-term version.
-    // Defaults match wezterm-term's TerminalState initialization.
-    auto_wrap: bool,
-    application_cursor_keys: bool,
-    application_keypad: bool,
-    focus_tracking: bool,
-    origin_mode: bool,
-    insert_mode: bool,
 }
 
 #[napi]
@@ -98,40 +144,58 @@ impl WeztermTerminal {
         let size = TerminalSize {
             rows,
             cols,
-            pixel_width: cols * 8,
-            pixel_height: rows * 16,
+            pixel_width: 0,
+            pixel_height: 0,
             dpi: 0,
         };
 
+        let writer = SharedWriter::new();
         let term = Terminal::new(
             size,
             config,
             "termless-wezterm",
             "0.1.0",
-            Box::new(Vec::new()), // Sink writer (headless)
+            Box::new(writer.clone()),
         );
 
         WeztermTerminal {
             term,
+            writer,
             cols,
             rows,
             title: String::new(),
-            auto_wrap: true, // wezterm defaults to true
-            application_cursor_keys: false,
-            application_keypad: false,
-            focus_tracking: false,
-            origin_mode: false,
-            insert_mode: false,
+        }
+    }
+
+    fn sync_responses(&mut self) {
+        let barrier = if self.term.bracketed_paste_enabled() {
+            format!("\x1b[200~{SYNC_BARRIER_TEXT}\x1b[201~").into_bytes()
+        } else {
+            SYNC_BARRIER_TEXT.as_bytes().to_vec()
+        };
+
+        let (lock, cvar) = &*self.writer.inner;
+        if let Ok(mut state) = lock.lock() {
+            state.expected_barrier = Some(barrier);
+        }
+        if self.term.send_paste(SYNC_BARRIER_TEXT).is_ok() {
+            if let Ok(state) = lock.lock() {
+                let _ = cvar.wait_timeout_while(
+                    state,
+                    Duration::from_millis(500),
+                    |s| s.expected_barrier.is_some(),
+                );
+            }
+        } else if let Ok(mut state) = lock.lock() {
+            state.expected_barrier = None;
         }
     }
 
     #[napi]
     pub fn feed(&mut self, data: Buffer) {
         let bytes = data.as_ref();
-        // Scan for DEC private mode set/reset sequences before feeding to
-        // the terminal, so we can track modes that lack public getters.
-        self.scan_dec_modes(bytes);
         self.term.advance_bytes(bytes);
+        self.sync_responses();
         // Capture title from terminal state
         self.title = self.term.get_title().to_string();
     }
@@ -143,8 +207,8 @@ impl WeztermTerminal {
         let size = TerminalSize {
             rows: self.rows,
             cols: self.cols,
-            pixel_width: self.cols * 8,
-            pixel_height: self.rows * 16,
+            pixel_width: 0,
+            pixel_height: 0,
             dpi: 0,
         };
         self.term.resize(size);
@@ -154,14 +218,12 @@ impl WeztermTerminal {
     pub fn reset(&mut self) {
         // Feed RIS escape sequence
         self.term.advance_bytes(b"\x1bc");
+        self.sync_responses();
+        let (lock, _) = &*self.writer.inner;
+        if let Ok(mut state) = lock.lock() {
+            state.buf.clear();
+        }
         self.title.clear();
-        // Restore tracked mode defaults (matching wezterm-term DECSTR behavior)
-        self.auto_wrap = true;
-        self.application_cursor_keys = false;
-        self.application_keypad = false;
-        self.focus_tracking = false;
-        self.origin_mode = false;
-        self.insert_mode = false;
     }
 
     #[napi]
@@ -311,21 +373,30 @@ impl WeztermTerminal {
         self.term.is_alt_screen_active()
     }
 
+    /// Check terminal mode by name. Returns None for modes that lack public
+    /// getters on tattoy_wezterm_term::Terminal so callers never read shadow state.
     #[napi]
-    pub fn get_mode(&self, mode: String) -> bool {
+    pub fn get_mode(&self, mode: String) -> Option<bool> {
         match mode.as_str() {
-            "altScreen" => self.term.is_alt_screen_active(),
-            "cursorVisible" => self.term.cursor_pos().visibility == CursorVisibility::Visible,
-            "bracketedPaste" => self.term.bracketed_paste_enabled(),
-            "applicationCursor" => self.application_cursor_keys,
-            "applicationKeypad" => self.application_keypad,
-            "autoWrap" => self.auto_wrap,
-            "mouseTracking" => self.term.is_mouse_grabbed(),
-            "focusTracking" => self.focus_tracking,
-            "originMode" => self.origin_mode,
-            "insertMode" => self.insert_mode,
-            "reverseVideo" => self.term.get_reverse_video(),
-            _ => false,
+            "altScreen" => Some(self.term.is_alt_screen_active()),
+            "cursorVisible" => Some(self.term.cursor_pos().visibility == CursorVisibility::Visible),
+            "bracketedPaste" => Some(self.term.bracketed_paste_enabled()),
+            "mouseTracking" => Some(self.term.is_mouse_grabbed()),
+            "reverseVideo" => Some(self.term.get_reverse_video()),
+            _ => None,
+        }
+    }
+
+    /// Drain pending terminal response bytes (DA1/DA2, DSR, DECRPM, window ops).
+    #[napi]
+    pub fn read_response(&self) -> Option<Buffer> {
+        let (lock, _) = &*self.writer.inner;
+        let mut state = lock.lock().ok()?;
+        if state.buf.is_empty() {
+            None
+        } else {
+            let bytes = std::mem::take(&mut state.buf);
+            Some(Buffer::from(bytes))
         }
     }
 
@@ -347,74 +418,6 @@ impl WeztermTerminal {
     #[napi]
     pub fn scroll_viewport(&mut self, _delta: i32) {
         // No-op in headless mode -- no viewport scroll position to track
-    }
-
-    /// Scan raw bytes for CSI sequences that control terminal modes
-    /// lacking public getters in wezterm-term. Handles:
-    /// - CSI ? <n> h/l  (DECSET/DECRST for DEC private modes)
-    /// - CSI <n> h/l    (SM/RM for ANSI modes, e.g. insert mode)
-    /// - ESC c           (RIS -- full reset)
-    fn scan_dec_modes(&mut self, data: &[u8]) {
-        let mut i = 0;
-        while i < data.len() {
-            if data[i] == 0x1b && i + 1 < data.len() && data[i + 1] == b'[' {
-                i += 2;
-                let is_private = i < data.len() && data[i] == b'?';
-                if is_private {
-                    i += 1;
-                }
-                // Parse digits
-                let start = i;
-                while i < data.len() && data[i].is_ascii_digit() {
-                    i += 1;
-                }
-                if i > start && i < data.len() {
-                    let code_str = std::str::from_utf8(&data[start..i]).unwrap_or("");
-                    if let Ok(code) = code_str.parse::<u32>() {
-                        let set = data[i] == b'h';
-                        let reset = data[i] == b'l';
-                        if set || reset {
-                            if is_private {
-                                self.apply_dec_mode(code, set);
-                            } else {
-                                self.apply_ansi_mode(code, set);
-                            }
-                        }
-                    }
-                }
-            } else if data[i] == 0x1b && i + 1 < data.len() && data[i + 1] == b'c' {
-                // RIS (full reset) -- restore defaults
-                self.auto_wrap = true;
-                self.application_cursor_keys = false;
-                self.application_keypad = false;
-                self.focus_tracking = false;
-                self.origin_mode = false;
-                self.insert_mode = false;
-                i += 2;
-            } else {
-                i += 1;
-            }
-        }
-    }
-
-    /// Apply a DEC private mode set/reset to tracked state.
-    fn apply_dec_mode(&mut self, code: u32, set: bool) {
-        match code {
-            1 => self.application_cursor_keys = set, // DECCKM
-            6 => self.origin_mode = set,             // DECOM
-            7 => self.auto_wrap = set,               // DECAWM
-            66 => self.application_keypad = set,     // DECNKM
-            1004 => self.focus_tracking = set,       // Focus tracking
-            _ => {}
-        }
-    }
-
-    /// Apply an ANSI mode set/reset (SM/RM without ? prefix).
-    fn apply_ansi_mode(&mut self, code: u32, set: bool) {
-        match code {
-            4 => self.insert_mode = set, // IRM (Insert/Replace Mode)
-            _ => {}
-        }
     }
 }
 

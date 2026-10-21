@@ -37,22 +37,13 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describe("window-op probe responses — xterm backend", () => {
-  test("answers CSI 14t with text-area pixel size (CSI 4;h;w t)", async () => {
+  test("does not synthesize a constant-factor CSI 14t pixel response in headless xterm.js", async () => {
     const responses = await probeBackend(createXtermBackend(), "\x1b[14t")
     const pixelResponse = responses.find((r) => CSI_4_TEXT_AREA_PIXELS_RE.test(r))
-    expect(pixelResponse, `no CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
-    const m = CSI_4_TEXT_AREA_PIXELS_RE.exec(pixelResponse!)!
-    const height = Number(m[1])
-    const width = Number(m[2])
-    // Sanity bounds — 80 cols × 24 rows × non-trivial cell size
-    expect(height).toBeGreaterThan(24)
-    expect(width).toBeGreaterThan(80)
-    // Divisible by the configured grid (cellSize integer)
-    expect(width % 80).toBe(0)
-    expect(height % 24).toBe(0)
+    expect(pixelResponse, `unexpected synthetic CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeUndefined()
   })
 
-  test("answers CSI 18t with text-area cell count (CSI 8;h;w t)", async () => {
+  test("answers CSI 18t with text-area cell count (CSI 8;h;w t) from the xterm.js engine", async () => {
     const responses = await probeBackend(createXtermBackend(), "\x1b[18t")
     const cellResponse = responses.find((r) => CSI_8_TEXT_AREA_CELLS_RE.test(r))
     expect(cellResponse, `no CSI 8;h;w t response in ${JSON.stringify(responses)}`).toBeDefined()
