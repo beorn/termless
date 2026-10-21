@@ -1,4 +1,5 @@
 import { describe, test, expect } from "vitest"
+import { createVtermScreen } from "vterm.js"
 import { createVtermBackend } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
@@ -62,21 +63,23 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 
-  test("answers each window-size query exactly once across feed chunks", () => {
+  test("forwards engine window-size replies exactly once across feed chunks", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     const responses: string[] = []
     backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    const engineResponses: string[] = []
+    const screen = createVtermScreen({ cols: 80, rows: 24, onResponse: (reply) => engineResponses.push(reply) })
 
-    backend.feed(new TextEncoder().encode("\x1b[14t"))
-    backend.feed(new TextEncoder().encode("\x1b[18t"))
-    backend.feed(new TextEncoder().encode("\x1b["))
-    backend.feed(new TextEncoder().encode("18"))
-    backend.feed(new TextEncoder().encode("t"))
-    backend.feed(new TextEncoder().encode("\x1b["))
-    backend.feed(new TextEncoder().encode("?996"))
-    backend.feed(new TextEncoder().encode("n"))
+    for (const chunk of ["\x1b[14t", "\x1b[16t", "\x1b[18t", "\x1b[", "18", "t", "\x1b[", "?996", "n"]) {
+      const bytes = new TextEncoder().encode(chunk)
+      screen.process(bytes)
+      backend.feed(bytes)
+    }
 
-    expect(responses).toEqual(["\x1b[4;384;640t", "\x1b[8;24;80t", "\x1b[8;24;80t"])
+    // Physical metrics belong to the installed engine, including CI's older source-sibling pin.
+    expect(responses).toEqual(engineResponses)
+    expect(responses).toHaveLength(4)
+    expect(responses.slice(2)).toEqual(["\x1b[8;24;80t", "\x1b[8;24;80t"])
     backend.destroy()
   })
 
