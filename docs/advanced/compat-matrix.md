@@ -1,6 +1,6 @@
 ---
 title: Cross-Backend Conformance
-description: Verify that all 10 Termless backends produce identical results for the same VT100/ECMA-48 sequences. Find and fix emulator bugs.
+description: Verify that all 12 Termless backends produce identical results for the same VT100/ECMA-48 sequences. Find and fix emulator bugs.
 ---
 
 # Cross-Backend Conformance
