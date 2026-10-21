@@ -13,7 +13,7 @@ For a comprehensive, interactive capability matrix across all backends, visit **
 
 ## Backends
 
-Termless supports [10 backends](/guide/backends), each wrapping a different terminal emulator. The divergences below were discovered through cross-backend testing of the three earliest backends:
+Termless supports [12 backends](/guide/backends), each wrapping a different terminal emulator. The divergences below were discovered through cross-backend testing of the three earliest backends:
 
 | Backend             | Emulator        | Implementation         | Reflow | Kitty Keyboard | OSC 8 |
 | ------------------- | --------------- | ---------------------- | ------ | -------------- | ----- |
@@ -25,7 +25,7 @@ xterm.js is the **reference backend** -- it has the widest adoption, passes the 
 
 **Usually, not always.** Being the reference means being the _fixed point of comparison_, not being right about everything. Where the reference itself is the less faithful of the two, that is recorded rather than smoothed over -- see the **vterm vs xterm.js** section below, where xterm.js is the degrading side in four of six known divergences.
 
-For the full capability matrix across all 10 backends, see the [Backend Capabilities](/guide/backends) page or [terminfo.dev](https://terminfo.dev).
+For the full capability matrix across all 12 backends, see the [Backend Capabilities](/guide/backends) page or [terminfo.dev](https://terminfo.dev).
 
 ## vterm vs xterm.js
 

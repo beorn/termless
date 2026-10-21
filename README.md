@@ -11,7 +11,7 @@ Built alongside [silvery](https://silvery.dev), a React TUI framework, but works
 ![Termless rendered terminal screenshot](docs/public/screenshots/build-pipeline.svg)
 
 - **Full terminal internals** -- access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching
-- **Cross-terminal conformance** -- run the same tests against xterm.js, Ghostty, Alacritty, WezTerm, vt100, vt100-rust, libvterm, Kitty, and Peekaboo to find where terminals disagree
+- **Cross-terminal conformance** -- run the same tests against 12 backends — xterm.js, Ghostty, Ghostty (native), Alacritty, WezTerm, vt100, vt100-rust, vt220, vterm.js, libvterm, Kitty, and Peekaboo — to find where terminals disagree
 - **Composable region selectors** -- `term.screen`, `term.scrollback`, `term.cell(r, c)`, `term.row(n)` for precise assertions
 - **21+ Vitest matchers** -- text, cell style, cursor, mode, scrollback, and snapshot matchers
 - **SVG & PNG screenshots** -- fast default renderers (PNG via optional `@resvg/resvg-js`), plus optional Playwright/Chromium rendering for browser-shaped text
@@ -441,7 +441,7 @@ Termless is the **only** headless terminal testing library that supports multi-b
 | Feature                   | Termless                                 | Playwright + xterm.js   | TUI Test         | ttytest2     | pexpect | Textual | Ink |
 | ------------------------- | ---------------------------------------- | ----------------------- | ---------------- | ------------ | ------- | ------- | --- |
 | **Terminal internals**    | ✅ scrollback, cursor, modes, cell attrs | ⚠️ xterm.js buffer only | ❌               | ❌           | ❌      | ⚠️      | ❌  |
-| **Multi-backend**         | ✅ 10 backends                           | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
+| **Multi-backend**         | ✅ 12 backends                           | ❌ xterm.js only        | ❌ xterm.js only | ❌ tmux only | ❌      | ❌      | ❌  |
 | **Composable selectors**  | ✅ 8 types                               | ❌                      | ❌               | ❌           | ❌      | ⚠️      | ❌  |
 | **Visual matchers**       | ✅ 21+                                   | ❌ DIY                  | ⚠️               | ❌           | ❌      | ⚠️      | ❌  |
 | **Protocol capabilities** | ✅ Kitty, sixel, OSC 8, reflow           | ❌ xterm.js subset      | ❌               | ❌           | ❌      | ❌      | ❌  |

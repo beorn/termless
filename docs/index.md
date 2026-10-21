@@ -1,7 +1,7 @@
 ---
 layout: home
 title: Termless -- Headless Terminal Testing
-description: Like Playwright, but for terminal apps. Test TUIs with in-process emulators -- assert on cells, colors, cursor, scrollback, and modes. 10 backends, 21+ matchers.
+description: Like Playwright, but for terminal apps. Test TUIs with in-process emulators -- assert on cells, colors, cursor, scrollback, and modes. 12 backends, 21+ matchers.
 
 hero:
   name: "Termless"
@@ -19,7 +19,7 @@ features:
   - title: Terminal Internals
     details: "Access scrollback, cursor state, cell colors, terminal modes, alt screen, resize behavior — everything that's invisible to string matching."
   - title: Cross-Terminal Conformance
-    details: "Run the same tests against 10 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
+    details: "Run the same tests against 12 backends. Find where xterm.js and Ghostty disagree on emoji width, color palettes, key encoding, and scroll behavior."
   - title: Record, View, Play, Compare
     details: "Capture a terminal session as a Recording. Play it back, animate it as GIF / SVG / APNG, scrub it frame-by-frame, or compare it across backends — one command each, headless and multi-backend."
   - title: Composable Selectors
