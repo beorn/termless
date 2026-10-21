@@ -16,7 +16,8 @@
 
 import { describe, test, expect, vi, afterEach } from "vitest"
 import { createRequire } from "node:module"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { dirname, join, sep } from "node:path"
 import type { RendererKind } from "../../src/view/rasterizer.ts"
 
 const require_ = createRequire(import.meta.url)
@@ -33,12 +34,18 @@ function playwrightInstalled(): boolean {
 const PLAYWRIGHT_INSTALLED = playwrightInstalled()
 
 /**
- * Whether a launchable Chromium binary is actually present. The `playwright`
- * package can be installed without the browser binaries — `playwright install
- * chromium` is a separate step. CI installs the package but not the binary, so
- * the smoke test (which launches a real browser) must gate on the binary, not
- * just the package. `chromium.executablePath()` is synchronous and points at
- * the resolved binary path; the binary may or may not exist on disk.
+ * Whether the Chromium binary the rasterizer launches is actually present. The
+ * `playwright` package can be installed without the browser binaries —
+ * `playwright install chromium` is a separate step. CI installs the package but
+ * not the binary, so the smoke test (which launches a real browser) must gate on
+ * the binary, not just the package.
+ *
+ * `launch({ headless: true })` runs the headless shell
+ * (`chromium_headless_shell-<rev>`), not the full build that
+ * `chromium.executablePath()` names (`chromium-<rev>`). A browsers directory can
+ * hold one without the other — a Nix-provided one carries only the headless
+ * shell — so the gate looks for the headless shell's directory beside the full
+ * build, at the revision playwright-core's `browsers.json` pins.
  */
 function chromiumBinaryAvailable(): boolean {
   if (!PLAYWRIGHT_INSTALLED) return false
@@ -46,8 +53,16 @@ function chromiumBinaryAvailable(): boolean {
     const { chromium } = require_("playwright") as {
       chromium: { executablePath(): string }
     }
-    const path = chromium.executablePath()
-    return !!path && existsSync(path)
+    const playwrightRequire = createRequire(require_.resolve("playwright"))
+    const core = dirname(playwrightRequire.resolve("playwright-core/package.json"))
+    const { browsers } = JSON.parse(readFileSync(join(core, "browsers.json"), "utf8")) as {
+      browsers: Array<{ name: string; revision: string }>
+    }
+    const shell = browsers.find((b) => b.name === "chromium-headless-shell")
+    const full = chromium.executablePath()
+    const at = full.lastIndexOf(`${sep}chromium-`)
+    if (!shell || at < 0) return false
+    return existsSync(join(full.slice(0, at), `chromium_headless_shell-${shell.revision}`))
   } catch {
     return false
   }
