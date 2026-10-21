@@ -6,8 +6,6 @@ use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize};
 
-const SYNC_BARRIER_TEXT: &str = "\x00__TERMLESS_WEZTERM_SYNC__\x00";
-
 struct ResponseBufferState {
     buf: Vec<u8>,
     expected_barrier: Option<Vec<u8>>,
@@ -35,22 +33,24 @@ impl SharedWriter {
 impl Write for SharedWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         let (lock, _) = &*self.inner;
-        if let Ok(mut state) = lock.lock() {
-            state.buf.extend_from_slice(data);
-        }
+        let mut state = lock
+            .lock()
+            .map_err(|_| std::io::Error::other("wezterm SharedWriter mutex poisoned"))?;
+        state.buf.extend_from_slice(data);
         Ok(data.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
         let (lock, cvar) = &*self.inner;
-        if let Ok(mut state) = lock.lock() {
-            if let Some(ref barrier) = state.expected_barrier {
-                if state.buf.ends_with(barrier) {
-                    let new_len = state.buf.len() - barrier.len();
-                    state.buf.truncate(new_len);
-                    state.expected_barrier = None;
-                    cvar.notify_all();
-                }
+        let mut state = lock
+            .lock()
+            .map_err(|_| std::io::Error::other("wezterm SharedWriter mutex poisoned"))?;
+        if let Some(ref barrier) = state.expected_barrier {
+            if state.buf.ends_with(barrier) {
+                let new_len = state.buf.len() - barrier.len();
+                state.buf.truncate(new_len);
+                state.expected_barrier = None;
+                cvar.notify_all();
             }
         }
         Ok(())
@@ -127,6 +127,7 @@ pub struct NapiScrollback {
 pub struct WeztermTerminal {
     term: Terminal,
     writer: SharedWriter,
+    barrier_seq: u64,
     cols: usize,
     rows: usize,
     title: String,
@@ -161,43 +162,63 @@ impl WeztermTerminal {
         WeztermTerminal {
             term,
             writer,
+            barrier_seq: 0,
             cols,
             rows,
             title: String::new(),
         }
     }
 
-    fn sync_responses(&mut self) {
-        let barrier = if self.term.bracketed_paste_enabled() {
-            format!("\x1b[200~{SYNC_BARRIER_TEXT}\x1b[201~").into_bytes()
+    fn sync_responses(&mut self) -> Result<()> {
+        self.barrier_seq += 1;
+        let seq = self.barrier_seq;
+        let barrier_token = format!("\x00__TERMLESS_WEZTERM_SYNC_{seq}__\x00");
+        let expected = if self.term.bracketed_paste_enabled() {
+            format!("\x1b[200~{barrier_token}\x1b[201~").into_bytes()
         } else {
-            SYNC_BARRIER_TEXT.as_bytes().to_vec()
+            barrier_token.as_bytes().to_vec()
         };
 
         let (lock, cvar) = &*self.writer.inner;
-        if let Ok(mut state) = lock.lock() {
-            state.expected_barrier = Some(barrier);
+        {
+            let mut state = lock
+                .lock()
+                .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+            state.expected_barrier = Some(expected);
         }
-        if self.term.send_paste(SYNC_BARRIER_TEXT).is_ok() {
-            if let Ok(state) = lock.lock() {
-                let _ = cvar.wait_timeout_while(
-                    state,
-                    Duration::from_millis(500),
-                    |s| s.expected_barrier.is_some(),
-                );
+        if let Err(err) = self.term.send_paste(&barrier_token) {
+            if let Ok(mut state) = lock.lock() {
+                state.expected_barrier = None;
             }
-        } else if let Ok(mut state) = lock.lock() {
-            state.expected_barrier = None;
+            return Err(Error::from_reason(format!(
+                "wezterm response barrier #{seq} send_paste failed: {err}"
+            )));
         }
+        let state = lock
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+        let (mut state, timeout) = cvar
+            .wait_timeout_while(state, Duration::from_millis(500), |s| {
+                s.expected_barrier.is_some()
+            })
+            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+        if timeout.timed_out() && state.expected_barrier.is_some() {
+            state.expected_barrier = None;
+            return Err(Error::from_reason(format!(
+                "wezterm response barrier #{seq} timed out after 500ms waiting for response flush"
+            )));
+        }
+        Ok(())
     }
 
     #[napi]
-    pub fn feed(&mut self, data: Buffer) {
+    pub fn feed(&mut self, data: Buffer) -> Result<()> {
         let bytes = data.as_ref();
         self.term.advance_bytes(bytes);
-        self.sync_responses();
+        self.sync_responses()?;
         // Capture title from terminal state
         self.title = self.term.get_title().to_string();
+        Ok(())
     }
 
     #[napi]
@@ -215,15 +236,17 @@ impl WeztermTerminal {
     }
 
     #[napi]
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> Result<()> {
         // Feed RIS escape sequence
         self.term.advance_bytes(b"\x1bc");
-        self.sync_responses();
+        self.sync_responses()?;
         let (lock, _) = &*self.writer.inner;
-        if let Ok(mut state) = lock.lock() {
-            state.buf.clear();
-        }
+        let mut state = lock
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+        state.buf.clear();
         self.title.clear();
+        Ok(())
     }
 
     #[napi]

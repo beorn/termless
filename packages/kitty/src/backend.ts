@@ -32,7 +32,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { execFileSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -231,6 +231,17 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   // Batch replay includes every earlier response. Keep the observed prefix so
   // a later snapshot only delivers replies generated since the previous one.
   let observedResponses = Buffer.alloc(0)
+  let kittyConfigDir: string | null = null
+
+  function ensureKittyConfigDir(): string {
+    if (process.env.KITTY_CONFIG_DIRECTORY) {
+      return process.env.KITTY_CONFIG_DIRECTORY
+    }
+    if (!kittyConfigDir) {
+      kittyConfigDir = mkdtempSync(join(tmpdir(), "termless-kitty-config-"))
+    }
+    return kittyConfigDir
+  }
 
   function ensureInit(): void {
     if (!initialized) throw new Error("kitty backend not initialized -- call init() first")
@@ -259,7 +270,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
         maxBuffer: 50 * 1024 * 1024, // 50MB — large terminal snapshots
         env: {
           ...process.env,
-          KITTY_CONFIG_DIRECTORY: process.env.KITTY_CONFIG_DIRECTORY ?? join(tmpdir(), "termless-kitty-config"),
+          KITTY_CONFIG_DIRECTORY: ensureKittyConfigDir(),
         },
       },
     )
@@ -332,6 +343,10 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     initialized = false
     snapshot = null
     observedResponses = Buffer.alloc(0)
+    if (kittyConfigDir) {
+      rmSync(kittyConfigDir, { recursive: true, force: true })
+      kittyConfigDir = null
+    }
   }
 
   function feed(data: Uint8Array): void {

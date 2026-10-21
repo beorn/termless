@@ -70,23 +70,43 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
 
   // CSI 18t = text-area cell-size query; reply CSI 8;rows;cols t derived
   // from engine screen dimensions (`s.rows` / `s.cols`), emitted in input order.
+  // Split raw bytes without decoding so multi-byte UTF-8 sequences split across
+  // chunks continue through vt220.js's streaming decoder intact.
+  function findCsi18t(data: Uint8Array, fromIndex: number): number {
+    for (let i = fromIndex; i <= data.length - 5; i++) {
+      if (
+        data[i] === 0x1b &&
+        data[i + 1] === 0x5b &&
+        data[i + 2] === 0x31 &&
+        data[i + 3] === 0x38 &&
+        data[i + 4] === 0x74
+      ) {
+        return i
+      }
+    }
+    return -1
+  }
+
   function feed(data: Uint8Array): void {
     const s = ensureScreen()
-    const text = new TextDecoder().decode(data)
-    if (!text.includes("\x1b[18t")) {
+    const first = findCsi18t(data, 0)
+    if (first === -1) {
       s.process(data)
       return
     }
-    const parts = text.split("\x1b[18t")
     const enc = new TextEncoder()
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]
-      if (part && part.length > 0) {
-        s.process(enc.encode(part))
+    let cursor = 0
+    let match = first
+    while (match !== -1) {
+      if (match > cursor) {
+        s.process(data.subarray(cursor, match))
       }
-      if (i < parts.length - 1) {
-        backend.onResponse?.(enc.encode(`\x1b[8;${s.rows};${s.cols}t`))
-      }
+      backend.onResponse?.(enc.encode(`\x1b[8;${s.rows};${s.cols}t`))
+      cursor = match + 5
+      match = findCsi18t(data, cursor)
+    }
+    if (cursor < data.length) {
+      s.process(data.subarray(cursor))
     }
   }
 

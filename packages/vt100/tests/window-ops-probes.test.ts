@@ -49,4 +49,21 @@ describe("window-op probe responses — vt100 backend", () => {
     backend.feed(new TextEncoder().encode("\x1b[18t\x1b[c"))
     expect(resizedResponses.join("")).toBe("\x1b[8;30;132t\x1b[?1;2c")
   })
+
+  test("preserves multi-byte UTF-8 characters split across chunks when a chunk contains CSI 18t", () => {
+    const backend = createVt100Backend({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (b: Uint8Array): void => {
+      responses.push(new TextDecoder().decode(b))
+    }
+
+    // "€" in UTF-8 is [0xe2, 0x82, 0xac]. Split it across two feed() calls
+    // where the second chunk also contains CSI 18t followed by "!".
+    backend.feed(new Uint8Array([0xe2]))
+    backend.feed(new Uint8Array([0x82, 0xac, 0x1b, 0x5b, 0x31, 0x38, 0x74, 0x21]))
+
+    expect(backend.getText()).toContain("€!")
+    expect(backend.getText()).not.toContain("\uFFFD")
+    expect(responses).toEqual(["\x1b[8;24;80t"])
+  })
 })
