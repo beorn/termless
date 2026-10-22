@@ -342,8 +342,9 @@ impl WeztermTerminal {
         }
 
         let line = &lines[0];
+        let palette = self.term.palette();
         match line.get_cell(col as usize) {
-            Some(cell) => convert_cell(cell),
+            Some(cell) => convert_cell(cell, &palette),
             None => empty_cell(),
         }
     }
@@ -366,9 +367,10 @@ impl WeztermTerminal {
         }
 
         let line = &lines[0];
+        let palette = self.term.palette();
         (0..self.cols)
             .map(|col| match line.get_cell(col) {
-                Some(cell) => convert_cell(cell),
+                Some(cell) => convert_cell(cell, &palette),
                 None => empty_cell(),
             })
             .collect()
@@ -491,35 +493,33 @@ fn srgba_to_u8(v: f32) -> u8 {
     (v * 255.0).round().clamp(0.0, 255.0) as u8
 }
 
-fn convert_cell(cell: tattoy_wezterm_term::CellRef) -> NapiCell {
+/// The 8-bit RGB triple of a resolved color.
+fn srgba_rgb(color: tattoy_wezterm_term::color::SrgbaTuple) -> (u8, u8, u8) {
+    let (r, g, b, _) = color.to_tuple_rgba();
+    (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b))
+}
+
+fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> NapiCell {
     let attrs = cell.attrs();
     let text = cell.str().to_string();
 
-    // Extract foreground color
+    // Every non-default color resolves through the terminal's palette, so an indexed color (SGR 38;5 /
+    // 48;5 and the 16 ANSI names) reads back as its RGB value instead of {r: index, g: 0, b: 0}
+    // (terminfo #30703). Default stays the is_default flag.
     let (fg_r, fg_g, fg_b, fg_is_default) = match attrs.foreground() {
         tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
-        tattoy_wezterm_term::color::ColorAttribute::TrueColorWithDefaultFallback(c)
-        | tattoy_wezterm_term::color::ColorAttribute::TrueColorWithPaletteFallback(c, _) => {
-            let rgba: tattoy_wezterm_term::color::SrgbaTuple = c.into();
-            let (r, g, b, _) = rgba.to_tuple_rgba();
-            (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b), false)
-        }
-        tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => {
-            // Return palette index; TypeScript side maps to RGB
-            (idx, 0, 0, false) // Simplified -- full palette mapping in TS
+        fg => {
+            let (r, g, b) = srgba_rgb(palette.resolve_fg(fg));
+            (r, g, b, false)
         }
     };
 
-    // Extract background color
     let (bg_r, bg_g, bg_b, bg_is_default) = match attrs.background() {
         tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
-        tattoy_wezterm_term::color::ColorAttribute::TrueColorWithDefaultFallback(c)
-        | tattoy_wezterm_term::color::ColorAttribute::TrueColorWithPaletteFallback(c, _) => {
-            let rgba: tattoy_wezterm_term::color::SrgbaTuple = c.into();
-            let (r, g, b, _) = rgba.to_tuple_rgba();
-            (srgba_to_u8(r), srgba_to_u8(g), srgba_to_u8(b), false)
+        bg => {
+            let (r, g, b) = srgba_rgb(palette.resolve_bg(bg));
+            (r, g, b, false)
         }
-        tattoy_wezterm_term::color::ColorAttribute::PaletteIndex(idx) => (idx, 0, 0, false),
     };
 
     // Underline style
