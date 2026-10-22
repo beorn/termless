@@ -111,6 +111,15 @@ describeNative("wezterm backend", () => {
       expect(cell.bg).toEqual({ r: 0, g: 128, b: 255 })
     })
 
+    test("indexed and named colors resolve through the palette, not as {r: index} (#30703)", () => {
+      // SGR 38;5;67 is cube (1,2,3) = #5f87af; SGR 48;5;173 is cube (4,2,1) = #d7875f; SGR 31 is palette
+      // slot 1, which wezterm's default palette (ColorPalette::compute_default) sets to #cc5555.
+      backend.feed(encode("\x1b[38;5;67mA\x1b[0m\x1b[48;5;173mB\x1b[0m\x1b[31mR\x1b[0m"))
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 95, g: 135, b: 175 })
+      expect(backend.getCell(0, 1).bg).toEqual({ r: 215, g: 135, b: 95 })
+      expect(backend.getCell(0, 2).fg).toEqual({ r: 204, g: 85, b: 85 })
+    })
+
     test("default colors are null", () => {
       backend.feed(encode("X"))
       const cell = backend.getCell(0, 0)
