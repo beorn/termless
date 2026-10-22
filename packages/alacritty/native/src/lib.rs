@@ -13,12 +13,15 @@ use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::term::cell::Flags as CellFlags;
 use alacritty_terminal::term::Config;
 use alacritty_terminal::term::Term;
-use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor};
+use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor, Rgb};
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 // ─── Event proxy ─────────────────────────────────────────
+
+/// A colour query the engine raised: the colour index and the engine's own reply formatter.
+type ColorRequest = (usize, Arc<dyn Fn(Rgb) -> String + Sync + Send + 'static>);
 
 /// Captures terminal events (title changes, bell, PTY responses) for JS consumption.
 #[derive(Clone)]
@@ -26,6 +29,7 @@ struct EventProxy {
     title: Arc<Mutex<String>>,
     bell_count: Arc<Mutex<u32>>,
     response_buf: Arc<Mutex<Vec<u8>>>,
+    color_requests: Arc<Mutex<Vec<ColorRequest>>>,
 }
 
 impl EventProxy {
@@ -34,6 +38,7 @@ impl EventProxy {
             title: Arc::new(Mutex::new(String::new())),
             bell_count: Arc::new(Mutex::new(0)),
             response_buf: Arc::new(Mutex::new(Vec::new())),
+            color_requests: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -59,6 +64,12 @@ impl EventListener for EventProxy {
             Event::PtyWrite(text) => {
                 if let Ok(mut buf) = self.response_buf.lock() {
                     buf.extend_from_slice(text.as_bytes());
+                }
+            }
+            // Term is mutably borrowed while it sends this, so feed() answers it after advance.
+            Event::ColorRequest(index, formatter) => {
+                if let Ok(mut requests) = self.color_requests.lock() {
+                    requests.push((index, formatter));
                 }
             }
             _ => {}
@@ -260,6 +271,17 @@ impl AlacrittyTerminal {
         if let Some(ref mut term) = self.term {
             for byte in data.as_ref() {
                 self.processor.advance(term, &[*byte]);
+                // Answer colour queries in stream order with the engine's colour and formatter.
+                // An unset colour (None, "the embedder's default") gets no reply.
+                if let Ok(mut requests) = self.proxy.color_requests.lock() {
+                    for (index, formatter) in requests.drain(..) {
+                        if let Some(rgb) = term.colors()[index] {
+                            if let Ok(mut buf) = self.proxy.response_buf.lock() {
+                                buf.extend_from_slice(formatter(rgb).as_bytes());
+                            }
+                        }
+                    }
+                }
             }
         }
     }
