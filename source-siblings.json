@@ -4,7 +4,7 @@
     {
       "name": "@silvery/commander",
       "repository": "beorn/silvery",
-      "commit": "371a3f310d2bbfc8bfd488f9655a4b0a9ad43136",
+      "commit": "c375b961de8f8cb8ada240e929a72c646fb20145",
       "directory": "packages/commander",
       "pack": true
     },
@@ -17,7 +17,7 @@
     {
       "name": "silvery",
       "repository": "beorn/silvery",
-      "commit": "371a3f310d2bbfc8bfd488f9655a4b0a9ad43136",
+      "commit": "c375b961de8f8cb8ada240e929a72c646fb20145",
       "pack": true
     },
     {
