@@ -135,8 +135,36 @@ fn palette_256(index: u8) -> (u8, u8, u8) {
     (v, v, v)
 }
 
-fn named_color_to_index(c: NamedColor) -> u8 {
-    c as u8
+/// The 256-palette slot a named color reads back as, or None for the terminal defaults.
+///
+/// `NamedColor` discriminants jump to 256 at `Foreground`, so a `named as u8` cast wraps
+/// `Foreground` to 0 (Black) and `Background` to 1 (Red): comparing the cast value against the
+/// defaults made named black and red read back as the default (terminfo #30703). Dim variants read as
+/// their base color; the DIM flag carries the intensity.
+fn named_color_index(named: NamedColor) -> Option<u8> {
+    match named {
+        NamedColor::Black | NamedColor::DimBlack => Some(0),
+        NamedColor::Red | NamedColor::DimRed => Some(1),
+        NamedColor::Green | NamedColor::DimGreen => Some(2),
+        NamedColor::Yellow | NamedColor::DimYellow => Some(3),
+        NamedColor::Blue | NamedColor::DimBlue => Some(4),
+        NamedColor::Magenta | NamedColor::DimMagenta => Some(5),
+        NamedColor::Cyan | NamedColor::DimCyan => Some(6),
+        NamedColor::White | NamedColor::DimWhite => Some(7),
+        NamedColor::BrightBlack => Some(8),
+        NamedColor::BrightRed => Some(9),
+        NamedColor::BrightGreen => Some(10),
+        NamedColor::BrightYellow => Some(11),
+        NamedColor::BrightBlue => Some(12),
+        NamedColor::BrightMagenta => Some(13),
+        NamedColor::BrightCyan => Some(14),
+        NamedColor::BrightWhite => Some(15),
+        NamedColor::Foreground
+        | NamedColor::Background
+        | NamedColor::Cursor
+        | NamedColor::BrightForeground
+        | NamedColor::DimForeground => None,
+    }
 }
 
 fn color_to_rgb(color: &Color) -> Option<Vec<u8>> {
@@ -146,15 +174,10 @@ fn color_to_rgb(color: &Color) -> Option<Vec<u8>> {
             let (r, g, b) = palette_256(*idx);
             Some(vec![r, g, b])
         }
-        Color::Named(named) => {
-            let idx = named_color_to_index(*named);
-            // Named foreground/background default = null
-            if idx == NamedColor::Foreground as u8 || idx == NamedColor::Background as u8 {
-                return None;
-            }
+        Color::Named(named) => named_color_index(*named).map(|idx| {
             let (r, g, b) = palette_256(idx);
-            Some(vec![r, g, b])
-        }
+            vec![r, g, b]
+        }),
     }
 }
 
