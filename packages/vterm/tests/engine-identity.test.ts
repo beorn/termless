@@ -3,7 +3,7 @@
  * @level l1
  * @consumer Termless backend identity and probe freshness
  * @testonly none
- * @reach fs-walk packages/vterm/package.json
+ * @reach fs-walk vendor/termless/packages/vterm/package.json
  */
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
