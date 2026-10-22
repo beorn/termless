@@ -158,6 +158,27 @@ describeNative("alacritty backend", () => {
       expect(cell.fg).toEqual({ r: 255, g: 0, b: 0 })
     })
 
+    test("named black and red read back as palette colors, not the default (#30703)", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[30;41mK\x1b[0m\x1b[31;40mR\x1b[0mX")
+      const black = backend.getCell(0, 0)
+      expect(black.fg).toEqual({ r: 0, g: 0, b: 0 })
+      expect(black.bg).toEqual({ r: 128, g: 0, b: 0 })
+      const red = backend.getCell(0, 1)
+      expect(red.fg).toEqual({ r: 128, g: 0, b: 0 })
+      expect(red.bg).toEqual({ r: 0, g: 0, b: 0 })
+      const plain = backend.getCell(0, 2)
+      expect(plain.fg).toBeNull()
+      expect(plain.bg).toBeNull()
+    })
+
+    test("the other named colors keep their palette values", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[32mG\x1b[0m\x1b[97mW\x1b[0m")
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 0, g: 128, b: 0 })
+      expect(backend.getCell(0, 1).fg).toEqual({ r: 255, g: 255, b: 255 })
+    })
+
     test("detects truecolor background", () => {
       backend = createBackend()
       feedText(backend, "\x1b[48;2;0;255;0mGreen BG\x1b[0m")
