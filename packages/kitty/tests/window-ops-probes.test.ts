@@ -35,7 +35,84 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
   return responses
 }
 
+function queryColor(backend: TerminalBackend, responses: string[], query: string, code: string): number[] {
+  responses.length = 0
+  backend.feed(new TextEncoder().encode(`\x1b]${query}\x1b\\`))
+  backend.getCursor() // Force actual Kitty replay before observing its reply.
+  const reply = responses.join("")
+  const match = new RegExp(`^\x1b\\]${code};rgb:([0-9a-f]{4})/([0-9a-f]{4})/([0-9a-f]{4})\x1b\\\\$`, "i").exec(reply)
+  if (!match) throw new Error(`Expected native OSC ${code} colour reply, got ${JSON.stringify(reply)}`)
+  return match.slice(1).map((component) => Number.parseInt(component, 16))
+}
+
 describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", () => {
+  /**
+   * @failure Missing colour callbacks suppress actual palette/dynamic replies, changes and reset effects.
+   * @level l5
+   * @consumer Terminfo Kitty colour-reset criteria
+   */
+  test.each([
+    { name: "palette index0", query: "4;0;?", code: "4;0", set: "4;0", reset: "104;0" },
+    { name: "foreground", query: "10;?", code: "10", set: "10", reset: "110" },
+    { name: "background", query: "11;?", code: "11", set: "11", reset: "111" },
+    { name: "cursor", query: "12;?", code: "12", set: "12", reset: "112" },
+  ])("restores actual Kitty colour state: $name", ({ query, code, set, reset }) => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    const feed = (value: string): void => backend.feed(new TextEncoder().encode(value))
+    try {
+      const baseline = queryColor(backend, responses, query, code)
+      const changed = baseline.join() === [0x1212, 0x3434, 0x5656].join() ? [0x65, 0x43, 0x21] : [0x12, 0x34, 0x56]
+      const rgb = changed.map((value) => value.toString(16).padStart(2, "0")).join("")
+      feed(`\x1b]${set};#${rgb}\x1b\\`)
+      expect(queryColor(backend, responses, query, code)).toEqual(changed.map((value) => value * 257))
+      feed(`\x1b]${reset}\x1b\\`)
+      expect(queryColor(backend, responses, query, code)).toEqual(baseline)
+
+      if (code === "4;0") {
+        // The same callback also receives paired entries and whole-table reset.
+        feed(`\x1b]4;0;#${rgb};1;#abcdef\x1b\\`)
+        expect(queryColor(backend, responses, query, code)).toEqual(changed.map((value) => value * 257))
+        feed("\x1b]104\x1b\\")
+        expect(queryColor(backend, responses, query, code)).toEqual(baseline)
+      } else if (code === "10") {
+        // Sequential parameters must not widen the reviewed callback to17/19/22.
+        responses.length = 0
+        feed(`\x1b]10;${Array(10).fill("?").join(";")}\x1b\\\x1b]17;?\x1b\\\x1b]19;?\x1b\\\x1b]22;?\x1b\\`)
+        backend.getCursor()
+        expect([...responses.join("").matchAll(/\x1b\](\d+);/g)].map((match) => match[1])).toEqual(["10", "11", "12"])
+      }
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  /**
+   * @failure Missing OSC10 prerequisite readback hides native colour-stack push/pop effects.
+   * @level l5
+   * @consumer Terminfo Kitty OSC30001 and OSC30101 criteria
+   */
+  test("restores actual Kitty colour state: paired native stack push/pop", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    const feed = (value: string): void => backend.feed(new TextEncoder().encode(value))
+    try {
+      const baseline = queryColor(backend, responses, "10;?", "10")
+      const changed = baseline.join() === [0x1212, 0x3434, 0x5656].join() ? [0x65, 0x43, 0x21] : [0x12, 0x34, 0x56]
+      const rgb = changed.map((value) => value.toString(16).padStart(2, "0")).join("")
+      feed(`\x1b]30001\x1b\\\x1b]10;#${rgb}\x1b\\`)
+      expect(queryColor(backend, responses, "10;?", "10")).toEqual(changed.map((value) => value * 257))
+      feed("\x1b]30101\x1b\\")
+      expect(queryColor(backend, responses, "10;?", "10")).toEqual(baseline)
+    } finally {
+      backend.destroy()
+    }
+  })
+
   /**
    * @failure Kitty batch replay redelivers previous query replies as if they belonged to a later feed.
    * @level l2
