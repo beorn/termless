@@ -36,8 +36,10 @@ import sys
 import traceback
 from collections import deque
 
-from kitty.fast_data_types import Screen, set_options
+from kitty.fast_data_types import Color, ESC_OSC, Screen, set_options
 from kitty.options.types import defaults
+from kitty.rgb import to_color
+from kitty.utils import color_as_int
 
 # Standard 16-color ANSI palette (xterm defaults)
 ANSI_16 = [
@@ -139,6 +141,63 @@ class Callbacks:
                 self.title = self.title_stack.pop()
         elif self.title:
             self.title_stack.append(self.title)
+
+    def _report_color(self, code, color):
+        # Match Kitty Window's 8-bit to 16-bit OSC reply.
+        r, g, b = (component * 257 for component in (color.red, color.green, color.blue))
+        screen.send_escape_code_to_child(ESC_OSC, f"{code};rgb:{r:04x}/{g:04x}/{b:04x}")
+
+    def set_dynamic_color(self, code, value=""):
+        if isinstance(value, (bytes, memoryview)):
+            value = str(value, "utf-8", "replace")
+        profile = screen.color_profile
+        names = {10: "default_fg", 11: "default_bg", 12: "cursor_color"}
+        for part in value.split(";"):
+            # Restrict every parameter, including those after an accepted code.
+            name = names.get(code - 100 if code >= 100 else code)
+            if name is not None:
+                if part == "?":
+                    # Kitty reports an unset cursor as black without storing it.
+                    self._report_color(str(code), getattr(profile, name) or Color())
+                else:
+                    color = to_color(part) if code < 100 and part else None
+                    if color is None:
+                        delattr(profile, name)  # Reset to configured/unset state.
+                    else:
+                        setattr(profile, name, color)
+            code += 1
+
+    def set_color_table_color(self, code, value=None):
+        value = str(value or b"", "utf-8", "replace")
+        profile = screen.color_profile
+        if code == 4:
+            parts = value.split(";")
+            if len(parts) % 2:
+                return  # Kitty ignores an incomplete index/specification list.
+            for index, spec in zip(parts[::2], parts[1::2]):
+                try:
+                    index = int(index)
+                except ValueError:
+                    continue  # Malformed protocol input, not a profile failure.
+                if not 0 <= index <= 255:
+                    continue
+                if spec == "?":
+                    self._report_color(f"4;{index}", profile.as_color((index << 8) | 1))
+                else:
+                    color = to_color(spec)
+                    if color is not None:
+                        profile.set_color(index, color_as_int(color))
+        elif code == 104:
+            if not value.strip():
+                profile.reset_color_table()
+            else:
+                for index in value.split(";"):
+                    try:
+                        index = int(index)
+                    except ValueError:
+                        continue
+                    if 0 <= index <= 255:
+                        profile.reset_color(index)
 
     def drain_responses(self):
         """Drain and return accumulated response data."""
