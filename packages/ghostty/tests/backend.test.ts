@@ -161,6 +161,20 @@ describe("ghostty backend", () => {
       expect(backend.getCell(0, 0).inverse).toBe(true)
     })
 
+    // ghostty-web exposes BLINK (64) and INVISIBLE (32) in CellFlags; dropping them reported a
+    // blinking or hidden cell as plain, which also renders the cell wrongly for every consumer.
+    test("detects blink", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[5mBlink\x1b[0m")
+      expect(backend.getCell(0, 0).blink).toBe(true)
+    })
+
+    test("detects hidden (invisible)", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[8mHidden\x1b[0m")
+      expect(backend.getCell(0, 0).hidden).toBe(true)
+    })
+
     test("detects truecolor foreground", () => {
       backend = createBackend()
       feedText(backend, "\x1b[38;2;255;0;0mRed\x1b[0m")
