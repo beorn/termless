@@ -10,6 +10,35 @@ VTerm *termless_vterm_new_utf8(int rows, int cols) {
   return vt;
 }
 
+// Per-screen fixed-width observation record: visible, shape, blink. Unknown
+// remains -1 until the native reset/property callback emits the corresponding
+// value. The callback runs before libvterm stores the property, so read val.
+static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
+  int32_t *record = user;
+  switch (prop) {
+    case VTERM_PROP_CURSORVISIBLE: record[0] = val->boolean; break;
+    case VTERM_PROP_CURSORSHAPE: record[1] = val->number; break;
+    case VTERM_PROP_CURSORBLINK: record[2] = val->boolean; break;
+    default: break;
+  }
+  // Returning zero would veto native property storage, including properties
+  // this observer does not expose (reverse, alternate screen, title, etc.).
+  return 1;
+}
+
+static const VTermScreenCallbacks observer_callbacks = {
+  .settermprop = observe_termprop,
+};
+
+void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
+  if (record) {
+    record[0] = record[1] = record[2] = -1;
+    vterm_screen_set_callbacks(screen, &observer_callbacks, record);
+  } else {
+    vterm_screen_set_callbacks(screen, NULL, NULL);
+  }
+}
+
 // Emscripten cwrap accepts scalar arguments; libvterm's cell/text APIs take
 // small structs by value, whose C ABI cannot be expressed by cwrap directly.
 int termless_vterm_screen_get_cell_flat(const VTermScreen *screen, int row, int col, uint32_t *out) {

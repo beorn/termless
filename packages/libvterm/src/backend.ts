@@ -173,6 +173,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   // Reusable cell struct allocation (allocated once per backend instance)
   let cellPtr: number = 0
+  // Three int32 values owned by this instance: visibility, native shape, blink.
+  let cursorPropsPtr = 0
 
   function ensureInit(): LibvtermModule {
     if (!module || !vt) {
@@ -183,10 +185,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   function init(options: TerminalOptions): void {
     // Clean up previous instance if re-initializing
-    if (vt && module) {
-      module.vterm_free(vt)
-      if (cellPtr) module._free(cellPtr)
-    }
+    destroy()
 
     // Resolve the module -- prefer injected, then shared
     module = mod ?? getLoadedModule()
@@ -209,6 +208,13 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     screen = module.vterm_obtain_screen(vt)
     state = module.vterm_obtain_state(vt)
 
+    cursorPropsPtr = module._malloc(3 * 4)
+    if (!cursorPropsPtr) {
+      destroy()
+      throw new Error("libvterm cursor observation allocation failed")
+    }
+    module.termless_vterm_screen_observe_props(screen, cursorPropsPtr)
+
     // Enable the screen (required for get_cell to work)
     module.vterm_screen_reset(screen, 1)
 
@@ -221,6 +227,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   function destroy(): void {
     if (module && vt) {
+      module.termless_vterm_screen_observe_props(screen, 0)
+      if (cursorPropsPtr) {
+        module._free(cursorPropsPtr)
+        cursorPropsPtr = 0
+      }
       if (cellPtr) {
         module._free(cellPtr)
         cellPtr = 0
@@ -360,6 +371,9 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     const cursorCol = m.getValue(posPtr + 4, "i32")
     m._free(posPtr)
 
+    const visible = m.getValue(cursorPropsPtr, "i32")
+    const shape = m.getValue(cursorPropsPtr + 4, "i32")
+
     return {
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy cursor alias required by TerminalBackend.
       x: cursorCol,
@@ -367,8 +381,9 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
       y: cursorRow,
       col: cursorCol,
       row: cursorRow,
-      visible: null, // This adapter does not observe libvterm's cursor properties.
-      style: null,
+      visible: visible === -1 ? null : visible !== 0,
+      // Native VTERM_PROP_CURSORSHAPE_{BLOCK,UNDERLINE,BAR_LEFT} = 1,2,3.
+      style: shape === 1 ? "block" : shape === 2 ? "underline" : shape === 3 ? "beam" : null,
     }
   }
 
