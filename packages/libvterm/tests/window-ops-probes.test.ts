@@ -57,22 +57,47 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
-  // AC2: unknown cursor properties must not become negative feature results.
-  // Existing ABI tests cover cells and positions, not unavailable properties.
-  // @failure Fixed cursor defaults misreport accepted hide/shape sequences.
+  // Cursor observations must come from native state and survive instance lifecycles.
+  // The former null assertions could not detect missing native property readback.
+  // @failure Missing or shared cursor observation hides native visibility/shape transitions.
   // @level l2
   // @consumer Terminfo cursor probes
   // @testonly none
-  test("keeps unobserved cursor properties unknown while reading its position", () => {
+  test("observes native cursor properties across reset and isolated instance lifetimes", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
+    const isolated = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 8, rows: 2 })
+    isolated.init({ cols: 8, rows: 2 })
+    const responses: string[] = []
+    backend.onResponse = (data) => responses.push(new TextDecoder().decode(data))
     try {
+      expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
       backend.feed(new TextEncoder().encode("\x1b[2;4H\x1b[?25l\x1b[6 q"))
-      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: null, style: null })
+      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: false, style: "beam" })
+      expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      // Native reports catch an observer that caches a property but vetoes its native store.
+      backend.feed(new TextEncoder().encode("\x1bP$q q\x1b\\"))
+      expect(responses.join("")).toBe("\x1bP1$r6 q\x1b\\")
+      responses.length = 0
+      backend.feed(new TextEncoder().encode("\x1b[?5h\x1b[?5$p"))
+      expect(responses.join("")).toBe("\x1b[?5;1$y")
+      backend.feed(new TextEncoder().encode("\x1b[?5l"))
       backend.feed(new TextEncoder().encode("\x1b[?25h\x1b[2 q"))
-      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: null, style: null })
+      expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: true, style: "block" })
+      backend.feed(new TextEncoder().encode("\x1b[?25l\x1b[6 q"))
+      backend.reset()
+      expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+
+      isolated.feed(new TextEncoder().encode("\x1b[?25l\x1b[6 q"))
+      backend.destroy()
+      backend.init({ cols: 8, rows: 2 })
+      expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: false, style: "beam" })
+      isolated.reset()
+      expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
     } finally {
       backend.destroy()
+      isolated.destroy()
     }
   })
 
