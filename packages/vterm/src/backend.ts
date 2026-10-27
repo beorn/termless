@@ -234,11 +234,11 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // (encodeKeyToAnsi reads the mode from the backend).
     kittyKeyboard: true,
 
-    // Protocol-level support: parses APC G sequences, responds to queries with OK.
-    // Does not store or render image data — there's no pixel framebuffer in a headless
-    // emulator. The handshake works, so apps that probe before sending images get a
-    // truthful "I accept this protocol" answer.
-    kittyGraphics: true,
+    // Parses APC G sequences but stores and renders no image data, so the default
+    // screen refuses graphics queries: this backend cannot show kitty graphics.
+    // A capable embedder opts in through the viewport adapter's declared
+    // kittyGraphicsImages capability instead.
+    kittyGraphics: false,
 
     // Parses sixel DCS sequences and preserves raw data via getSixelImages().
     // A host (GUI renderer, test harness) can consume the stored data. No pixel

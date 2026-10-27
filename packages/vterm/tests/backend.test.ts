@@ -640,7 +640,9 @@ describe("createVtermBackend", () => {
     expect(backend.capabilities.name).toBe("vterm")
     expect(backend.capabilities.truecolor).toBe(true)
     expect(backend.capabilities.kittyKeyboard).toBe(true)
-    expect(backend.capabilities.kittyGraphics).toBe(true)
+    // #31020: the default screen refuses kitty queries — this backend renders
+    // no images; capable embedders opt in through the viewport adapter.
+    expect(backend.capabilities.kittyGraphics).toBe(false)
     expect(backend.capabilities.sixel).toBe(true)
     expect(backend.capabilities.osc8Hyperlinks).toBe(true)
     expect(backend.capabilities.reflow).toBe(true)

@@ -129,17 +129,14 @@ interface VtermIslandHandleOptions extends VtermGuestOptions {
 
 /**
  * Project emulator replies through the capabilities of the cell-only Island
- * guest. vterm.js can parse Kitty/Sixel, but this adapter exposes only a
- * {@link CellBuffer}; until it has a pixel side-channel, positively advertising
- * either protocol makes a child emit graphics that the host silently drops.
+ * guest. Kitty is answered by the screen's declared kittyGraphicsImages
+ * capability (OK or an explicit refusal reaches the child unchanged), so this
+ * projection only handles Sixel, which has no screen-side declaration:
+ * vterm.js parses Sixel but this adapter exposes only a {@link CellBuffer};
+ * until it has a pixel side-channel, positively advertising Sixel makes a
+ * child emit graphics that the host silently drops.
  */
 function cellGuestResponse(data: string, artifactCapabilities: IslandArtifactCapabilities | undefined): string | null {
-  // Kitty graphics query response (APC G). No response means unsupported, which
-  // is the protocol's capability-negotiation contract.
-  if (/^\x1b_G.*\x1b\\$/u.test(data)) {
-    return artifactCapabilities?.terminalSequences.kittyGraphics === true ? data : null
-  }
-
   // DA1 attribute 4 advertises Sixel. Keep every other emulator-owned device
   // attribute while removing only the capability this guest cannot project.
   const primaryDeviceAttributes = /^\x1b\[\?([\d;]+)c$/u.exec(data)
@@ -359,6 +356,8 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
   const inputEventListeners = new Set<(event: IslandInputEvent) => void>()
   const maxGraphicsPayloadLength = opts.maxGraphicsPayloadLength ?? DEFAULT_MAX_STRING_SEQUENCE_LENGTH
   const artifactCapabilities = opts.artifactCapabilities
+  // One predicate: the screen's declared capability and the artifact relay agree by construction.
+  const kittyGraphicsImages = artifactCapabilities?.terminalSequences.kittyGraphics === true
   let pendingArtifacts: IslandOutputArtifact[] = []
   let pendingArtifactLength = 0
 
@@ -386,11 +385,7 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
       )
       return
     }
-    if (
-      event.kind === "apc" &&
-      artifactCapabilities?.terminalSequences.kittyGraphics === true &&
-      kittyAction(event.data) !== "q"
-    ) {
+    if (event.kind === "apc" && kittyGraphicsImages && kittyAction(event.data) !== "q") {
       if (!event.data.startsWith("G")) return
       queueArtifact({
         kind: "terminal-sequence",
@@ -424,6 +419,7 @@ function createVtermIslandHandle(opts: VtermIslandHandleOptions): VtermGuestHand
     cols,
     rows,
     scrollbackLimit: opts.scrollback ?? 0,
+    kittyGraphicsImages,
     maxStringSequenceLength: maxGraphicsPayloadLength,
     // The emulator's own DA1/DA2/DSR/color-query answers go back to the child as
     // if typed — the same round-trip a real terminal performs.

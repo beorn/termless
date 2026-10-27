@@ -369,6 +369,8 @@ describe("vtermGuest — child wiring + lifecycle", () => {
     const handle = await mount({ cols: 10, rows: 3, child })
     try {
       handle.feedAnsi("\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\")
+      // #31020: the screen's explicit refusal must reach the child, not silence.
+      expect(writes.join("")).toContain("_Gi=31;ENOTSUP")
       expect(writes.join("")).not.toContain("_Gi=31;OK")
 
       writes.length = 0
