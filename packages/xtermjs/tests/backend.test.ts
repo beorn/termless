@@ -5,6 +5,7 @@
  * @testonly none
  */
 import { describe, test, expect } from "vitest"
+import xterm from "@xterm/headless"
 import { createXtermBackend } from "../src/backend.ts"
 import { resolveXtermCellHyperlink } from "../src/xterm-link.ts"
 
@@ -564,5 +565,77 @@ describe("createXtermBackend", () => {
     expect(backend.getTitle()).toBe("pushed-title")
 
     backend.destroy()
+  })
+
+  test("getIconLabel() mirrors getTitle() across OSC 0, OSC 1, OSC 2, XTWINOPS 22;0t/23;0t, and reset()", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+
+    expect(typeof backend.getIconLabel).toBe("function")
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    // OSC 0 sets both icon label and window title
+    backend.feed(encode("\x1b]0;both-icon-and-title\x07"))
+    expect(backend.getTitle()).toBe("both-icon-and-title")
+    expect(backend.getIconLabel?.()).toBe("both-icon-and-title")
+
+    // OSC 1 updates only icon label; OSC 2 updates only window title
+    backend.feed(encode("\x1b]1;only-icon\x07\x1b]2;only-title\x07"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // CSI 22;0t saves both labels; OSC 0 overwrites both; CSI 23;0t restores both labels
+    backend.feed(encode("\x1b[22;0t\x1b]0;overwritten\x07"))
+    expect(backend.getIconLabel?.()).toBe("overwritten")
+    expect(backend.getTitle()).toBe("overwritten")
+
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // reset() clears both window title and icon label (and their stacks)
+    backend.feed(encode("\x1b[22;0t\x1b]0;before-reset\x07"))
+    backend.reset()
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    backend.destroy()
+  })
+
+  test("pins @xterm/headless 6.0.0 _core._inputHandler._iconName and fails loud if non-string", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    expect(backend.capabilities.version).toBe("6.0.0")
+
+    const term = new xterm.Terminal({ cols: 80, rows: 24, allowProposedApi: true })
+    const core = (
+      term as unknown as {
+        _core?: { _inputHandler?: { _iconName?: unknown; setIconName?: (data: string) => boolean } }
+      }
+    )._core
+    expect(typeof core?._inputHandler?._iconName).toBe("string")
+    expect(core?._inputHandler?._iconName).toBe("")
+    const inputHandlerProto = Object.getPrototypeOf(core!._inputHandler!) as {
+      setIconName(this: { _iconName?: unknown }, data: string): boolean
+    }
+    const origSetIconName = inputHandlerProto.setIconName
+    term.dispose()
+
+    try {
+      inputHandlerProto.setIconName = function () {
+        this._iconName = undefined
+        return true
+      }
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt\x07"))
+      expect(() => backend.getIconLabel?.()).toThrow(
+        "xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)",
+      )
+    } finally {
+      inputHandlerProto.setIconName = origSetIconName
+      backend.destroy()
+    }
   })
 })

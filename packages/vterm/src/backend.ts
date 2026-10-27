@@ -201,6 +201,14 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return ensureScreen().getTitle()
   }
 
+  function getIconLabel(): string {
+    const iconLabel = ensureScreen().snapshot().iconLabel
+    if (typeof iconLabel !== "string") {
+      throw new Error("vterm snapshot iconLabel state is unavailable (snapshot().iconLabel)")
+    }
+    return iconLabel
+  }
+
   function getScrollback(): ScrollbackState {
     const s = ensureScreen()
     const scrollbackLength = s.getScrollbackLength()
@@ -302,6 +310,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCursor,
     getMode,
     getTitle,
+    getIconLabel,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

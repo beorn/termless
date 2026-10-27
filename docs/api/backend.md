@@ -146,6 +146,9 @@ export function createMyBackend(): TerminalBackend {
     getTitle() {
       /* return string */
     },
+    getIconLabel() {
+      /* optional: return string when backend tracks engine icon-name state */
+    },
     getScrollback() {
       /* return ScrollbackState */
     },

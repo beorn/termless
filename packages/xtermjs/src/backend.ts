@@ -16,8 +16,16 @@ interface XtermInternalLine {
   replaceCells?(start: number, end: number, fill: unknown): void
 }
 
+interface XtermInternalInputHandler {
+  _iconName?: unknown
+  _windowTitle?: unknown
+  _iconNameStack?: unknown
+  _windowTitleStack?: unknown
+}
+
 interface XtermInternalCore {
   readonly _writeBuffer?: { writeSync(data: string): void }
+  readonly _inputHandler?: XtermInternalInputHandler
   readonly coreService?: { readonly isCursorHidden?: unknown }
   readonly buffer?: {
     readonly lines?: { readonly length: number; get(index: number): XtermInternalLine | undefined }
@@ -154,6 +162,14 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return !hidden
   }
 
+  function iconLabel(t: XTerminal): string {
+    const iconName = coreOf(t)._inputHandler?._iconName
+    if (typeof iconName !== "string") {
+      throw new Error("xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)")
+    }
+    return iconName
+  }
+
   function ensureTerm(): XTerminal {
     if (!term) throw new Error("xterm backend not initialized — call init() first")
     return term
@@ -280,6 +296,20 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     // RIS (Reset to Initial State) escape sequence
     writeSync(t, "\x1bc")
     title = ""
+    const inputHandler = coreOf(t)._inputHandler
+    if (typeof inputHandler?._iconName !== "string") {
+      throw new Error("xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)")
+    }
+    inputHandler._iconName = ""
+    if (typeof inputHandler._windowTitle === "string") {
+      inputHandler._windowTitle = ""
+    }
+    if (Array.isArray(inputHandler._iconNameStack)) {
+      inputHandler._iconNameStack.length = 0
+    }
+    if (Array.isArray(inputHandler._windowTitleStack)) {
+      inputHandler._windowTitleStack.length = 0
+    }
   }
 
   function getText(): string {
@@ -523,6 +553,10 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     return title
   }
 
+  function getIconLabel(): string {
+    return iconLabel(ensureTerm())
+  }
+
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     const buf = t.buffer.active
@@ -580,6 +614,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     getCursor,
     getMode,
     getTitle,
+    getIconLabel,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
