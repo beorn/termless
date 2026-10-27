@@ -40,7 +40,7 @@ describe("createXtermBackend", () => {
           const target = realpathSync(fileURLToPath(url))
           const bytes = readFileSync(target)
           const blobOid = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex")
-          return { path: relative(repo, target), blobOid }
+          return { path: relative(repo, target).replaceAll("\\", "/"), blobOid }
         }),
       )
     } finally {

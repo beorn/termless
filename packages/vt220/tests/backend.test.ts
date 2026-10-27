@@ -26,7 +26,7 @@ describe("createVt220Backend", () => {
           const target = realpathSync(fileURLToPath(url))
           const bytes = readFileSync(target)
           const blobOid = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex")
-          return { path: relative(repo, target), blobOid }
+          return { path: relative(repo, target).replaceAll("\\", "/"), blobOid }
         }),
       )
     } finally {
@@ -81,7 +81,7 @@ describe("createVt220Backend", () => {
         encoding: "utf8",
       })
       if (remote.error) throw remote.error
-      const packagePath = relative(toplevel, engineRoot)
+      const packagePath = relative(toplevel, engineRoot).replaceAll("\\", "/")
       if (
         remote.status !== 0 ||
         remote.stdout.trim() !== declaration.engine.repository ||
