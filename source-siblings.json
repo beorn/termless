@@ -26,20 +26,6 @@
       "commit": "4661a112548ee052b303e5e09481344bb2da5d2b",
       "directory": "packages/vitepress-enrich",
       "pack": true
-    },
-    {
-      "name": "vt100.js",
-      "repository": "beorn/vterm",
-      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
-      "directory": "packages/vt100",
-      "pack": true
-    },
-    {
-      "name": "vt220.js",
-      "repository": "beorn/vterm",
-      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
-      "directory": "packages/vt220",
-      "pack": true
     }
   ]
 }

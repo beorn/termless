@@ -45,7 +45,7 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "vt100.js": "0.7.1"
+    "vt100.js": "0.9.0"
   },
   "peerDependencies": {
     "@termless/core": "^0.10.2"
