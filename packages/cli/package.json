@@ -49,7 +49,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
     "@napi-rs/canvas": "1.0.11",
-    "@resvg/resvg-js": "^2.6.0",
+    "@resvg/resvg-js": "2.6.2",
     "@silvery/commander": "^0.18.2",
     "@termless/vterm": "^0.10.2",
     "loggily": "^0.10.2",
