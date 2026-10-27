@@ -1,0 +1,35 @@
+{
+  "sha256": "9e35be98a7397d81fa241d587e4c77b3e1179660b3c6af20e3da751623f78845",
+  "jsSha256": "268bfdb57f2ee04d98b5b8f6d304ee812f6f2cc1c4b0b0a51380a4a781393da4",
+  "engineVersion": "0.3.3",
+  "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
+  "buildHash": "fedb0cae43701f7f6ac388d9d6065e33c693034ecafa5d9b1520b1c9d842b028",
+  "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23-git",
+  "wrapperSourceCommit": "d5b065bea1c8d34ba63b37e742ed0e5d24691854",
+  "wrapperTreeOid": "3a4364e342bbf46d88eb76b7739acaa314fc891e",
+  "upstreamTag": "v0.3.3",
+  "buildInputs": {
+    "runtimeTarget": "node",
+    "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
+    "wrapperSourceCommit": "d5b065bea1c8d34ba63b37e742ed0e5d24691854",
+    "wrapperTreeOid": "3a4364e342bbf46d88eb76b7739acaa314fc891e",
+    "buildScriptSha256": "87d8678b538680becaaeea6d0eb64f0a58a0e438c222cdcc1e0fccd6d5eadb93",
+    "flatApiSha256": "68de6fd7ba897ec4ecbdbc1c2bb1c11392eb0d9024162b68c6adccf2e3f4a9f0",
+    "dtsSha256": "d47164fd992770f731bd17e38e22953de6c04b2b238178db51d4b3503380b88c",
+    "generatedIncludes": [
+      [
+        "src/encoding/DECdrawing.inc",
+        "d8c25047d5f4b6cea81904fb9efb640307298dbe945d1b71623fcb741a6449ee"
+      ],
+      [
+        "src/encoding/uk.inc",
+        "9dad74b7ced668b4ed495791c59d3006d858593e4b5fe5e01cb5bfa7a5e24ebb"
+      ],
+      [
+        "src/fullwidth.inc",
+        "41c4b4a0722cd8d269e66225c04e922454039405903fefb2c8b07c9de0cf57f1"
+      ]
+    ],
+    "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23-git"
+  }
+}
