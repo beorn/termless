@@ -261,11 +261,15 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     if (backend.onResponse && m.vterm_output_read) {
       const outBufLen = 1024
       const outBuf = m._malloc(outBufLen)
-      const bytesRead = m.vterm_output_read(vt, outBuf, outBufLen)
-      if (bytesRead > 0) {
-        backend.onResponse(readBytes(m, outBuf, bytesRead))
+      try {
+        for (;;) {
+          const bytesRead = m.vterm_output_read(vt, outBuf, outBufLen)
+          if (bytesRead === 0) break
+          backend.onResponse(readBytes(m, outBuf, bytesRead))
+        }
+      } finally {
+        m._free(outBuf)
       }
-      m._free(outBuf)
     }
   }
 

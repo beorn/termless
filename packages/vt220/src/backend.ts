@@ -6,9 +6,11 @@
  * insert mode (IRM), selective erase (DECSED/DECSEL), and soft reset (DECSTR).
  */
 
+import { replyDelivery } from "./reply-delivery.ts"
 import { createVt220Screen as createScreen, type ScreenCell, type Vt220Screen as Screen } from "vt220.js"
 import type {
   TerminalBackend,
+  ReplyDeliveryExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -34,7 +36,7 @@ const DEFAULT_ROWS = 24
  * (SGR 8/28), and soft reset (DECSTR). No truecolor, no 256 colors, no wide
  * chars — use vterm.js for those.
  */
-export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBackend & ReplyDeliveryExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -257,10 +259,10 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(),
+    extensions: new Set(["reply-delivery"]),
   }
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & ReplyDeliveryExtension = {
     name: "vt220",
     init,
     destroy,
@@ -281,6 +283,7 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend

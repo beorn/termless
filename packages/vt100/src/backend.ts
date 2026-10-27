@@ -6,9 +6,11 @@
  * inspired by the Rust vt100 crate's design.
  */
 
+import { replyDelivery } from "./reply-delivery.ts"
 import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
   TerminalBackend,
+  ReplyDeliveryExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -37,7 +39,7 @@ const DEFAULT_ROWS = 24
  * OSC title, and more. No truecolor, no 256 colors, no wide chars — use
  * vterm.js for those.
  */
-export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBackend & ReplyDeliveryExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -275,10 +277,10 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(),
+    extensions: new Set(["reply-delivery"]),
   }
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & ReplyDeliveryExtension = {
     name: "vt100",
     init,
     destroy,
@@ -299,6 +301,7 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend
