@@ -25,6 +25,7 @@ export type {
   EmulatorWarning,
   KeyDescriptor,
   HyperlinkExtension,
+  ReplyDeliveryExtension,
   MouseButton,
   MouseEvent,
   MouseModifiers,

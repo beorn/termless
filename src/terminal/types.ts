@@ -540,6 +540,24 @@ export interface WarningExtension {
 // Extension Interfaces (optional)
 // ═══════════════════════════════════════════════════════
 
+/**
+ * An adapter-owned audit of complete, synchronous engine reply delivery.
+ * Absence gives no delivery guarantee; this never declares protocol support.
+ */
+export interface ReplyDeliveryExtension {
+  readonly replyDelivery: {
+    /** Every engine reply reaches onResponse in input order by this boundary. */
+    readonly boundary: "feed-and-getCursor"
+    /** Audited imported entry and reply glue; the declaration module never lists itself. */
+    readonly adapterSources: readonly { readonly path: string; readonly blobOid: string }[]
+    /** Expected existing runtime evidence, compared by the collecting identity owner. */
+    readonly engine:
+      | { readonly kind: "registry"; readonly lockIntegrity: string }
+      | { readonly kind: "source"; readonly repository: string; readonly treeOid: string }
+      | { readonly kind: "wasm"; readonly sha256: string }
+  }
+}
+
 export interface MouseEvent {
   x: number
   y: number
