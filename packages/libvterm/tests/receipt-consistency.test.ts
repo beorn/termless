@@ -3,7 +3,7 @@
  * @acceptance CTO artifact landing T3: the pair, inputs and upstream tag match one receipt.
  * @level l1 — real package artifact and source bytes, without loading the engine.
  * @consumer @termless/libvterm loading the vendored native pair; #30695 artifact landing.
- * @reach fs-walk <package-local: wasm pair, receipt and committed build inputs>
+ * @reach fs-walk vendor/termless/packages/libvterm/wasm/** vendor/termless/packages/libvterm/build/**
  * @testonly none
  */
 import { createHash } from "node:crypto"
