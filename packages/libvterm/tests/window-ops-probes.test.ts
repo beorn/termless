@@ -15,7 +15,7 @@
 import { describe, test, expect } from "vitest"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import type { TerminalBackend } from "../../../src/terminal/types.ts"
+import { hasExtension, type TerminalBackend } from "../../../src/terminal/types.ts"
 
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
 const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
@@ -57,6 +57,44 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
+  // CTO c02b6619: retain the unresolved completeness counterexample without blessing output loss.
+  test.todo(
+    "deliver all 2000 ordered CPR replies: 15020 expected bytes, 4096 received; evidence /hh/var/@dev4/30576/libvterm-capacity-numeric.log",
+  )
+
+  // Complete-drain acceptance: one feed must deliver all ordered engine replies.
+  // Existing single-query probes never cross the adapter's 1024-byte read boundary.
+  test("delivers more than 1024 bytes of ordered engine replies before feed returns", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 80, rows: 24 })
+    try {
+      const responses: string[] = []
+      backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+      const positions = Array.from({ length: 180 }, (_, i) => [1 + (i % 24), 1 + (i % 80)] as const)
+      const expected = positions.map(([row, col]) => `\x1b[${row};${col}R`).join("")
+      expect(new TextEncoder().encode(expected).length).toBeGreaterThan(1024)
+      backend.feed(new TextEncoder().encode(positions.map(([row, col]) => `\x1b[${row};${col}H\x1b[6n`).join("")))
+      expect(responses.join("")).toBe(expected)
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // CTO fallback: the real engine still loses output beyond its 4096-byte buffer.
+  // A working read function alone, or its absence, cannot qualify complete delivery.
+  test.each([true, false])("withholds complete reply delivery with output read available=%s", (available) => {
+    const mod = Object.create(wasmModule!) as LibvtermModule
+    if (!available) mod.vterm_output_read = undefined
+    const backend = createLibvtermBackend(undefined, mod)
+    backend.init({ cols: 80, rows: 24 })
+    try {
+      expect(hasExtension(backend, "reply-delivery")).toBe(false)
+      expect("replyDelivery" in backend).toBe(false)
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // AC2: unknown cursor properties must not become negative feature results.
   // Existing ABI tests cover cells and positions, not unavailable properties.
   // @failure Fixed cursor defaults misreport accepted hide/shape sequences.
