@@ -30,6 +30,8 @@ bun vitest run packages/xtermjs/  # Run tests for a specific package
 
 Write tests for all new functionality. For rendering/terminal behavior, use the `@termless/test` matchers.
 
+An entry in [`source-siblings.json`](../source-siblings.json) exists only while unreleased source is under test; remove it in the change that locks the released version.
+
 ### Type Checking
 
 ```bash
