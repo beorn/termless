@@ -56,6 +56,25 @@ Fast unit tests and high-fidelity terminal tests are different tools. Use in-mem
 For a comprehensive, interactive capability matrix across all backends, visit **[terminfo.dev](https://terminfo.dev)** — powered by termless census probes.
 :::
 
+## Reply delivery
+
+Adapters may expose `ReplyDeliveryExtension` through `hasExtension(backend, "reply-delivery")`.
+Its `replyDelivery` value declares that every engine reply reaches `onResponse`, in input order,
+before `feed()` or its immediate `getCursor()` drain returns. It does not declare protocol support.
+Answers derived from true engine state are allowed; invented protocol constants are not.
+
+The declaration lives with the adapter and binds the imported entry and reply glue by Git blob OID,
+plus an audited registry integrity, source repository/tree OID or WASM digest. The declaration module
+never hashes itself. A consumer compares those facts with its measured loaded runtime; matching
+package versions alone provide no qualification. Each declaring adapter's owning tests hash its
+actual resolved import bytes, so an unaudited edit fails before commit as well as in clean CI.
+
+Xtermjs, vt100, vt220 and vterm declare complete paths. Libvterm drains queued replies but does not
+declare completeness: a large input can lose engine output before that drain. Ghostty's exposed
+response queue also does not establish delivery of every engine reply class. An absent extension
+provides no complete-delivery guarantee. See the [probe evidence contract](https://github.com/beorn/terminfo.dev/blob/main/packages/probe-defs/README.md)
+for the source-bound sentinel consumer and its late-reply checks.
+
 ## Backend Details
 
 Each backend can be used via factory function (explicit, sync) or string name via `backend()` (async — handles WASM/native init). The registry handles backend-specific initialization (WASM loading, native module binding).
