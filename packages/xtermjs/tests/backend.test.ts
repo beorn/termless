@@ -606,32 +606,86 @@ describe("createXtermBackend", () => {
     backend.destroy()
   })
 
-  test("pins @xterm/headless 6.0.0 _core._inputHandler._iconName and fails loud if non-string", () => {
+  test("pins @xterm/headless 6.0.0 _core._inputHandler title/icon internals and fails loud on shape drift", () => {
     const backend = createXtermBackend({ cols: 80, rows: 24 })
     expect(backend.capabilities.version).toBe("6.0.0")
 
     const term = new xterm.Terminal({ cols: 80, rows: 24, allowProposedApi: true })
     const core = (
       term as unknown as {
-        _core?: { _inputHandler?: { _iconName?: unknown; setIconName?: (data: string) => boolean } }
+        _core?: {
+          _inputHandler?: {
+            _iconName?: unknown
+            _windowTitle?: unknown
+            _iconNameStack?: unknown
+            _windowTitleStack?: unknown
+            setIconName?: (data: string) => boolean
+          }
+        }
       }
     )._core
     expect(typeof core?._inputHandler?._iconName).toBe("string")
     expect(core?._inputHandler?._iconName).toBe("")
+    expect(typeof core?._inputHandler?._windowTitle).toBe("string")
+    expect(core?._inputHandler?._windowTitle).toBe("")
+    expect(Array.isArray(core?._inputHandler?._iconNameStack)).toBe(true)
+    expect(core?._inputHandler?._iconNameStack).toEqual([])
+    expect(Array.isArray(core?._inputHandler?._windowTitleStack)).toBe(true)
+    expect(core?._inputHandler?._windowTitleStack).toEqual([])
     const inputHandlerProto = Object.getPrototypeOf(core!._inputHandler!) as {
-      setIconName(this: { _iconName?: unknown }, data: string): boolean
+      setIconName(
+        this: {
+          _iconName?: unknown
+          _windowTitle?: unknown
+          _iconNameStack?: unknown
+          _windowTitleStack?: unknown
+        },
+        data: string,
+      ): boolean
     }
     const origSetIconName = inputHandlerProto.setIconName
     term.dispose()
 
     try {
-      inputHandlerProto.setIconName = function () {
-        this._iconName = undefined
+      inputHandlerProto.setIconName = function (data: string) {
+        if (data === "corrupt-icon") {
+          this._iconName = undefined
+        } else if (data === "corrupt-title") {
+          this._iconName = ""
+          this._windowTitle = undefined
+        } else if (data === "corrupt-icon-stack") {
+          this._iconName = ""
+          this._windowTitle = ""
+          this._iconNameStack = null
+        } else if (data === "corrupt-title-stack") {
+          this._iconName = ""
+          this._windowTitle = ""
+          this._iconNameStack = []
+          this._windowTitleStack = null
+        }
         return true
       }
-      backend.feed(new TextEncoder().encode("\x1b]1;corrupt\x07"))
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-icon\x07"))
       expect(() => backend.getIconLabel?.()).toThrow(
         "xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)",
+      )
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-title\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless window-title state is unavailable (_core._inputHandler._windowTitle)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-icon-stack\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless icon-name stack is unavailable (_core._inputHandler._iconNameStack)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-title-stack\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless window-title stack is unavailable (_core._inputHandler._windowTitleStack)",
       )
     } finally {
       inputHandlerProto.setIconName = origSetIconName

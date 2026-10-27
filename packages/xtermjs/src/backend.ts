@@ -300,16 +300,19 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     if (typeof inputHandler?._iconName !== "string") {
       throw new Error("xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)")
     }
+    if (typeof inputHandler._windowTitle !== "string") {
+      throw new Error("xterm.js headless window-title state is unavailable (_core._inputHandler._windowTitle)")
+    }
+    if (!Array.isArray(inputHandler._iconNameStack)) {
+      throw new Error("xterm.js headless icon-name stack is unavailable (_core._inputHandler._iconNameStack)")
+    }
+    if (!Array.isArray(inputHandler._windowTitleStack)) {
+      throw new Error("xterm.js headless window-title stack is unavailable (_core._inputHandler._windowTitleStack)")
+    }
     inputHandler._iconName = ""
-    if (typeof inputHandler._windowTitle === "string") {
-      inputHandler._windowTitle = ""
-    }
-    if (Array.isArray(inputHandler._iconNameStack)) {
-      inputHandler._iconNameStack.length = 0
-    }
-    if (Array.isArray(inputHandler._windowTitleStack)) {
-      inputHandler._windowTitleStack.length = 0
-    }
+    inputHandler._windowTitle = ""
+    inputHandler._iconNameStack.length = 0
+    inputHandler._windowTitleStack.length = 0
   }
 
   function getText(): string {
