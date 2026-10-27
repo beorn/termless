@@ -1,0 +1,22 @@
+import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+
+// Audited synchronous feed -> engine response -> onResponse path.
+// This module deliberately never binds itself; determining adapter edits need re-audit.
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  boundary: "feed-and-getCursor",
+  adapterSources: [
+    {
+      path: "packages/vt100/src/index.ts",
+      blobOid: "99833d737402f9d1d8e3e257e3a255d8aa1facc3",
+    },
+    {
+      path: "packages/vt100/src/backend.ts",
+      blobOid: "0aa26ec3b49d1a3a35f6c1d21d85d4dfb31e0fd4",
+    },
+  ],
+  engine: {
+    kind: "source",
+    repository: "git@github.com:beorn/vterm.git",
+    treeOid: "4d781c043038d63c7267a6c459601708395643fe",
+  },
+}

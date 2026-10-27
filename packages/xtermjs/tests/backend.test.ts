@@ -1,3 +1,10 @@
+import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { readFileSync, realpathSync } from "node:fs"
+import { relative } from "node:path"
+import { fileURLToPath } from "node:url"
+import { hasExtension } from "../../../src/terminal/types.ts"
 /**
  * @failure OSC 8 links parsed by xterm were hidden from backend cell observations.
  * @level l0
@@ -10,6 +17,37 @@ import { createXtermBackend } from "../src/backend.ts"
 import { resolveXtermCellHyperlink } from "../src/xterm-link.ts"
 
 describe("createXtermBackend", () => {
+  // Accepted requirement: adapter-owned audited source determines reply eligibility.
+  // Existing behavior tests exercise replies but cannot detect a missing/stale declaration.
+  // CTO binding 3: hash actual resolved import bytes; committed/CI bytes are HEAD bytes.
+  test("declares reply delivery bound to audited adapter and engine sources", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    try {
+      expect(hasExtension(backend, "reply-delivery")).toBe(true)
+      if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
+        throw new Error("initialized backend declares no reply delivery")
+      }
+      const declaration = backend.replyDelivery
+      expect(declaration.boundary).toBe("feed-and-getCursor")
+      const repo = fileURLToPath(new URL("../../../", import.meta.url))
+      const lockText = execFileSync("git", ["show", "HEAD:bun.lock"], { cwd: repo, encoding: "utf8" })
+      const lock = JSON.parse(lockText.replace(/,\s*([}\]])/g, "$1")) as { packages: Record<string, unknown[]> }
+      expect(declaration.engine).toEqual({ kind: "registry", lockIntegrity: lock.packages["@xterm/headless"]![3] })
+      // Resolve the actual entry and implementation imports independently of declaration paths.
+      const importedSources = [import.meta.resolve("../src/index.ts"), import.meta.resolve("../src/backend.ts")]
+      expect(declaration.adapterSources).toEqual(
+        importedSources.map((url) => {
+          const target = realpathSync(fileURLToPath(url))
+          const bytes = readFileSync(target)
+          const blobOid = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex")
+          return { path: relative(repo, target), blobOid }
+        }),
+      )
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // ── Lifecycle ──
 
   test("creates backend with default options (80x24)", () => {

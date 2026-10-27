@@ -6,6 +6,7 @@
  */
 
 // @xterm/headless is CJS — use default import for Node.js ESM compat
+import { replyDelivery } from "./reply-delivery.ts"
 import xterm from "@xterm/headless"
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
@@ -45,6 +46,7 @@ interface XtermInternalCore {
 import { Unicode11Addon } from "@xterm/addon-unicode11"
 import type {
   TerminalBackend,
+  ReplyDeliveryExtension,
   HyperlinkExtension,
   TerminalOptions,
   Cell,
@@ -133,8 +135,10 @@ const DEFAULT_ROWS = 24
  * Uses @xterm/headless for in-process terminal emulation — no browser needed.
  * The terminal is initialized lazily via init(), or eagerly if opts are provided.
  */
-// oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend & HyperlinkExtension {
+export function createXtermBackend(
+  opts?: Partial<TerminalOptions>,
+  // oxlint-disable-next-line typescript/no-deprecated -- Registered adapter still implements this lifecycle.
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
@@ -591,11 +595,11 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["hyperlinks"]),
+    extensions: new Set(["hyperlinks", "reply-delivery"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-  const backend: TerminalBackend & HyperlinkExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
     name: "xterm",
     init,
     destroy,
@@ -622,6 +626,7 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend

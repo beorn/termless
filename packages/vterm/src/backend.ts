@@ -7,9 +7,11 @@
  * Supports every SGR attribute, cursor shapes, OSC 8 hyperlinks, and more.
  */
 
+import { replyDelivery } from "./reply-delivery.ts"
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   TerminalBackend,
+  ReplyDeliveryExtension,
   HyperlinkExtension,
   TerminalOptions,
   Cell,
@@ -57,7 +59,9 @@ const BLANK_CELL: Cell = {
  * underline color, cursor shapes (DECSCUSR), OSC 8 hyperlinks, all DEC
  * private modes, DA1/DA2/DSR responses, synchronized output, and more.
  */
-export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBackend & HyperlinkExtension {
+export function createVtermBackend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -266,6 +270,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     reflow: true,
 
     extensions: new Set([
+      "reply-delivery",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc52", // Clipboard read/write via OSC 52
       "osc7", // CWD reporting via OSC 7
@@ -290,7 +295,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     ]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
     name: "vterm",
     init,
     destroy,
@@ -315,6 +320,7 @@ export function createVtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   // Eagerly init if opts provided
