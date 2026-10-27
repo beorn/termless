@@ -5,6 +5,7 @@
  * @testonly none
  */
 import { describe, test, expect } from "vitest"
+import xterm from "@xterm/headless"
 import { createXtermBackend } from "../src/backend.ts"
 import { resolveXtermCellHyperlink } from "../src/xterm-link.ts"
 
@@ -535,5 +536,160 @@ describe("createXtermBackend", () => {
     expect(cell.fg).not.toBeNull()
     expect(cell.fg!.r).toBe(0x80)
     backend.destroy()
+  })
+
+  // ── Window title stack (XTWINOPS 22 / 23) ──
+
+  test("XTWINOPS 22 and 23 push and pop the window title without icon-only selector cross-talk", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+
+    backend.feed(encode("\x1b]2;pushed-title\x07"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    backend.feed(encode("\x1b[22;0t\x1b]2;new-title\x07"))
+    expect(backend.getTitle()).toBe("new-title")
+
+    // Selector 1 (icon-only) must not overwrite or pop the window title stack
+    backend.feed(encode("\x1b[23;1t"))
+    expect(backend.getTitle()).toBe("new-title")
+
+    // Pop window title from the CSI 22;0t push
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    // Selector 2 (window-title-only) round-trip
+    backend.feed(encode("\x1b[22;2t\x1b]2;second-title\x07"))
+    expect(backend.getTitle()).toBe("second-title")
+    backend.feed(encode("\x1b[23;2t"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    backend.destroy()
+  })
+
+  test("getIconLabel() mirrors getTitle() across OSC 0, OSC 1, OSC 2, XTWINOPS 22;0t/23;0t, and reset()", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+
+    expect(typeof backend.getIconLabel).toBe("function")
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    // OSC 0 sets both icon label and window title
+    backend.feed(encode("\x1b]0;both-icon-and-title\x07"))
+    expect(backend.getTitle()).toBe("both-icon-and-title")
+    expect(backend.getIconLabel?.()).toBe("both-icon-and-title")
+
+    // OSC 1 updates only icon label; OSC 2 updates only window title
+    backend.feed(encode("\x1b]1;only-icon\x07\x1b]2;only-title\x07"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // CSI 22;0t saves both labels; OSC 0 overwrites both; CSI 23;0t restores both labels
+    backend.feed(encode("\x1b[22;0t\x1b]0;overwritten\x07"))
+    expect(backend.getIconLabel?.()).toBe("overwritten")
+    expect(backend.getTitle()).toBe("overwritten")
+
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // reset() clears both window title and icon label (and their stacks)
+    backend.feed(encode("\x1b[22;0t\x1b]0;before-reset\x07"))
+    backend.reset()
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    backend.destroy()
+  })
+
+  test("pins @xterm/headless 6.0.0 _core._inputHandler title/icon internals and fails loud on shape drift", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    expect(backend.capabilities.version).toBe("6.0.0")
+
+    const term = new xterm.Terminal({ cols: 80, rows: 24, allowProposedApi: true })
+    const core = (
+      term as unknown as {
+        _core?: {
+          _inputHandler?: {
+            _iconName?: unknown
+            _windowTitle?: unknown
+            _iconNameStack?: unknown
+            _windowTitleStack?: unknown
+            setIconName?: (data: string) => boolean
+          }
+        }
+      }
+    )._core
+    expect(typeof core?._inputHandler?._iconName).toBe("string")
+    expect(core?._inputHandler?._iconName).toBe("")
+    expect(typeof core?._inputHandler?._windowTitle).toBe("string")
+    expect(core?._inputHandler?._windowTitle).toBe("")
+    expect(Array.isArray(core?._inputHandler?._iconNameStack)).toBe(true)
+    expect(core?._inputHandler?._iconNameStack).toEqual([])
+    expect(Array.isArray(core?._inputHandler?._windowTitleStack)).toBe(true)
+    expect(core?._inputHandler?._windowTitleStack).toEqual([])
+    const inputHandlerProto = Object.getPrototypeOf(core!._inputHandler!) as {
+      setIconName(
+        this: {
+          _iconName?: unknown
+          _windowTitle?: unknown
+          _iconNameStack?: unknown
+          _windowTitleStack?: unknown
+        },
+        data: string,
+      ): boolean
+    }
+    const origSetIconName = inputHandlerProto.setIconName
+    term.dispose()
+
+    try {
+      inputHandlerProto.setIconName = function (data: string) {
+        if (data === "corrupt-icon") {
+          this._iconName = undefined
+        } else if (data === "corrupt-title") {
+          this._iconName = ""
+          this._windowTitle = undefined
+        } else if (data === "corrupt-icon-stack") {
+          this._iconName = ""
+          this._windowTitle = ""
+          this._iconNameStack = null
+        } else if (data === "corrupt-title-stack") {
+          this._iconName = ""
+          this._windowTitle = ""
+          this._iconNameStack = []
+          this._windowTitleStack = null
+        }
+        return true
+      }
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-icon\x07"))
+      expect(() => backend.getIconLabel?.()).toThrow(
+        "xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)",
+      )
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless icon-name state is unavailable (_core._inputHandler._iconName)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-title\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless window-title state is unavailable (_core._inputHandler._windowTitle)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-icon-stack\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless icon-name stack is unavailable (_core._inputHandler._iconNameStack)",
+      )
+
+      backend.feed(new TextEncoder().encode("\x1b]1;corrupt-title-stack\x07"))
+      expect(() => backend.reset()).toThrow(
+        "xterm.js headless window-title stack is unavailable (_core._inputHandler._windowTitleStack)",
+      )
+    } finally {
+      inputHandlerProto.setIconName = origSetIconName
+      backend.destroy()
+    }
   })
 })

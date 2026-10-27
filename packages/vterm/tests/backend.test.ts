@@ -850,3 +850,44 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 })
+
+describe("createVtermBackend icon label state", () => {
+  test("getIconLabel() mirrors getTitle() across OSC 0, OSC 1, OSC 2, XTWINOPS 22;0t/23;0t, and reset()", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+
+    expect(typeof backend.getIconLabel).toBe("function")
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    // OSC 0 sets both icon label and window title
+    backend.feed(encode("\x1b]0;both-icon-and-title\x07"))
+    expect(backend.getTitle()).toBe("both-icon-and-title")
+    expect(backend.getIconLabel?.()).toBe("both-icon-and-title")
+
+    // OSC 1 updates only icon label; OSC 2 updates only window title
+    backend.feed(encode("\x1b]1;only-icon\x07\x1b]2;only-title\x07"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // CSI 22;0t saves both labels; OSC 0 overwrites both; CSI 23;0t restores both labels
+    backend.feed(encode("\x1b[22;0t\x1b]0;overwritten\x07"))
+    expect(backend.getIconLabel?.()).toBe("overwritten")
+    expect(backend.getTitle()).toBe("overwritten")
+
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getIconLabel?.()).toBe("only-icon")
+    expect(backend.getTitle()).toBe("only-title")
+
+    // reset() clears both window title and icon label (and their stacks)
+    backend.feed(encode("\x1b[22;0t\x1b]0;before-reset\x07"))
+    backend.reset()
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+
+    backend.destroy()
+  })
+})

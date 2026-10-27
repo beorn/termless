@@ -183,6 +183,7 @@ export interface Terminal {
   getCursor(): Cursor
   getMode(mode: TerminalMode): boolean
   getTitle(): string
+  getIconLabel?(): string
   getScrollback(): ScrollbackState
 }
 
