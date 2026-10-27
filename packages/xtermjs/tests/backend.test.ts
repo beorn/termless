@@ -536,4 +536,33 @@ describe("createXtermBackend", () => {
     expect(cell.fg!.r).toBe(0x80)
     backend.destroy()
   })
+
+  // ── Window title stack (XTWINOPS 22 / 23) ──
+
+  test("XTWINOPS 22 and 23 push and pop the window title without icon-only selector cross-talk", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+
+    backend.feed(encode("\x1b]2;pushed-title\x07"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    backend.feed(encode("\x1b[22;0t\x1b]2;new-title\x07"))
+    expect(backend.getTitle()).toBe("new-title")
+
+    // Selector 1 (icon-only) must not overwrite or pop the window title stack
+    backend.feed(encode("\x1b[23;1t"))
+    expect(backend.getTitle()).toBe("new-title")
+
+    // Pop window title from the CSI 22;0t push
+    backend.feed(encode("\x1b[23;0t"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    // Selector 2 (window-title-only) round-trip
+    backend.feed(encode("\x1b[22;2t\x1b]2;second-title\x07"))
+    expect(backend.getTitle()).toBe("second-title")
+    backend.feed(encode("\x1b[23;2t"))
+    expect(backend.getTitle()).toBe("pushed-title")
+
+    backend.destroy()
+  })
 })
