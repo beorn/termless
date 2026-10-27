@@ -36,6 +36,7 @@ const changedWrapper = git(
   "packages/libvterm/build/build.sh",
   "packages/libvterm/build/flat-api.c",
   "packages/libvterm/build/write-receipt.ts",
+  "packages/libvterm/wasm/libvterm.d.ts",
 )
 if (changedWrapper) throw new Error(`Cannot attest uncommitted libvterm build inputs:\n${changedWrapper}`)
 
@@ -57,6 +58,7 @@ const buildInputs = {
   wrapperTreeOid,
   buildScriptSha256: sha256(readFileSync(join(packageDir, "build", "build.sh"))),
   flatApiSha256: sha256(readFileSync(join(packageDir, "build", "flat-api.c"))),
+  dtsSha256: sha256(readFileSync(join(packageDir, "wasm", "libvterm.d.ts"))),
   generatedIncludes,
   toolchain,
 }

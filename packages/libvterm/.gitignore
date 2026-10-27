@@ -1,4 +1,7 @@
 build/tmp/
 wasm/*
 !wasm/libvterm.d.ts
+!wasm/libvterm.js
+!wasm/libvterm.wasm
+!wasm/libvterm.wasm.receipt.json
 node_modules/
