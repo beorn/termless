@@ -175,6 +175,8 @@ export function createXtermBackend(opts?: Partial<TerminalOptions>): TerminalBac
       windowOptions: {
         getWinSizeChars: true,
         getCellSizePixels: true,
+        pushTitle: true,
+        popTitle: true,
       },
     })
 
