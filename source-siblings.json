@@ -40,13 +40,6 @@
       "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
       "directory": "packages/vt220",
       "pack": true
-    },
-    {
-      "name": "vterm.js",
-      "repository": "beorn/vterm",
-      "commit": "70b4d34e31173261ebc9ef79dae3d4b887dd783a",
-      "directory": "packages/vterm",
-      "pack": true
     }
   ]
 }
