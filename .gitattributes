@@ -2,3 +2,9 @@
 # (PR #5, 2026-09-01: a Windows runner read them back as CRLF and every
 # byte-identity assertion failed on line endings alone).
 tests/asciicast/fixtures/*.cast text eol=lf
+
+# The libvterm receipt hashes native builder output and its exact text inputs.
+packages/libvterm/wasm/libvterm.js text eol=lf
+packages/libvterm/wasm/libvterm.d.ts text eol=lf
+packages/libvterm/build/build.sh text eol=lf
+packages/libvterm/build/flat-api.c text eol=lf
