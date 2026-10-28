@@ -149,15 +149,16 @@ export function sgrDelta(prev: CellStyle, next: CellStyle): string {
 }
 
 /** Pull the style-relevant subset of a {@link Cell}. */
+// Drawing policy: unreported style attributes are drawn unset; retained readback stays null.
 function styleOf(cell: Cell): CellStyle {
   return {
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
-    dim: cell.dim,
-    italic: cell.italic,
+    dim: cell.dim === true,
+    italic: cell.italic === true,
     underline: cell.underline !== false,
-    strikethrough: cell.strikethrough,
+    strikethrough: cell.strikethrough === true,
     inverse: cell.inverse,
     blink: cell.blink,
   }

@@ -7,6 +7,8 @@
  */
 
 import { describe, test, expect } from "vitest"
+import { termlessMatchers } from "../../../src/jest-matchers.ts"
+import { terminalMatchers } from "../src/matchers.ts"
 import "../src/matchers.ts" // Auto-register matchers
 import type {
   Terminal,
@@ -626,4 +628,22 @@ describe("error handling", () => {
   test("cell matcher on null gives generic error", () => {
     expect(() => expect(null).toBeBold()).toThrow()
   })
+})
+
+// Both polarities must reject unavailable evidence; false alone is inverted by .not.
+test.each(["dim", "italic", "strikethrough"] as const)("%s unknown fails positive and negated matchers", (field) => {
+  const cell = mockCell({ [field]: null })
+  for (const adapter of [termlessMatchers, terminalMatchers]) {
+    expect.extend({
+      toHaveAttrs: adapter.toHaveAttrs,
+      toBeDim: adapter.toBeDim,
+      toBeItalic: adapter.toBeItalic,
+      toBeStrikethrough: adapter.toBeStrikethrough,
+    })
+    expect(() => expect(cell).toHaveAttrs({ [field]: true })).toThrow(`${field} is unreported`)
+    expect(() => expect(cell).not.toHaveAttrs({ [field]: true })).toThrow(`${field} is unreported`)
+    const matcher = field === "dim" ? "toBeDim" : field === "italic" ? "toBeItalic" : "toBeStrikethrough"
+    expect(() => expect(cell)[matcher]()).toThrow(`${field} is unreported`)
+    expect(() => expect(cell).not[matcher]()).toThrow(`${field} is unreported`)
+  }
 })

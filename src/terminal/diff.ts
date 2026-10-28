@@ -25,7 +25,7 @@ export interface CellSummary {
   fg: Color | null
   bg: Color | null
   bold: boolean
-  italic: boolean
+  italic: boolean | null
   underline: UnderlineStyle
 }
 

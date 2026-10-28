@@ -31,6 +31,7 @@ import type {
   SvgScreenshotOptions,
   SvgTheme,
 } from "../../../src/terminal/types.ts"
+import { termlessMatchers } from "../../../src/jest-matchers.ts"
 import { screenshotSvg } from "../../../src/render/svg.ts"
 import {
   assertRegionView,
@@ -42,15 +43,11 @@ import {
   assertHasText,
   assertMatchesLines,
   assertIsBold,
-  assertIsItalic,
-  assertIsDim,
-  assertIsStrikethrough,
   assertIsInverse,
   assertIsWide,
   assertHasUnderline,
   assertHasFg,
   assertHasBg,
-  assertHaveAttrs,
   assertCursorAt,
   assertCursorStyle,
   assertCursorVisible,
@@ -285,8 +282,7 @@ export const terminalMatchers = {
 
   /** Assert multiple cell attributes at once. Only specified fields are checked. */
   toHaveAttrs(received: unknown, attrs: CellAttrs) {
-    assertCellView(received, "toHaveAttrs")
-    return toMatcherResult(assertHaveAttrs(received, attrs))
+    return termlessMatchers.toHaveAttrs(received, attrs)
   },
 
   /** @deprecated Use toHaveAttrs({ bold: true }) */
@@ -297,20 +293,20 @@ export const terminalMatchers = {
 
   /** @deprecated Use toHaveAttrs({ italic: true }) */
   toBeItalic(received: unknown) {
-    assertCellView(received, "toBeItalic")
-    return toMatcherResult(assertIsItalic(received))
+    // oxlint-disable-next-line typescript/no-deprecated -- Preserve the legacy matcher through its canonical compatibility owner.
+    return termlessMatchers.toBeItalic(received)
   },
 
   /** @deprecated Use toHaveAttrs({ dim: true }) */
   toBeDim(received: unknown) {
-    assertCellView(received, "toBeDim")
-    return toMatcherResult(assertIsDim(received))
+    // oxlint-disable-next-line typescript/no-deprecated -- Preserve the legacy matcher through its canonical compatibility owner.
+    return termlessMatchers.toBeDim(received)
   },
 
   /** @deprecated Use toHaveAttrs({ strikethrough: true }) */
   toBeStrikethrough(received: unknown) {
-    assertCellView(received, "toBeStrikethrough")
-    return toMatcherResult(assertIsStrikethrough(received))
+    // oxlint-disable-next-line typescript/no-deprecated -- Preserve the legacy matcher through its canonical compatibility owner.
+    return termlessMatchers.toBeStrikethrough(received)
   },
 
   /** @deprecated Use toHaveAttrs({ inverse: true }) */

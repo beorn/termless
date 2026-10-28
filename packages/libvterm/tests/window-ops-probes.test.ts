@@ -177,6 +177,7 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
       expect(backend.getCell(0, 0)).toMatchObject({ char: "A", fg: null, bg: null })
       expect(backend.getCell(0, 1)).toMatchObject({
         char: "B",
+        dim: null, // The ABI does not expose faint; null is not measured false.
         bold: true,
         italic: true,
         underline: "single",

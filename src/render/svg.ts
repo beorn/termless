@@ -238,6 +238,7 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
       continue
     }
 
+    // Drawing policy: unreported style attributes are drawn unset; retained readback stays null.
     const { fg } = cellFgBg(cell, themeFg, themeBg)
     const char = cell.char || " "
     const underline = cell.underline !== false
@@ -258,7 +259,15 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
       current &&
       !cell.wide &&
       !current.isWide &&
-      spansMatch(current, fg, cell.bold, cell.italic, cell.dim, underline, cell.strikethrough)
+      spansMatch(
+        current,
+        fg,
+        cell.bold,
+        cell.italic === true,
+        cell.dim === true,
+        underline,
+        cell.strikethrough === true,
+      )
     if (canMerge) {
       current!.text += char
       current!.cellCount += cellsForChar
@@ -267,10 +276,10 @@ function buildTextSpans(cells: Cell[], themeFg: string, themeBg: string): TextSp
         text: char,
         fill: fg,
         bold: cell.bold,
-        italic: cell.italic,
-        dim: cell.dim,
+        italic: cell.italic === true,
+        dim: cell.dim === true,
         underline,
-        strikethrough: cell.strikethrough,
+        strikethrough: cell.strikethrough === true,
         startCol: col,
         cellCount: cellsForChar,
         isWide: cell.wide === true,

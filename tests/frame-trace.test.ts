@@ -11,6 +11,7 @@ import type { TraceFrame, SilveryRenderEvent } from "../src/recording/frame-trac
 import type { Terminal } from "../src/terminal/types.ts"
 
 // Use the vt100 backend — pure-TS, no native deps, fast for tests.
+import { createVtermBackend } from "../packages/vterm/src/index.ts"
 import { createVt100Backend } from "../packages/vt100/src/index.ts"
 
 let dir: string
@@ -387,4 +388,56 @@ describe("createFrameTracer", () => {
       rmSync(dir4, { recursive: true, force: true })
     }
   })
+})
+
+// Boolean-only captures miss this failure: unreported state needs its own history fingerprint.
+test("frame fingerprints retain each null attribute separately from measured false", async () => {
+  const term = createTerminal({ backend: createVt100Backend(), cols: 1, rows: 1 })
+  term.feed("X")
+  let cell = {
+    ...term.getCell(0, 0),
+    dim: false as boolean | null,
+    italic: false as boolean | null,
+    strikethrough: false as boolean | null,
+  }
+  term.getRows = () => [[cell]]
+  const tracer = createFrameTracer(term, {
+    dir: join(dir, "nullable-styles"),
+    debounceMs: 1,
+    renderFn: stubRender,
+  })
+  try {
+    tracer.onWrite(new Uint8Array())
+    await waitForFrames(tracer, 1)
+    for (const field of ["dim", "italic", "strikethrough"] as const) {
+      cell = { ...cell, [field]: null }
+      tracer.onWrite(new Uint8Array())
+      await waitForFrames(tracer, tracer.framesSinceSeq(0).length + 1)
+    }
+    const frames = tracer.framesSinceSeq(0)
+    expect(new Set(frames.map((frame) => frame.hash)).size).toBe(4)
+    expect(frames.every((frame) => frame.duplicate_of === null)).toBe(true)
+  } finally {
+    await tracer.stop()
+    term.close()
+  }
+})
+
+// Exact pre-change fingerprint of retained rich boolean-only recording input (real Vterm).
+test("retained boolean-only recording keeps the legacy frame fingerprint", async () => {
+  const term = createTerminal({ backend: createVtermBackend(), cols: 8, rows: 2 })
+  const tracer = createFrameTracer(term, {
+    dir: join(dir, "legacy-booleans"),
+    debounceMs: 1,
+    silveryEventsFile: null,
+    renderFn: stubRender,
+  })
+  try {
+    term.feed("\x1b[1;2;3;9mX\x1b[0mY")
+    tracer.onWrite(new Uint8Array())
+    await tracer.stop()
+    expect(tracer.framesSinceSeq(0).map((frame) => frame.hash)).toEqual(["xxh64:7be5862c7b3a7bf0"])
+  } finally {
+    term.close()
+  }
 })

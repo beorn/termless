@@ -228,8 +228,9 @@ export function assertIsBold(cell: CellView): AssertionResult {
 /** Assert cell is italic. */
 export function assertIsItalic(cell: CellView): AssertionResult {
   const loc = cellLocation(cell)
+  if (cell.italic === null) return { pass: false, message: `${loc}: italic is unreported by this producer` }
   return {
-    pass: cell.italic,
+    pass: cell.italic === true,
     message: cell.italic ? `Expected ${loc} not to be italic` : `Expected ${loc} to be italic`,
   }
 }
@@ -237,8 +238,9 @@ export function assertIsItalic(cell: CellView): AssertionResult {
 /** Assert cell is dim. */
 export function assertIsDim(cell: CellView): AssertionResult {
   const loc = cellLocation(cell)
+  if (cell.dim === null) return { pass: false, message: `${loc}: dim is unreported by this producer` }
   return {
-    pass: cell.dim,
+    pass: cell.dim === true,
     message: cell.dim ? `Expected ${loc} not to be dim` : `Expected ${loc} to be dim`,
   }
 }
@@ -246,8 +248,11 @@ export function assertIsDim(cell: CellView): AssertionResult {
 /** Assert cell has strikethrough. */
 export function assertIsStrikethrough(cell: CellView): AssertionResult {
   const loc = cellLocation(cell)
+  if (cell.strikethrough === null) {
+    return { pass: false, message: `${loc}: strikethrough is unreported by this producer` }
+  }
   return {
-    pass: cell.strikethrough,
+    pass: cell.strikethrough === true,
     message: cell.strikethrough ? `Expected ${loc} not to be strikethrough` : `Expected ${loc} to be strikethrough`,
   }
 }
@@ -345,7 +350,10 @@ export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResu
   let allMatch = true
 
   const check = (label: string, expected: unknown, actual: unknown, pass: boolean) => {
-    if (pass) {
+    if (actual === null && ["dim", "italic", "strikethrough"].includes(label)) {
+      details.push(`  ${label} is unreported by this producer`)
+      allMatch = false
+    } else if (pass) {
       details.push(`  ${label}: matched`)
     } else {
       details.push(`  ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
@@ -356,8 +364,9 @@ export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResu
   if (attrs.bold !== undefined) check("bold", attrs.bold, cell.bold, cell.bold === attrs.bold)
   if (attrs.italic !== undefined) check("italic", attrs.italic, cell.italic, cell.italic === attrs.italic)
   if (attrs.dim !== undefined) check("dim", attrs.dim, cell.dim, cell.dim === attrs.dim)
-  if (attrs.strikethrough !== undefined)
+  if (attrs.strikethrough !== undefined) {
     check("strikethrough", attrs.strikethrough, cell.strikethrough, cell.strikethrough === attrs.strikethrough)
+  }
   if (attrs.inverse !== undefined) check("inverse", attrs.inverse, cell.inverse, cell.inverse === attrs.inverse)
   if (attrs.wide !== undefined) check("wide", attrs.wide, cell.wide, cell.wide === attrs.wide)
 

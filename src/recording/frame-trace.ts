@@ -207,7 +207,7 @@ function bufferFingerprint(terminal: TestTerminal): {
   for (const row of lines) {
     let s = ""
     for (const cell of row) {
-      // Mix in char + a 1-byte attribute digest so attribute-only changes still
+      // Mix in char + an attribute digest so attribute-only changes still
       // produce a new hash.
       const attrs =
         (cell.bold ? 1 : 0) |
@@ -215,7 +215,10 @@ function bufferFingerprint(terminal: TestTerminal): {
         (cell.italic ? 4 : 0) |
         (cell.underline ? 8 : 0) |
         (cell.inverse ? 16 : 0) |
-        (cell.strikethrough ? 32 : 0)
+        (cell.strikethrough ? 32 : 0) |
+        (cell.dim === null ? 64 : 0) |
+        (cell.italic === null ? 128 : 0) |
+        (cell.strikethrough === null ? 256 : 0)
       const fg = cell.fg ? `${cell.fg.r},${cell.fg.g},${cell.fg.b}` : ""
       const bg = cell.bg ? `${cell.bg.r},${cell.bg.g},${cell.bg.b}` : ""
       s += `${cell.char}|${attrs}|${fg}|${bg};`
