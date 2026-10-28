@@ -1,14 +1,10 @@
-# vendor-kit: verify@68fec0e27fac — generated; edit km/packages/km-infra/vendor-kit/templates/verify.yml in km, then re-sync
+# vendor-kit-override: Automatic Verify paused under #31323 until the private ghostty-web publication hold lifts; retain manual dispatch.
 name: Verify
 
-# Light per-push gate: the suite + build must stay green on main so a release
-# tag never discovers rot. Heavy checks belong in release.yml (pre-publish).
+# Automatic verification is paused until the private ghostty-web publication hold lifts; manual dispatch remains available.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: verify-${{ github.ref }}

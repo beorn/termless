@@ -10,6 +10,7 @@
     "linksExtraExcludes": "            --exclude '^https://asciinema\\.org/?$'\n"
   },
   "overrides": {
-    "oxfmt": "extra ignorePattern beyond canonical: docs/.vitepress/dist/"
+    "oxfmt": "extra ignorePattern beyond canonical: docs/.vitepress/dist/",
+    "verify": "Automatic Verify paused under #31323 until the private ghostty-web publication hold lifts; retain manual dispatch."
   }
 }
