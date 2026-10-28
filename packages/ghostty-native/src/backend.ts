@@ -255,7 +255,7 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     // the readonly stream, which ignores queries and has no writer, so the addon exports neither
     // hasResponse nor readResponse. If a later libghostty exposes a reply path, this drain is where
     // it belongs — but never fill it from this adapter: adapter-made answers are the class #30549
-    // removed and packages/probes/proven-reply-paths.ts forbids.
+    // removed.
     if (backend.onResponse && native.hasResponse && native.readResponse) {
       while (native.hasResponse(h)) {
         const response = native.readResponse(h)
