@@ -9,6 +9,9 @@ packages/libvterm/wasm/libvterm.d.ts text eol=lf
 packages/libvterm/build/build.sh text eol=lf
 packages/libvterm/build/flat-api.c text eol=lf
 
+# Preserve the private Ghostty producer's mixed line endings byte-for-byte.
+vendor/ghostty-web/dist/** -text
+
 # Reply-delivery declarations bind the imported adapter bytes on every platform.
 packages/vt100/src/index.ts text eol=lf
 packages/vt100/src/backend.ts text eol=lf

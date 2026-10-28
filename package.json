@@ -55,7 +55,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown && tsdown -W",
+    "build": "tsdown && tsdown -W 'packages/*'",
     "test": "bun run ci",
     "typecheck": "tsc --noEmit",
     "ci": "bun --bun vitest run",
