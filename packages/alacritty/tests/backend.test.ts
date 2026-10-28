@@ -6,10 +6,46 @@
  *
  * TODO: Tests require the native Rust module to be built first.
  * Run: cd packages/alacritty/native && cargo build --release
+ * @failure Audited native reply delivery is omitted or binds different adapter/glue/loader bytes.
+ * @level l0
+ * @consumer Headless collector native reply eligibility.
+ * @testonly none
  */
 import { describe, test, expect, afterEach } from "vitest"
 import { createAlacrittyBackend, loadAlacrittyNative } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
+import { hasExtension, type ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import { createHash } from "node:crypto"
+import { readFileSync, realpathSync } from "node:fs"
+import { relative } from "node:path"
+import { fileURLToPath } from "node:url"
+
+// N1/N2: declaration integrity is independent of addon availability; no init/feed is performed.
+// Existing native behavior tests cannot detect a missing or stale source binding when builds are absent.
+test("declares audited native reply delivery without initializing the engine", () => {
+  const backend = createAlacrittyBackend()
+  expect(hasExtension(backend, "reply-delivery")).toBe(true)
+  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery"))
+    throw new Error("Alacritty declares no reply delivery")
+  expect(backend.replyDelivery.engine).toEqual({
+    kind: "native",
+    sha256: "e6e16113863355b77d0aa3b359bd40c7066fb144e005fbc324fecfa3f4869bea",
+  })
+  expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
+  const repo = fileURLToPath(new URL("../../../", import.meta.url))
+  const sources = ["../src/index.ts", "../src/backend.ts", "../native/src/lib.rs", "../../../src/load-native.ts"]
+  expect(backend.replyDelivery.adapterSources).toEqual(
+    sources.map((path) => {
+      const target = realpathSync(fileURLToPath(new URL(path, import.meta.url)))
+      const bytes = readFileSync(target)
+      return {
+        path: relative(repo, target).replaceAll("\\", "/"),
+        blobOid: createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex"),
+      }
+    }),
+  )
+  backend.destroy()
+})
 
 // Skip all tests if native module is not available
 let nativeAvailable = false

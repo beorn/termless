@@ -16,9 +16,11 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
+import { replyDelivery } from "./reply-delivery.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module types (from napi-rs)
@@ -287,10 +289,10 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(),
+    extensions: new Set(["reply-delivery"]),
   }
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & ReplyDeliveryExtension = {
     name: "alacritty",
     init,
     destroy,
@@ -311,6 +313,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend
