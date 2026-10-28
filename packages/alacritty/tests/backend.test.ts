@@ -25,8 +25,9 @@ import { fileURLToPath } from "node:url"
 test("declares audited native reply delivery without initializing the engine", () => {
   const backend = createAlacrittyBackend()
   expect(hasExtension(backend, "reply-delivery")).toBe(true)
-  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery"))
+  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
     throw new Error("Alacritty declares no reply delivery")
+  }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
     sha256: "e6e16113863355b77d0aa3b359bd40c7066fb144e005fbc324fecfa3f4869bea",
