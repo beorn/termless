@@ -38,7 +38,7 @@
         "@napi-rs/canvas": "1.0.11",
         "@resvg/resvg-js": "^2.6.2",
         "@twemoji/svg": "^15.0.0",
-        "ghostty-web": "^0.4.0",
+        "ghostty-web": "file:./vendor/ghostty-web",
         "gifenc": "^1.0.3",
         "playwright": "^1.59.0",
         "upng-js": "^2.1.0",
@@ -99,7 +99,7 @@
       "version": "0.10.2",
       "dependencies": {
         "@napi-rs/canvas": "1.0.11",
-        "ghostty-web": "^0.4.0",
+        "ghostty-web": "file:../../vendor/ghostty-web",
       },
       "peerDependencies": {
         "@termless/core": "^0.10.2",
@@ -1100,7 +1100,7 @@
 
     "get-tsconfig": ["get-tsconfig@5.0.0-beta.5", "", { "dependencies": { "resolve-pkg-maps": "^1.0.0" } }, "sha512-/6gFNr0N04nob252sTQxyFLi3eKFRqIg1I87YcqAMT1i6SQrSF6KujUEQrtrjMV0H/eejTCltLdDSTEMzHbnsQ=="],
 
-    "ghostty-web": ["ghostty-web@0.4.0", "", {}, "sha512-0puDBik2qapbD/QQBW9o5ZHfXnZBqZWx/ctBiVtKZ6ZLds4NYb+wZuw1cRLXZk9zYovIQ908z3rvFhexAvc5Hg=="],
+    "ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 
     "gifenc": ["gifenc@1.0.3", "", {}, "sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw=="],
 
@@ -1553,6 +1553,10 @@
     "@rolldown/binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.11.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw=="],
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
+
+    "@termless/core/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
+
+    "@termless/ghostty/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 
     "@vue/compiler-core/entities": ["entities@7.0.1", "", {}, "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA=="],
 
