@@ -110,7 +110,7 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
     fg,
     bg,
     bold: raw.bold,
-    dim: false, // libvterm doesn't expose dim/faint in its cell attrs
+    dim: null, // This producer does not expose dim/faint in its cell attrs.
     italic: raw.italic,
     underline: underlineStyle(raw.underline, row, col),
     underlineColor: null,
@@ -472,7 +472,7 @@ function emptyCell(): Cell {
     fg: null,
     bg: null,
     bold: false,
-    dim: false,
+    dim: null,
     italic: false,
     underline: false as const,
     underlineColor: null,

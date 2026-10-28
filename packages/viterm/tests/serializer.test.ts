@@ -210,3 +210,14 @@ describe("terminalSnapshot", () => {
     expect(marker.name).toBe("step-1")
   })
 })
+
+// Boolean snapshots omit unset flags; unknown flags must leave a distinct retained annotation.
+test("terminal snapshots retain unavailable fields distinctly from measured false", () => {
+  const unknown = createMockTerminal({
+    lines: ["X"],
+    cells: new Map([["0,0", { dim: null, italic: null, strikethrough: null }]]),
+  })
+  const encoded = terminalSerializer.serialize(terminalSnapshot(unknown))
+  expect(encoded).toContain("dim:null italic:null strike:null")
+  expect(encoded).not.toBe(terminalSerializer.serialize(terminalSnapshot(createMockTerminal({ lines: ["X"] }))))
+})

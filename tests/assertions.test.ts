@@ -886,3 +886,19 @@ describe("message format contract", () => {
     expect(result.message).not.toContain("not to contain")
   })
 })
+
+// Required-null readback must fail assertions explicitly rather than pretending to measure false.
+test.each([
+  ["dim", assertIsDim],
+  ["italic", assertIsItalic],
+  ["strikethrough", assertIsStrikethrough],
+] as const)("unreported %s fails with the field named", (field, assertion) => {
+  const cell = mockCell({ [field]: null })
+  expect(assertion(cell).pass).toBe(false)
+  expect(assertion(cell).message).toContain(`${field} is unreported`)
+  for (const value of [true, false]) {
+    const result = assertHaveAttrs(cell, { [field]: value })
+    expect(result.pass).toBe(false)
+    expect(result.message).toContain(`${field} is unreported`)
+  }
+})

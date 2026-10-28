@@ -8,9 +8,12 @@
  * is plain serializable data and survives a JSON round-trip unchanged.
  */
 
+import { createHash } from "node:crypto"
 import { afterEach, describe, expect, test } from "vitest"
 import { createVtermBackend } from "../packages/vterm/src/index.ts"
 import { diffTerminalStates, terminalStateDigest, type TerminalStateDigest } from "../src/terminal/state-digest.ts"
+import { snapshotVisualState } from "../src/recording/visual-snapshot.ts"
+import { diffBuffers } from "../src/terminal/diff.ts"
 import type { TerminalBackend } from "../src/terminal/types.ts"
 
 const encoder = new TextEncoder()
@@ -166,4 +169,32 @@ describe("diffTerminalStates", () => {
     expect(diff.rows![0]!.a.text).toBe("bbb")
     expect(diff.rows![0]!.b.text).toBe("BBB")
   })
+})
+
+// Existing floods use measured booleans; only an unreported field exposes lossy encoders.
+test.each(["dim", "italic", "strikethrough"] as const)(
+  "%s null survives JSON and differs from measured false",
+  (field) => {
+    const known = fed("X", 1, 1)
+    const cell = { ...known.getCell(0, 0), [field]: null }
+    const unknown = { ...known, getCell: () => cell, getRows: () => [[cell]], getRow: () => [cell] }
+    const round = JSON.parse(JSON.stringify(cell)) as typeof cell
+    expect(round[field]).toBeNull()
+    const restored = { ...unknown, getCell: () => round, getRows: () => [[round]], getRow: () => [round] }
+    expect(diffBuffers(unknown, restored).equal).toBe(true)
+    expect(diffBuffers(known, restored).equal).toBe(false)
+    const digest = terminalStateDigest(restored)
+    expect(diffTerminalStates(terminalStateDigest(known), digest).equal).toBe(false)
+    expect(snapshotVisualState(restored)).not.toBe(snapshotVisualState(known))
+  },
+)
+
+// Pre-change real-vterm boolean-only recording input; fixed hashes prove legacy wire identity.
+test("retained boolean-only recording keeps legacy digest and visual bytes", () => {
+  const term = fed("\x1b[1;2;3;9mX\x1b[0mY", 8, 2)
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+  expect(hash(JSON.stringify(terminalStateDigest(term)))).toBe(
+    "c84a4a38b234d54fd7ca8ebd276fd9b0b75496429fffcf0580ac1ebe3b1945ff",
+  )
+  expect(hash(snapshotVisualState(term))).toBe("41611b76d1676e78dbae650e298af3b0c36fb0f7316f19acdb78319c25f54580")
 })

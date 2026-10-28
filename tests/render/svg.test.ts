@@ -1,6 +1,8 @@
 import { describe, test, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { rowToAnsi } from "../../src/render/ansi.ts"
+import { cellsToAnsi } from "../../src/terminal/cells-to-ansi.ts"
 import { screenshotSvg, rgbToHex, rgbToString, embeddedFontFaceDefs } from "../../src/render/svg.ts"
 import { BUNDLED_PRIMARY_FAMILY, bundledFontsDir } from "../../src/render/fonts.ts"
 import type {
@@ -608,4 +610,15 @@ describe("embedded @font-face rules carry each face's weight", () => {
       bold: "700",
     })
   })
+})
+
+// Drawing may leave unavailable attributes unset; encoders retain null in readback elsewhere.
+test("unreported style attributes draw identically to measured unset attributes", () => {
+  const unknown = createMockReadable(["X"], {
+    cellOverrides: { "0,0": { dim: null, italic: null, strikethrough: null } },
+  })
+  const unset = createMockReadable(["X"])
+  expect(screenshotSvg(unknown)).toBe(screenshotSvg(unset))
+  expect(rowToAnsi(unknown.getRow(0), 1)).toBe(rowToAnsi(unset.getRow(0), 1))
+  expect(cellsToAnsi(unknown)).toBe(cellsToAnsi(unset))
 })

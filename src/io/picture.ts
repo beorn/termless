@@ -27,11 +27,14 @@ export interface Cell {
   fg: Color | null
   bg: Color | null
   bold: boolean
-  dim: boolean
-  italic: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  dim: boolean | null
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  italic: boolean | null
   underline: UnderlineStyle
   underlineColor: Color | null
-  strikethrough: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  strikethrough: boolean | null
   inverse: boolean
   blink: boolean
   hidden: boolean

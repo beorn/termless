@@ -99,7 +99,14 @@ export const termlessMatchers = {
   /** Assert multiple cell attributes at once. */
   toHaveAttrs(received: unknown, attrs: CellAttrs) {
     assertCellView(received, "toHaveAttrs")
-    return toMatcherResult(assertHaveAttrs(received, attrs))
+    const result = assertHaveAttrs(received, attrs)
+    // Unreported evidence must fail both positive and negated matcher calls.
+    for (const field of ["dim", "italic", "strikethrough"] as const) {
+      if (attrs[field] !== undefined && received[field] === null) {
+        throw new Error(result.message)
+      }
+    }
+    return toMatcherResult(result)
   },
 
   /** @deprecated Use toHaveAttrs({ bold: true }) */
@@ -111,19 +118,25 @@ export const termlessMatchers = {
   /** @deprecated Use toHaveAttrs({ italic: true }) */
   toBeItalic(received: unknown) {
     assertCellView(received, "toBeItalic")
-    return toMatcherResult(assertIsItalic(received))
+    const result = assertIsItalic(received)
+    if (received.italic === null) throw new Error(result.message)
+    return toMatcherResult(result)
   },
 
   /** @deprecated Use toHaveAttrs({ dim: true }) */
   toBeDim(received: unknown) {
     assertCellView(received, "toBeDim")
-    return toMatcherResult(assertIsDim(received))
+    const result = assertIsDim(received)
+    if (received.dim === null) throw new Error(result.message)
+    return toMatcherResult(result)
   },
 
   /** @deprecated Use toHaveAttrs({ strikethrough: true }) */
   toBeStrikethrough(received: unknown) {
     assertCellView(received, "toBeStrikethrough")
-    return toMatcherResult(assertIsStrikethrough(received))
+    const result = assertIsStrikethrough(received)
+    if (received.strikethrough === null) throw new Error(result.message)
+    return toMatcherResult(result)
   },
 
   /** @deprecated Use toHaveAttrs({ inverse: true }) */

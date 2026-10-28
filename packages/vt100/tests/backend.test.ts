@@ -237,11 +237,14 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("italic is always false (not supported in VT100)", () => {
+  // Unreported engine attributes are unknown, including on blank cells; false
+  // would invent a measured negative. These cases own the producer boundary.
+  test("italic is null when the engine does not report it", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[3mitalic\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.italic).toBe(false)
+    expect(cell.char).toBe("i")
+    expect(cell.italic).toBeNull()
     backend.destroy()
   })
 
@@ -253,19 +256,21 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("strikethrough is always false (not supported in VT100)", () => {
+  test("strikethrough is null when the engine does not report it", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[9mstruck\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.strikethrough).toBe(false)
+    expect(cell.char).toBe("s")
+    expect(cell.strikethrough).toBeNull()
     backend.destroy()
   })
 
-  test("faint/dim is always false (not supported in VT100)", () => {
+  test("faint/dim is null when the engine does not report it", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[2mdim\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.dim).toBe(false)
+    expect(cell.char).toBe("d")
+    expect(cell.dim).toBeNull()
     backend.destroy()
   })
 
@@ -577,10 +582,10 @@ describe("createVt100Backend", () => {
     expect(cell.fg).toBeNull()
     expect(cell.bg).toBeNull()
     expect(cell.bold).toBe(false)
-    expect(cell.italic).toBe(false)
+    expect(cell.italic).toBeNull()
     expect(cell.underline).toBe(false)
-    expect(cell.strikethrough).toBe(false)
-    expect(cell.dim).toBe(false)
+    expect(cell.strikethrough).toBeNull()
+    expect(cell.dim).toBeNull()
     expect(cell.inverse).toBe(false)
     expect(cell.blink).toBe(false)
     expect(cell.hidden).toBe(false)

@@ -191,3 +191,16 @@ describe("createVt220Backend", () => {
     backend.destroy()
   })
 })
+
+// Classic engine cells do not report these attributes; SGR cannot turn absence into false.
+test("VT220 returns null for unreported styles in measured and out-of-range cells", () => {
+  const backend = createVt220Backend({ cols: 2, rows: 1 })
+  try {
+    backend.feed(new TextEncoder().encode("\x1b[2;3;9mX"))
+    for (const cell of [backend.getCell(0, 0), backend.getCell(9, 9)]) {
+      expect(cell).toMatchObject({ dim: null, italic: null, strikethrough: null })
+    }
+  } finally {
+    backend.destroy()
+  }
+})

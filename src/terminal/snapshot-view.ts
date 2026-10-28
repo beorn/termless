@@ -24,7 +24,8 @@ import type { Cell, Color, Cursor, CursorStyle, ScrollbackState, Terminal, Termi
  * One cell as a vterm-family engine snapshot represents it. Field-for-field
  * match of vterm.js's `ScreenCell` (see `packages/vterm/src/backend.ts`'s
  * `convertCell`), minus the fields no engine snapshot needs for a read-only
- * fold (`overline` has no slot in termless's {@link Cell}, same as the live
+ * fold. Missing faint/italic/strikethrough readback remains null; it is not measured false.
+ * (`overline` has no slot in termless's {@link Cell}, same as the live
  * vterm backend).
  */
 export interface EngineSnapshotCell {
@@ -32,11 +33,11 @@ export interface EngineSnapshotCell {
   fg: Color | null
   bg: Color | null
   bold: boolean
-  faint: boolean
-  italic: boolean
+  faint?: boolean | null
+  italic?: boolean | null
   underline: "none" | "single" | "double" | "curly" | "dotted" | "dashed"
   underlineColor: Color | null
-  strikethrough: boolean
+  strikethrough?: boolean | null
   inverse: boolean
   blink: boolean
   hidden: boolean
@@ -116,11 +117,11 @@ function convertCell(sc: EngineSnapshotCell | undefined, prevWide: boolean): Cel
     fg: sc.fg,
     bg: sc.bg,
     bold: sc.bold,
-    dim: sc.faint,
-    italic: sc.italic,
+    dim: sc.faint ?? null,
+    italic: sc.italic ?? null,
     underline: sc.underline === "none" ? false : sc.underline,
     underlineColor: sc.underlineColor,
-    strikethrough: sc.strikethrough,
+    strikethrough: sc.strikethrough ?? null,
     inverse: sc.inverse,
     blink: sc.blink,
     hidden: sc.hidden,

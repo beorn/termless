@@ -44,15 +44,16 @@ const INITIAL_SGR: SgrState = {
   hidden: false,
 }
 
+// Drawing policy: unreported style attributes are drawn unset; retained readback stays null.
 function sgrFor(cell: Cell): SgrState {
   return {
     fg: cell.fg,
     bg: cell.bg,
     bold: cell.bold,
-    dim: cell.dim,
-    italic: cell.italic,
+    dim: cell.dim === true,
+    italic: cell.italic === true,
     underline: cell.underline,
-    strikethrough: cell.strikethrough,
+    strikethrough: cell.strikethrough === true,
     inverse: cell.inverse,
     hidden: cell.hidden,
   }
