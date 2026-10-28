@@ -14,6 +14,10 @@ vendor/ghostty-web/dist/** -text
 vendor/ghostty-web/*.patch -text
 
 # Reply-delivery declarations bind the imported adapter bytes on every platform.
+packages/alacritty/src/index.ts text eol=lf
+packages/alacritty/src/backend.ts text eol=lf
+packages/alacritty/native/src/lib.rs text eol=lf
+src/load-native.ts text eol=lf
 packages/vt100/src/index.ts text eol=lf
 packages/vt100/src/backend.ts text eol=lf
 packages/vt220/src/index.ts text eol=lf
