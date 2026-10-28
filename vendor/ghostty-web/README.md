@@ -50,21 +50,21 @@ npm install ghostty-web
 ghostty-web aims to be API-compatible with the xterm.js API.
 
 ```javascript
-import { init, Terminal } from 'ghostty-web';
+import { init, Terminal } from "ghostty-web"
 
-await init();
+await init()
 
 const term = new Terminal({
   fontSize: 14,
   theme: {
-    background: '#1a1b26',
-    foreground: '#a9b1d6',
+    background: "#1a1b26",
+    foreground: "#a9b1d6",
   },
-});
+})
 
-term.open(document.getElementById('terminal'));
-term.onData((data) => websocket.send(data));
-websocket.onmessage = (e) => term.write(e.data);
+term.open(document.getElementById("terminal"))
+term.onData((data) => websocket.send(data))
+websocket.onmessage = (e) => term.write(e.data)
 ```
 
 For a comprehensive client <-> server example, refer to the [demo](./demo/index.html#L141).
