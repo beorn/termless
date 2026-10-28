@@ -17,6 +17,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   engine: {
     kind: "source",
     repository: "git@github.com:beorn/vterm.git",
-    treeOid: "d4f46ec8ca9c9bfb9a8f0486cfcaa3b48715c1a8",
+    treeOid: "2be41392dfe44232331d01b966d6b112f885e604",
   },
 }
