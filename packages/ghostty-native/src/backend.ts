@@ -250,7 +250,12 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     const h = ensureHandle()
     native.feed(h, data)
 
-    // Drain DA1/DA2/DSR responses and forward to the terminal layer
+    // Drain DA1/DA2/DSR responses and forward to the terminal layer. This is a NO-OP on
+    // libghostty-vt 1.3.1 and is kept deliberately (#30730, @cto ruling (B) 7c077d3d): vtStream() is
+    // the readonly stream, which ignores queries and has no writer, so the addon exports neither
+    // hasResponse nor readResponse. If a later libghostty exposes a reply path, this drain is where
+    // it belongs — but never fill it from this adapter: adapter-made answers are the class #30549
+    // removed and packages/probes/proven-reply-paths.ts forbids.
     if (backend.onResponse && native.hasResponse && native.readResponse) {
       while (native.hasResponse(h)) {
         const response = native.readResponse(h)
@@ -363,14 +368,14 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     extensions: new Set(),
   }
 
-  // TODO(native): Wire DA1/DA2/DSR response capture in main.zig.
-  // The Zig side uses ReadonlyStream which doesn't capture write-back data.
-  // Steps:
-  //   1. Replace ReadonlyStream with a full Stream that captures terminal output
-  //      (or add a separate response buffer to TerminalHandle)
-  //   2. Accumulate response bytes written by the terminal into the buffer
-  //   3. Expose hasResponse(handle) and readResponse(handle) via napigen
-  // The TS side is already wired — it calls hasResponse/readResponse after each feed().
+  // There is nothing to wire here: libghostty-vt 1.3.1 has no reply path (#30730, @cto (B) 7c077d3d).
+  // Terminal.vtStream() returns the READONLY stream (src/terminal/Terminal.zig:261-264), whose
+  // handler has no writer and ignores queries (src/terminal/stream_readonly.zig:177-190); libghostty
+  // answers queries in Ghostty's app-side stream handler (src/termio/stream_handler.zig), which this
+  // adapter must not port — adapter-made answers are the class #30549 removed. The ghostty-native
+  // device.* query cells and the seven DECRQM mode cells therefore take the by-name class-UNTESTABLE
+  // reason at the cut (#30711 row 13). A port was tried and refused; the patch and its smoke logs
+  // stay as evidence under /hh/var/@dev8/30730/.
 
   const backend: TerminalBackend = {
     name: "ghostty-native",
