@@ -1,5 +1,7 @@
 This is a patched, source-backed distribution of ghostty-web0.4.0, never an upstream release. See RECEIPT.json and the removal tracker @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
 
+The package manifest retains upstream consumer metadata; build scripts and development dependencies are omitted from this installable distribution. Rebuilds use the pinned upstream archive's own manifest and lockfile through rebuild.ts.
+
 # ghostty-web
 
 [![NPM Version](https://img.shields.io/npm/v/ghostty-web)](https://npmjs.com/package/ghostty-web) [![NPM Downloads](https://img.shields.io/npm/dw/ghostty-web)](https://npmjs.com/package/ghostty-web) [![npm bundle size](https://img.shields.io/bundlephobia/minzip/ghostty-web)](https://npmjs.com/package/ghostty-web) [![license](https://img.shields.io/github/license/coder/ghostty-web)](./LICENSE)
