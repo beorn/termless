@@ -555,6 +555,7 @@ export interface ReplyDeliveryExtension {
       | { readonly kind: "registry"; readonly lockIntegrity: string }
       | { readonly kind: "source"; readonly repository: string; readonly treeOid: string }
       | { readonly kind: "wasm"; readonly sha256: string }
+      | { readonly kind: "native"; readonly sha256: string }
   }
 }
 
