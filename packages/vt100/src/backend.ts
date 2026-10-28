@@ -34,9 +34,9 @@ const DEFAULT_ROWS = 24
  * the Rust vt100 crate. It parses ANSI/VT100 escape sequences and
  * maintains an in-memory screen representation with per-cell attributes.
  *
- * Supports: SGR (8 standard colors, bold, underline, blink, reverse, hidden),
+ * Supports: monochrome SGR (bold, underline, blink, reverse),
  * cursor movement, erase commands, scroll regions, DA1/DSR responses,
- * OSC title, and more. No truecolor, no 256 colors, no wide chars — use
+ * OSC title, and more. No color, hidden text, or wide chars — use
  * vterm.js for those.
  */
 export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBackend & ReplyDeliveryExtension {
