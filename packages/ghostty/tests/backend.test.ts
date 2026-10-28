@@ -39,9 +39,15 @@ describe("ghostty backend", () => {
   test("committed producer outputs match the pinned build receipt", () => {
     const directory = join(import.meta.dirname, "../../../vendor/ghostty-web")
     const receipt = JSON.parse(readFileSync(join(directory, "RECEIPT.json"), "utf8")) as {
+      patchSha256: string
+      innerPatchSha256: string
       outputs: Record<string, string>
     }
-    for (const [path, expected] of Object.entries(receipt.outputs)) {
+    for (const [path, expected] of Object.entries({
+      ...receipt.outputs,
+      "producer.patch": receipt.patchSha256,
+      "ghostty-wasm-api.patch": receipt.innerPatchSha256,
+    })) {
       expect(
         createHash("sha256")
           .update(readFileSync(join(directory, path)))
@@ -50,6 +56,71 @@ describe("ghostty backend", () => {
       ).toBe(expected)
     }
   })
+
+  // Q4: real producer replies must reflect the active screen's keyboard stack.
+  // Rendering/receipt tests cannot detect an ignored query action.
+  test.each(["direct", "adapter"] as const)(
+    "Kitty flags queries preserve lifecycle and response order via %s",
+    (path) => {
+      const create = () => {
+        if (path === "direct") {
+          const terminal = ghostty.createTerminal(80, 24, { scrollbackLimit: 1000 })
+          return {
+            write(text: string) {
+              terminal.write(text)
+              terminal.update()
+              let response = ""
+              while (terminal.hasResponse()) response += terminal.readResponse() ?? ""
+              return response
+            },
+            dispose: () => terminal.free(),
+          }
+        }
+        const terminal = createBackend()
+        let response = ""
+        terminal.onResponse = (bytes) => {
+          response += new TextDecoder().decode(bytes)
+        }
+        return {
+          write(text: string) {
+            response = ""
+            feedText(terminal, text)
+            return response
+          },
+          dispose: () => terminal.destroy(),
+        }
+      }
+      const first = create()
+      const second = create()
+      try {
+        expect(first.write("\x1b[5n")).toBe("\x1b[0n")
+        expect(first.write("\x1b[?u")).toBe("\x1b[?0u")
+        for (const flags of [1, 3, 5, 9, 25, 31]) {
+          expect(first.write(`\x1b[>${flags}u\x1b[?u\x1b[<u\x1b[?u`)).toBe(`\x1b[?${flags}u\x1b[?0u`)
+        }
+        for (const [flags, mode, expected] of [
+          [8, 1, 8],
+          [3, 2, 11],
+          [2, 3, 9],
+          [31, 1, 31],
+        ]) {
+          expect(first.write(`\x1b[=${flags};${mode}u\x1b[?u`)).toBe(`\x1b[?${expected}u`)
+        }
+        expect(first.write("\x1bc\x1b[?u")).toBe("\x1b[?0u")
+        expect(first.write("\x1b[>5u\x1b[?u")).toBe("\x1b[?5u")
+        expect(second.write("\x1b[?u")).toBe("\x1b[?0u")
+        expect(second.write("\x1b[>9u\x1b[?u")).toBe("\x1b[?9u")
+        expect(first.write("\x1b[?u")).toBe("\x1b[?5u")
+        expect(first.write("\x1b[?1049h\x1b[?u\x1b[>25u\x1b[?u")).toBe("\x1b[?0u\x1b[?25u")
+        expect(first.write("\x1b[?1049l\x1b[?u")).toBe("\x1b[?5u")
+        expect(first.write("\x1b[?u\x1b[<u\x1b[?u")).toBe("\x1b[?5u\x1b[?0u")
+        expect(first.write("\x1b[5n\x1b[6n")).toBe("\x1b[0n\x1b[1;1R")
+      } finally {
+        first.dispose()
+        second.dispose()
+      }
+    },
+  )
 
   test.each(["viewport", "scrollback"] as const)("rejects invalid producer ordinals in %s with its digest", (path) => {
     const original = ghostty.createTerminal.bind(ghostty)

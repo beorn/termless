@@ -16,11 +16,40 @@ index 03cad709f34..90b1658b92d 100644
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1006 @@
++@@ -0,0 +1,1011 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
-@@ -717,7 +717,7 @@ index 000000000..d57b4e405
+@@ -575,22 +575,27 @@ index 000000000..d57b4e405
+ +            .mouse_shape => self.terminal.mouse_shape = value,
+ +            .color_operation => try self.colorOperation(value.op, &value.requests),
+ +            .kitty_color_report => try self.kittyColorOperation(value),
+++            .kitty_keyboard_query => {
+++                const flags = self.terminal.screens.active.kitty_keyboard.current().int();
+++                var buf: [32]u8 = undefined;
+++                const resp = try std.fmt.bufPrint(&buf, "\x1B[?{}u", .{flags});
+++                try self.response_buffer.appendSlice(self.alloc, resp);
+++            },
+ +
+ +            // Actions that require no response and have no terminal effect
+ +            .dcs_hook,
+ +            .dcs_put,
+ +            .dcs_unhook,
+ +            .apc_start,
+ +            .apc_end,
+ +            .apc_put,
+ +            .bell,
+ +            .enquiry,
+ +            .request_mode,
+ +            .request_mode_unknown,
+ +            .size_report,
+ +            .xtversion,
+ +            .device_attributes,
+-+            .kitty_keyboard_query,
+ +            .window_title,
+ +            .report_pwd,
+ +            .show_desktop_notification,
+@@ -717,7 +722,7 @@ index 000000000..d57b4e405
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
@@ -29,7 +58,7 @@ index 03cad709f34..90b1658b92d 100644
  +};
  +
  +/// Dirty state
-@@ -1072,6 +1072,7 @@ index 000000000..d57b4e405
+@@ -1072,6 +1077,7 @@ index 000000000..d57b4e405
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
@@ -37,7 +66,7 @@ index 03cad709f34..90b1658b92d 100644
  +            };
  +            idx += 1;
  +        }
-@@ -1264,6 +1265,7 @@ index 000000000..d57b4e405
+@@ -1264,6 +1270,7 @@ index 000000000..d57b4e405
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
