@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.11",
-    "ghostty-web": "^0.4.0"
+    "ghostty-web": "file:../../vendor/ghostty-web"
   },
   "peerDependencies": {
     "@termless/core": "^0.10.2"

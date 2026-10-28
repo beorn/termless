@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "package": "ghostty-web",
+  "version": "0.4.0",
+  "web": {
+    "repository": "https://github.com/coder/ghostty-web",
+    "commit": "9e4e126d89ac3537d2b2ebec075849851566de9f",
+    "archiveSha256": "d2cedff4d77581b39703d0955bcce3b8607c266e85962ad8ce0bc14385008b8b"
+  },
+  "core": {
+    "repository": "https://github.com/ghostty-org/ghostty",
+    "commit": "5714ed07a1012573261b7b7e3ed2add9c1504496",
+    "archiveSha256": "55cee28558945de6e984bc183cd51f28eefdbf805544da2e70d4635476178790"
+  },
+  "patchSha256": "3c9e9d01b91f9153cf722917269dbcf31138396c517d647fe298e898916a6835",
+  "innerPatchSha256": "9aad7ec21c01ea12fabf34e011e4f1e9f954db79005b78ec0935399dd951f100",
+  "upstreamLockSha256": "f956fc4300424f4195e454084d3c749d3b9ca4ef68079e21c192772380b4168a",
+  "toolchain": {
+    "bun": "1.4.4",
+    "zig": "0.15.2",
+    "nixAttribute": "pkgs.zig_0_15",
+    "vite": "4.5.14",
+    "typescript": "5.9.3",
+    "flakeLockSha256": "282d1098337a5705a7c1d13188a74d2fe34565766619e8d6b21a48d5b67451be"
+  },
+  "outputs": {
+    "ghostty-vt.wasm": "f5ac0a42ccef2c288c27d1d3a082b1fa43c38fb37c8f01f72f59004164052c84",
+    "dist/ghostty-vt.wasm": "f5ac0a42ccef2c288c27d1d3a082b1fa43c38fb37c8f01f72f59004164052c84",
+    "dist/ghostty-web.js": "ce1e16f22f24f2dd896a4bbac2fe05e94367d8181ca4fbadfc1782c7a531fa80",
+    "dist/ghostty-web.umd.cjs": "fbe829d55b0c9adc4e1de61d211447c2699ed9628c1bb41a526fc42df191c3f5",
+    "dist/index.d.ts": "131bfad39d92b396d42b9c0ab2e065c63a1c3964ddba1ac390afbc7199652d2d",
+    "dist/__vite-browser-external-2447137e.js": "f8c456031e5001c0cda4837cd9ee3a33d79beeba120ec633ec9d990632fb2aa6"
+  },
+  "removal": "@si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty",
+  "upstreamAccepted": false
+}

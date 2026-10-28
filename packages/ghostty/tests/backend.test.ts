@@ -4,8 +4,12 @@
  * Tests the Ghostty backend implementation using ghostty-web WASM.
  * These mirror the xterm.js backend tests to verify cross-backend compatibility.
  */
-import { describe, test, expect, beforeAll, afterEach } from "vitest"
+import { describe, test, expect, beforeAll, afterEach, vi } from "vitest"
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { Ghostty } from "ghostty-web"
+import { resolveGhosttyWebWasm } from "../src/load-native.ts"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
@@ -30,6 +34,46 @@ describe("ghostty backend", () => {
 
   afterEach(() => {
     if (backend) backend.destroy()
+  })
+
+  test("committed producer outputs match the pinned build receipt", () => {
+    const directory = join(import.meta.dirname, "../../../vendor/ghostty-web")
+    const receipt = JSON.parse(readFileSync(join(directory, "RECEIPT.json"), "utf8")) as {
+      outputs: Record<string, string>
+    }
+    for (const [path, expected] of Object.entries(receipt.outputs)) {
+      expect(
+        createHash("sha256")
+          .update(readFileSync(join(directory, path)))
+          .digest("hex"),
+        path,
+      ).toBe(expected)
+    }
+  })
+
+  test.each(["viewport", "scrollback"] as const)("rejects invalid producer ordinals in %s with its digest", (path) => {
+    const original = ghostty.createTerminal.bind(ghostty)
+    const spy = vi.spyOn(ghostty, "createTerminal").mockImplementation((...args) => {
+      const terminal = original(...args)
+      const method = path === "viewport" ? "getLine" : "getScrollbackLine"
+      const read = terminal[method].bind(terminal)
+      terminal[method] = (row) => {
+        const cells = read(row)
+        if (cells?.[0]) cells[0].underline_style = 6
+        return cells
+      }
+      return terminal
+    })
+    try {
+      backend = createBackend(12, 2)
+      feedText(backend, "X")
+      if (path === "scrollback") feedText(backend, "\r\nZ\r\nW")
+      expect(() => backend.getCell(0, 0)).toThrow(
+        `Ghostty producer ${createHash("sha256").update(readFileSync(resolveGhosttyWebWasm())).digest("hex")} returned invalid underline_style 6`,
+      )
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   describe("lifecycle", () => {
@@ -143,10 +187,27 @@ describe("ghostty backend", () => {
       expect(backend.getCell(0, 0).dim).toBe(true)
     })
 
-    test("detects underline", () => {
-      backend = createBackend()
-      feedText(backend, "\x1b[4mUnderline\x1b[0m")
-      expect(backend.getCell(0, 0).underline).toBe("single")
+    // CTO Stage B: the real installed producer must preserve each style in both
+    // viewport and history; the previous single-only case missed rich-style collapse.
+    test.each([
+      ["none", "\x1b[24m", false],
+      ["single", "\x1b[4m", "single"],
+      ["double", "\x1b[21m", "double"],
+      ["double colon", "\x1b[4:2m", "double"],
+      ["curly", "\x1b[4:3m", "curly"],
+      ["dotted", "\x1b[4:4m", "dotted"],
+      ["dashed", "\x1b[4:5m", "dashed"],
+    ] as const)("preserves %s underline in viewport and scrollback", (_name, sequence, expected) => {
+      backend = createBackend(12, 2)
+      feedText(backend, `\x1b[1m${sequence}X\x1b[24mY`)
+      const check = () => {
+        expect(backend.getCell(0, 0)).toMatchObject({ char: "X", underline: expected, bold: true })
+        expect(backend.getCell(0, 1)).toMatchObject({ char: "Y", underline: false, bold: true })
+      }
+      check()
+      feedText(backend, "\r\nZ\r\nW")
+      expect(backend.getScrollback().totalRows).toBeGreaterThan(2)
+      check()
     })
 
     test("detects strikethrough", () => {

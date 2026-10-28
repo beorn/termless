@@ -113,6 +113,19 @@ export function _resetSharedForTesting(): void {
 // Cell conversion
 // ═══════════════════════════════════════════════════════
 
+const UNDERLINE_STYLES = [false, "single", "double", "curly", "dotted", "dashed"] as const
+
+function underlineStyle(cell: GhosttyCell, digest: string | undefined): Cell["underline"] {
+  const ordinal = cell.underline_style
+  if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= UNDERLINE_STYLES.length) {
+    const producer = digest ?? "unmeasured injected instance"
+    throw new Error(
+      `Ghostty producer ${producer} returned invalid underline_style ${String(ordinal)}; expected integer 0..5`,
+    )
+  }
+  return UNDERLINE_STYLES[ordinal as 0 | 1 | 2 | 3 | 4 | 5]
+}
+
 /** Check if an fg/bg matches the terminal's default colors (= "no explicit color set") */
 function isDefaultColor(r: number, g: number, b: number, defaults: { fg: Color; bg: Color }, isFg: boolean): boolean {
   const d = isFg ? defaults.fg : defaults.bg
@@ -125,6 +138,7 @@ function convertGhosttyCell(
   row: number,
   col: number,
   defaults: { fg: Color; bg: Color },
+  producerDigest: string | undefined,
 ): Cell {
   // Get proper text — use grapheme API for multi-codepoint characters
   let text: string
@@ -152,7 +166,7 @@ function convertGhosttyCell(
     bold: (cell.flags & CellFlags.BOLD) !== 0,
     dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underline: underlineStyle(cell, producerDigest),
     underlineColor: null,
     strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
@@ -170,6 +184,7 @@ function convertScrollbackCell(
   offset: number,
   col: number,
   defaults: { fg: Color; bg: Color },
+  producerDigest: string | undefined,
 ): Cell {
   let text: string
   if (cell.grapheme_len > 0) {
@@ -195,7 +210,7 @@ function convertScrollbackCell(
     bold: (cell.flags & CellFlags.BOLD) !== 0,
     dim: (cell.flags & CellFlags.FAINT) !== 0,
     italic: (cell.flags & CellFlags.ITALIC) !== 0,
-    underline: (cell.flags & CellFlags.UNDERLINE) !== 0 ? "single" : false,
+    underline: underlineStyle(cell, producerDigest),
     underlineColor: null,
     strikethrough: (cell.flags & CellFlags.STRIKETHROUGH) !== 0,
     inverse: (cell.flags & CellFlags.INVERSE) !== 0,
@@ -232,6 +247,7 @@ export function createGhosttyBackend(
 ): LegacyBackend & WarningExtension {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
+  const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let title = ""
@@ -466,8 +482,8 @@ export function createGhosttyBackend(
     if (!cells) return Array.from({ length: cols }, () => emptyCell())
     return cells.map((cell, col) =>
       row < scrollbackLen
-        ? convertScrollbackCell(cell, t, row, col, defaultColors)
-        : convertGhosttyCell(cell, t, row - scrollbackLen, col, defaultColors),
+        ? convertScrollbackCell(cell, t, row, col, defaultColors, producerDigest)
+        : convertGhosttyCell(cell, t, row - scrollbackLen, col, defaultColors, producerDigest),
     )
   }
 
