@@ -1,2 +1,16 @@
 #!/bin/sh
-bun run ci
+set -eu
+
+superproject=$(git rev-parse --show-superproject-working-tree)
+# CI's browser smoke needs the browser declared by the containing flake.
+# Its browser export is x86_64-linux only today; keep this platform case
+# aligned with that declaration when its platform coverage changes.
+case "$(uname -sm)" in
+  "Linux x86_64")
+    if [ -n "$superproject" ] && [ -f "$superproject/flake.nix" ]; then
+      exec nix develop --no-write-lock-file "$superproject#default" --command bun run ci
+    fi
+    ;;
+esac
+
+exec bun run ci
