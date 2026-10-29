@@ -18,6 +18,7 @@ import type {
   TerminalCapabilities,
   Color,
   ReplyDeliveryExtension,
+  HyperlinkExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -38,6 +39,10 @@ interface NapiCell {
   bgG: number
   bgB: number
   bgIsDefault: boolean
+  ulR: number
+  ulG: number
+  ulB: number
+  ulIsDefault: boolean
   bold: boolean
   faint: boolean
   italic: boolean
@@ -46,6 +51,7 @@ interface NapiCell {
   inverse: boolean
   blink: boolean
   wide: boolean
+  hyperlink: string | null
 }
 
 interface NapiCursor {
@@ -118,8 +124,19 @@ export function loadWeztermNative(): NativeModule {
 // ═══════════════════════════════════════════════════════
 
 function convertNapiCell(cell: NapiCell): Cell {
+  if (cell.hyperlink !== null && typeof cell.hyperlink !== "string") {
+    throw new Error("wezterm native cell.hyperlink must be a string or null")
+  }
   const fg: Color | null = cell.fgIsDefault ? null : { r: cell.fgR, g: cell.fgG, b: cell.fgB }
   const bg: Color | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
+  if (
+    typeof cell.ulIsDefault !== "boolean" ||
+    (!cell.ulIsDefault &&
+      ![cell.ulR, cell.ulG, cell.ulB].every((channel) => Number.isInteger(channel) && channel >= 0 && channel <= 255))
+  ) {
+    throw new Error("wezterm native underline color must report default or RGB; rebuild the native addon")
+  }
+  const underlineColor: Color | null = cell.ulIsDefault ? null : { r: cell.ulR, g: cell.ulG, b: cell.ulB }
 
   return {
     char: cell.text,
@@ -129,14 +146,14 @@ function convertNapiCell(cell: NapiCell): Cell {
     dim: cell.faint,
     italic: cell.italic,
     underline: cell.underline === "none" ? false : (cell.underline as Cell["underline"]),
-    underlineColor: null,
+    underlineColor,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
     blink: cell.blink,
     hidden: false,
     wide: cell.wide,
     continuation: false,
-    hyperlink: null,
+    hyperlink: cell.hyperlink,
   }
 }
 
@@ -175,7 +192,10 @@ const DEFAULT_ROWS = 24
  * @param opts - Optional terminal dimensions for eager initialization
  * @param native - Optional pre-loaded native module (for test isolation)
  */
-export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: NativeModule): TerminalBackend {
+export function createWeztermBackend(
+  opts?: Partial<TerminalOptions>,
+  native?: NativeModule,
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -323,15 +343,14 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     kittyKeyboard: true,
     kittyGraphics: false, // Not available in headless mode
     sixel: true,
-    // The NAPI cell bridge does not expose parsed URI metadata.
-    osc8Hyperlinks: false,
+    osc8Hyperlinks: true,
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["reply-delivery"]),
+    extensions: new Set(["hyperlinks", "reply-delivery"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
     name: "wezterm",
     init,
     destroy,
@@ -341,6 +360,9 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt(row, col) {
+      return getCell(row, col).hyperlink
+    },
     getLine,
     getLines,
     getRow: getLine,

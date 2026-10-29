@@ -8,6 +8,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // declaredPixelGeometry, neither of which touches that path; bound to the native artifact built
 // from these sources (Cargo.lock sha256 8eaeab73), whose build receipt names the source commit.
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
+// Re-audited for owned OSC 8 URI readback: the existing synchronous reply path is unchanged.
+// Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -18,11 +20,11 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "f49e2f8054e6bfea9ad7b4086d8710ec8e67c374",
+      blobOid: "b3906b5439d65cfa69f523cea199c25bef04cc03",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "671656550ffaa64a3b8468abd4c60569b9e0dc18",
+      blobOid: "b83bbf08bb20c6b7965cd0b6492a827707644a8f",
     },
     {
       path: "src/load-native.ts",
@@ -31,6 +33,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "99a6bc50445e2bee31ed87ecfd06c0b317ba96a262d700bcdae9e44d5401ced8",
+    sha256: "0f56a805793d7d829daa617f1323aacff0d73fe868747b0d077c6af315e2aab8",
   },
 }

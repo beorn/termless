@@ -84,7 +84,7 @@ impl TerminalConfiguration for HeadlessConfig {
 // Exported cell type
 // ═══════════════════════════════════════════════════════
 
-#[napi(object)]
+#[napi(object, use_nullable = true)]
 pub struct NapiCell {
     pub text: String,
     pub fg_r: u8,
@@ -95,6 +95,10 @@ pub struct NapiCell {
     pub bg_g: u8,
     pub bg_b: u8,
     pub bg_is_default: bool,
+    pub ul_r: u8,
+    pub ul_g: u8,
+    pub ul_b: u8,
+    pub ul_is_default: bool,
     pub bold: bool,
     pub faint: bool,
     pub italic: bool,
@@ -103,6 +107,7 @@ pub struct NapiCell {
     pub inverse: bool,
     pub blink: bool,
     pub wide: bool,
+    pub hyperlink: Option<String>,
 }
 
 #[napi(object)]
@@ -488,6 +493,10 @@ fn empty_cell() -> NapiCell {
         bg_g: 0,
         bg_b: 0,
         bg_is_default: true,
+        ul_r: 0,
+        ul_g: 0,
+        ul_b: 0,
+        ul_is_default: true,
         bold: false,
         faint: false,
         italic: false,
@@ -496,6 +505,7 @@ fn empty_cell() -> NapiCell {
         inverse: false,
         blink: false,
         wide: false,
+        hyperlink: None,
     }
 }
 
@@ -533,6 +543,14 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         }
     };
 
+    let (ul_r, ul_g, ul_b, ul_is_default) = match attrs.underline_color() {
+        tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
+        ul => {
+            let (r, g, b) = srgba_rgb(palette.resolve_fg(ul));
+            (r, g, b, false)
+        }
+    };
+
     // Underline style
     let underline = match attrs.underline() {
         tattoy_wezterm_term::Underline::None => "none",
@@ -557,6 +575,10 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         bg_g,
         bg_b,
         bg_is_default,
+        ul_r,
+        ul_g,
+        ul_b,
+        ul_is_default,
         bold,
         faint,
         italic: attrs.italic(),
@@ -565,5 +587,6 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         inverse: attrs.reverse(),
         blink: attrs.blink() != tattoy_wezterm_term::Blink::None,
         wide: cell.width() > 1,
+        hyperlink: attrs.hyperlink().map(|link| link.uri().to_owned()),
     }
 }

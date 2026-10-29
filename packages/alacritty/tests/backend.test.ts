@@ -11,10 +11,10 @@
  * @consumer Headless collector native reply eligibility.
  * @testonly none
  */
-import { describe, test, expect, afterEach } from "vitest"
+import { describe, test, expect, afterEach, vi } from "vitest"
 import { createAlacrittyBackend, loadAlacrittyNative } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
-import { hasExtension, type ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import { hasExtension, type HyperlinkExtension, type ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
 import { relative } from "node:path"
@@ -30,7 +30,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "11c87e7e7f23e6f224e9dc8c3296b0a91f5453a42038e5ad049aafa864f9bd50",
+    sha256: "d280c3fd2129f42db0d7154d6e66f5582a67fa1faf1e82ab463b6b8286f126d0",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -48,13 +48,14 @@ test("declares audited native reply delivery without initializing the engine", (
   backend.destroy()
 })
 
-// Skip all tests if native module is not available
+// Native coverage is optional in the default suite; an absent addon is NOT MEASURED.
 let nativeAvailable = false
+let nativeUnavailableReason = ""
 try {
   loadAlacrittyNative()
   nativeAvailable = true
-} catch {
-  // Native module not built — tests will be skipped
+} catch (error) {
+  nativeUnavailableReason = error instanceof Error ? error.message : String(error)
 }
 
 const describeNative = nativeAvailable ? describe : describe.skip
@@ -68,6 +69,105 @@ function createBackend(cols = 80, rows = 24): TerminalBackend {
 function feedText(backend: TerminalBackend, text: string): void {
   backend.feed(new TextEncoder().encode(text))
 }
+
+// Existing style tests cannot detect dropped OSC 8 metadata or concealed native read failures.
+describeNative(
+  nativeAvailable
+    ? "alacritty hyperlink observations"
+    : `alacritty hyperlink observations (NOT MEASURED: ${nativeUnavailableReason})`,
+  () => {
+    test("reads owned OSC 8 URIs consistently across cells, rows and active buffers", () => {
+      const backend = createBackend(40, 4)
+      const first = "https://example.test:8443/a:b"
+      const second = "urn:example:second"
+      function expectLink(row: number, col: number, char: string, uri: string | null): void {
+        expect(backend.getCell(row, col)).toMatchObject({ char, hyperlink: uri })
+        expect(backend.getLine(row)[col]).toMatchObject({ char, hyperlink: uri })
+        expect(backend.getLines()[row]![col]).toMatchObject({ char, hyperlink: uri })
+        expect(hasExtension(backend, "hyperlinks")).toBe(true)
+        if (!hasExtension<HyperlinkExtension>(backend, "hyperlinks")) throw new Error("Missing hyperlinks extension")
+        expect(backend.getHyperlinkAt(row, col)).toBe(uri)
+      }
+      try {
+        feedText(backend, `A\x1b]8;id=not-the-uri;${first}\x1b\\LINK\x1b]8;;\x1b\\Z`)
+        expectLink(0, 1, "L", first)
+        expectLink(0, 4, "K", first)
+        expectLink(0, 0, "A", null)
+        expectLink(0, 5, "Z", null)
+        expectLink(3, 0, " ", null)
+        const saved = backend.getCell(0, 1).hyperlink
+
+        feedText(backend, `\x1b[?1049h\x1b[HB\x1b]8;;${second}\x1b\\ALT\x1b]8;;\x1b\\Q`)
+        expectLink(0, 1, "A", second)
+        expectLink(0, 0, "B", null)
+        expectLink(0, 4, "Q", null)
+        feedText(backend, "\x1b[?1049l")
+        expectLink(0, 1, "L", first)
+
+        feedText(backend, `\x1b[2;4r\x1b[?6h\x1b[1;1H\x1b]8;;${second}\x1b\\R\x1b]8;;\x1b\\S`)
+        expectLink(1, 0, "R", second)
+        expectLink(1, 1, "S", null)
+        expectLink(0, 1, "L", first)
+        feedText(backend, "\x1b[?6l\x1b[r\x1b[H\x1b[2Kplain")
+        expectLink(0, 1, "l", null)
+        expect(saved).toBe(first)
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test("propagates native read failures and rejects missing or malformed URI metadata", () => {
+      const native = loadAlacrittyNative()
+      const backend = createBackend(10, 2)
+      const prototype = native.AlacrittyTerminal.prototype
+      try {
+        const cell = new native.AlacrittyTerminal(10, 2)
+        let original: ReturnType<typeof cell.getCell>
+        try {
+          original = cell.getCell(0, 0)
+        } finally {
+          cell.destroy()
+        }
+        const readHyperlink = () => {
+          if (!hasExtension<HyperlinkExtension>(backend, "hyperlinks")) throw new Error("Missing hyperlinks extension")
+          return backend.getHyperlinkAt(0, 0)
+        }
+        const reads = [() => backend.getCell(0, 0), () => backend.getLine(0), () => backend.getLines(), readHyperlink]
+        for (const invalid of [undefined, 42, {}]) {
+          const broken = { ...original }
+          if (invalid === undefined) Reflect.deleteProperty(broken, "hyperlink")
+          else Reflect.set(broken, "hyperlink", invalid)
+          const spies = [
+            vi.spyOn(prototype, "getCell").mockReturnValue(broken),
+            vi.spyOn(prototype, "getLine").mockReturnValue([broken]),
+            vi.spyOn(prototype, "getLines").mockReturnValue([[broken]]),
+          ]
+          try {
+            for (const read of reads) expect(read).toThrow(/hyperlink/)
+          } finally {
+            for (const spy of spies) spy.mockRestore()
+          }
+        }
+        const failure = new Error("native read failed")
+        const fail = () => {
+          throw failure
+        }
+        const spies = [
+          vi.spyOn(prototype, "getCell").mockImplementation(fail),
+          vi.spyOn(prototype, "getLine").mockImplementation(fail),
+          vi.spyOn(prototype, "getLines").mockImplementation(fail),
+        ]
+        try {
+          for (const read of reads) expect(read).toThrow(failure)
+        } finally {
+          for (const spy of spies) spy.mockRestore()
+        }
+      } finally {
+        backend.destroy()
+      }
+    })
+  },
+)
 
 describeNative("alacritty backend", () => {
   let backend: TerminalBackend

@@ -18,6 +18,8 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  DefaultColorsExtension,
+  HyperlinkExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
@@ -37,6 +39,9 @@ interface NativeCell {
   bg_r: number
   bg_g: number
   bg_b: number
+  ul_r: number
+  ul_g: number
+  ul_b: number
   bold: boolean
   faint: boolean
   italic: boolean
@@ -45,6 +50,7 @@ interface NativeCell {
   inverse: boolean
   blink: boolean
   wide: number // 0=narrow, 1=wide, 2=spacer_tail
+  hyperlink: string | null
 }
 
 interface NativeCursor {
@@ -67,6 +73,9 @@ interface NativeColors {
   bg_r: number
   bg_g: number
   bg_b: number
+  cursor_r: number
+  cursor_g: number
+  cursor_b: number
 }
 
 interface NativeModule {
@@ -155,7 +164,18 @@ const CURSOR_STYLE_MAP: Record<number, CursorStyle> = {
   3: "block", // block_hollow maps to block
 }
 
+function readColor(r: number, g: number, b: number): Color | null {
+  if (r === -1 && g === -1 && b === -1) return null
+  if (![r, g, b].every((channel) => Number.isInteger(channel) && channel >= 0 && channel <= 255)) {
+    throw new Error("ghostty-native color must be RGB or all -1; rebuild the native addon")
+  }
+  return { r, g, b }
+}
+
 function convertNativeCell(nc: NativeCell): Cell {
+  if (nc.hyperlink !== null && typeof nc.hyperlink !== "string") {
+    throw new Error("ghostty-native cell hyperlink must be a string or null; rebuild the native addon")
+  }
   return {
     char: nc.text,
     fg: nc.fg_r >= 0 ? ({ r: nc.fg_r, g: nc.fg_g, b: nc.fg_b } as Color) : null,
@@ -164,34 +184,14 @@ function convertNativeCell(nc: NativeCell): Cell {
     dim: nc.faint,
     italic: nc.italic,
     underline: UNDERLINE_MAP[nc.underline] ?? false,
-    underlineColor: null,
+    underlineColor: readColor(nc.ul_r, nc.ul_g, nc.ul_b),
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: nc.blink,
     hidden: false,
     wide: nc.wide === 1,
     continuation: nc.wide === 2, // spacer_tail
-    hyperlink: null,
-  }
-}
-
-function emptyCell(): Cell {
-  return {
-    char: "",
-    fg: null,
-    bg: null,
-    bold: false,
-    dim: false,
-    italic: false,
-    underline: false,
-    underlineColor: null,
-    strikethrough: false,
-    inverse: false,
-    blink: false,
-    hidden: false,
-    wide: false,
-    continuation: false,
-    hyperlink: null,
+    hyperlink: nc.hyperlink,
   }
 }
 
@@ -212,7 +212,9 @@ const DEFAULT_ROWS = 24
  * Requires the native module to be built first. See README.md for
  * build instructions.
  */
-export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createGhosttyNativeBackend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & HyperlinkExtension & DefaultColorsExtension {
   let handle: NativeTerminalHandle | null = null
 
   function ensureHandle(): NativeTerminalHandle {
@@ -289,28 +291,29 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
 
   function getCell(row: number, col: number): Cell {
     const native = loadGhosttyNative()
-    try {
-      return convertNativeCell(native.getCell(ensureHandle(), row, col))
-    } catch {
-      return emptyCell()
-    }
+    return convertNativeCell(native.getCell(ensureHandle(), row, col))
   }
 
   function getLine(row: number): Cell[] {
     const native = loadGhosttyNative()
-    try {
-      return native.getLine(ensureHandle(), row).map(convertNativeCell)
-    } catch {
-      return []
-    }
+    return native.getLine(ensureHandle(), row).map(convertNativeCell)
   }
 
   function getLines(): Cell[][] {
     const native = loadGhosttyNative()
-    try {
-      return native.getLines(ensureHandle()).map((row) => row.map(convertNativeCell))
-    } catch {
-      return []
+    return native.getLines(ensureHandle()).map((row) => row.map(convertNativeCell))
+  }
+
+  function getHyperlinkAt(row: number, col: number): string | null {
+    return getCell(row, col).hyperlink
+  }
+
+  function getDefaultColors(): ReturnType<DefaultColorsExtension["getDefaultColors"]> {
+    const colors = loadGhosttyNative().getDefaultColors(ensureHandle())
+    return {
+      fg: readColor(colors.fg_r, colors.fg_g, colors.fg_b),
+      bg: readColor(colors.bg_r, colors.bg_g, colors.bg_b),
+      cursor: readColor(colors.cursor_r, colors.cursor_g, colors.cursor_b),
     }
   }
 
@@ -366,7 +369,7 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(),
+    extensions: new Set(["hyperlinks", "default-colors"]),
   }
 
   // There is nothing to wire here: libghostty-vt 1.3.1 has no reply path (#30730, @cto (B) 7c077d3d).
@@ -378,7 +381,7 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
   // reason at the cut (#30711 row 13). A port was tried and refused; the patch and its smoke logs
   // stay as evidence under /hh/var/@dev8/30730/.
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & HyperlinkExtension & DefaultColorsExtension = {
     name: "ghostty-native",
     init,
     destroy,
@@ -388,6 +391,8 @@ export function createGhosttyNativeBackend(opts?: Partial<TerminalOptions>): Ter
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt,
+    getDefaultColors,
     getLine,
     getLines,
     getRow: getLine,
