@@ -6,6 +6,7 @@
  * @reach fs-walk vendor/termless/packages/libvterm/wasm/** vendor/termless/packages/libvterm/build/**
  * @testonly none
  */
+import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
@@ -21,6 +22,7 @@ test("the committed libvterm pair and build inputs match their receipt", () => {
     sha256: string
     jsSha256: string
     upstreamTag: string
+    wrapperTreeOid: string
     buildInputs: Record<string, string>
   }
 
@@ -36,4 +38,12 @@ test("the committed libvterm pair and build inputs match their receipt", () => {
   const tag = /^LIBVTERM_TAG="([^"]+)"/m.exec(bytes("build/build.sh").toString())?.[1]
   expect(tag, "build/build.sh LIBVTERM_TAG declaration").toBeDefined()
   expect(receipt.upstreamTag, "upstreamTag versus build/build.sh LIBVTERM_TAG").toBe(tag)
+
+  // The writer attests the staged build subtree: the subtree of the tree being committed. In the commit hook that is
+  // the staged subtree; on a clean checkout it equals HEAD:packages/libvterm/build. Run from the repository top level,
+  // where a hook's relative GIT_INDEX_FILE resolves.
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: resolve(packageDir, "../.."), encoding: "utf8" }).trim()
+  const wrapperTreeOid = git("rev-parse", `${git("write-tree")}:packages/libvterm/build`)
+  expect(receipt.wrapperTreeOid, "staged build subtree").toBe(wrapperTreeOid)
 })

@@ -28,23 +28,35 @@ if (wasmPath !== join(packageDir, "wasm", "libvterm.wasm") || jsPath !== join(pa
 }
 const changedSource = git(sourceDir, "status", "--porcelain", "--untracked-files=no")
 if (changedSource) throw new Error(`Tracked libvterm source changed during build:\n${changedSource}`)
-const changedWrapper = git(
-  termlessRepo,
-  "status",
-  "--porcelain",
-  "--",
-  "packages/libvterm/build/build.sh",
-  "packages/libvterm/build/flat-api.c",
-  "packages/libvterm/build/write-receipt.ts",
-  "packages/libvterm/wasm/libvterm.d.ts",
+// The receipt attests the STAGED inputs, so the inputs, the rebuilt pair and this receipt land as one commit. A
+// working-tree byte that differs from the index would attest what that commit does not carry. Unparsed: trimming
+// would drop the leading worktree-status column of the first line.
+const changedWrapper = execFileSync(
+  "git",
+  [
+    "status",
+    "--porcelain",
+    "--untracked-files=no",
+    "--",
+    "packages/libvterm/build",
+    "packages/libvterm/wasm/libvterm.d.ts",
+  ],
+  { cwd: termlessRepo, encoding: "utf8" },
 )
-if (changedWrapper) throw new Error(`Cannot attest uncommitted libvterm build inputs:\n${changedWrapper}`)
+  .split("\n")
+  .filter((line) => line.length > 0 && line[1] !== " ")
+  .join("\n")
+if (changedWrapper) {
+  throw new Error(`Cannot attest libvterm build inputs whose working tree differs from the index:\n${changedWrapper}`)
+}
 
 const sourceCommit = git(sourceDir, "rev-parse", "HEAD")
 const upstreamTag = git(sourceDir, "describe", "--tags", "--exact-match")
 if (!/^v\d+\.\d+\.\d+$/.test(upstreamTag)) throw new Error(`libvterm source has no stable tag: ${upstreamTag}`)
-const wrapperSourceCommit = git(termlessRepo, "rev-parse", "HEAD")
-const wrapperTreeOid = git(termlessRepo, "rev-parse", "HEAD:packages/libvterm/build")
+// The parent of the landing commit; the attested build subtree is NOT claimed reachable under it. The replayable
+// identity is the staged subtree oid plus the content hashes below.
+const wrapperBaseCommit = git(termlessRepo, "rev-parse", "HEAD")
+const wrapperTreeOid = git(termlessRepo, "rev-parse", `${git(termlessRepo, "write-tree")}:packages/libvterm/build`)
 const toolchain = execFileSync("emcc", ["--version"], { encoding: "utf8" }).split("\n")[0]!.trim()
 const generatedIncludes = [
   "src/encoding/DECdrawing.inc",
@@ -54,7 +66,7 @@ const generatedIncludes = [
 const buildInputs = {
   runtimeTarget: "node",
   sourceCommit,
-  wrapperSourceCommit,
+  wrapperBaseCommit,
   wrapperTreeOid,
   buildScriptSha256: sha256(readFileSync(join(packageDir, "build", "build.sh"))),
   flatApiSha256: sha256(readFileSync(join(packageDir, "build", "flat-api.c"))),
@@ -69,7 +81,7 @@ const receipt = {
   sourceCommit,
   buildHash: sha256(JSON.stringify(buildInputs)),
   toolchain,
-  wrapperSourceCommit,
+  wrapperBaseCommit,
   wrapperTreeOid,
   upstreamTag,
   buildInputs,

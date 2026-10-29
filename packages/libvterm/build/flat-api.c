@@ -1,5 +1,6 @@
 #include "vterm.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 // TerminalBackend accepts UTF-8 bytes; libvterm itself defaults to legacy
@@ -8,6 +9,59 @@ VTerm *termless_vterm_new_utf8(int rows, int cols) {
   VTerm *vt = vterm_new(rows, cols);
   if (vt) vterm_set_utf8(vt, 1);
   return vt;
+}
+
+// libvterm drops a whole reply once its fixed output buffer (4096 bytes by
+// default) is full (vterm.c vterm_push_output_bytes). With an output callback
+// it hands every reply over instead; this sink keeps them in order until the
+// adapter reads them. Replies longer than libvterm's own 4096-byte formatting
+// buffer never reach the callback, and the sink cannot change that.
+typedef struct {
+  char *bytes;
+  size_t len;
+  size_t cap;
+  int failed;
+} TermlessOutputSink;
+
+static void sink_output(const char *bytes, size_t len, void *user) {
+  TermlessOutputSink *sink = user;
+  if (sink->failed) return;
+  if (len > sink->cap - sink->len) {
+    size_t cap = sink->cap ? sink->cap : 4096;
+    while (len > cap - sink->len) {
+      if (cap > SIZE_MAX / 2) { sink->failed = 1; return; }
+      cap *= 2;
+    }
+    char *grown = realloc(sink->bytes, cap);
+    if (!grown) { sink->failed = 1; return; }
+    sink->bytes = grown;
+    sink->cap = cap;
+  }
+  memcpy(sink->bytes + sink->len, bytes, len);
+  sink->len += len;
+}
+
+TermlessOutputSink *termless_vterm_output_attach(VTerm *vt) {
+  TermlessOutputSink *sink = calloc(1, sizeof *sink);
+  if (sink) vterm_output_set_callback(vt, sink_output, sink);
+  return sink;
+}
+
+// Copies up to len pending reply bytes in order and removes them from the sink.
+// Returns -1 once an allocation failure has lost a reply; it never recovers.
+int termless_vterm_output_read(TermlessOutputSink *sink, char *buf, int len) {
+  if (sink->failed) return -1;
+  size_t n = sink->len < (size_t)len ? sink->len : (size_t)len;
+  memcpy(buf, sink->bytes, n);
+  memmove(sink->bytes, sink->bytes + n, sink->len - n);
+  sink->len -= n;
+  return (int)n;
+}
+
+void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
+  vterm_output_set_callback(vt, NULL, NULL);
+  free(sink->bytes);
+  free(sink);
 }
 
 // Per-screen fixed-width observation record: visible, shape, blink. Unknown
