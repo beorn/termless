@@ -81,7 +81,8 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
         expect(queryColor(backend, responses, query, code)).toEqual(baseline)
       } else if (code === "10") {
         // Kitty's own Window.set_dynamic_color answers sequential parameters only for its dynamic colour codes
-        // (10/11/12/17/19), then OSC 17/19 and the OSC 22 pointer-shape query.
+        // (10/11/12/17/19), then OSC 17/19 and the OSC 22 pointer-shape query. Measured against kitty 0.49.2's
+        // unmodified Window methods in the per-cell trace trace2.out; this pin follows that measurement.
         responses.length = 0
         feed(`\x1b]10;${Array(10).fill("?").join(";")}\x1b\\\x1b]17;?\x1b\\\x1b]19;?\x1b\\\x1b]22;?\x1b\\`)
         backend.getCursor()
