@@ -9,6 +9,13 @@ export interface TerminalOptions {
   cols: number
   rows: number
   scrollbackLimit?: number
+  /**
+   * Host pixel geometry the caller declares for a headless engine: one cell's size in pixels, positive integers. The
+   * text area is cols x cellWidth by rows x cellHeight and follows every resize; no dpi is declared (0 = no scale).
+   * Transport only: the caller owns the value and no backend holds a default. A backend that does not consume it
+   * ignores it.
+   */
+  pixelGeometry?: { cellWidth: number; cellHeight: number }
 }
 
 // ── The readable picture — declared in io, re-exported here ──
