@@ -111,3 +111,23 @@ describe.skipIf(nativeBuildError !== null)(
     })
   },
 )
+
+describe.skipIf(nativeBuildError !== null)(
+  nativeBuildError === null
+    ? "backend exposes the engine clipboard callback"
+    : `getClipboardState NOT MEASURED (${nativeBuildError})`,
+  () => {
+    test("holds the OSC 52 write on the backend object after feed", () => {
+      const backend = createVt100RustBackend({ cols: 4, rows: 1 })
+      const encoded = btoa("terminfo-osc52-witness")
+      try {
+        backend.feed(new TextEncoder().encode(`\x1b]52;c;${encoded}\x07`))
+        expect(backend.getClipboardState?.().writes).toEqual([
+          expect.objectContaining({ selector: "c", payload: encoded }),
+        ])
+      } finally {
+        backend.destroy()
+      }
+    })
+  },
+)

@@ -211,6 +211,11 @@ export interface Terminal {
   getMode(mode: TerminalMode): boolean
   getTitle(): string
   getIconLabel?(): string
+  /** Present only when the backend exposes the engine's clipboard callback state. */
+  getClipboardState?(): {
+    writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
+    pasteSelector?: string
+  }
   getScrollback(): ScrollbackState
 }
 
