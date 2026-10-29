@@ -38,6 +38,7 @@ import type {
   Color,
   EmulatorWarning,
   WarningExtension,
+  HyperlinkExtension,
   ScreenshotOptions,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
@@ -139,6 +140,7 @@ function convertGhosttyCell(
   col: number,
   defaults: { fg: Color; bg: Color },
   producerDigest: string | undefined,
+  hyperlink: string | null,
 ): Cell {
   // Get proper text — use grapheme API for multi-codepoint characters
   let text: string
@@ -174,7 +176,7 @@ function convertGhosttyCell(
     hidden: (cell.flags & CellFlags.INVISIBLE) !== 0,
     wide: cell.width > 1,
     continuation: false,
-    hyperlink: null,
+    hyperlink,
   }
 }
 
@@ -185,6 +187,7 @@ function convertScrollbackCell(
   col: number,
   defaults: { fg: Color; bg: Color },
   producerDigest: string | undefined,
+  hyperlink: string | null,
 ): Cell {
   let text: string
   if (cell.grapheme_len > 0) {
@@ -218,7 +221,7 @@ function convertScrollbackCell(
     hidden: (cell.flags & CellFlags.INVISIBLE) !== 0,
     wide: cell.width > 1,
     continuation: false,
-    hyperlink: null,
+    hyperlink,
   }
 }
 
@@ -244,7 +247,7 @@ const DEFAULT_ROWS = 24
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
   ghostty?: Ghostty,
-): LegacyBackend & WarningExtension {
+): LegacyBackend & WarningExtension & HyperlinkExtension {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
@@ -480,11 +483,13 @@ export function createGhosttyBackend(
     if (row < 0 || row >= totalRows) return Array.from({ length: cols }, () => emptyCell())
     const cells = row < scrollbackLen ? t.getScrollbackLine(row) : t.getLine(row - scrollbackLen)
     if (!cells) return Array.from({ length: cols }, () => emptyCell())
-    return cells.map((cell, col) =>
-      row < scrollbackLen
-        ? convertScrollbackCell(cell, t, row, col, defaultColors, producerDigest)
-        : convertGhosttyCell(cell, t, row - scrollbackLen, col, defaultColors, producerDigest),
-    )
+    return cells.map((cell, col) => {
+      // URI lookup uses absolute rows; live grapheme lookup remains relative to the screen.
+      const hyperlink = t.getHyperlinkAt(row, col)
+      return row < scrollbackLen
+        ? convertScrollbackCell(cell, t, row, col, defaultColors, producerDigest, hyperlink)
+        : convertGhosttyCell(cell, t, row - scrollbackLen, col, defaultColors, producerDigest, hyperlink)
+    })
   }
 
   function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
@@ -511,6 +516,10 @@ export function createGhosttyBackend(
 
   function getCell(row: number, col: number): Cell {
     return absoluteLine(row)[col] ?? emptyCell()
+  }
+
+  function getHyperlinkAt(row: number, col: number): string | null {
+    return getCell(row, col).hyperlink
   }
 
   function getLine(row: number): Cell[] {
@@ -613,7 +622,7 @@ export function createGhosttyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["dirtyTracking", "warnings"]),
+    extensions: new Set(["dirtyTracking", "warnings", "hyperlinks"]),
   }
 
   function getWarnings(): EmulatorWarning[] {
@@ -642,7 +651,7 @@ export function createGhosttyBackend(
     return renderTerminalPng(backend, opts as RenderOptions | undefined)
   }
 
-  const backend: LegacyBackend & WarningExtension = {
+  const backend: LegacyBackend & WarningExtension & HyperlinkExtension = {
     name: "ghostty",
     init,
     destroy,
@@ -652,6 +661,7 @@ export function createGhosttyBackend(
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt,
     // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
     // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.

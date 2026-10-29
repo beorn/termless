@@ -8,10 +8,10 @@ import { describe, test, expect, beforeAll, afterEach, vi } from "vitest"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { Ghostty } from "ghostty-web"
+import { Ghostty, GhosttyTerminal } from "ghostty-web"
 import { resolveGhosttyWebWasm } from "../src/load-native.ts"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
-import type { TerminalBackend } from "../../../src/terminal/types.ts"
+import type { TerminalBackend, HyperlinkExtension } from "../../../src/terminal/types.ts"
 
 let ghostty: Ghostty
 
@@ -36,6 +36,64 @@ describe("ghostty backend", () => {
     if (backend) backend.destroy()
   })
 
+  // @failure The URI wrapper keeps a detached view, frees borrowed bytes before copying, or conflates status 0/1.
+  // @level l0 @consumer GhosttyTerminal URI ABI. Real engine lifecycle tests cannot force memory growth during lookup.
+  test("copies URI bytes before another WASM call and releases scratch on every ABI outcome", () => {
+    const memory = new WebAssembly.Memory({ initial: 1, maximum: 32 })
+    const uri = "https://example.com/é:a"
+    let status = 1
+    let length = new TextEncoder().encode(uri).length
+    let outOfMemory = false
+    const release = vi.fn(() => new Uint8Array(memory.buffer, 64, 64).fill(0))
+    const allocate = vi.fn(() => {
+      if (outOfMemory) return 0
+      memory.grow(1)
+      return 8
+    })
+    // Only the FFI is controlled here; the wrapper and WebAssembly.Memory are production/real.
+    const exports: Record<string, unknown> = {
+      memory,
+      ghostty_terminal_new: () => 1,
+      ghostty_terminal_free: () => {},
+      ghostty_wasm_alloc_u8_array: allocate,
+      ghostty_wasm_free_u8_array: release,
+      ghostty_render_state_get_hyperlink: (_handle: number, _row: number, _col: number, out: number) => {
+        memory.grow(1)
+        new Uint8Array(memory.buffer).set(new TextEncoder().encode(uri), 64)
+        const words = new DataView(memory.buffer, out, 8)
+        words.setUint32(0, 64, true)
+        words.setUint32(4, length, true)
+        return status
+      },
+    }
+    const terminal = new GhosttyTerminal(
+      exports as unknown as ConstructorParameters<typeof GhosttyTerminal>[0],
+      memory,
+      2,
+      1,
+    )
+    expect(terminal.getHyperlinkAt(0, 1)).toBe(uri)
+    expect(release).toHaveBeenLastCalledWith(8, 8)
+    length = 0
+    expect(terminal.getHyperlinkAt(0, 1)).toBe("")
+    status = 0
+    expect(terminal.getHyperlinkAt(0, 1)).toBeNull()
+    for (const invalid of [-1, 2]) {
+      status = invalid
+      const frees = release.mock.calls.length
+      expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(`status ${invalid}`)
+      expect(release.mock.calls.length).toBe(frees + 1)
+    }
+    const frees = release.mock.calls.length
+    outOfMemory = true
+    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/allocate/)
+    expect(release.mock.calls.length).toBe(frees)
+    exports.ghostty_render_state_get_hyperlink = undefined
+    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/missing ghostty_render_state_get_hyperlink/)
+    terminal.free()
+    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/freed/)
+  })
+
   test("committed producer outputs match the pinned build receipt", () => {
     const directory = join(import.meta.dirname, "../../../vendor/ghostty-web")
     const receipt = JSON.parse(readFileSync(join(directory, "RECEIPT.json"), "utf8")) as {
@@ -55,6 +113,87 @@ describe("ghostty backend", () => {
         path,
       ).toBe(expected)
     }
+  })
+
+  // @failure OSC 8 URI is lost or read from the wrong buffer row during lifecycle changes.
+  // @level l0 @consumer Cell.hyperlink and HyperlinkExtension
+  // Existing rendering tests never read URI values; use the real WASM and adapter, with no new test seam.
+  test("OSC 8 URI observations survive buffer lifecycle", () => {
+    let raw: GhosttyTerminal | undefined
+    const create = ghostty.createTerminal.bind(ghostty)
+    const spy = vi.spyOn(ghostty, "createTerminal").mockImplementation((...args) => {
+      raw = create(...args)
+      return raw
+    })
+    try {
+      backend = createBackend(16, 3)
+    } finally {
+      spy.mockRestore()
+    }
+    const uri = "https://example.com:8443/a:b?q=c:d"
+    const open = `\x1b]8;id=not-the-uri;${uri}\x1b\\`
+    const close = "\x1b]8;;\x1b\\"
+    feedText(backend, `A${open}LINK${close}Z`)
+    // This must fail on the old adapter's actual wrong-null value before any new API is called.
+    expect(backend.getCell(0, 1).hyperlink).toBe(uri)
+    const links = backend as TerminalBackend & HyperlinkExtension
+    expect(backend.capabilities.extensions.has("hyperlinks")).toBe(true)
+    const at = (row: number, col: number, char: string, hyperlink: string | null) => {
+      expect(backend.getCell(row, col)).toMatchObject({ char, hyperlink })
+      expect(backend.getRow(row)[col]).toMatchObject({ char, hyperlink })
+      expect(links.getHyperlinkAt(row, col)).toBe(hyperlink)
+    }
+    for (const [col, char] of [..."ALINKZ"].entries()) {
+      at(0, col, char, col > 0 && col < 5 ? uri : null)
+    }
+    const copied = links.getHyperlinkAt(0, 1)
+    feedText(backend, "\x1b[1;2HX")
+    at(0, 1, "X", null)
+    expect(copied).toBe(uri)
+
+    backend.reset()
+    feedText(backend, `${open}OLD${close}\r\none\r\ntwo\r\n${open}LIVE${close}`)
+    expect(backend.getScrollback().viewportTop).toBe(1)
+    at(0, 0, "O", uri)
+    at(1, 0, "o", null)
+    at(3, 0, "L", uri)
+    // The pinned producer retains the cursor on 1049h; select the tested cell explicitly.
+    feedText(backend, `\x1b[?1049h\x1b[H${open}ALT${close}`)
+    expect(backend.getScrollback().viewportTop).toBe(0)
+    at(0, 0, "A", uri)
+    feedText(backend, "\x1b[?1049l")
+    expect(backend.getScrollback().viewportTop).toBe(1)
+    at(0, 0, "O", uri)
+    at(3, 0, "L", uri)
+    backend.resize(20, 4)
+    at(0, 0, "O", uri)
+    at(3, 0, "L", uri)
+    backend.reset()
+    expect(links.getHyperlinkAt(0, 0)).toBeNull()
+    expect(copied).toBe(uri)
+
+    feedText(backend, "\x1b[1;3m界e\u0301\x1b[0m")
+    const plain = backend.getRow(0).slice(0, 3)
+    expect(plain[0]).toMatchObject({ char: "界", wide: true, bold: true, italic: true })
+    expect(plain[2]?.char).toBe("e\u0301")
+    backend.reset()
+    feedText(backend, `\x1b[1;3m${open}界e\u0301${close}\x1b[0m`)
+    if (!raw) throw new Error("Ghostty terminal was not created")
+    const producer = raw.getLine(0)
+    if (!producer) throw new Error("Ghostty producer returned no live row")
+    for (let col = 0; col < 3; col++) {
+      const cell = backend.getCell(0, col)
+      const native = producer[col]
+      if (!native) throw new Error(`Ghostty producer returned no cell at 0:${col}`)
+      // The engine decides whether its wide continuation owns a hyperlink; preserve its metadata.
+      const hyperlink = native.hyperlink_id ? uri : null
+      expect(cell).toEqual({ ...plain[col], hyperlink })
+      at(0, col, cell.char, hyperlink)
+    }
+    expect(links.getHyperlinkAt(-1, 0)).toBeNull()
+    expect(links.getHyperlinkAt(0, 20)).toBeNull()
+    backend.destroy()
+    expect(() => links.getHyperlinkAt(0, 0)).toThrow("not initialized")
   })
 
   // Q4: real producer replies must reflect the active screen's keyboard stack.

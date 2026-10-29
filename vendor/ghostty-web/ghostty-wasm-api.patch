@@ -1,14 +1,12 @@
 diff --git a/.gitignore b/.gitignore
-index e451b171a..89c623d8b 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -23,3 +23,4 @@ glad.zip
+@@ -23,3 +23,4 @@
  /ghostty.qcow2
  
  vgcore.*
 +node_modules/
 diff --git a/include/ghostty/vt.h b/include/ghostty/vt.h
-index 4f8fef88e..ca9fb1d4d 100644
 --- a/include/ghostty/vt.h
 +++ b/include/ghostty/vt.h
 @@ -28,6 +28,7 @@
@@ -19,7 +17,7 @@ index 4f8fef88e..ca9fb1d4d 100644
   * - @ref key "Key Encoding" - Encode key events into terminal sequences
   * - @ref osc "OSC Parser" - Parse OSC (Operating System Command) sequences
   * - @ref sgr "SGR Parser" - Parse SGR (Select Graphic Rendition) sequences
-@@ -74,6 +75,7 @@ extern "C" {
+@@ -74,6 +75,7 @@
  
  #include <ghostty/vt/result.h>
  #include <ghostty/vt/allocator.h>
@@ -29,10 +27,9 @@ index 4f8fef88e..ca9fb1d4d 100644
  #include <ghostty/vt/key.h>
 diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
-index 000000000..298ad36c1
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,249 @@
+@@ -0,0 +1,263 @@
 +/**
 + * @file terminal.h
 + *
@@ -197,6 +194,20 @@ index 000000000..298ad36c1
 +    size_t buffer_size
 +);
 +
++/**
++ * Read a stored hyperlink at an absolute buffer row (history first, then active).
++ * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
++ * The caller must copy those bytes before another engine call.
++ * Returns -1 on error, 0 for no link, 1 for a link (including an empty URI).
++ * GhosttyCell's 16-byte ABI and hyperlink presence bit are unchanged.
++ */
++int ghostty_render_state_get_hyperlink(
++    GhosttyTerminal term,
++    int row,
++    int col,
++    size_t* out_ptr_len
++);
++
 +/* ============================================================================
 + * Terminal Modes
 + * ========================================================================= */
@@ -283,10 +294,9 @@ index 000000000..298ad36c1
 +
 +#endif /* GHOSTTY_VT_TERMINAL_H */
 diff --git a/src/lib_vt.zig b/src/lib_vt.zig
-index 03a883e20..f07bbd759 100644
 --- a/src/lib_vt.zig
 +++ b/src/lib_vt.zig
-@@ -140,6 +140,41 @@ comptime {
+@@ -140,6 +140,42 @@
          @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
          @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
          @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
@@ -310,6 +320,7 @@ index 03a883e20..f07bbd759 100644
 +        @export(&c.render_state_mark_clean, .{ .name = "ghostty_render_state_mark_clean" });
 +        @export(&c.render_state_get_viewport, .{ .name = "ghostty_render_state_get_viewport" });
 +        @export(&c.render_state_get_grapheme, .{ .name = "ghostty_render_state_get_grapheme" });
++        @export(&c.render_state_get_hyperlink, .{ .name = "ghostty_render_state_get_hyperlink" });
 +
 +        // Terminal modes
 +        @export(&c.terminal_is_alternate_screen, .{ .name = "ghostty_terminal_is_alternate_screen" });
@@ -329,10 +340,9 @@ index 03a883e20..f07bbd759 100644
          // On Wasm we need to export our allocator convenience functions.
          if (builtin.target.cpu.arch.isWasm()) {
 diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
-index bc92597f5..18503933f 100644
 --- a/src/terminal/c/main.zig
 +++ b/src/terminal/c/main.zig
-@@ -4,6 +4,7 @@ pub const key_event = @import("key_event.zig");
+@@ -4,6 +4,7 @@
  pub const key_encode = @import("key_encode.zig");
  pub const paste = @import("paste.zig");
  pub const sgr = @import("sgr.zig");
@@ -340,7 +350,7 @@ index bc92597f5..18503933f 100644
  
  // The full C API, unexported.
  pub const osc_new = osc.new;
-@@ -52,6 +53,42 @@ pub const key_encoder_encode = key_encode.encode;
+@@ -52,6 +53,43 @@
  
  pub const paste_is_safe = paste.is_safe;
  
@@ -364,6 +374,7 @@ index bc92597f5..18503933f 100644
 +pub const render_state_mark_clean = terminal.renderStateMarkClean;
 +pub const render_state_get_viewport = terminal.renderStateGetViewport;
 +pub const render_state_get_grapheme = terminal.renderStateGetGrapheme;
++pub const render_state_get_hyperlink = terminal.renderStateGetHyperlink;
 +
 +// Terminal modes
 +pub const terminal_is_alternate_screen = terminal.isAlternateScreen;
@@ -383,7 +394,7 @@ index bc92597f5..18503933f 100644
  test {
      _ = color;
      _ = osc;
-@@ -59,6 +96,7 @@ test {
+@@ -59,6 +97,7 @@
      _ = key_encode;
      _ = paste;
      _ = sgr;
@@ -393,10 +404,9 @@ index bc92597f5..18503933f 100644
      _ = @import("../../lib/allocator.zig");
 diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
-index 000000000..d57b4e405
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1011 @@
+@@ -0,0 +1,1048 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -1136,6 +1146,43 @@ index 000000000..d57b4e405
 +    return @intCast(count);
 +}
 +
++/// Borrow the engine-owned URI for an absolute buffer coordinate.
++/// The caller copies before another engine call; this lookup allocates nothing.
++pub fn renderStateGetHyperlink(
++    ptr: ?*anyopaque,
++    row: c_int,
++    col: c_int,
++    out_ptr_len: ?[*]usize,
++) callconv(.c) c_int {
++    const out = out_ptr_len orelse return -1;
++    out[0] = 0;
++    out[1] = 0;
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    const t = &wrapper.terminal;
++    if (row < 0 or col < 0) return -1;
++    const y: usize = @intCast(row);
++    const x: usize = @intCast(col);
++    if (x >= t.cols) return -1;
++    const history: usize = @intCast(getScrollbackLength(ptr));
++    if (y >= history + @as(usize, t.rows)) return -1;
++    const pages = &t.screens.active.pages;
++    const pin = (if (y < history)
++        pages.pin(.{ .history = .{ .y = @intCast(y) } })
++    else
++        pages.pin(.{ .active = .{ .y = @intCast(y - history) } })) orelse return -1;
++    const cells = pin.cells(.all);
++    if (x >= cells.len) return -1;
++    const cell = &cells[x];
++    if (!cell.hyperlink) return 0;
++    const page = pin.node.data;
++    const id = page.lookupHyperlink(cell) orelse return -1;
++    const link = page.hyperlink_set.get(page.memory, id);
++    const uri = link.uri.slice(page.memory);
++    out[0] = @intFromPtr(uri.ptr);
++    out[1] = uri.len;
++    return 1;
++}
++
 +// ============================================================================
 +// Terminal Modes (minimal set for compatibility)
 +// ============================================================================
@@ -1409,10 +1456,9 @@ index 000000000..d57b4e405
 +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
 +}
 diff --git a/src/terminal/render.zig b/src/terminal/render.zig
-index b6430ea34..10e0ef79d 100644
 --- a/src/terminal/render.zig
 +++ b/src/terminal/render.zig
-@@ -322,13 +322,14 @@ pub const RenderState = struct {
+@@ -322,13 +322,14 @@
          // Colors.
          self.colors.cursor = t.colors.cursor.get();
          self.colors.palette = t.colors.palette.current;

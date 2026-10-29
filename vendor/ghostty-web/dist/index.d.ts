@@ -360,7 +360,12 @@ export declare class GhosttyTerminal {
     getScrollbackLine(offset: number): GhosttyCell[] | null;
     /** Check if a row in the active screen is wrapped (soft-wrapped to next line) */
     isRowWrapped(row: number): boolean;
-    /** Hyperlink URI not yet exposed in simplified API */
+    /** Read the stored URI at an absolute buffer row (history first, then active). */
+    getHyperlinkAt(row: number, col: number): string | null;
+    /**
+     * Legacy ID-only stub: hyperlink_id is only a presence bit; use getHyperlinkAt(row,col) for a URI.
+     * Browser-provider cleanup waits on @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
+     */
     getHyperlinkUri(_id: number): string | null;
     /**
      * Check if there are pending responses from the terminal.
@@ -476,6 +481,7 @@ declare interface GhosttyWasmExports extends WebAssembly.Exports {
     ghostty_render_state_mark_clean(terminal: TerminalHandle): void;
     ghostty_render_state_get_viewport(terminal: TerminalHandle, bufPtr: number, bufLen: number): number;
     ghostty_render_state_get_grapheme(terminal: TerminalHandle, row: number, col: number, bufPtr: number, bufLen: number): number;
+    ghostty_render_state_get_hyperlink(terminal: TerminalHandle, row: number, col: number, outPtrLen: number): number;
     ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
     ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
     ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
