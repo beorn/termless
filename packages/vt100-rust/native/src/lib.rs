@@ -1,16 +1,66 @@
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 #[derive(Default)]
-struct TitleCallbacks {
+struct TerminalCallbacks {
     title: String,
+    icon_label: String,
+    clipboard: BTreeMap<String, ClipboardPayload>,
+    paste_selector: Option<String>,
 }
 
-impl vt100::Callbacks for TitleCallbacks {
+struct ClipboardPayload {
+    payload: String,
+    text: Option<String>,
+    decode_error: Option<String>,
+}
+
+impl vt100::Callbacks for TerminalCallbacks {
     fn set_window_title(&mut self, _: &mut vt100::Screen, title: &[u8]) {
         self.title = String::from_utf8_lossy(title).into_owned();
     }
+
+    fn set_window_icon_name(&mut self, _: &mut vt100::Screen, icon_name: &[u8]) {
+        self.icon_label = String::from_utf8_lossy(icon_name).into_owned();
+    }
+
+    fn copy_to_clipboard(&mut self, _: &mut vt100::Screen, selector: &[u8], data: &[u8]) {
+        let (text, decode_error) = match STANDARD.decode(data) {
+            Ok(bytes) => (Some(String::from_utf8_lossy(&bytes).into_owned()), None),
+            Err(error) => (None, Some(error.to_string())),
+        };
+        // Retain callback arguments exactly; interpreting selector lists is host policy.
+        self.clipboard.insert(
+            String::from_utf8_lossy(selector).into_owned(),
+            ClipboardPayload {
+                payload: String::from_utf8_lossy(data).into_owned(),
+                text,
+                decode_error,
+            },
+        );
+    }
+
+    fn paste_from_clipboard(&mut self, _: &mut vt100::Screen, selector: &[u8]) {
+        // vt100 emits a host request, not protocol reply bytes. Do not fabricate a reply.
+        self.paste_selector = Some(String::from_utf8_lossy(selector).into_owned());
+    }
+}
+
+#[napi(object)]
+pub struct NapiClipboardWrite {
+    pub selector: String,
+    pub payload: String,
+    pub text: Option<String>,
+    pub decode_error: Option<String>,
+}
+
+#[napi(object)]
+pub struct NapiClipboardState {
+    pub writes: Vec<NapiClipboardWrite>,
+    pub paste_selector: Option<String>,
 }
 
 // ===============================================================
@@ -99,7 +149,7 @@ pub struct NapiScrollback {
 
 #[napi]
 pub struct Vt100RustTerminal {
-    parser: Mutex<vt100::Parser<TitleCallbacks>>,
+    parser: Mutex<vt100::Parser<TerminalCallbacks>>,
     cols: u16,
     rows: u16,
 }
@@ -112,7 +162,7 @@ impl Vt100RustTerminal {
         let r = rows as u16;
         let c = cols as u16;
 
-        let parser = vt100::Parser::new_with_callbacks(r, c, scrollback, TitleCallbacks::default());
+        let parser = vt100::Parser::new_with_callbacks(r, c, scrollback, TerminalCallbacks::default());
 
         Vt100RustTerminal {
             parser: Mutex::new(parser),
@@ -149,7 +199,7 @@ impl Vt100RustTerminal {
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         // Feed RIS escape sequence to reset
         parser.process(b"\x1bc");
-        parser.callbacks_mut().title.clear();
+        *parser.callbacks_mut() = TerminalCallbacks::default();
         Ok(())
     }
 
@@ -341,6 +391,37 @@ impl Vt100RustTerminal {
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         Ok(parser.callbacks().title.clone())
+    }
+
+    #[napi]
+    pub fn get_icon_label(&self) -> Result<String> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(parser.callbacks().icon_label.clone())
+    }
+
+    #[napi]
+    pub fn get_clipboard_state(&self) -> Result<NapiClipboardState> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        let callbacks = parser.callbacks();
+        Ok(NapiClipboardState {
+            writes: callbacks
+                .clipboard
+                .iter()
+                .map(|(selector, value)| NapiClipboardWrite {
+                    selector: selector.clone(),
+                    payload: value.payload.clone(),
+                    text: value.text.clone(),
+                    decode_error: value.decode_error.clone(),
+                })
+                .collect(),
+            paste_selector: callbacks.paste_selector.clone(),
+        })
     }
 
     #[napi]

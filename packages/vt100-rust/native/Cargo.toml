@@ -8,6 +8,7 @@ description = "napi-rs bindings for vt100 Rust crate"
 crate-type = ["cdylib"]
 
 [dependencies]
+base64 = "=0.22.1"
 napi = { version = "3", features = ["napi8"] }
 napi-derive = "3"
 vt100 = "=0.16.2"

@@ -68,6 +68,11 @@ interface Vt100RustTerminal {
   getCursor(): NapiCursor
   getMode(mode: string): boolean
   getTitle(): string
+  getIconLabel(): string
+  getClipboardState(): {
+    writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
+    pasteSelector?: string
+  }
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
   /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
@@ -277,6 +282,10 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     return ensureTerm().getTitle()
   }
 
+  function getIconLabel(): string {
+    return ensureTerm().getIconLabel()
+  }
+
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     const sb = t.getScrollback()
@@ -333,6 +342,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     getCursor,
     getMode,
     getTitle,
+    getIconLabel,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
