@@ -17,9 +17,11 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
+import { replyDelivery } from "./reply-delivery.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module loading
@@ -310,10 +312,10 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(),
+    extensions: new Set(["reply-delivery"]),
   }
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & ReplyDeliveryExtension = {
     name: "wezterm",
     init,
     destroy,
@@ -334,6 +336,7 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend
