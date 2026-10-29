@@ -32,6 +32,7 @@ import type {
   EmulatorWarning,
   ReplyDeliveryExtension,
   WarningExtension,
+  HyperlinkExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -99,6 +100,7 @@ interface BridgeCommand {
 
 interface BridgeCell {
   text: string
+  hyperlink: string | null
   fg: [number, number, number] | null
   bg: [number, number, number] | null
   bold: boolean
@@ -145,6 +147,9 @@ const BRIDGE_SCRIPT = `${__kittyDir}/build/bridge.py`
 // ===============================================================
 
 function convertBridgeCell(cell: BridgeCell): Cell {
+  if (cell.hyperlink !== null && typeof cell.hyperlink !== "string") {
+    throw new Error("Kitty bridge cell hyperlink must be a string or null")
+  }
   const fg: Color | null = cell.fg ? { r: cell.fg[0], g: cell.fg[1], b: cell.fg[2] } : null
   const bg: Color | null = cell.bg ? { r: cell.bg[0], g: cell.bg[1], b: cell.bg[2] } : null
 
@@ -163,7 +168,7 @@ function convertBridgeCell(cell: BridgeCell): Cell {
     hidden: false,
     wide: cell.wide,
     continuation: false,
-    hyperlink: null,
+    hyperlink: cell.hyperlink,
   }
 }
 
@@ -225,7 +230,7 @@ export function isKittyAvailable(): boolean {
  */
 export function createKittyBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & WarningExtension & ReplyDeliveryExtension {
+): TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let scrollbackLimit = 1000
@@ -499,7 +504,7 @@ export function createKittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["warnings", "reply-delivery"]),
+    extensions: new Set(["warnings", "reply-delivery", "hyperlinks"]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -512,7 +517,7 @@ export function createKittyBackend(
   // lazily (on next query) rather than immediately after feed(). This is fine
   // for testing but may cause timing issues with interactive PTY usage.
 
-  const backend: TerminalBackend & WarningExtension & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension = {
     name: "kitty",
     init,
     destroy,
@@ -522,6 +527,7 @@ export function createKittyBackend(
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt: (row, col) => getCell(row, col).hyperlink,
     getLine,
     getLines,
     getRow: getLine,

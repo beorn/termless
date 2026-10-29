@@ -5,6 +5,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // in stream order (native/src/lib.rs send_event), so the path is unchanged; bound to the native artifact built from
 // these sources (Cargo.lock sha256 1f89f257), whose build receipt names the source commit.
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
+// Re-audited for owned OSC 8 URI readback and propagated cell-read errors: feed/getCursor/readResponse are unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",

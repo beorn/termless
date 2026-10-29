@@ -606,6 +606,12 @@ export interface ColorPaletteExtension {
   setDefaultBg(color: Color): void
 }
 
+/** Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b. */
+export interface DefaultColorsExtension {
+  /** All three current engine defaults; null means observed unset, not unknown display RGB. */
+  getDefaultColors(): { fg: Color | null; bg: Color | null; cursor: Color | null }
+}
+
 export interface DirtyTrackingExtension {
   getDirtyRows(): Set<number>
   clearDirty(): void

@@ -17,7 +17,7 @@ Commands:
 
 A snapshot contains the full terminal state:
   {
-    cells: [[{text, fg, bg, bold, dim, italic, underline, strikethrough, inverse, wide}, ...], ...],
+    cells: [[{text, hyperlink, fg, bg, bold, dim, italic, underline, strikethrough, inverse, wide}, ...], ...],
     cursor: {x, y, visible, style},
     title: string,
     modes: {altScreen, bracketedPaste, applicationCursor, autoWrap, ...},
@@ -252,8 +252,19 @@ def make_snapshot():
             if not text or text == "\0":
                 text = ""
 
+            # cpu_cells carries Kitty's stored id:URI. Match get_hyperlink_for_id(..., only_url=True): strip only the
+            # first colon, retaining every URI colon and an empty URI. Missing or malformed expected metadata is fatal.
+            hyperlink = cell_data["hyperlink"]
+            if hyperlink is not None:
+                if not isinstance(hyperlink, str):
+                    raise TypeError("Kitty CPU-cell hyperlink must be a string or None")
+                if ":" not in hyperlink:
+                    raise ValueError("Kitty CPU-cell hyperlink is missing its id:URI separator")
+                hyperlink = hyperlink.split(":", 1)[1]
+
             cell_row.append({
                 "text": text,
+                "hyperlink": hyperlink,
                 "fg": decode_color(cur.fg),
                 "bg": decode_color(cur.bg),
                 "bold": cur.bold,

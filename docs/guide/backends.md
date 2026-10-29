@@ -77,6 +77,22 @@ for the source-bound sentinel consumer and its late-reply checks.
 
 ## Backend Details
 
+### Reading parser metadata
+
+Use `hasExtension<HyperlinkExtension>(backend, "hyperlinks")` before calling
+`getHyperlinkAt(row, col)`. The getter and `Cell.hyperlink` return the stored URI,
+or null for an observed unlinked cell. They use the same row origin as that
+backend's `getCell`; buffer and viewport addressing differ between backends.
+Alacritty, WezTerm, Ghostty Native and Kitty preserve this metadata through their
+native bridges. A capability flag alone does not provide a metadata observer.
+
+Ghostty Native also advertises `DefaultColorsExtension` as `default-colors`.
+`getDefaultColors()` reads all three current engine defaults (`fg`, `bg`,
+`cursor`), including OSC overrides. Null means the engine reports an unset slot;
+it does not supply a display RGB. Reads require an initialized backend. This
+Track A compatibility extension migrates onto Emulator or leaves with
+TerminalBackend at A4b.
+
 Each backend can be used via factory function (explicit, sync) or string name via `backend()` (async — handles WASM/native init). The registry handles backend-specific initialization (WASM loading, native module binding).
 
 ### @termless/xtermjs

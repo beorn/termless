@@ -17,6 +17,7 @@ import type {
   TerminalCapabilities,
   Color,
   ReplyDeliveryExtension,
+  HyperlinkExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -44,6 +45,7 @@ interface NativeCell {
   strikethrough: boolean
   inverse: boolean
   wide: boolean
+  hyperlink: string | null
 }
 
 interface NativeCursor {
@@ -104,6 +106,9 @@ export function loadAlacrittyNative(): NativeModule {
 // ═══════════════════════════════════════════════════════
 
 function convertNativeCell(nc: NativeCell): Cell {
+  if (nc.hyperlink !== null && typeof nc.hyperlink !== "string") {
+    throw new Error("alacritty backend: native cell hyperlink must be a string or null")
+  }
   return {
     char: nc.text,
     fg: nc.fg ? ({ r: nc.fg[0]!, g: nc.fg[1]!, b: nc.fg[2]! } as Color) : null,
@@ -121,27 +126,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     hidden: false,
     wide: nc.wide,
     continuation: false,
-    hyperlink: null,
-  }
-}
-
-function emptyCell(): Cell {
-  return {
-    char: "",
-    fg: null,
-    bg: null,
-    bold: false,
-    dim: false,
-    italic: false,
-    underline: false,
-    underlineColor: null,
-    strikethrough: false,
-    inverse: false,
-    blink: false,
-    hidden: false,
-    wide: false,
-    continuation: false,
-    hyperlink: null,
+    hyperlink: nc.hyperlink,
   }
 }
 
@@ -162,7 +147,9 @@ const DEFAULT_ROWS = 24
  * Requires the native module to be built first. See README.md for build
  * instructions.
  */
-export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createAlacrittyBackend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension {
   let term: NativeAlacrittyTerminal | null = null
 
   function ensureTerm(): NativeAlacrittyTerminal {
@@ -233,30 +220,17 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
   }
 
   function getCell(row: number, col: number): Cell {
-    const t = ensureTerm()
-    try {
-      return convertNativeCell(t.getCell(row, col))
-    } catch {
-      return emptyCell()
-    }
+    return convertNativeCell(ensureTerm().getCell(row, col))
   }
 
   function getLine(row: number): Cell[] {
-    const t = ensureTerm()
-    try {
-      return t.getLine(row).map(convertNativeCell)
-    } catch {
-      return []
-    }
+    return ensureTerm().getLine(row).map(convertNativeCell)
   }
 
   function getLines(): Cell[][] {
-    const t = ensureTerm()
-    try {
-      return t.getLines().map((row) => row.map(convertNativeCell))
-    } catch {
-      return []
-    }
+    return ensureTerm()
+      .getLines()
+      .map((row) => row.map(convertNativeCell))
   }
 
   function getCursor(): Cursor {
@@ -307,10 +281,10 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["reply-delivery"]),
+    extensions: new Set(["reply-delivery", "hyperlinks"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension = {
     name: "alacritty",
     init,
     destroy,
@@ -320,6 +294,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
     getText,
     getTextRange,
     getCell,
+    getHyperlinkAt: (row, col) => getCell(row, col).hyperlink,
     getLine,
     getLines,
     getRow: getLine,

@@ -20,6 +20,7 @@ export type {
   // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   CellView,
   Color,
+  DefaultColorsExtension,
   Cursor,
   CursorStyle,
   EmulatorWarning,
