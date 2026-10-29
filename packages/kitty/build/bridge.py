@@ -36,10 +36,11 @@ import sys
 import traceback
 from collections import deque
 
-from kitty.fast_data_types import Color, ESC_OSC, Screen, set_options
+from kitty.fast_data_types import Color, ESC_CSI, ESC_OSC, Screen, get_options, set_options
 from kitty.options.types import defaults
 from kitty.rgb import to_color
 from kitty.utils import color_as_int
+from kitty.window import da1
 
 # Standard 16-color ANSI palette (xterm defaults)
 ANSI_16 = [
@@ -125,6 +126,10 @@ class Callbacks:
         raw = bytes(data)
         self.wtcbuf += raw
         self.responses += raw
+
+    def on_da1(self):
+        """Answer DA1 as kitty's Window.on_da1 does; the Screen hands DA1 to its window instead of replying."""
+        screen.send_escape_code_to_child(ESC_CSI, da1(get_options()))
 
     def title_changed(self, title, raw=None):
         if hasattr(title, "tobytes"):

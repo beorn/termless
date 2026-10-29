@@ -232,6 +232,23 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     for (let i = 0; i < 11; i++) feed("\x1b[23;2t")
     expect(backend.getTitle()).toBe("title-0")
   })
+
+  /**
+   * @failure Headless Kitty swallows its on_da1 window callback, so DA1 goes unanswered and the DA1 sentinel cannot decide a silent query.
+   * @level l2
+   * @consumer Terminfo headless DA1 sentinel and device.primary-da
+   */
+  test("answers primary DA the way Kitty's window does", () => {
+    const backend = createKittyBackend()
+    backend.init?.({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    backend.feed(new TextEncoder().encode("\x1b[c"))
+    backend.getCursor()
+    // Kitty's Window.on_da1 sends CSI followed by da1(options); with default options that is ?62;52;c.
+    expect(responses.join("")).toBe("\x1b[?62;52;c")
+    backend.destroy()
+  })
 })
 
 describe.skipIf(kittyAvailable)("window-op probe responses — kitty backend (skipped)", () => {
