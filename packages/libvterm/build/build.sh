@@ -78,6 +78,8 @@ emcc -O2 \
     "_termless_vterm_screen_get_cell_flat",
     "_termless_vterm_screen_get_text_flat",
     "_termless_vterm_screen_observe_props",
+    "_termless_vterm_screen_get_title",
+    "_termless_vterm_screen_get_title_len",
     "_vterm_state_get_cursorpos",
     "_vterm_obtain_state",
     "_vterm_screen_set_callbacks",

@@ -606,6 +606,24 @@ describe("ghostty backend", () => {
       const text = backend.getText()
       expect(text).not.toContain("Some content")
     })
+
+    test("observes .window_title across OSC 0, OSC 2, and full reset while keeping .title_push/.title_pop unimplemented (#31735)", () => {
+      backend = createBackend()
+      expect(backend.getTitle()).toBe("")
+      feedText(backend, "\x1b]0;osc0-title\x07")
+      expect(backend.getTitle()).toBe("osc0-title")
+      feedText(backend, "\x1b]2;osc2-title\x1b\\")
+      expect(backend.getTitle()).toBe("osc2-title")
+      // Upstream Ghostty 5714ed07 stream_handler.zig:343-346 marks .title_push/.title_pop Unimplemented
+      feedText(backend, "\x1b[22;0t\x1b]2;after-push\x07\x1b[23;0t")
+      expect(backend.getTitle()).toBe("after-push")
+      feedText(backend, "\x1bc")
+      expect(backend.getTitle()).toBe("")
+      feedText(backend, "\x1b]2;before-reset\x07")
+      expect(backend.getTitle()).toBe("before-reset")
+      backend.reset()
+      expect(backend.getTitle()).toBe("")
+    })
   })
 
   describe("key encoding", () => {

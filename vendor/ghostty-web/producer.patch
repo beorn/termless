@@ -1,3 +1,171 @@
+diff --git a/lib/buffer.ts b/lib/buffer.ts
+--- a/lib/buffer.ts
++++ b/lib/buffer.ts
+@@ -115,6 +115,7 @@
+       width: 1,
+       hyperlink_id: 0,
+       grapheme_len: 0,
++      underline_style: 0,
+     };
+     this.nullCell = new BufferCell(nullCellData, 0);
+   }
+@@ -255,6 +256,7 @@
+           width: 1,
+           hyperlink_id: 0,
+           grapheme_len: 0,
++          underline_style: 0,
+         },
+         x
+       );
+diff --git a/lib/ghostty.ts b/lib/ghostty.ts
+--- a/lib/ghostty.ts
++++ b/lib/ghostty.ts
+@@ -362,6 +362,7 @@
+       this.viewportBufferPtr = 0;
+     }
+     this.exports.ghostty_terminal_free(this.handle);
++    this.handle = 0;
+   }
+ 
+   // ==========================================================================
+@@ -582,6 +583,11 @@
+ 
+     for (let i = 0; i < count; i++) {
+       const cellOffset = i * GhosttyTerminal.CELL_SIZE;
++      const flags = u8[cellOffset + 10];
++      const underline_style = u8[cellOffset + 15];
++      if (((flags & CellFlags.UNDERLINE) !== 0) !== (underline_style !== 0)) {
++        throw new Error(`Ghostty scrollback cell ${i}: underline flag/style mismatch; old producer with new decoder or decoder bug`);
++      }
+       cells.push({
+         codepoint: view.getUint32(cellOffset, true),
+         fg_r: u8[cellOffset + 4],
+@@ -590,10 +596,11 @@
+         bg_r: u8[cellOffset + 7],
+         bg_g: u8[cellOffset + 8],
+         bg_b: u8[cellOffset + 9],
+-        flags: u8[cellOffset + 10],
++        flags,
+         width: u8[cellOffset + 11],
+         hyperlink_id: view.getUint16(cellOffset + 12, true),
+         grapheme_len: u8[cellOffset + 14],
++        underline_style,
+       });
+     }
+ 
+@@ -605,9 +612,60 @@
+     return this.exports.ghostty_terminal_is_row_wrapped(this.handle, row) !== 0;
+   }
+ 
+-  /** Hyperlink URI not yet exposed in simplified API */
++  /** Read the stored URI at an absolute buffer row (history first, then active). */
++  getHyperlinkAt(row: number, col: number): string | null {
++    if (!this.handle) throw new Error('Ghostty terminal has been freed');
++    const lookup = this.exports.ghostty_render_state_get_hyperlink;
++    if (typeof lookup !== 'function') {
++      throw new Error('Ghostty WASM is missing ghostty_render_state_get_hyperlink');
++    }
++    // Allocate before borrowing a URI; an allocation can grow WASM memory.
++    const scratch = this.exports.ghostty_wasm_alloc_u8_array(8);
++    if (!scratch) throw new Error('Failed to allocate hyperlink pointer/length');
++    try {
++      const status = lookup(this.handle, row, col, scratch);
++      if (status === 0) return null;
++      if (status !== 1) throw new Error(`Ghostty hyperlink lookup failed with status ${status} at ${row}:${col}`);
++      // Reacquire after the export, then copy synchronously before even freeing scratch.
++      const view = new DataView(this.memory.buffer, scratch, 8);
++      const pointer = view.getUint32(0, true);
++      const length = view.getUint32(4, true);
++      const bytes = new Uint8Array(this.memory.buffer, pointer, length);
++      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
++    } finally {
++      this.exports.ghostty_wasm_free_u8_array(scratch, 8);
++    }
++  }
++
++  /** Read the current window title set by OSC 0 / OSC 2, cleared on full reset. */
++  getTitle(): string {
++    if (!this.handle) throw new Error('Ghostty terminal has been freed');
++    const lookup = this.exports.ghostty_terminal_get_title;
++    if (typeof lookup !== 'function') {
++      throw new Error('Ghostty WASM is missing ghostty_terminal_get_title');
++    }
++    const scratch = this.exports.ghostty_wasm_alloc_u8_array(8);
++    if (!scratch) throw new Error('Failed to allocate title pointer/length');
++    try {
++      const status = lookup(this.handle, scratch);
++      if (status === 0) return '';
++      if (status !== 1) throw new Error(`Ghostty title lookup failed with status ${status}`);
++      const view = new DataView(this.memory.buffer, scratch, 8);
++      const pointer = view.getUint32(0, true);
++      const length = view.getUint32(4, true);
++      const bytes = new Uint8Array(this.memory.buffer, pointer, length);
++      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
++    } finally {
++      this.exports.ghostty_wasm_free_u8_array(scratch, 8);
++    }
++  }
++
++  /**
++   * Legacy ID-only stub: hyperlink_id is only a presence bit; use getHyperlinkAt(row,col) for a URI.
++   * Browser-provider cleanup waits on @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
++   */
+   getHyperlinkUri(_id: number): string | null {
+-    return null; // TODO: Add hyperlink support
++    return null;
+   }
+ 
+   /**
+@@ -673,6 +731,7 @@
+           width: 1,
+           hyperlink_id: 0,
+           grapheme_len: 0,
++          underline_style: 0,
+         });
+       }
+     }
+@@ -697,6 +756,10 @@
+       cell.width = u8[offset + 11];
+       cell.hyperlink_id = view.getUint16(offset + 12, true);
+       cell.grapheme_len = u8[offset + 14]; // grapheme_len is at byte 14
++      cell.underline_style = u8[offset + 15];
++      if (((cell.flags & CellFlags.UNDERLINE) !== 0) !== (cell.underline_style !== 0)) {
++        throw new Error(`Ghostty viewport cell ${i}: underline flag/style mismatch; old producer with new decoder or decoder bug`);
++      }
+     }
+   }
+ 
+diff --git a/lib/types.ts b/lib/types.ts
+--- a/lib/types.ts
++++ b/lib/types.ts
+@@ -438,10 +438,19 @@
+     bufLen: number
+   ): number; // Returns count of codepoints or -1 on error
+ 
++  // Absolute row: history first, then active. Two wasm32 words receive a borrowed UTF-8 pointer/length.
++  ghostty_render_state_get_hyperlink(
++    terminal: TerminalHandle,
++    row: number,
++    col: number,
++    outPtrLen: number
++  ): number; // -1 error, 0 no link, 1 link (including an empty URI)
++
+   // Terminal modes
+   ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
+   ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
+   ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
++  ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
+ 
+   // Scrollback API
+   ghostty_terminal_get_scrollback_length(terminal: TerminalHandle): number;
+@@ -550,6 +559,7 @@
+   width: number; // u8 (character width: 1=normal, 2=wide, etc.)
+   hyperlink_id: number; // u16 (0 = no link, >0 = hyperlink ID in set)
+   grapheme_len: number; // u8 (number of extra codepoints beyond first)
++  underline_style: number; // u8 at byte 15: none=0, single=1, double=2, curly=3, dotted=4, dashed=5
+ }
+ 
+ /**
 diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 --- a/patches/ghostty-wasm-api.patch
 +++ b/patches/ghostty-wasm-api.patch
@@ -34,7 +202,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/include/ghostty/vt/terminal.h
 -@@ -0,0 +1,249 @@
-+@@ -0,0 +1,263 @@
++@@ -0,0 +1,273 @@
  +/**
  + * @file terminal.h
  + *
@@ -68,7 +236,24 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Terminal Modes
  + * ========================================================================= */
-@@ -283,10 +294,9 @@
+@@ -215,6 +226,16 @@
+ + */
+ +bool ghostty_terminal_get_mode(GhosttyTerminal term, int mode, bool is_ansi);
+ +
+++/**
+++ * Borrow the current window title (UTF-8) recorded from the VT stream.
+++ * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
+++ * Returns -1 on error, 0 for an empty title, 1 for a non-empty title.
+++ */
+++int ghostty_terminal_get_title(
+++    GhosttyTerminal term,
+++    size_t* out_ptr_len
+++);
+++
+ +/* ============================================================================
+ + * Scrollback API
+ + * ========================================================================= */
+@@ -283,10 +304,9 @@
  +
  +#endif /* GHOSTTY_VT_TERMINAL_H */
  diff --git a/src/lib_vt.zig b/src/lib_vt.zig
@@ -76,11 +261,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- a/src/lib_vt.zig
  +++ b/src/lib_vt.zig
 -@@ -140,6 +140,41 @@ comptime {
-+@@ -140,6 +140,42 @@
++@@ -140,6 +140,43 @@
           @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
           @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
           @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
-@@ -310,6 +320,7 @@
+@@ -310,11 +330,13 @@
  +        @export(&c.render_state_mark_clean, .{ .name = "ghostty_render_state_mark_clean" });
  +        @export(&c.render_state_get_viewport, .{ .name = "ghostty_render_state_get_viewport" });
  +        @export(&c.render_state_get_grapheme, .{ .name = "ghostty_render_state_get_grapheme" });
@@ -88,7 +273,13 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +        // Terminal modes
  +        @export(&c.terminal_is_alternate_screen, .{ .name = "ghostty_terminal_is_alternate_screen" });
-@@ -329,10 +340,9 @@
+ +        @export(&c.terminal_has_mouse_tracking, .{ .name = "ghostty_terminal_has_mouse_tracking" });
+ +        @export(&c.terminal_get_mode, .{ .name = "ghostty_terminal_get_mode" });
+++        @export(&c.terminal_get_title, .{ .name = "ghostty_terminal_get_title" });
+ +
+ +        // Scrollback API
+ +        @export(&c.terminal_get_scrollback_length, .{ .name = "ghostty_terminal_get_scrollback_length" });
+@@ -329,10 +351,9 @@
           // On Wasm we need to export our allocator convenience functions.
           if (builtin.target.cpu.arch.isWasm()) {
  diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
@@ -100,16 +291,16 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   pub const key_encode = @import("key_encode.zig");
   pub const paste = @import("paste.zig");
   pub const sgr = @import("sgr.zig");
-@@ -340,7 +350,7 @@
+@@ -340,7 +361,7 @@
   
   // The full C API, unexported.
   pub const osc_new = osc.new;
 -@@ -52,6 +53,42 @@ pub const key_encoder_encode = key_encode.encode;
-+@@ -52,6 +53,43 @@
++@@ -52,6 +53,44 @@
   
   pub const paste_is_safe = paste.is_safe;
   
-@@ -364,6 +374,7 @@
+@@ -364,11 +385,13 @@
  +pub const render_state_mark_clean = terminal.renderStateMarkClean;
  +pub const render_state_get_viewport = terminal.renderStateGetViewport;
  +pub const render_state_get_grapheme = terminal.renderStateGetGrapheme;
@@ -117,16 +308,22 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +// Terminal modes
  +pub const terminal_is_alternate_screen = terminal.isAlternateScreen;
-@@ -383,7 +394,7 @@
+ +pub const terminal_has_mouse_tracking = terminal.hasMouseTracking;
+ +pub const terminal_get_mode = terminal.getMode;
+++pub const terminal_get_title = terminal.getTitle;
+ +
+ +// Scrollback API
+ +pub const terminal_get_scrollback_length = terminal.getScrollbackLength;
+@@ -383,7 +406,7 @@
   test {
       _ = color;
       _ = osc;
 -@@ -59,6 +96,7 @@ test {
-+@@ -59,6 +97,7 @@
++@@ -59,6 +98,7 @@
       _ = key_encode;
       _ = paste;
       _ = sgr;
-@@ -393,10 +404,9 @@
+@@ -393,10 +416,9 @@
       _ = @import("../../lib/allocator.zig");
  diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
  new file mode 100644
@@ -134,11 +331,45 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1048 @@
++@@ -0,0 +1,1097 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
-@@ -575,6 +585,12 @@
+@@ -435,12 +457,19 @@
+ +    alloc: Allocator,
+ +    terminal: *Terminal,
+ +    response_buffer: *std.ArrayList(u8),
+-+
+-+    pub fn init(alloc: Allocator, terminal: *Terminal, response_buffer: *std.ArrayList(u8)) ResponseHandler {
+++    title: *std.ArrayList(u8),
+++
+++    pub fn init(
+++        alloc: Allocator,
+++        terminal: *Terminal,
+++        response_buffer: *std.ArrayList(u8),
+++        title: *std.ArrayList(u8),
+++    ) ResponseHandler {
+ +        return .{
+ +            .alloc = alloc,
+ +            .terminal = terminal,
+ +            .response_buffer = response_buffer,
+++            .title = title,
+ +        };
+ +    }
+ +
+@@ -561,7 +590,10 @@
+ +            },
+ +            .active_status_display => self.terminal.status_display = value,
+ +            .decaln => try self.terminal.decaln(),
+-+            .full_reset => self.terminal.fullReset(),
+++            .full_reset => {
+++                self.terminal.fullReset();
+++                self.title.clearRetainingCapacity();
+++            },
+ +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
+ +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
+ +            .prompt_start => {
+@@ -575,6 +607,31 @@
  +            .mouse_shape => self.terminal.mouse_shape = value,
  +            .color_operation => try self.colorOperation(value.op, &value.requests),
  +            .kitty_color_report => try self.kittyColorOperation(value),
@@ -148,18 +379,55 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 ++                const resp = try std.fmt.bufPrint(&buf, "\x1B[?{}u", .{flags});
 ++                try self.response_buffer.appendSlice(self.alloc, resp);
 ++            },
+++            .window_title => {
+++                self.title.clearRetainingCapacity();
+++                try self.title.appendSlice(self.alloc, value.title);
+++            },
+++            .size_report => {
+++                // Format CSI 18 t cell-grid size report from Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496
+++                // src/termio/Termio.zig:540-546. Pixel-dependent .csi_14_t and .csi_16_t stay silent in WASM.
+++                switch (value) {
+++                    .csi_18_t => {
+++                        var buf: [32]u8 = undefined;
+++                        const resp = try std.fmt.bufPrint(&buf, "\x1b[8;{};{}t", .{
+++                            self.terminal.rows,
+++                            self.terminal.cols,
+++                        });
+++                        try self.response_buffer.appendSlice(self.alloc, resp);
+++                    },
+++                    .csi_14_t, .csi_16_t, .csi_21_t => {},
+++                }
+++            },
  +
  +            // Actions that require no response and have no terminal effect
  +            .dcs_hook,
-@@ -590,7 +606,6 @@
- +            .size_report,
+@@ -587,15 +644,13 @@
+ +            .enquiry,
+ +            .request_mode,
+ +            .request_mode_unknown,
+-+            .size_report,
  +            .xtversion,
  +            .device_attributes,
 -+            .kitty_keyboard_query,
- +            .window_title,
+-+            .window_title,
  +            .report_pwd,
  +            .show_desktop_notification,
-@@ -717,7 +732,7 @@
+ +            .progress_report,
+ +            .clipboard_contents,
+++            // Unimplemented in Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496 src/termio/stream_handler.zig:343-346
+ +            .title_push,
+ +            .title_pop,
+ +            => {},
+@@ -700,6 +755,8 @@
+ +    render_state: RenderState,
+ +    /// Response buffer for DSR and other query responses
+ +    response_buffer: std.ArrayList(u8),
+++    /// Recorded window title from OSC 0 / OSC 2
+++    title: std.ArrayList(u8) = .{},
+ +    /// Track alternate screen state to detect screen switches
+ +    last_screen_is_alternate: bool = false,
+ +};
+@@ -717,7 +774,7 @@
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
@@ -168,7 +436,39 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +};
  +
  +/// Dirty state
-@@ -1072,6 +1087,7 @@
+@@ -812,11 +869,12 @@
+ +        return null;
+ +    };
+ +
+-+    // Initialize response buffer
+++    // Initialize response and title buffers
+ +    wrapper.response_buffer = .{};
+++    wrapper.title = .{};
+ +
+-+    // Initialize handler with references to terminal and response buffer
+-+    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer);
+++    // Initialize handler with references to terminal, response buffer, and title buffer
+++    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer, &wrapper.title);
+ +
+ +    // Initialize stream with the handler
+ +    wrapper.stream = ResponseStream.init(wrapper.handler);
+@@ -828,6 +886,7 @@
+ +        .stream = wrapper.stream,
+ +        .render_state = RenderState.empty,
+ +        .response_buffer = wrapper.response_buffer,
+++        .title = wrapper.title,
+ +    };
+ +
+ +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
+@@ -847,6 +906,7 @@
+ +    const alloc = wrapper.alloc;
+ +    wrapper.stream.deinit();
+ +    wrapper.response_buffer.deinit(alloc);
+++    wrapper.title.deinit(alloc);
+ +    wrapper.render_state.deinit(alloc);
+ +    wrapper.terminal.deinit(alloc);
+ +    alloc.destroy(wrapper);
+@@ -1072,6 +1132,7 @@
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
@@ -176,7 +476,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            };
  +            idx += 1;
  +        }
-@@ -1130,6 +1146,43 @@
+@@ -1130,6 +1191,43 @@
  +    return @intCast(count);
  +}
  +
@@ -220,7 +520,30 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Terminal Modes (minimal set for compatibility)
  +// ============================================================================
-@@ -1264,6 +1317,7 @@
+@@ -1154,6 +1252,22 @@
+ +    return wrapper.terminal.modes.get(mode);
+ +}
+ +
+++/// Borrow the engine-recorded window title (OSC 0 / OSC 2), cleared on full reset.
+++pub fn getTitle(
+++    ptr: ?*anyopaque,
+++    out_ptr_len: ?[*]usize,
+++) callconv(.c) c_int {
+++    const out = out_ptr_len orelse return -1;
+++    out[0] = 0;
+++    out[1] = 0;
+++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
+++    const slice = wrapper.title.items;
+++    if (slice.len == 0) return 0;
+++    out[0] = @intFromPtr(slice.ptr);
+++    out[1] = slice.len;
+++    return 1;
+++}
+++
+ +// ============================================================================
+ +// Scrollback API
+ +// ============================================================================
+@@ -1264,6 +1378,7 @@
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
@@ -228,7 +551,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        };
  +    }
  +    return @intCast(cols);
-@@ -1402,10 +1456,9 @@
+@@ -1402,10 +1517,9 @@
  +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
  +}
  diff --git a/src/terminal/render.zig b/src/terminal/render.zig
@@ -240,143 +563,3 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
           // Colors.
           self.colors.cursor = t.colors.cursor.get();
           self.colors.palette = t.colors.palette.current;
-diff --git a/lib/ghostty.ts b/lib/ghostty.ts
---- a/lib/ghostty.ts
-+++ b/lib/ghostty.ts
-@@ -362,6 +362,7 @@
-       this.viewportBufferPtr = 0;
-     }
-     this.exports.ghostty_terminal_free(this.handle);
-+    this.handle = 0;
-   }
- 
-   // ==========================================================================
-@@ -582,6 +583,11 @@
- 
-     for (let i = 0; i < count; i++) {
-       const cellOffset = i * GhosttyTerminal.CELL_SIZE;
-+      const flags = u8[cellOffset + 10];
-+      const underline_style = u8[cellOffset + 15];
-+      if (((flags & CellFlags.UNDERLINE) !== 0) !== (underline_style !== 0)) {
-+        throw new Error(`Ghostty scrollback cell ${i}: underline flag/style mismatch; old producer with new decoder or decoder bug`);
-+      }
-       cells.push({
-         codepoint: view.getUint32(cellOffset, true),
-         fg_r: u8[cellOffset + 4],
-@@ -590,10 +596,11 @@
-         bg_r: u8[cellOffset + 7],
-         bg_g: u8[cellOffset + 8],
-         bg_b: u8[cellOffset + 9],
--        flags: u8[cellOffset + 10],
-+        flags,
-         width: u8[cellOffset + 11],
-         hyperlink_id: view.getUint16(cellOffset + 12, true),
-         grapheme_len: u8[cellOffset + 14],
-+        underline_style,
-       });
-     }
- 
-@@ -605,9 +612,37 @@
-     return this.exports.ghostty_terminal_is_row_wrapped(this.handle, row) !== 0;
-   }
- 
--  /** Hyperlink URI not yet exposed in simplified API */
-+  /** Read the stored URI at an absolute buffer row (history first, then active). */
-+  getHyperlinkAt(row: number, col: number): string | null {
-+    if (!this.handle) throw new Error('Ghostty terminal has been freed');
-+    const lookup = this.exports.ghostty_render_state_get_hyperlink;
-+    if (typeof lookup !== 'function') {
-+      throw new Error('Ghostty WASM is missing ghostty_render_state_get_hyperlink');
-+    }
-+    // Allocate before borrowing a URI; an allocation can grow WASM memory.
-+    const scratch = this.exports.ghostty_wasm_alloc_u8_array(8);
-+    if (!scratch) throw new Error('Failed to allocate hyperlink pointer/length');
-+    try {
-+      const status = lookup(this.handle, row, col, scratch);
-+      if (status === 0) return null;
-+      if (status !== 1) throw new Error(`Ghostty hyperlink lookup failed with status ${status} at ${row}:${col}`);
-+      // Reacquire after the export, then copy synchronously before even freeing scratch.
-+      const view = new DataView(this.memory.buffer, scratch, 8);
-+      const pointer = view.getUint32(0, true);
-+      const length = view.getUint32(4, true);
-+      const bytes = new Uint8Array(this.memory.buffer, pointer, length);
-+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-+    } finally {
-+      this.exports.ghostty_wasm_free_u8_array(scratch, 8);
-+    }
-+  }
-+
-+  /**
-+   * Legacy ID-only stub: hyperlink_id is only a presence bit; use getHyperlinkAt(row,col) for a URI.
-+   * Browser-provider cleanup waits on @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
-+   */
-   getHyperlinkUri(_id: number): string | null {
--    return null; // TODO: Add hyperlink support
-+    return null;
-   }
- 
-   /**
-@@ -673,6 +708,7 @@
-           width: 1,
-           hyperlink_id: 0,
-           grapheme_len: 0,
-+          underline_style: 0,
-         });
-       }
-     }
-@@ -697,6 +733,10 @@
-       cell.width = u8[offset + 11];
-       cell.hyperlink_id = view.getUint16(offset + 12, true);
-       cell.grapheme_len = u8[offset + 14]; // grapheme_len is at byte 14
-+      cell.underline_style = u8[offset + 15];
-+      if (((cell.flags & CellFlags.UNDERLINE) !== 0) !== (cell.underline_style !== 0)) {
-+        throw new Error(`Ghostty viewport cell ${i}: underline flag/style mismatch; old producer with new decoder or decoder bug`);
-+      }
-     }
-   }
- 
-diff --git a/lib/types.ts b/lib/types.ts
---- a/lib/types.ts
-+++ b/lib/types.ts
-@@ -438,6 +438,14 @@
-     bufLen: number
-   ): number; // Returns count of codepoints or -1 on error
- 
-+  // Absolute row: history first, then active. Two wasm32 words receive a borrowed UTF-8 pointer/length.
-+  ghostty_render_state_get_hyperlink(
-+    terminal: TerminalHandle,
-+    row: number,
-+    col: number,
-+    outPtrLen: number
-+  ): number; // -1 error, 0 no link, 1 link (including an empty URI)
-+
-   // Terminal modes
-   ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
-   ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
-@@ -550,6 +558,7 @@
-   width: number; // u8 (character width: 1=normal, 2=wide, etc.)
-   hyperlink_id: number; // u16 (0 = no link, >0 = hyperlink ID in set)
-   grapheme_len: number; // u8 (number of extra codepoints beyond first)
-+  underline_style: number; // u8 at byte 15: none=0, single=1, double=2, curly=3, dotted=4, dashed=5
- }
- 
- /**
-diff --git a/lib/buffer.ts b/lib/buffer.ts
---- a/lib/buffer.ts
-+++ b/lib/buffer.ts
-@@ -115,6 +115,7 @@
-       width: 1,
-       hyperlink_id: 0,
-       grapheme_len: 0,
-+      underline_style: 0,
-     };
-     this.nullCell = new BufferCell(nullCellData, 0);
-   }
-@@ -255,6 +256,7 @@
-           width: 1,
-           hyperlink_id: 0,
-           grapheme_len: 0,
-+          underline_style: 0,
-         },
-         x
-       );

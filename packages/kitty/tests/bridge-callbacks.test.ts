@@ -55,7 +55,8 @@ test.skipIf(!isKittyAvailable())("underline colors (requires installed Kitty or 
   const backend = createKittyBackend({ cols: 6, rows: 1 })
   try {
     backend.feed(new TextEncoder().encode("\x1b[4;38;5;5mC\x1b[58;5;5mI\x1b[58;2;255;0;128mR\x1b[59mD\x1b[0m"))
-    const palette5 = { r: 128, g: 0, b: 128 }
+    // Kitty's own ColorProfile default for color5 (kitty/options/types.py defaults.color5 = #cb1ed1)
+    const palette5 = { r: 203, g: 30, b: 209 }
     expect(backend.getCell(0, 0)).toMatchObject({ char: "C", fg: palette5, underlineColor: null })
     expect(backend.getCell(0, 1)).toMatchObject({ char: "I", underline: "single", underlineColor: palette5 })
     expect(backend.getCell(0, 2).underlineColor).toEqual({ r: 255, g: 0, b: 128 })
@@ -79,6 +80,26 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
     try {
       backend.feed(new TextEncoder().encode("\x1b]4;1;#abcdef\x1b\\\x1b]104;1\x1b\\"))
       expect(() => backend.getCursor()).not.toThrow()
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("resolves indexed cell colors through screen.color_profile after OSC 4 and XTPUSHCOLORS/XTPOPCOLORS (#31735)", () => {
+    const backend = createKittyBackend({ cols: 10, rows: 2 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b]4;1;rgb:12/34/56\x1b\\\x1b[31;48;5;1;4;58;5;1mA\x1b[0m"))
+      expect(backend.getCell(0, 0)).toMatchObject({
+        char: "A",
+        fg: { r: 0x12, g: 0x34, b: 0x56 },
+        bg: { r: 0x12, g: 0x34, b: 0x56 },
+        underline: "single",
+        underlineColor: { r: 0x12, g: 0x34, b: 0x56 },
+      })
+      backend.feed(new TextEncoder().encode("\x1b[#P\x1b]4;1;rgb:aa/bb/cc\x1b\\"))
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 0xaa, g: 0xbb, b: 0xcc })
+      backend.feed(new TextEncoder().encode("\x1b[#Q"))
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 0x12, g: 0x34, b: 0x56 })
     } finally {
       backend.destroy()
     }

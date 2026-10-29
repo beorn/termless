@@ -16,19 +16,19 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "bb0c9ebedc00048158ea7a8c70be3574f7bd437f",
+      blobOid: "63d6406b52cc48347fef2b9129e56905fb486060",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "46559e9cbcdf10f1969fce00be442cb271fafeaa",
+      blobOid: "2bbd4d5cf59b8d53db8f5c0329d2ed7853c43e45",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "cbc2ed6cdc71344fa0f3414a7626c3f5d2545362",
+      blobOid: "973341a8e2303d25cb17f1a36d491aad6c55b3a1",
     },
   ],
   engine: {
     kind: "wasm",
-    sha256: "170517ec73b25039ce2870efa6f2cc79e710aaa87b42bd08dcd5ced693012446",
+    sha256: "5937bd79139ee5856bcf1bd619cc44fcd2d750d3def3066a74956678cdaaaeb2",
   },
 }

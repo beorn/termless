@@ -165,6 +165,35 @@ describe("createXtermBackend", () => {
     backend.destroy()
   })
 
+  test("resolves indexed cell colors from _core._inputHandler.onColor after OSC 4 and OSC 104 (#31735)", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b]4;1;rgb:12/34/56\x07\x1b[31;48;5;1;4;58;5;1mA\x1b[0m"))
+      expect(backend.getCell(0, 0)).toMatchObject({
+        char: "A",
+        fg: { r: 0x12, g: 0x34, b: 0x56 },
+        bg: { r: 0x12, g: 0x34, b: 0x56 },
+        underline: "single",
+        underlineColor: { r: 0x12, g: 0x34, b: 0x56 },
+      })
+      // Single-index OSC 104 restore event returns to our display default for index 1
+      backend.feed(new TextEncoder().encode("\x1b]104;1\x07"))
+      expect(backend.getCell(0, 0)).toMatchObject({
+        char: "A",
+        fg: { r: 0x80, g: 0, b: 0 },
+        bg: { r: 0x80, g: 0, b: 0 },
+        underlineColor: { r: 0x80, g: 0, b: 0 },
+      })
+      // Full-table OSC 104 restore (index === undefined) and backend.reset()
+      backend.feed(new TextEncoder().encode("\x1b]4;1;rgb:ab/cd/ef\x07"))
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 0xab, g: 0xcd, b: 0xef })
+      backend.feed(new TextEncoder().encode("\x1b]104\x07"))
+      expect(backend.getCell(0, 0).fg).toEqual({ r: 0x80, g: 0, b: 0 })
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // ── Text attributes ──
 
   test("feed bold text, getCell() has bold=true", () => {

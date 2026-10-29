@@ -29,7 +29,7 @@ diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,263 @@
+@@ -0,0 +1,273 @@
 +/**
 + * @file terminal.h
 + *
@@ -226,6 +226,16 @@ new file mode 100644
 + */
 +bool ghostty_terminal_get_mode(GhosttyTerminal term, int mode, bool is_ansi);
 +
++/**
++ * Borrow the current window title (UTF-8) recorded from the VT stream.
++ * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
++ * Returns -1 on error, 0 for an empty title, 1 for a non-empty title.
++ */
++int ghostty_terminal_get_title(
++    GhosttyTerminal term,
++    size_t* out_ptr_len
++);
++
 +/* ============================================================================
 + * Scrollback API
 + * ========================================================================= */
@@ -296,7 +306,7 @@ new file mode 100644
 diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 --- a/src/lib_vt.zig
 +++ b/src/lib_vt.zig
-@@ -140,6 +140,42 @@
+@@ -140,6 +140,43 @@
          @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
          @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
          @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
@@ -326,6 +336,7 @@ diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 +        @export(&c.terminal_is_alternate_screen, .{ .name = "ghostty_terminal_is_alternate_screen" });
 +        @export(&c.terminal_has_mouse_tracking, .{ .name = "ghostty_terminal_has_mouse_tracking" });
 +        @export(&c.terminal_get_mode, .{ .name = "ghostty_terminal_get_mode" });
++        @export(&c.terminal_get_title, .{ .name = "ghostty_terminal_get_title" });
 +
 +        // Scrollback API
 +        @export(&c.terminal_get_scrollback_length, .{ .name = "ghostty_terminal_get_scrollback_length" });
@@ -350,7 +361,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  
  // The full C API, unexported.
  pub const osc_new = osc.new;
-@@ -52,6 +53,43 @@
+@@ -52,6 +53,44 @@
  
  pub const paste_is_safe = paste.is_safe;
  
@@ -380,6 +391,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
 +pub const terminal_is_alternate_screen = terminal.isAlternateScreen;
 +pub const terminal_has_mouse_tracking = terminal.hasMouseTracking;
 +pub const terminal_get_mode = terminal.getMode;
++pub const terminal_get_title = terminal.getTitle;
 +
 +// Scrollback API
 +pub const terminal_get_scrollback_length = terminal.getScrollbackLength;
@@ -394,7 +406,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  test {
      _ = color;
      _ = osc;
-@@ -59,6 +97,7 @@
+@@ -59,6 +98,7 @@
      _ = key_encode;
      _ = paste;
      _ = sgr;
@@ -406,7 +418,7 @@ diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1048 @@
+@@ -0,0 +1,1097 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -445,12 +457,19 @@ new file mode 100644
 +    alloc: Allocator,
 +    terminal: *Terminal,
 +    response_buffer: *std.ArrayList(u8),
++    title: *std.ArrayList(u8),
 +
-+    pub fn init(alloc: Allocator, terminal: *Terminal, response_buffer: *std.ArrayList(u8)) ResponseHandler {
++    pub fn init(
++        alloc: Allocator,
++        terminal: *Terminal,
++        response_buffer: *std.ArrayList(u8),
++        title: *std.ArrayList(u8),
++    ) ResponseHandler {
 +        return .{
 +            .alloc = alloc,
 +            .terminal = terminal,
 +            .response_buffer = response_buffer,
++            .title = title,
 +        };
 +    }
 +
@@ -571,7 +590,10 @@ new file mode 100644
 +            },
 +            .active_status_display => self.terminal.status_display = value,
 +            .decaln => try self.terminal.decaln(),
-+            .full_reset => self.terminal.fullReset(),
++            .full_reset => {
++                self.terminal.fullReset();
++                self.title.clearRetainingCapacity();
++            },
 +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
 +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
 +            .prompt_start => {
@@ -591,6 +613,25 @@ new file mode 100644
 +                const resp = try std.fmt.bufPrint(&buf, "\x1B[?{}u", .{flags});
 +                try self.response_buffer.appendSlice(self.alloc, resp);
 +            },
++            .window_title => {
++                self.title.clearRetainingCapacity();
++                try self.title.appendSlice(self.alloc, value.title);
++            },
++            .size_report => {
++                // Format CSI 18 t cell-grid size report from Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496
++                // src/termio/Termio.zig:540-546. Pixel-dependent .csi_14_t and .csi_16_t stay silent in WASM.
++                switch (value) {
++                    .csi_18_t => {
++                        var buf: [32]u8 = undefined;
++                        const resp = try std.fmt.bufPrint(&buf, "\x1b[8;{};{}t", .{
++                            self.terminal.rows,
++                            self.terminal.cols,
++                        });
++                        try self.response_buffer.appendSlice(self.alloc, resp);
++                    },
++                    .csi_14_t, .csi_16_t, .csi_21_t => {},
++                }
++            },
 +
 +            // Actions that require no response and have no terminal effect
 +            .dcs_hook,
@@ -603,14 +644,13 @@ new file mode 100644
 +            .enquiry,
 +            .request_mode,
 +            .request_mode_unknown,
-+            .size_report,
 +            .xtversion,
 +            .device_attributes,
-+            .window_title,
 +            .report_pwd,
 +            .show_desktop_notification,
 +            .progress_report,
 +            .clipboard_contents,
++            // Unimplemented in Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496 src/termio/stream_handler.zig:343-346
 +            .title_push,
 +            .title_pop,
 +            => {},
@@ -715,6 +755,8 @@ new file mode 100644
 +    render_state: RenderState,
 +    /// Response buffer for DSR and other query responses
 +    response_buffer: std.ArrayList(u8),
++    /// Recorded window title from OSC 0 / OSC 2
++    title: std.ArrayList(u8) = .{},
 +    /// Track alternate screen state to detect screen switches
 +    last_screen_is_alternate: bool = false,
 +};
@@ -827,11 +869,12 @@ new file mode 100644
 +        return null;
 +    };
 +
-+    // Initialize response buffer
++    // Initialize response and title buffers
 +    wrapper.response_buffer = .{};
++    wrapper.title = .{};
 +
-+    // Initialize handler with references to terminal and response buffer
-+    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer);
++    // Initialize handler with references to terminal, response buffer, and title buffer
++    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer, &wrapper.title);
 +
 +    // Initialize stream with the handler
 +    wrapper.stream = ResponseStream.init(wrapper.handler);
@@ -843,6 +886,7 @@ new file mode 100644
 +        .stream = wrapper.stream,
 +        .render_state = RenderState.empty,
 +        .response_buffer = wrapper.response_buffer,
++        .title = wrapper.title,
 +    };
 +
 +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
@@ -862,6 +906,7 @@ new file mode 100644
 +    const alloc = wrapper.alloc;
 +    wrapper.stream.deinit();
 +    wrapper.response_buffer.deinit(alloc);
++    wrapper.title.deinit(alloc);
 +    wrapper.render_state.deinit(alloc);
 +    wrapper.terminal.deinit(alloc);
 +    alloc.destroy(wrapper);
@@ -1205,6 +1250,22 @@ new file mode 100644
 +    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return false));
 +    const mode = modespkg.modeFromInt(@intCast(mode_num), is_ansi) orelse return false;
 +    return wrapper.terminal.modes.get(mode);
++}
++
++/// Borrow the engine-recorded window title (OSC 0 / OSC 2), cleared on full reset.
++pub fn getTitle(
++    ptr: ?*anyopaque,
++    out_ptr_len: ?[*]usize,
++) callconv(.c) c_int {
++    const out = out_ptr_len orelse return -1;
++    out[0] = 0;
++    out[1] = 0;
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    const slice = wrapper.title.items;
++    if (slice.len == 0) return 0;
++    out[0] = @intFromPtr(slice.ptr);
++    out[1] = slice.len;
++    return 1;
 +}
 +
 +// ============================================================================
