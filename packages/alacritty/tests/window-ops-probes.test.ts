@@ -1,15 +1,14 @@
 /**
  * Window-op probe responses — alacritty backend.
  *
- * alacritty_terminal (Rust via napi-rs) is a cell-grid emulator with no
- * native window pixel concept, so we synthesize CSI 14t (text-area pixel
- * size) and CSI 18t (text-area cell count) responses from configured
- * grid × cell metrics. silvery's `resolveMouseOption()` uses both to
- * enable SGR-Pixels (1016) mouse coordinate mode.
+ * alacritty_terminal (Rust via napi-rs) answers CSI 18t (text-area cell
+ * count) itself, and CSI 14t (text-area pixel size) through its own
+ * formatter from the declared cell size; the adapter synthesizes neither.
+ * Without a declared pixel geometry CSI 14t gets no reply, pinned below;
+ * declared geometry is covered in pixel-geometry.test.ts. alacritty_terminal
+ * has no CSI 16t.
  *
- * Skipped when the native .node binary isn't built locally — the
- * intercept lives in the JS wrapper and is independent of the binary,
- * but the backend can't initialize without it.
+ * Skipped when the native .node binary isn't built locally.
  */
 
 import { describe, test, expect } from "vitest"
