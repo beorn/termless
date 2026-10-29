@@ -57,13 +57,56 @@ async function probeBackend(query: string): Promise<string[]> {
 }
 
 describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (skipped: ${skipReason})` : ""}`, () => {
-  // CTO c02b6619: retain the unresolved completeness counterexample without blessing output loss.
-  test.todo(
-    "deliver all 2000 ordered CPR replies: 15020 expected bytes, 4096 received; evidence /hh/var/@dev4/30576/libvterm-capacity-numeric.log",
-  )
+  // CTO c02b6619's retained counterexample (/hh/var/@dev4/30576/libvterm-capacity-numeric.log): libvterm's
+  // default 4096-byte output buffer dropped every reply that no longer fit before the adapter drained.
+  test("delivers all 2000 ordered CPR replies (15020 bytes) from one feed", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 80, rows: 24 })
+    try {
+      const responses: string[] = []
+      backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+      const positions = Array.from({ length: 2000 }, (_, i) => [1 + (i % 24), 1 + (i % 80)] as const)
+      const expected = positions.map(([row, col]) => `\x1b[${row};${col}R`).join("")
+      expect(new TextEncoder().encode(expected).length).toBe(15020)
+      backend.feed(new TextEncoder().encode(positions.map(([row, col]) => `\x1b[${row};${col}H\x1b[6n`).join("")))
+      expect(responses.join("")).toBe(expected)
+    } finally {
+      backend.destroy()
+    }
+  })
 
   // Complete-drain acceptance: one feed must deliver all ordered engine replies.
   // Existing single-query probes never cross the adapter's 1024-byte read boundary.
+  // CTO 2cfdb6e8: complete delivery is declared only after whole DA1/DECRQSS replies are measured. Expected bytes
+  // follow libvterm 9d6d2112 state.c (DA, request_status_string) and pen.c vterm_state_getpen, behind a backlog
+  // larger than libvterm's former 4096-byte output buffer.
+  test("delivers whole DA1, DA2 and DECRQSS replies in order behind a 5600-byte reply backlog", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 80, rows: 24 })
+    try {
+      const responses: string[] = []
+      backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+      const exchanges = [
+        ["\x1b[c", "\x1b[?1;2c"],
+        ["\x1b[>c", "\x1b[>0;100;0c"],
+        ["\x1b[1;3;4;5;7;9;38;2;10;20;30;48;5;200m\x1bP$qm\x1b\\", "\x1bP1$r1;3;4;5;7;9;38:2:10:20:30;48:5:200m\x1b\\"],
+        ["\x1b[3;20r\x1bP$qr\x1b\\", "\x1bP1$r3;20r\x1b\\"],
+        ["\x1b[4 q\x1bP$q q\x1b\\", "\x1bP1$r4 q\x1b\\"],
+        ['\x1bP$q"q\x1b\\', '\x1bP1$r2"q\x1b\\'],
+        ["\x1bP$qz\x1b\\", "\x1bP0$r\x1b\\"],
+        ["\x1b[c", "\x1b[?1;2c"],
+      ] as const
+      const backlog = "\x1b[24;80R".repeat(700)
+      expect(backlog.length).toBe(5600)
+      backend.feed(
+        new TextEncoder().encode("\x1b[24;80H\x1b[6n".repeat(700) + exchanges.map(([query]) => query).join("")),
+      )
+      expect(responses.join("")).toBe(backlog + exchanges.map(([, reply]) => reply).join(""))
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("delivers more than 1024 bytes of ordered engine replies before feed returns", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 80, rows: 24 })
@@ -80,12 +123,9 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     }
   })
 
-  // CTO fallback: the real engine still loses output beyond its 4096-byte buffer.
-  // A working read function alone, or its absence, cannot qualify complete delivery.
-  test.each([true, false])("withholds complete reply delivery with output read available=%s", (available) => {
-    const mod = Object.create(wasmModule!) as LibvtermModule
-    if (!available) mod.vterm_output_read = undefined
-    const backend = createLibvtermBackend(undefined, mod)
+  // CTO 2cfdb6e8: complete delivery is declared only after full DA1/DECRQSS replies are measured on this engine.
+  test("withholds complete reply delivery until it is declared", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 80, rows: 24 })
     try {
       expect(hasExtension(backend, "reply-delivery")).toBe(false)

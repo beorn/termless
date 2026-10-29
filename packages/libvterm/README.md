@@ -17,8 +17,10 @@ nix develop --command bash packages/libvterm/build/build.sh
 
 An existing Emscripten SDK can also run `bash build/build.sh` from this package.
 The build generates `wasm/libvterm.js`, `wasm/libvterm.wasm`, and a receipt binding
-their hashes to the committed build inputs. Uncommitted build inputs prevent
-receipt generation; diagnostic binaries from such a build are not attested.
+their hashes to the staged build inputs. Stage the changed inputs, run the build,
+then commit the inputs, the rebuilt pair and the receipt together as one commit.
+A build input whose working tree differs from the index prevents receipt
+generation; diagnostic binaries from such a build are not attested.
 
 This generated loader targets Node.js: the pinned build uses
 `ENVIRONMENT=node`, and the adapter loads its assets with `node:fs` and
