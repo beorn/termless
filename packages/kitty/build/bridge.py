@@ -139,7 +139,11 @@ class Callbacks:
     color_control = Window.color_control
     report_color_scheme_preference = Window.report_color_scheme_preference
     is_dark = Window.is_dark
-    refresh = Window.refresh
+
+    def refresh(self, reload_all_gpu_data=False):
+        """kitty's Window.refresh marks the screen dirty, then wakes the host I/O and main loops to redraw; it writes no
+        child bytes. The headless replay has neither loop (waking the main loop without one segfaults), so only the mark."""
+        self.screen.mark_as_dirty()
 
     def __init__(self):
         self.screen = None
