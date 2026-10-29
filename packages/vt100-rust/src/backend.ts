@@ -288,6 +288,10 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     return ensureTerm().getIconLabel()
   }
 
+  function getClipboardState() {
+    return ensureTerm().getClipboardState()
+  }
+
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     const sb = t.getScrollback()
@@ -345,6 +349,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     getMode,
     getTitle,
     getIconLabel,
+    getClipboardState,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
