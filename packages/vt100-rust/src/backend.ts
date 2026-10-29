@@ -257,7 +257,8 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
 
   function getLines(): Cell[][] {
     const result: Cell[][] = []
-    for (let row = 0; row < rows; row++) {
+    const totalRows = getScrollback().totalRows
+    for (let row = 0; row < totalRows; row++) {
       result.push(getLine(row))
     }
     return result

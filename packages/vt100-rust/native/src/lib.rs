@@ -154,8 +154,6 @@ pub struct NapiScrollback {
 #[napi]
 pub struct Vt100RustTerminal {
     parser: Mutex<vt100::Parser<TerminalCallbacks>>,
-    cols: u16,
-    rows: u16,
 }
 
 #[napi]
@@ -166,12 +164,11 @@ impl Vt100RustTerminal {
         let r = rows as u16;
         let c = cols as u16;
 
-        let parser = vt100::Parser::new_with_callbacks(r, c, scrollback, TerminalCallbacks::default());
+        let parser =
+            vt100::Parser::new_with_callbacks(r, c, scrollback, TerminalCallbacks::default());
 
         Vt100RustTerminal {
             parser: Mutex::new(parser),
-            cols: c,
-            rows: r,
         }
     }
 
@@ -209,54 +206,27 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_text(&self) -> Result<String> {
-        let parser = self
+        let mut parser = self
             .parser
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
-        let screen = parser.screen();
-        let mut lines = Vec::new();
-
-        // Scrollback lines
-        let scrollback_len = screen.scrollback();
-        for row_offset in 0..scrollback_len {
-            // Scrollback rows are indexed negatively from the top of the screen
-            let neg_row = -(scrollback_len as i32) + row_offset as i32;
-            let row_idx = neg_row as i32;
-            let mut line = String::new();
-            for col in 0..self.cols {
-                if let Some(cell) = screen.cell(row_idx as u16, col) {
-                    let contents = cell.contents();
-                    if contents.is_empty() {
-                        line.push(' ');
-                    } else {
-                        line.push_str(&contents);
+        Ok(read_buffer(parser.screen_mut(), |screen, history| {
+            let (rows, cols) = screen.size();
+            let mut lines = Vec::new();
+            for row in 0..history + usize::from(rows) {
+                let screen_row = select_buffer_row(screen, history, row);
+                let mut line = String::new();
+                for col in 0..cols {
+                    let contents = screen.cell(screen_row, col).map(|cell| cell.contents());
+                    match contents.as_deref() {
+                        None | Some("") => line.push(' '),
+                        Some(text) => line.push_str(text),
                     }
-                } else {
-                    line.push(' ');
                 }
+                lines.push(line.trim_end().to_string());
             }
-            lines.push(line.trim_end().to_string());
-        }
-
-        // Visible screen lines
-        for row in 0..self.rows {
-            let mut line = String::new();
-            for col in 0..self.cols {
-                if let Some(cell) = screen.cell(row, col) {
-                    let contents = cell.contents();
-                    if contents.is_empty() {
-                        line.push(' ');
-                    } else {
-                        line.push_str(&contents);
-                    }
-                } else {
-                    line.push(' ');
-                }
-            }
-            lines.push(line.trim_end().to_string());
-        }
-
-        Ok(lines.join("\n"))
+            lines.join("\n")
+        }))
     }
 
     #[napi]
@@ -267,83 +237,78 @@ impl Vt100RustTerminal {
         end_row: i32,
         end_col: i32,
     ) -> Result<String> {
-        let parser = self
+        let mut parser = self
             .parser
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
-        let screen = parser.screen();
-        let mut parts = Vec::new();
-
-        for row in start_row..=end_row {
-            if row < 0 || row >= self.rows as i32 {
-                continue;
-            }
-            let col_start = if row == start_row {
-                start_col as u16
-            } else {
-                0
-            };
-            let col_end = if row == end_row {
-                end_col as u16
-            } else {
-                self.cols
-            };
-
-            let mut text = String::new();
-            for col in col_start..col_end.min(self.cols) {
-                if let Some(cell) = screen.cell(row as u16, col) {
-                    let contents = cell.contents();
-                    if contents.is_empty() {
-                        text.push(' ');
-                    } else {
-                        text.push_str(&contents);
-                    }
+        Ok(read_buffer(parser.screen_mut(), |screen, history| {
+            let (rows, cols) = screen.size();
+            let total = history + usize::from(rows);
+            let mut parts = Vec::new();
+            for row in start_row.max(0)..=end_row.min(total as i32 - 1) {
+                let screen_row = select_buffer_row(screen, history, row as usize);
+                let col_start = if row == start_row {
+                    start_col as u16
                 } else {
-                    text.push(' ');
+                    0
+                };
+                let col_end = if row == end_row { end_col as u16 } else { cols };
+                let mut text = String::new();
+                for col in col_start..col_end.min(cols) {
+                    let contents = screen.cell(screen_row, col).map(|cell| cell.contents());
+                    match contents.as_deref() {
+                        None | Some("") => text.push(' '),
+                        Some(contents) => text.push_str(contents),
+                    }
                 }
+                parts.push(text.trim_end().to_string());
             }
-            parts.push(text.trim_end().to_string());
-        }
-
-        Ok(parts.join("\n"))
+            parts.join("\n")
+        }))
     }
 
     #[napi]
     pub fn get_cell(&self, row: i32, col: i32) -> Result<NapiCell> {
-        let parser = self
+        let mut parser = self
             .parser
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
-        let screen = parser.screen();
-
-        if row < 0 || row >= self.rows as i32 || col < 0 || col >= self.cols as i32 {
-            return Ok(empty_cell());
-        }
-
-        match screen.cell(row as u16, col as u16) {
-            Some(cell) => Ok(convert_cell(cell)),
-            None => Ok(empty_cell()),
-        }
+        Ok(read_buffer(parser.screen_mut(), |screen, history| {
+            let (rows, cols) = screen.size();
+            if row < 0
+                || row as usize >= history + usize::from(rows)
+                || col < 0
+                || col >= i32::from(cols)
+            {
+                return empty_cell();
+            }
+            let screen_row = select_buffer_row(screen, history, row as usize);
+            match screen.cell(screen_row, col as u16) {
+                Some(cell) => convert_cell(cell),
+                None => empty_cell(),
+            }
+        }))
     }
 
     #[napi]
     pub fn get_line(&self, row: i32) -> Result<Vec<NapiCell>> {
-        let parser = self
+        let mut parser = self
             .parser
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
-        let screen = parser.screen();
-
-        if row < 0 || row >= self.rows as i32 {
-            return Ok((0..self.cols).map(|_| empty_cell()).collect());
-        }
-
-        Ok((0..self.cols)
-            .map(|col| match screen.cell(row as u16, col) {
-                Some(cell) => convert_cell(cell),
-                None => empty_cell(),
-            })
-            .collect())
+        Ok(read_buffer(parser.screen_mut(), |screen, history| {
+            let (rows, cols) = screen.size();
+            if row < 0 || row as usize >= history + usize::from(rows) {
+                return (0..cols).map(|_| empty_cell()).collect();
+            }
+            let screen_row = select_buffer_row(screen, history, row as usize);
+            (0..cols)
+                .map(|col| match screen.cell(screen_row, col) {
+                    Some(cell) => convert_cell(cell),
+                    None => empty_cell(),
+                })
+                .collect()
+        }))
     }
 
     #[napi]
@@ -430,23 +395,31 @@ impl Vt100RustTerminal {
 
     #[napi]
     pub fn get_scrollback(&self) -> Result<NapiScrollback> {
-        let parser = self
+        let mut parser = self
             .parser
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
-        let screen = parser.screen();
-        let scrollback_len = screen.scrollback() as u32;
-
-        Ok(NapiScrollback {
-            viewport_offset: 0, // Headless mode, no viewport scroll state
-            total_lines: scrollback_len + self.rows as u32,
-            screen_lines: self.rows as u32,
-        })
+        let offset = parser.screen().scrollback();
+        Ok(read_buffer(parser.screen_mut(), |screen, history| {
+            let (rows, _) = screen.size();
+            NapiScrollback {
+                viewport_offset: (history - offset) as i32,
+                total_lines: (history + usize::from(rows)) as u32,
+                screen_lines: u32::from(rows),
+            }
+        }))
     }
 
     #[napi]
-    pub fn scroll_viewport(&self, _delta: i32) -> Result<()> {
-        // No-op in headless mode — no viewport scroll position to track
+    pub fn scroll_viewport(&self, delta: i32) -> Result<()> {
+        let mut parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        let screen = parser.screen_mut();
+        // Termless's negative delta means older rows; vt100's offset grows toward history.
+        let offset = (screen.scrollback() as i64 - i64::from(delta)).max(0) as usize;
+        screen.set_scrollback(offset);
         Ok(())
     }
 }
@@ -454,6 +427,26 @@ impl Vt100RustTerminal {
 // ===============================================================
 // Helpers
 // ===============================================================
+
+/// Inspect retained product rows under the parser lock, then restore the caller's view.
+fn read_buffer<T>(
+    screen: &mut vt100::Screen,
+    read: impl FnOnce(&mut vt100::Screen, usize) -> T,
+) -> T {
+    let offset = screen.scrollback();
+    // The public setter clamps to retained occupancy, not configured history capacity.
+    screen.set_scrollback(usize::MAX);
+    let history = screen.scrollback();
+    let result = read(screen, history);
+    screen.set_scrollback(offset);
+    result
+}
+
+/// Select one absolute buffer row using vt100's existing viewport, without copying history.
+fn select_buffer_row(screen: &mut vt100::Screen, history: usize, row: usize) -> u16 {
+    screen.set_scrollback(history.saturating_sub(row));
+    row.saturating_sub(history) as u16
+}
 
 fn empty_cell() -> NapiCell {
     NapiCell {
