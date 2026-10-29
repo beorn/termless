@@ -2,9 +2,10 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> native response barrier -> readResponse -> onResponse path:
 // the engine writes replies into an unbounded SharedWriter buffer (native/src/lib.rs:33-41); feed() sends a paste barrier
-// through that writer and waits until the flush that ends with it, failing loudly after 500 ms (lib.rs:172-212, 214-222);
-// the TypeScript feed then drains the whole buffer into onResponse (src/backend.ts feed). Bound to the native artifact
-// built from these unchanged sources (Termless a552d932, Cargo.lock sha256 8eaeab73).
+// through that writer and waits until the flush that ends with it, failing loudly after 500 ms (lib.rs:188-228, 230-238);
+// the TypeScript feed then drains the whole buffer into onResponse (src/backend.ts feed). Re-audited when the pixel
+// geometry reached the native constructor and resize, which leave that path unchanged; bound to the native artifact built
+// from these sources (Cargo.lock sha256 8eaeab73), whose build receipt names the source commit.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -15,11 +16,11 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "9f9af63f2bcc439be7f809bdb7d60643ed1fbe4b",
+      blobOid: "011399df25f97701044ee0c88809144d940cd7c7",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "59dc70811d17b3cfcdede9d33ab8edf86bbf05e2",
+      blobOid: "1a41e16d876820d2d3ca01230939a48f2cace5b1",
     },
     {
       path: "src/load-native.ts",
@@ -28,6 +29,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "84da518e3f298a0ed75f186db6e39d87e99b8f0c8508dd7252ec0cafee77fe12",
+    sha256: "78c05a7155ffb48b351de181cce13a5d996c3472f545f674dc34177fe27bae01",
   },
 }

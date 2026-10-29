@@ -1,15 +1,13 @@
 /**
  * Window-op probe responses — wezterm backend.
  *
- * wezterm-term (Rust via napi-rs) is a cell-grid emulator with no native
- * window pixel concept, so we synthesize CSI 14t (text-area pixel size)
- * and CSI 18t (text-area cell count) responses from configured grid ×
- * cell metrics. silvery's `resolveMouseOption()` uses both to enable
- * SGR-Pixels (1016) mouse coordinate mode.
+ * wezterm-term (Rust via napi-rs) answers CSI 14t (text-area pixel size)
+ * and CSI 18t (text-area cell count) itself; the wrapper synthesizes
+ * neither. Without a declared pixel geometry the text area is the crate's
+ * no-display zero, pinned below; declared geometry is covered in
+ * pixel-geometry.test.ts.
  *
- * Skipped when the native .node binary isn't built locally — the
- * intercept lives in the JS wrapper and is independent of the binary,
- * but the backend can't initialize without it.
+ * Skipped when the native .node binary isn't built locally.
  */
 
 import { describe, test, expect } from "vitest"

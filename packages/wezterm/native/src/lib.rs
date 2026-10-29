@@ -130,29 +130,43 @@ pub struct WeztermTerminal {
     barrier_seq: u64,
     cols: usize,
     rows: usize,
+    cell_width: usize,
+    cell_height: usize,
     title: String,
+}
+
+/// wezterm-term reads pixel_width/pixel_height as the text area: CSI 14 t and XTSMGRAPHICS report them as-is, CSI 16 t
+/// and OSC 1337 ReportCellSize divide them by cols/rows. A cell size of 0 (none declared) keeps the no-display zero.
+fn terminal_size(cols: usize, rows: usize, cell_width: usize, cell_height: usize) -> TerminalSize {
+    TerminalSize {
+        rows,
+        cols,
+        pixel_width: cols * cell_width,
+        pixel_height: rows * cell_height,
+        dpi: 0,
+    }
 }
 
 #[napi]
 impl WeztermTerminal {
     #[napi(constructor)]
-    pub fn new(cols: u32, rows: u32, scrollback_limit: Option<u32>) -> Self {
+    pub fn new(
+        cols: u32,
+        rows: u32,
+        scrollback_limit: Option<u32>,
+        cell_width: Option<u32>,
+        cell_height: Option<u32>,
+    ) -> Self {
         let scrollback = scrollback_limit.unwrap_or(1000) as usize;
         let cols = cols as usize;
         let rows = rows as usize;
+        let cell_width = cell_width.unwrap_or(0) as usize;
+        let cell_height = cell_height.unwrap_or(0) as usize;
 
         let config = Arc::new(HeadlessConfig { scrollback });
-        let size = TerminalSize {
-            rows,
-            cols,
-            pixel_width: 0,
-            pixel_height: 0,
-            dpi: 0,
-        };
-
         let writer = SharedWriter::new();
         let term = Terminal::new(
-            size,
+            terminal_size(cols, rows, cell_width, cell_height),
             config,
             "termless-wezterm",
             "0.1.0",
@@ -165,6 +179,8 @@ impl WeztermTerminal {
             barrier_seq: 0,
             cols,
             rows,
+            cell_width,
+            cell_height,
             title: String::new(),
         }
     }
@@ -225,14 +241,7 @@ impl WeztermTerminal {
     pub fn resize(&mut self, cols: u32, rows: u32) {
         self.cols = cols as usize;
         self.rows = rows as usize;
-        let size = TerminalSize {
-            rows: self.rows,
-            cols: self.cols,
-            pixel_width: 0,
-            pixel_height: 0,
-            dpi: 0,
-        };
-        self.term.resize(size);
+        self.term.resize(terminal_size(self.cols, self.rows, self.cell_width, self.cell_height));
     }
 
     #[napi]

@@ -77,7 +77,13 @@ interface WeztermTerminal {
 }
 
 interface NativeModule {
-  WeztermTerminal: new (cols: number, rows: number, scrollbackLimit?: number) => WeztermTerminal
+  WeztermTerminal: new (
+    cols: number,
+    rows: number,
+    scrollbackLimit?: number,
+    cellWidth?: number,
+    cellHeight?: number,
+  ) => WeztermTerminal
 }
 
 let nativeModule: NativeModule | null = null
@@ -191,7 +197,20 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     cols = options.cols
     rows = options.rows
 
-    term = new mod.WeztermTerminal(cols, rows, options.scrollbackLimit ?? 1000)
+    // The engine takes the cell size as u32, which would wrap a negative or truncate a fraction into a size nobody declared.
+    const geometry = options.pixelGeometry
+    for (const [name, value] of Object.entries(geometry ?? {})) {
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(`wezterm backend: pixelGeometry.${name} must be a positive integer, got ${value}`)
+      }
+    }
+    term = new mod.WeztermTerminal(
+      cols,
+      rows,
+      options.scrollbackLimit ?? 1000,
+      geometry?.cellWidth,
+      geometry?.cellHeight,
+    )
   }
 
   // Eagerly init if opts provided
@@ -200,6 +219,7 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
       cols: opts.cols ?? DEFAULT_COLS,
       rows: opts.rows ?? DEFAULT_ROWS,
       scrollbackLimit: opts.scrollbackLimit,
+      pixelGeometry: opts.pixelGeometry,
     })
   }
 
