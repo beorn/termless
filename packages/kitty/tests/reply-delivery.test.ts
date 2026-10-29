@@ -25,7 +25,7 @@ test("declares audited batch-replay reply delivery without starting kitty", () =
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "c490c7d98fbf5a9acbcff14b8153cb5beae2f3df47ae30211119116a25ac9bbc",
+    sha256: "bb65c2d57e56eecca8143d73771432cf7dd386bccd36ae658950e5923a661886",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -40,5 +40,20 @@ test("declares audited batch-replay reply delivery without starting kitty", () =
       }
     }),
   )
+  backend.destroy()
+})
+
+// The launcher's bytes follow the flake lock (autoPatchelf rewrites the ELF), so the declared engine must be the launcher
+// this host loads: a lock bump that changes it fails here, not by turning every kitty decision into a non-member.
+const binary = process.env.KITTY_BINARY
+test.skipIf(!binary)("declares the kitty launcher KITTY_BINARY loads", () => {
+  const backend = createKittyBackend()
+  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
+    throw new Error("kitty declares no reply delivery")
+  }
+  const loaded = createHash("sha256")
+    .update(readFileSync(realpathSync(binary!)))
+    .digest("hex")
+  expect(loaded).toBe(backend.replyDelivery.engine.sha256)
   backend.destroy()
 })

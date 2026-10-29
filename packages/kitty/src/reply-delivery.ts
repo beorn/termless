@@ -5,7 +5,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // (on_da1 -> da1(get_options())) and colour reports included, returns base64 in the replay snapshot, and ensureSnapshot
 // forwards the new bytes to onResponse by the next getCursor, refusing a replay that changes an earlier reply
 // (src/backend.ts). A Window callback the bridge does not reproduce is drained as an UNREPRODUCED_CALLBACK warning, never
-// answered; one that raises fails the feed. Bound to the kitty 0.49.2 official launcher's sha256.
+// answered; one that raises fails the feed. Bound to the kitty 0.49.2 official launcher the hh flake builds at flake.lock
+// blob 6116bd61 (/nix/store/fbpk67n6fd9kb95vl7ksrc7pkh3gx3qx-kitty-official-binary-0.49.2/bin/kitty); its bytes follow the lock.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -16,6 +17,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "c490c7d98fbf5a9acbcff14b8153cb5beae2f3df47ae30211119116a25ac9bbc",
+    sha256: "bb65c2d57e56eecca8143d73771432cf7dd386bccd36ae658950e5923a661886",
   },
 }
