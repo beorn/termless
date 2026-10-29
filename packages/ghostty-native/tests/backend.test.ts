@@ -1,5 +1,5 @@
 /**
- * @failure Ghostty native readback drops stored URI metadata or fabricates unset default colors.
+ * @failure Ghostty native readback drops stored URI/style metadata or fabricates unset default colors.
  * @level l0
  * @consumer Termless Ghostty native backend cell observations.
  * @testonly none
@@ -19,6 +19,27 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Existing URI/color cases never observe SGR 53/55 through the native cell projection.
+    test("preserves overline enable and reset state through native cell and row readback", () => {
+      const backend = createGhosttyNativeBackend({ cols: 6, rows: 1 })
+      try {
+        backend.feed(new TextEncoder().encode("A\x1b[53mB\x1b[55mC\x1b[53mD\x1b[0mE"))
+        expect(backend.getCell(0, 1).overline).toBe(true)
+        expect(
+          backend
+            .getLine(0)
+            .slice(0, 5)
+            .map((cell) => cell.overline),
+        ).toEqual([false, true, false, true, false])
+
+        backend.reset()
+        expect(backend.getCell(0, 0).overline).toBe(false)
+        expect(backend.getLines().map((row) => row.map((cell) => cell.overline))).toEqual([Array(6).fill(false)])
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // Existing URI scroll tests observe cells, not the absolute buffer coordinate or its legacy mirror.
     test("reports absolute viewport rows through scrolling", () => {
       const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
