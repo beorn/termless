@@ -49,7 +49,8 @@ function cellChar(cell: Cell): string {
 
 /**
  * Compare a single cell between the two backends.
- * Asserts on text content and all style attributes.
+ * Asserts shared styles and each backend's observation of the Rust-only styles.
+ * These shared-style fixtures leave Rust's italic and strikethrough off.
  */
 function compareCells(ts: TerminalBackend, rust: TerminalBackend, row: number, col: number, label?: string): void {
   const tsCell = ts.getCell(row, col)
@@ -59,9 +60,11 @@ function compareCells(ts: TerminalBackend, rust: TerminalBackend, row: number, c
 
   expect(cellChar(tsCell), `char at ${pos}`).toBe(cellChar(rustCell))
   expect(tsCell.bold, `bold at ${pos}`).toBe(rustCell.bold)
-  expect(tsCell.italic, `italic at ${pos}`).toBe(rustCell.italic)
+  expect(tsCell.italic, `VT100 italic at ${pos}`).toBeNull()
+  expect(rustCell.italic, `Rust italic at ${pos}`).toBe(false)
   expect(tsCell.underline, `underline at ${pos}`).toBe(rustCell.underline)
-  expect(tsCell.strikethrough, `strikethrough at ${pos}`).toBe(rustCell.strikethrough)
+  expect(tsCell.strikethrough, `VT100 strikethrough at ${pos}`).toBeNull()
+  expect(rustCell.strikethrough, `Rust strikethrough at ${pos}`).toBe(false)
   expect(tsCell.inverse, `inverse at ${pos}`).toBe(rustCell.inverse)
   expect(tsCell.wide, `wide at ${pos}`).toBe(rustCell.wide)
   expect(tsCell.fg, `fg at ${pos}`).toEqual(rustCell.fg)
@@ -163,7 +166,7 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
       feedBoth(ts, rust, "\x1b[3mI\x1b[0mN")
       // vt100.js is a VT100-era emulator — no italic support
       // Rust crate is modern — supports italic
-      expect(ts.getCell(0, 0).italic).toBe(false) // VT100 doesn't have italic
+      expect(ts.getCell(0, 0).italic).toBeNull() // VT100 does not report italic
       expect(rust.getCell(0, 0).italic).toBe(true)
       compareCells(ts, rust, 0, 1, "normal N")
     })
@@ -178,11 +181,11 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("strikethrough", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[9mS\x1b[0mN")
-      // Neither exposes strikethrough: vt100.js removed it (VT100-era), Rust crate doesn't expose it
+      // VT100 leaves strikethrough unreported; the Rust adapter reports false.
       const tsCell = ts.getCell(0, 0)
       const rustCell = rust.getCell(0, 0)
       expect(cellChar(tsCell)).toBe(cellChar(rustCell))
-      expect(tsCell.strikethrough).toBe(false)
+      expect(tsCell.strikethrough).toBeNull()
       expect(rustCell.strikethrough).toBe(false)
       compareCells(ts, rust, 0, 1, "normal N")
     })
@@ -221,7 +224,7 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
       feedBoth(ts, rust, "\x1b[1;3;38;2;255;0;0mX\x1b[0m")
       // vt100.js: only bold survives (italic + truecolor ignored)
       expect(ts.getCell(0, 0).bold).toBe(true)
-      expect(ts.getCell(0, 0).italic).toBe(false)
+      expect(ts.getCell(0, 0).italic).toBeNull()
       expect(ts.getCell(0, 0).fg).toBeNull()
       // Rust: all three apply
       expect(rust.getCell(0, 0).bold).toBe(true)
