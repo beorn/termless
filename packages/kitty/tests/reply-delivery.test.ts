@@ -54,6 +54,6 @@ test.skipIf(!binary)("declares the kitty launcher KITTY_BINARY loads", () => {
   const loaded = createHash("sha256")
     .update(readFileSync(realpathSync(binary!)))
     .digest("hex")
-  expect(loaded).toBe(backend.replyDelivery.engine.sha256)
+  expect(backend.replyDelivery.engine).toEqual({ kind: "native", sha256: loaded })
   backend.destroy()
 })
