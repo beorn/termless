@@ -40,6 +40,7 @@ interface NativeCell {
   faint: boolean
   italic: boolean
   underline: string // "none" | "single" | "double" | "curly" | "dotted" | "dashed"
+  underlineColor: [number, number, number] | null
   strikethrough: boolean
   inverse: boolean
   wide: boolean
@@ -111,7 +112,9 @@ function convertNativeCell(nc: NativeCell): Cell {
     dim: nc.faint,
     italic: nc.italic,
     underline: nc.underline === "none" ? false : (nc.underline as Cell["underline"]),
-    underlineColor: null,
+    underlineColor: nc.underlineColor
+      ? { r: nc.underlineColor[0], g: nc.underlineColor[1], b: nc.underlineColor[2] }
+      : null,
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: null,

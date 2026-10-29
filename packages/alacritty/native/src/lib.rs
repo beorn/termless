@@ -134,6 +134,8 @@ pub struct JsCell {
     pub italic: bool,
     /// "none" | "single" | "double" | "curly" | "dotted" | "dashed"
     pub underline: String,
+    /// Underline RGB as [r, g, b] or null for default
+    pub underline_color: Option<Vec<u8>>,
     pub strikethrough: bool,
     pub inverse: bool,
     pub wide: bool,
@@ -476,6 +478,7 @@ impl AlacrittyTerminal {
                     faint: false,
                     italic: false,
                     underline: "none".to_string(),
+                    underline_color: None,
                     strikethrough: false,
                     inverse: false,
                     wide: false,
@@ -507,6 +510,7 @@ impl AlacrittyTerminal {
             faint: flags.contains(CellFlags::DIM),
             italic: flags.contains(CellFlags::ITALIC),
             underline: underline_style(flags).to_string(),
+            underline_color: cell.underline_color().as_ref().and_then(color_to_rgb),
             strikethrough: flags.contains(CellFlags::STRIKEOUT),
             inverse: flags.contains(CellFlags::INVERSE),
             wide: flags.contains(CellFlags::WIDE_CHAR),

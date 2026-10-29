@@ -30,7 +30,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "5d818656c9d58c8c68bec9f7bca1a55cc65ccf9fc078f9a3da0b872a28bf547a",
+    sha256: "11c87e7e7f23e6f224e9dc8c3296b0a91f5453a42038e5ad049aafa864f9bd50",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -221,6 +221,20 @@ describeNative("alacritty backend", () => {
       feedText(backend, "\x1b[48;2;0;255;0mGreen BG\x1b[0m")
       const cell = backend.getCell(0, 0)
       expect(cell.bg).toEqual({ r: 0, g: 255, b: 0 })
+    })
+
+    test("detects indexed, truecolor, and reset underline color (SGR 58/59, #31379)", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[4;58;5;5mI\x1b[4;58;2;255;0;128mR\x1b[59mD\x1b[0m")
+      const indexed = backend.getCell(0, 0)
+      expect(indexed.underline).toBe("single")
+      expect(indexed.underlineColor).toEqual({ r: 128, g: 0, b: 128 })
+      const rgb = backend.getCell(0, 1)
+      expect(rgb.underline).toBe("single")
+      expect(rgb.underlineColor).toEqual({ r: 255, g: 0, b: 128 })
+      const reset = backend.getCell(0, 2)
+      expect(reset.underline).toBe("single")
+      expect(reset.underlineColor).toBeNull()
     })
 
     test("detects wide characters", () => {
