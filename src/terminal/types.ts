@@ -18,6 +18,26 @@ export interface TerminalOptions {
   pixelGeometry?: { cellWidth: number; cellHeight: number }
 }
 
+/**
+ * The declared cell size a backend hands its engine, or undefined when none is declared. Refuses a half-declared
+ * geometry or a size that is not a positive integer: an engine takes the cell size as an unsigned integer, so a missing
+ * key, a negative or a fraction would reach it as a size nobody declared.
+ */
+export function declaredPixelGeometry(
+  backend: string,
+  options: TerminalOptions,
+): { cellWidth: number; cellHeight: number } | undefined {
+  const geometry = options.pixelGeometry
+  if (geometry === undefined) return undefined
+  for (const name of ["cellWidth", "cellHeight"] as const) {
+    const value = geometry[name]
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`${backend} backend: pixelGeometry.${name} must be a positive integer, got ${value}`)
+    }
+  }
+  return { cellWidth: geometry.cellWidth, cellHeight: geometry.cellHeight }
+}
+
 // ── The readable picture — declared in io, re-exported here ──
 //
 // `Cell`, `Color`, `UnderlineStyle`, `Cursor` and `CursorStyle` are the shapes

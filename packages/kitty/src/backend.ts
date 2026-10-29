@@ -33,6 +33,7 @@ import type {
   ReplyDeliveryExtension,
   WarningExtension,
 } from "../../../src/terminal/types.ts"
+import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { replyDelivery } from "./reply-delivery.ts"
 import { execFileSync } from "node:child_process"
@@ -337,12 +338,14 @@ export function createKittyBackend(
   }
 
   function init(options: TerminalOptions): void {
+    // The bridge hands Kitty's Screen this cell size; none declared keeps its 0x0 cell.
+    const geometry = declaredPixelGeometry("kitty", options)
     cols = options.cols
     rows = options.rows
     scrollbackLimit = options.scrollbackLimit ?? 1000
 
     // Reset command log with init as the first command
-    commandLog = [{ op: "init", cols, rows, scrollbackLimit }]
+    commandLog = [{ op: "init", cols, rows, scrollbackLimit, ...geometry }]
     initialized = true
     snapshot = null
     observedResponses = Buffer.alloc(0)
@@ -355,6 +358,7 @@ export function createKittyBackend(
       cols: opts.cols ?? DEFAULT_COLS,
       rows: opts.rows ?? DEFAULT_ROWS,
       scrollbackLimit: opts.scrollbackLimit,
+      pixelGeometry: opts.pixelGeometry,
     })
   }
 

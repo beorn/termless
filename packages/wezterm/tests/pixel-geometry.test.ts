@@ -47,13 +47,16 @@ describeNative(`declared pixel geometry — wezterm backend${skipReason ? ` (ski
     expect(reply(DECLARED, "\x1b[?2;1S", [100, 30])).toBe("\x1b[?2;0;1000;600S")
   })
 
-  test("refuses a cell size that is not a positive integer", () => {
-    for (const pixelGeometry of [
-      { cellWidth: 0, cellHeight: 20 },
-      { cellWidth: 10, cellHeight: -20 },
-      { cellWidth: 10.5, cellHeight: 20 },
-    ]) {
-      expect(() => createWeztermBackend({ ...DECLARED, pixelGeometry })).toThrow(/pixelGeometry/)
+  test("refuses a cell size that is not a positive integer, or a geometry missing one, naming the key", () => {
+    for (const [pixelGeometry, key] of [
+      [{ cellWidth: 0, cellHeight: 20 }, "cellWidth"],
+      [{ cellWidth: 10, cellHeight: -20 }, "cellHeight"],
+      [{ cellWidth: 10.5, cellHeight: 20 }, "cellWidth"],
+      [{ cellWidth: 10 }, "cellHeight"],
+    ] as [TerminalOptions["pixelGeometry"], string][]) {
+      expect(() => createWeztermBackend({ ...DECLARED, pixelGeometry })).toThrow(
+        `pixelGeometry.${key} must be a positive integer`,
+      )
     }
   })
 })

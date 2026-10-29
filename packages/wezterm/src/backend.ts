@@ -19,6 +19,7 @@ import type {
   Color,
   ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
+import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 import { replyDelivery } from "./reply-delivery.ts"
@@ -197,13 +198,7 @@ export function createWeztermBackend(opts?: Partial<TerminalOptions>, native?: N
     cols = options.cols
     rows = options.rows
 
-    // The engine takes the cell size as u32, which would wrap a negative or truncate a fraction into a size nobody declared.
-    const geometry = options.pixelGeometry
-    for (const [name, value] of Object.entries(geometry ?? {})) {
-      if (!Number.isInteger(value) || value <= 0) {
-        throw new Error(`wezterm backend: pixelGeometry.${name} must be a positive integer, got ${value}`)
-      }
-    }
+    const geometry = declaredPixelGeometry("wezterm", options)
     term = new mod.WeztermTerminal(
       cols,
       rows,

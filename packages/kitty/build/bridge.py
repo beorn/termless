@@ -7,7 +7,7 @@ a JSON-RPC interface over stdin/stdout. Each line of stdin is a JSON
 command; each line of stdout is a JSON response.
 
 Commands:
-  init       {cols, rows, scrollbackLimit}  -> {ok: true}
+  init       {cols, rows, scrollbackLimit, cellWidth?, cellHeight?}  -> {ok: true}
   feed       {data: base64}                 -> {ok: true}
   resize     {cols, rows}                   -> {ok: true}
   reset      {}                             -> {ok: true}
@@ -339,8 +339,11 @@ def handle_command(cmd):
         set_boss(HeadlessBoss())
         callbacks = Callbacks()
         # Screen(callbacks, lines, cols, scrollback, cell_width, cell_height, window_id, test_child)
-        # Pass 0x0 cell dimensions so headless Screen does not invent pixel metrics for CSI 14t/16t.
-        screen = Screen(callbacks, rows, cols, scrollback_limit, 0, 0, 0, callbacks)
+        # Kitty answers CSI 14t/16t from this cell size and keeps it across resize. It is the caller's declared
+        # pixel geometry; none declared keeps 0x0, so headless Screen never invents pixel metrics.
+        cell_width = cmd.get("cellWidth", 0)
+        cell_height = cmd.get("cellHeight", 0)
+        screen = Screen(callbacks, rows, cols, scrollback_limit, cell_width, cell_height, 0, callbacks)
         callbacks.screen = screen
         return {"ok": True}
 

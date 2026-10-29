@@ -2,14 +2,11 @@
  * Window-op probe responses — kitty backend.
  *
  * The kitty backend runs kitty's VT parser through a Python subprocess
- * (via batch replay) — it has no real window. We synthesize CSI 14t
- * (text-area pixel size) and CSI 18t (text-area cell count) responses
- * from configured grid × cell metrics. silvery's
- * `resolveMouseOption()` uses both to enable SGR-Pixels (1016) mouse
- * coordinate mode.
- *
- * See `tests/window-ops-probes.test.ts` at the termless root for the
- * full rationale.
+ * (via batch replay) — it has no real window. Kitty's own Screen answers
+ * CSI 14t (text-area pixel size), CSI 16t (cell size) and CSI 18t
+ * (text-area cell count); the adapter synthesizes none of them. Without
+ * a declared pixel geometry the cell is 0x0, pinned below; declared
+ * geometry is covered in pixel-geometry.test.ts.
  *
  * Note: tests are skipped automatically if kitty isn't installed (the
  * subprocess bridge requires `kitty +runpy` — see backend docs).

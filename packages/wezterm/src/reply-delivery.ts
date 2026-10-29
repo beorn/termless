@@ -4,7 +4,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // the engine writes replies into an unbounded SharedWriter buffer (native/src/lib.rs:33-41); feed() sends a paste barrier
 // through that writer and waits until the flush that ends with it, failing loudly after 500 ms (lib.rs:188-228, 230-238);
 // the TypeScript feed then drains the whole buffer into onResponse (src/backend.ts feed). Re-audited when the pixel
-// geometry reached the native constructor and resize, which leave that path unchanged; bound to the native artifact built
+// geometry reached the native constructor and resize, and again when its check moved to src/terminal/types.ts
+// declaredPixelGeometry, neither of which touches that path; bound to the native artifact built
 // from these sources (Cargo.lock sha256 8eaeab73), whose build receipt names the source commit.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
@@ -16,7 +17,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "011399df25f97701044ee0c88809144d940cd7c7",
+      blobOid: "c31a13598307fc803055197becf4d7ce2c858244",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
