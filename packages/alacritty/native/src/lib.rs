@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use alacritty_terminal::event::{Event, EventListener};
+use alacritty_terminal::event::{Event, EventListener, WindowSize};
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::term::cell::Flags as CellFlags;
@@ -30,6 +30,8 @@ struct EventProxy {
     bell_count: Arc<Mutex<u32>>,
     response_buf: Arc<Mutex<Vec<u8>>>,
     color_requests: Arc<Mutex<Vec<ColorRequest>>>,
+    /// The text area at the declared cell size, or None when the caller declared none.
+    window: Arc<Mutex<Option<WindowSize>>>,
 }
 
 impl EventProxy {
@@ -39,6 +41,7 @@ impl EventProxy {
             bell_count: Arc::new(Mutex::new(0)),
             response_buf: Arc::new(Mutex::new(Vec::new())),
             color_requests: Arc::new(Mutex::new(Vec::new())),
+            window: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -72,9 +75,49 @@ impl EventListener for EventProxy {
                     requests.push((index, formatter));
                 }
             }
+            // CSI 14 t, through the engine's own formatter. With no declared cell size it gets no reply.
+            Event::TextAreaSizeRequest(formatter) => {
+                let window = self.window.lock().ok().and_then(|window| *window);
+                if let Some(window) = window {
+                    if let Ok(mut buf) = self.response_buf.lock() {
+                        buf.extend_from_slice(formatter(window).as_bytes());
+                    }
+                }
+            }
             _ => {}
         }
     }
+}
+
+/// The text area of `cols` x `rows` cells at the declared cell size, or None when none is declared (the backend's
+/// declaredPixelGeometry refuses a half declaration before it reaches here). Refuses a size the engine's WindowSize
+/// cannot hold: its fields are u16 and its CSI 14 t formatter multiplies them in u16, which wraps in a release build.
+fn declared_window(
+    cols: u32,
+    rows: u32,
+    cell_width: Option<u32>,
+    cell_height: Option<u32>,
+) -> Result<Option<WindowSize>> {
+    let Some((cell_width, cell_height)) = cell_width.zip(cell_height) else {
+        return Ok(None);
+    };
+    for (key, cell, axis, count) in [
+        ("cellWidth", cell_width, "cols", cols),
+        ("cellHeight", cell_height, "rows", rows),
+    ] {
+        let pixels = u64::from(cell) * u64::from(count);
+        if cell > u32::from(u16::MAX) || count > u32::from(u16::MAX) || pixels > u64::from(u16::MAX) {
+            return Err(Error::from_reason(format!(
+                "alacritty backend: pixelGeometry.{key} {cell} x {axis} {count} = {pixels} pixels exceeds 65535, the largest text area alacritty_terminal can report"
+            )));
+        }
+    }
+    Ok(Some(WindowSize {
+        num_lines: rows as u16,
+        num_cols: cols as u16,
+        cell_width: cell_width as u16,
+        cell_height: cell_height as u16,
+    }))
 }
 
 // ─── JS-visible cell data ────────────────────────────────
@@ -239,13 +282,25 @@ pub struct AlacrittyTerminal {
     processor: Processor,
     cols: usize,
     rows: usize,
+    cell_width: Option<u32>,
+    cell_height: Option<u32>,
 }
 
 #[napi]
 impl AlacrittyTerminal {
     #[napi(constructor)]
-    pub fn new(cols: u32, rows: u32, scrollback_limit: Option<u32>) -> Self {
+    pub fn new(
+        cols: u32,
+        rows: u32,
+        scrollback_limit: Option<u32>,
+        cell_width: Option<u32>,
+        cell_height: Option<u32>,
+    ) -> Result<Self> {
+        let window = declared_window(cols, rows, cell_width, cell_height)?;
         let proxy = EventProxy::new();
+        if let Ok(mut slot) = proxy.window.lock() {
+            *slot = window;
+        }
         let mut config = Config::default();
         config.scrolling_history = scrollback_limit.unwrap_or(1000) as usize;
 
@@ -256,13 +311,15 @@ impl AlacrittyTerminal {
 
         let term = Term::new(config, &size, proxy.clone());
 
-        Self {
+        Ok(Self {
             term: Some(term),
             proxy,
             processor: Processor::new(),
             cols: cols as usize,
             rows: rows as usize,
-        }
+            cell_width,
+            cell_height,
+        })
     }
 
     /// Feed raw bytes (VT sequences) into the terminal.
@@ -286,9 +343,11 @@ impl AlacrittyTerminal {
         }
     }
 
-    /// Resize the terminal grid.
+    /// Resize the terminal grid. The declared cell size stays, so the text area follows; a text area the engine
+    /// cannot hold is refused and the terminal keeps its size.
     #[napi]
-    pub fn resize(&mut self, cols: u32, rows: u32) {
+    pub fn resize(&mut self, cols: u32, rows: u32) -> Result<()> {
+        let window = declared_window(cols, rows, self.cell_width, self.cell_height)?;
         if let Some(ref mut term) = self.term {
             self.cols = cols as usize;
             self.rows = rows as usize;
@@ -297,7 +356,11 @@ impl AlacrittyTerminal {
                 rows: self.rows,
             };
             term.resize(size);
+            if let Ok(mut slot) = self.proxy.window.lock() {
+                *slot = window;
+            }
         }
+        Ok(())
     }
 
     /// Get full text content (scrollback + screen).

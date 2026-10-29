@@ -18,6 +18,7 @@ import type {
   Color,
   ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
+import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 import { replyDelivery } from "./reply-delivery.ts"
@@ -70,7 +71,13 @@ interface NativeAlacrittyTerminal {
 }
 
 interface NativeModule {
-  AlacrittyTerminal: new (cols: number, rows: number, scrollbackLimit?: number) => NativeAlacrittyTerminal
+  AlacrittyTerminal: new (
+    cols: number,
+    rows: number,
+    scrollbackLimit?: number,
+    cellWidth?: number,
+    cellHeight?: number,
+  ) => NativeAlacrittyTerminal
 }
 
 // ═══════════════════════════════════════════════════════
@@ -161,12 +168,19 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
   }
 
   function init(options: TerminalOptions): void {
+    const geometry = declaredPixelGeometry("alacritty", options)
     if (term) {
       term.destroy()
     }
 
     const native = loadAlacrittyNative()
-    term = new native.AlacrittyTerminal(options.cols, options.rows, options.scrollbackLimit ?? 1000)
+    term = new native.AlacrittyTerminal(
+      options.cols,
+      options.rows,
+      options.scrollbackLimit ?? 1000,
+      geometry?.cellWidth,
+      geometry?.cellHeight,
+    )
   }
 
   if (opts) {
@@ -174,6 +188,7 @@ export function createAlacrittyBackend(opts?: Partial<TerminalOptions>): Termina
       cols: opts.cols ?? DEFAULT_COLS,
       rows: opts.rows ?? DEFAULT_ROWS,
       scrollbackLimit: opts.scrollbackLimit,
+      pixelGeometry: opts.pixelGeometry,
     })
   }
 
