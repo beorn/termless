@@ -36,10 +36,9 @@ import sys
 import traceback
 from collections import deque
 
-from kitty.fast_data_types import Color, ESC_OSC, Screen, set_options
+from kitty.fast_data_types import Screen, set_boss, set_options
 from kitty.options.types import defaults
-from kitty.rgb import to_color
-from kitty.utils import color_as_int
+from kitty.window import Window
 
 # Standard 16-color ANSI palette (xterm defaults)
 ANSI_16 = [
@@ -112,19 +111,57 @@ def decode_cursor_shape(shape):
     return {0: "block", 1: "block", 2: "beam", 3: "underline"}.get(shape, "block")
 
 
+class HeadlessBoss:
+    """The one boss method a reproduced Window callback reaches; in kitty it only redraws host windows."""
+
+    def default_bg_changed_for(self, window_id, via_escape_code=False):
+        pass
+
+
 class Callbacks:
-    """Minimal callbacks for headless Screen operation."""
+    """The headless Screen's window.
+
+    Every Screen -> Window callback that can write to the child runs kitty's own Window method
+    unchanged; any callback without a method here is recorded in `unreproduced`, never answered.
+    """
+
+    # Reply-bearing Window methods, reproduced unchanged; they read self.screen, self.id and self.os_window_id.
+    on_da1 = Window.on_da1
+    report_color = Window.report_color
+    set_dynamic_color = Window.set_dynamic_color
+    set_color_table_color = Window.set_color_table_color
+    request_capabilities = Window.request_capabilities
+    color_control = Window.color_control
+    report_color_scheme_preference = Window.report_color_scheme_preference
+    is_dark = Window.is_dark
+    refresh = Window.refresh
 
     def __init__(self):
+        self.screen = None
+        self.id = 0  # The Screen is created with window_id 0.
+        self.os_window_id = 0
         self.wtcbuf = b""
         self.title = ""
         self.title_stack = deque(maxlen=10)
         self.responses = b""  # Accumulated DA1/DA2/DSR response data
+        self.unreproduced = []  # Callback names this feed reached that the bridge does not reproduce
 
     def write(self, data):
         raw = bytes(data)
         self.wtcbuf += raw
         self.responses += raw
+
+    def no_reply(self, *args, **kwargs):
+        """A Window callback that changes host or title state only and never writes to the child."""
+
+    icon_changed = osc_context = on_reset = on_bell = cmd_output_marking = no_reply
+    color_profile_popped = on_activity_since_last_focus = send_signal_for_key = no_reply
+
+    def desktop_notify(self, osc_code, raw_data):
+        # OSC 1337 only sets user variables (Window.osc_1337), and OSC 9 and 777 only show a notification;
+        # OSC 99 can answer through the boss's notification manager, which is host state.
+        if osc_code == 99:
+            self.unreproduced.append("desktop_notify")
 
     def title_changed(self, title, raw=None):
         if hasattr(title, "tobytes"):
@@ -142,72 +179,22 @@ class Callbacks:
         elif self.title:
             self.title_stack.append(self.title)
 
-    def _report_color(self, code, color):
-        # Match Kitty Window's 8-bit to 16-bit OSC reply.
-        r, g, b = (component * 257 for component in (color.red, color.green, color.blue))
-        screen.send_escape_code_to_child(ESC_OSC, f"{code};rgb:{r:04x}/{g:04x}/{b:04x}")
-
-    def set_dynamic_color(self, code, value=""):
-        if isinstance(value, (bytes, memoryview)):
-            value = str(value, "utf-8", "replace")
-        profile = screen.color_profile
-        names = {10: "default_fg", 11: "default_bg", 12: "cursor_color"}
-        for part in value.split(";"):
-            # Restrict every parameter, including those after an accepted code.
-            name = names.get(code - 100 if code >= 100 else code)
-            if name is not None:
-                if part == "?":
-                    # Kitty reports an unset cursor as black without storing it.
-                    self._report_color(str(code), getattr(profile, name) or Color())
-                else:
-                    color = to_color(part) if code < 100 and part else None
-                    if color is None:
-                        delattr(profile, name)  # Reset to configured/unset state.
-                    else:
-                        setattr(profile, name, color)
-            code += 1
-
-    def set_color_table_color(self, code, value=None):
-        value = str(value or b"", "utf-8", "replace")
-        profile = screen.color_profile
-        if code == 4:
-            parts = value.split(";")
-            if len(parts) % 2:
-                return  # Kitty ignores an incomplete index/specification list.
-            for index, spec in zip(parts[::2], parts[1::2]):
-                try:
-                    index = int(index)
-                except ValueError:
-                    continue  # Malformed protocol input, not a profile failure.
-                if not 0 <= index <= 255:
-                    continue
-                if spec == "?":
-                    self._report_color(f"4;{index}", profile.as_color((index << 8) | 1))
-                else:
-                    color = to_color(spec)
-                    if color is not None:
-                        profile.set_color(index, color_as_int(color))
-        elif code == 104:
-            if not value.strip():
-                profile.reset_color_table()
-            else:
-                for index in value.split(";"):
-                    try:
-                        index = int(index)
-                    except ValueError:
-                        continue
-                    if 0 <= index <= 255:
-                        profile.reset_color(index)
-
     def drain_responses(self):
         """Drain and return accumulated response data."""
         data = self.responses
         self.responses = b""
         return data
 
+    def drain_unreproduced(self):
+        names = sorted(set(self.unreproduced))
+        self.unreproduced = []
+        return names
+
     def __getattr__(self, name):
-        """Silently accept any callback kitty might invoke."""
-        return lambda *a, **kw: None
+        """Record any other callback kitty invokes (clipboard, file transfer, resize report, remote control)."""
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return lambda *a, **kw: self.unreproduced.append(name)
 
 
 # Global state
@@ -311,6 +298,7 @@ def make_snapshot():
 
     # Drain any accumulated response data (DA1/DA2/DSR responses)
     response_data = callbacks.drain_responses() if callbacks else b""
+    unreproduced = callbacks.drain_unreproduced() if callbacks else []
 
     result = {
         "cells": cell_rows,
@@ -322,6 +310,8 @@ def make_snapshot():
     }
     if response_data:
         result["responses"] = base64.b64encode(response_data).decode("ascii")
+    if unreproduced:
+        result["unreproduced"] = unreproduced
     return result
 
 
@@ -337,10 +327,12 @@ def handle_command(cmd):
         scrollback_limit = cmd.get("scrollbackLimit", 1000)
 
         set_options(defaults)
+        set_boss(HeadlessBoss())
         callbacks = Callbacks()
         # Screen(callbacks, lines, cols, scrollback, cell_width, cell_height, window_id, test_child)
         # Pass 0x0 cell dimensions so headless Screen does not invent pixel metrics for CSI 14t/16t.
         screen = Screen(callbacks, rows, cols, scrollback_limit, 0, 0, 0, callbacks)
+        callbacks.screen = screen
         return {"ok": True}
 
     elif op == "feed":
@@ -348,6 +340,7 @@ def handle_command(cmd):
         # Clear response buffer before feeding so we capture only this feed's responses
         if callbacks:
             callbacks.drain_responses()
+            callbacks.drain_unreproduced()
         parse_bytes(screen, data)
         result = {"ok": True}
         # Include any response data generated by this feed (DA1/DA2/DSR)
@@ -355,6 +348,9 @@ def handle_command(cmd):
             resp = callbacks.drain_responses()
             if resp:
                 result["responses"] = base64.b64encode(resp).decode("ascii")
+            unreproduced = callbacks.drain_unreproduced()
+            if unreproduced:
+                result["unreproduced"] = unreproduced
         return result
 
     elif op == "resize":
@@ -425,6 +421,7 @@ def batch_main():
 
         # Accumulate response data from all feed commands
         all_responses = b""
+        all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -433,11 +430,14 @@ def batch_main():
             # Collect per-feed response data
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
+            all_unreproduced.extend(result.get("unreproduced", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
         if all_responses:
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
+        if all_unreproduced:
+            snapshot["unreproduced"] = all_unreproduced
         sys.stdout.write(json.dumps(snapshot) + "\n")
     except Exception as e:
         sys.stdout.write(json.dumps({

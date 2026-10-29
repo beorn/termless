@@ -29,6 +29,8 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  EmulatorWarning,
+  WarningExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { execFileSync } from "node:child_process"
@@ -123,6 +125,8 @@ interface BridgeSnapshot {
   error?: string
   /** Base64-encoded DA1/DA2/DSR response data accumulated during replay */
   responses?: string
+  /** Window callbacks the replay reached that the bridge does not reproduce, in feed order */
+  unreproduced?: string[]
 }
 
 // ===============================================================
@@ -216,7 +220,7 @@ export function isKittyAvailable(): boolean {
  *
  * @param opts - Optional terminal dimensions for eager initialization
  */
-export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBackend {
+export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBackend & WarningExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let scrollbackLimit = 1000
@@ -231,6 +235,8 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   // Batch replay includes every earlier response. Keep the observed prefix so
   // a later snapshot only delivers replies generated since the previous one.
   let observedResponses = Buffer.alloc(0)
+  let observedUnreproduced: string[] = []
+  const warnings: EmulatorWarning[] = []
   let kittyConfigDir: string | null = null
 
   function ensureKittyConfigDir(): string {
@@ -308,8 +314,17 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
       throw new Error("Kitty bridge changed an earlier response during batch replay")
     }
     const newResponses = responseBytes.subarray(observedResponses.length)
+    const unreproduced = nextSnapshot.unreproduced ?? []
+    if (observedUnreproduced.some((callback, index) => unreproduced[index] !== callback)) {
+      throw new Error("Kitty bridge changed an earlier unreproduced callback during batch replay")
+    }
+    // A reply this bridge cannot produce is a harness gap, never the terminal's silence.
+    for (const callback of unreproduced.slice(observedUnreproduced.length)) {
+      warnings.push({ code: "UNREPRODUCED_CALLBACK", message: callback, backend: "kitty" })
+    }
     snapshot = nextSnapshot
     observedResponses = responseBytes
+    observedUnreproduced = unreproduced
     if (backend.onResponse && newResponses.length > 0) {
       backend.onResponse(new Uint8Array(newResponses))
     }
@@ -327,6 +342,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     initialized = true
     snapshot = null
     observedResponses = Buffer.alloc(0)
+    observedUnreproduced = []
   }
 
   // Eagerly init if opts provided
@@ -343,6 +359,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     initialized = false
     snapshot = null
     observedResponses = Buffer.alloc(0)
+    observedUnreproduced = []
     if (kittyConfigDir) {
       rmSync(kittyConfigDir, { recursive: true, force: true })
       kittyConfigDir = null
@@ -474,7 +491,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(),
+    extensions: new Set(["warnings"]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -487,7 +504,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   // lazily (on next query) rather than immediately after feed(). This is fine
   // for testing but may cause timing issues with interactive PTY usage.
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & WarningExtension = {
     name: "kitty",
     init,
     destroy,
@@ -508,6 +525,10 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    getWarnings: () => [...warnings],
+    clearWarnings: () => {
+      warnings.length = 0
+    },
   }
 
   return backend

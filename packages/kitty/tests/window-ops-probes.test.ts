@@ -56,6 +56,8 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     { name: "foreground", query: "10;?", code: "10", set: "10", reset: "110" },
     { name: "background", query: "11;?", code: "11", set: "11", reset: "111" },
     { name: "cursor", query: "12;?", code: "12", set: "12", reset: "112" },
+    { name: "selection background", query: "17;?", code: "17", set: "17", reset: "117" },
+    { name: "selection foreground", query: "19;?", code: "19", set: "19", reset: "119" },
   ])("restores actual Kitty colour state: $name", ({ query, code, set, reset }) => {
     const backend = createKittyBackend()
     backend.init({ cols: 80, rows: 24 })
@@ -78,11 +80,21 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
         feed("\x1b]104\x1b\\")
         expect(queryColor(backend, responses, query, code)).toEqual(baseline)
       } else if (code === "10") {
-        // Sequential parameters must not widen the reviewed callback to17/19/22.
+        // Kitty's own Window.set_dynamic_color answers sequential parameters only for its dynamic colour codes
+        // (10/11/12/17/19), then OSC 17/19 and the OSC 22 pointer-shape query.
         responses.length = 0
         feed(`\x1b]10;${Array(10).fill("?").join(";")}\x1b\\\x1b]17;?\x1b\\\x1b]19;?\x1b\\\x1b]22;?\x1b\\`)
         backend.getCursor()
-        expect([...responses.join("").matchAll(/\x1b\](\d+);/g)].map((match) => match[1])).toEqual(["10", "11", "12"])
+        expect([...responses.join("").matchAll(/\x1b\](\d+);/g)].map((match) => match[1])).toEqual([
+          "10",
+          "11",
+          "12",
+          "17",
+          "19",
+          "17",
+          "19",
+          "22",
+        ])
       }
     } finally {
       backend.destroy()
@@ -231,6 +243,52 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     for (let i = 0; i < 11; i++) feed(`\x1b[22;2t\x1b]2;title-${i}\x07`)
     for (let i = 0; i < 11; i++) feed("\x1b[23;2t")
     expect(backend.getTitle()).toBe("title-0")
+  })
+
+  /**
+   * @failure Headless Kitty swallows its on_da1 window callback, so DA1 goes unanswered and the DA1 sentinel cannot decide a silent query.
+   * @level l2
+   * @consumer Terminfo headless DA1 sentinel and device.primary-da
+   */
+  test("answers primary DA the way Kitty's window does", () => {
+    const backend = createKittyBackend()
+    backend.init?.({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    backend.feed(new TextEncoder().encode("\x1b[c"))
+    backend.getCursor()
+    // Kitty's Window.on_da1 sends CSI followed by da1(options); with default options that is ?62;52;c.
+    expect(responses.join("")).toBe("\x1b[?62;52;c")
+    backend.destroy()
+  })
+
+  /**
+   * @failure A reply-bearing Kitty callback the bridge cannot reproduce reads as the terminal's silence.
+   * @level l5
+   * @consumer Terminfo headless collector harness-gap grading
+   */
+  test("reports a callback the bridge does not reproduce, once, as a warning", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    try {
+      // OSC 52 read reaches Window.clipboard_control, whose reply depends on host clipboard permission.
+      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x1b\\"))
+      backend.getCursor()
+      expect(responses).toEqual([])
+      const warning = { code: "UNREPRODUCED_CALLBACK", message: "clipboard_control", backend: "kitty" }
+      expect(backend.getWarnings()).toEqual([warning])
+      // Kitty's own Window methods answer these; the next replay re-runs OSC 52 without reporting it again.
+      backend.feed(new TextEncoder().encode("\x1b[?996n\x1b]17;?\x1b\\"))
+      backend.getCursor()
+      expect(responses.join("")).toMatch(/^\x1b\[\?997;[12]n\x1b\]17;rgb:[0-9a-f/]+\x1b\\$/)
+      expect(backend.getWarnings()).toEqual([warning])
+      backend.clearWarnings()
+      expect(backend.getWarnings()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
   })
 })
 
