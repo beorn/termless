@@ -101,6 +101,7 @@ pub struct NapiCell {
     pub underline: String,
     pub strikethrough: bool,
     pub inverse: bool,
+    pub blink: bool,
     pub wide: bool,
 }
 
@@ -493,6 +494,7 @@ fn empty_cell() -> NapiCell {
         underline: "none".to_string(),
         strikethrough: false,
         inverse: false,
+        blink: false,
         wide: false,
     }
 }
@@ -561,6 +563,7 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         underline: underline.to_string(),
         strikethrough: attrs.strikethrough(),
         inverse: attrs.reverse(),
+        blink: attrs.blink() != tattoy_wezterm_term::Blink::None,
         wide: cell.width() > 1,
     }
 }

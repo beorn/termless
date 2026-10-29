@@ -44,6 +44,7 @@ interface NapiCell {
   underline: string
   strikethrough: boolean
   inverse: boolean
+  blink: boolean
   wide: boolean
 }
 
@@ -131,7 +132,7 @@ function convertNapiCell(cell: NapiCell): Cell {
     underlineColor: null,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
-    blink: false,
+    blink: cell.blink,
     hidden: false,
     wide: cell.wide,
     continuation: false,

@@ -224,6 +224,7 @@ const JsCell = struct {
     underline: i8, // 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed
     strikethrough: bool,
     inverse: bool,
+    blink: bool,
     wide: u8, // 0=narrow, 1=wide, 2=spacer_tail
 };
 
@@ -271,6 +272,7 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
     var underline: i8 = 0;
     var strikethrough: bool = false;
     var inverse: bool = false;
+    var blink: bool = false;
 
     if (cell.style_id != 0) {
         const sty = page.styles.get(page.memory, cell.style_id);
@@ -315,6 +317,7 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
         underline = @intCast(@intFromEnum(sty.flags.underline));
         strikethrough = sty.flags.strikethrough;
         inverse = sty.flags.inverse;
+        blink = sty.flags.blink;
     } else {
         // Handle bg-only cells (content_tag == .bg_color_palette or .bg_color_rgb)
         switch (cell.content_tag) {
@@ -364,6 +367,7 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
         .underline = underline,
         .strikethrough = strikethrough,
         .inverse = inverse,
+        .blink = blink,
         .wide = wide_val,
     };
 }
@@ -383,6 +387,7 @@ fn defaultCell() JsCell {
         .underline = 0,
         .strikethrough = false,
         .inverse = false,
+        .blink = false,
         .wide = 0,
     };
 }

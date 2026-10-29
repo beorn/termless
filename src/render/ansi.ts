@@ -160,7 +160,7 @@ function styleOf(cell: Cell): CellStyle {
     underline: cell.underline !== false,
     strikethrough: cell.strikethrough === true,
     inverse: cell.inverse,
-    blink: cell.blink,
+    blink: cell.blink === true,
   }
 }
 

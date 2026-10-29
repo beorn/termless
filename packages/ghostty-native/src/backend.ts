@@ -43,6 +43,7 @@ interface NativeCell {
   underline: number // 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed
   strikethrough: boolean
   inverse: boolean
+  blink: boolean
   wide: number // 0=narrow, 1=wide, 2=spacer_tail
 }
 
@@ -166,7 +167,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     underlineColor: null,
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
-    blink: false,
+    blink: nc.blink,
     hidden: false,
     wide: nc.wide === 1,
     continuation: nc.wide === 2, // spacer_tail

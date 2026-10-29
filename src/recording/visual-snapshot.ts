@@ -32,7 +32,7 @@ function underlineToString(u: UnderlineStyle): string {
 function cellToString(cell: Cell): string {
   // Encode all visually-relevant cell properties into a compact string.
   // Order: char|fg|bg|bold|dim|italic|underline|underlineColor|strikethrough|inverse|blink|hidden|wide|hyperlink
-  return `${cell.char}|${rgbToString(cell.fg)}|${rgbToString(cell.bg)}|${cell.bold ? 1 : 0}${cell.dim === null ? "?" : cell.dim ? 1 : 0}${cell.italic === null ? "?" : cell.italic ? 1 : 0}${underlineToString(cell.underline)}|${rgbToString(cell.underlineColor)}|${cell.strikethrough === null ? "?" : cell.strikethrough ? 1 : 0}${cell.inverse ? 1 : 0}${cell.blink ? 1 : 0}${cell.hidden ? 1 : 0}${cell.wide ? 1 : 0}|${cell.hyperlink ?? "-"}`
+  return `${cell.char}|${rgbToString(cell.fg)}|${rgbToString(cell.bg)}|${cell.bold ? 1 : 0}${cell.dim === null ? "?" : cell.dim ? 1 : 0}${cell.italic === null ? "?" : cell.italic ? 1 : 0}${underlineToString(cell.underline)}|${rgbToString(cell.underlineColor)}|${cell.strikethrough === null ? "?" : cell.strikethrough ? 1 : 0}${cell.inverse ? 1 : 0}${cell.blink === null ? "?" : cell.blink ? 1 : 0}${cell.hidden ? 1 : 0}${cell.wide ? 1 : 0}|${cell.hyperlink ?? "-"}`
 }
 
 /**

@@ -58,6 +58,11 @@ describe("sgrDelta", () => {
 })
 
 describe("rowToAnsi", () => {
+  it("draws unreported blink unset while measured blink still emits SGR 5", () => {
+    expect(rowToAnsi([cell("X", { blink: null })], 1)).toBe("X")
+    expect(rowToAnsi([cell("X", { blink: true })], 1)).toContain("\x1b[5m")
+  })
+
   it("renders plain ASCII cells in order, padded to cols", () => {
     const row = "hi".split("").map((c) => cell(c))
     const out = rowToAnsi(row, 5)

@@ -114,7 +114,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     underlineColor: null,
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
-    blink: false,
+    blink: null,
     hidden: false,
     wide: nc.wide,
     continuation: false,

@@ -172,7 +172,7 @@ describe("diffTerminalStates", () => {
 })
 
 // Existing floods use measured booleans; only an unreported field exposes lossy encoders.
-test.each(["dim", "italic", "strikethrough"] as const)(
+test.each(["dim", "italic", "strikethrough", "blink"] as const)(
   "%s null survives JSON and differs from measured false",
   (field) => {
     const known = fed("X", 1, 1)

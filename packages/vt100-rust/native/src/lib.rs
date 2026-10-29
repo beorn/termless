@@ -428,7 +428,7 @@ fn convert_cell(cell: &vt100::Cell) -> NapiCell {
         bg_b,
         bg_is_default,
         bold: cell.bold(),
-        faint: false, // vt100 crate doesn't expose faint/dim
+        faint: cell.dim(),
         italic: cell.italic(),
         underline: underline.to_string(),
         strikethrough: false, // vt100 crate doesn't expose strikethrough

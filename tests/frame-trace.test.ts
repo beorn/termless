@@ -399,6 +399,7 @@ test("frame fingerprints retain each null attribute separately from measured fal
     dim: false as boolean | null,
     italic: false as boolean | null,
     strikethrough: false as boolean | null,
+    blink: false as boolean | null,
   }
   term.getRows = () => [[cell]]
   const tracer = createFrameTracer(term, {
@@ -409,13 +410,13 @@ test("frame fingerprints retain each null attribute separately from measured fal
   try {
     tracer.onWrite(new Uint8Array())
     await waitForFrames(tracer, 1)
-    for (const field of ["dim", "italic", "strikethrough"] as const) {
+    for (const field of ["dim", "italic", "strikethrough", "blink"] as const) {
       cell = { ...cell, [field]: null }
       tracer.onWrite(new Uint8Array())
       await waitForFrames(tracer, tracer.framesSinceSeq(0).length + 1)
     }
     const frames = tracer.framesSinceSeq(0)
-    expect(new Set(frames.map((frame) => frame.hash)).size).toBe(4)
+    expect(new Set(frames.map((frame) => frame.hash)).size).toBe(5)
     expect(frames.every((frame) => frame.duplicate_of === null)).toBe(true)
   } finally {
     await tracer.stop()

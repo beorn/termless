@@ -36,7 +36,8 @@ export interface Cell {
   /** null = this producer does not report the attribute; never a terminal-support claim. */
   strikethrough: boolean | null
   inverse: boolean
-  blink: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  blink: boolean | null
   hidden: boolean
   wide: boolean
   continuation: boolean

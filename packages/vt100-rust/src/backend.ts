@@ -122,7 +122,7 @@ function convertNapiCell(cell: NapiCell): Cell {
     underlineColor: null,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
-    blink: false,
+    blink: null,
     hidden: false,
     wide: cell.wide,
     continuation: false,

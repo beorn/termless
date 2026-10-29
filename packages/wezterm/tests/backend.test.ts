@@ -139,6 +139,12 @@ describeNative("wezterm backend", () => {
   // ── Attributes ──
 
   describe("attributes", () => {
+    test("reports blink set and reset on distinct cells", () => {
+      backend.feed(encode("\x1b[5mA\x1b[25mB"))
+      expect(backend.getCell(0, 0).blink).toBe(true)
+      expect(backend.getCell(0, 1).blink).toBe(false)
+    })
+
     test("bold", () => {
       backend.feed(encode("\x1b[1mB\x1b[0m"))
       expect(backend.getCell(0, 0).bold).toBe(true)

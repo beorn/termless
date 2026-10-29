@@ -120,11 +120,11 @@ describe("snapshotView", () => {
 // Native snapshots may omit unavailable readback; omission is not measured false.
 test("snapshot fields absent or null retain unknown while booleans remain measured", () => {
   const snapshot = makeSnapshot()
-  const { faint: _faint, italic: _italic, strikethrough: _strike, ...unreported } = cell("X")
-  snapshot.main.grid = [[unreported, cell("Y"), cell("Z", { faint: null, italic: null, strikethrough: null })]]
+  const { faint: _faint, italic: _italic, strikethrough: _strike, blink: _blink, ...unreported } = cell("X")
+  snapshot.main.grid = [[unreported, cell("Y"), cell("Z", { faint: null, italic: null, strikethrough: null, blink: null })]]
   const term = snapshotView(snapshot)
   for (const col of [0, 2]) {
-    expect(term.getCell(1, col)).toMatchObject({ dim: null, italic: null, strikethrough: null })
+    expect(term.getCell(1, col)).toMatchObject({ dim: null, italic: null, strikethrough: null, blink: null })
   }
-  expect(term.getCell(1, 1)).toMatchObject({ dim: false, italic: false, strikethrough: false })
+  expect(term.getCell(1, 1)).toMatchObject({ dim: false, italic: false, strikethrough: false, blink: false })
 })
