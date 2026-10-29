@@ -14,8 +14,8 @@
 
 import { describe, test, expect } from "vitest"
 import { createLibvtermBackend } from "../src/backend.ts"
-import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import { hasExtension, type TerminalBackend } from "../../../src/terminal/types.ts"
+import { initLibvterm, loadedLibvtermWasm, type LibvtermModule } from "../src/wasm-bindings.ts"
+import { hasExtension, type ReplyDeliveryExtension, type TerminalBackend } from "../../../src/terminal/types.ts"
 
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
 const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
@@ -123,13 +123,16 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     }
   })
 
-  // CTO 2cfdb6e8: complete delivery is declared only after full DA1/DECRQSS replies are measured on this engine.
-  test("withholds complete reply delivery until it is declared", () => {
+  // CTO 2cfdb6e8: complete delivery is declared after full DA1/DECRQSS replies were measured above, and binds the WASM
+  // this suite actually loaded; the declaration test alone reads only the receipt.
+  test("declares complete reply delivery for the loaded WASM", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 80, rows: 24 })
     try {
-      expect(hasExtension(backend, "reply-delivery")).toBe(false)
-      expect("replyDelivery" in backend).toBe(false)
+      if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
+        throw new Error("libvterm declares no reply delivery")
+      }
+      expect(backend.replyDelivery.engine).toEqual({ kind: "wasm", sha256: loadedLibvtermWasm().sha256 })
     } finally {
       backend.destroy()
     }

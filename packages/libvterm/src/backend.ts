@@ -31,9 +31,11 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { replyDelivery } from "./reply-delivery.ts"
 
 // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
 type LegacyBackend = TerminalBackend
@@ -233,7 +235,8 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   function destroy(): void {
     if (module && vt) {
-      module.termless_vterm_screen_observe_props(screen, 0)
+      // A failed init can destroy before the screen handle exists; libvterm dereferences the screen it is given.
+      if (screen) module.termless_vterm_screen_observe_props(screen, 0)
       if (cursorPropsPtr) {
         module._free(cursorPropsPtr)
         cursorPropsPtr = 0
@@ -443,10 +446,10 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     semanticPrompts: false,
     unicode: "15.1",
     reflow: false,
-    extensions: new Set<string>(),
+    extensions: new Set<string>(["reply-delivery"]),
   }
 
-  const backend: LegacyBackend = {
+  const backend: LegacyBackend & ReplyDeliveryExtension = {
     name: "libvterm",
     init,
     destroy,
@@ -469,6 +472,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,
+    replyDelivery,
   }
 
   return backend
