@@ -56,6 +56,8 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     { name: "foreground", query: "10;?", code: "10", set: "10", reset: "110" },
     { name: "background", query: "11;?", code: "11", set: "11", reset: "111" },
     { name: "cursor", query: "12;?", code: "12", set: "12", reset: "112" },
+    { name: "selection background", query: "17;?", code: "17", set: "17", reset: "117" },
+    { name: "selection foreground", query: "19;?", code: "19", set: "19", reset: "119" },
   ])("restores actual Kitty colour state: $name", ({ query, code, set, reset }) => {
     const backend = createKittyBackend()
     backend.init({ cols: 80, rows: 24 })
@@ -78,11 +80,21 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
         feed("\x1b]104\x1b\\")
         expect(queryColor(backend, responses, query, code)).toEqual(baseline)
       } else if (code === "10") {
-        // Sequential parameters must not widen the reviewed callback to17/19/22.
+        // Kitty's own Window.set_dynamic_color answers sequential parameters only for its dynamic colour codes
+        // (10/11/12/17/19), then OSC 17/19 and the OSC 22 pointer-shape query.
         responses.length = 0
         feed(`\x1b]10;${Array(10).fill("?").join(";")}\x1b\\\x1b]17;?\x1b\\\x1b]19;?\x1b\\\x1b]22;?\x1b\\`)
         backend.getCursor()
-        expect([...responses.join("").matchAll(/\x1b\](\d+);/g)].map((match) => match[1])).toEqual(["10", "11", "12"])
+        expect([...responses.join("").matchAll(/\x1b\](\d+);/g)].map((match) => match[1])).toEqual([
+          "10",
+          "11",
+          "12",
+          "17",
+          "19",
+          "17",
+          "19",
+          "22",
+        ])
       }
     } finally {
       backend.destroy()
