@@ -314,6 +314,14 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 
+  test("overline attribute detection", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    backend.feed(new TextEncoder().encode("\x1b[53mA\x1b[55mB"))
+    expect(backend.getCell(0, 0).overline).toBe(true)
+    expect(backend.getCell(0, 1).overline).toBe(false)
+    backend.destroy()
+  })
+
   test("faint/dim attribute detection", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[2mdim\x1b[0m"))

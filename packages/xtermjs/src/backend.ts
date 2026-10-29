@@ -459,6 +459,7 @@ export function createXtermBackend(
       strikethrough: bufCell.isStrikethrough() !== 0,
       inverse: bufCell.isInverse() !== 0,
       blink: bufCell.isBlink() !== 0,
+      overline: bufCell.isOverline() !== 0,
       hidden: bufCell.isInvisible() !== 0,
       wide: bufCell.getWidth() > 1,
       continuation: false,

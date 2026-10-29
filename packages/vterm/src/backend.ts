@@ -127,6 +127,7 @@ export function createVtermBackend(
         strikethrough: sc.strikethrough,
         inverse: sc.inverse,
         blink: sc.blink,
+        overline: sc.overline,
         hidden: sc.hidden,
         wide: sc.wide,
         continuation,

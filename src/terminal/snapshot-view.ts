@@ -25,8 +25,7 @@ import type { Cell, Color, Cursor, CursorStyle, ScrollbackState, Terminal, Termi
  * match of vterm.js's `ScreenCell` (see `packages/vterm/src/backend.ts`'s
  * `convertCell`), minus the fields no engine snapshot needs for a read-only
  * fold. Missing faint/italic/strikethrough/blink readback remains null; it is not measured false.
- * (`overline` has no slot in termless's {@link Cell}, same as the live
- * vterm backend).
+ * (`overline` is optional on {@link Cell}; this snapshot fold does not copy it).
  */
 export interface EngineSnapshotCell {
   char: string
