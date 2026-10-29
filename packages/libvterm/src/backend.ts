@@ -166,6 +166,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
   let vt: number = 0 // VTerm* pointer
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer
+  let output: number = 0 // TermlessOutputSink* holding replies until feed() drains them
   let module: LibvtermModule | null = mod ?? getLoadedModule()
   let cols = opts?.cols ?? DEFAULT_COLS
   let rows = opts?.rows ?? DEFAULT_ROWS
@@ -203,6 +204,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     // Create the VTerm instance
     vt = module.vterm_new(rows, cols)
     if (!vt) throw new Error("vterm_new returned null")
+    output = module.termless_vterm_output_attach(vt)
+    if (!output) {
+      destroy()
+      throw new Error("libvterm output sink allocation failed")
+    }
 
     // Get screen and state handles
     screen = module.vterm_obtain_screen(vt)
@@ -236,6 +242,10 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
         module._free(cellPtr)
         cellPtr = 0
       }
+      if (output) {
+        module.termless_vterm_output_detach(vt, output)
+        output = 0
+      }
       module.vterm_free(vt)
       vt = 0
       screen = 0
@@ -256,20 +266,19 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     // Free the temporary buffer
     m._free(ptr)
 
-    // Drain DA1/DA2/DSR responses and forward to the terminal layer.
-    // libvterm buffers output internally; vterm_output_read drains it.
-    if (backend.onResponse && m.vterm_output_read) {
-      const outBufLen = 1024
-      const outBuf = m._malloc(outBufLen)
-      try {
-        for (;;) {
-          const bytesRead = m.vterm_output_read(vt, outBuf, outBufLen)
-          if (bytesRead === 0) break
-          backend.onResponse(readBytes(m, outBuf, bytesRead))
-        }
-      } finally {
-        m._free(outBuf)
+    // Drain every reply this feed produced, in order, from the output sink (build/flat-api.c); replies nobody
+    // listens for are discarded so the sink never grows across feeds.
+    const outBufLen = 1024
+    const outBuf = m._malloc(outBufLen)
+    try {
+      for (;;) {
+        const bytesRead = m.termless_vterm_output_read(output, outBuf, outBufLen)
+        if (bytesRead < 0) throw new Error("libvterm output sink could not grow; engine replies were lost")
+        if (bytesRead === 0) break
+        backend.onResponse?.(readBytes(m, outBuf, bytesRead))
       }
+    } finally {
+      m._free(outBuf)
     }
   }
 
