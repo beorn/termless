@@ -38,11 +38,8 @@ export interface Cell {
   inverse: boolean
   /** null = this producer does not report the attribute; never a terminal-support claim. */
   blink: boolean | null
-  /**
-   * SGR 53 overline. Omitted when this producer does not report the attribute.
-   * A present false is a measured off, not an unreported field.
-   */
-  overline?: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  overline: boolean | null
   hidden: boolean
   wide: boolean
   continuation: boolean

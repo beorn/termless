@@ -99,6 +99,7 @@ export function fakeEmulator(size: Size = FIXTURE_SIZE): FakeEmulator {
       strikethrough: false,
       inverse: false,
       blink: false,
+      overline: false,
       hidden: false,
       wide: false,
       continuation: false,

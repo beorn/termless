@@ -16,7 +16,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
   adapterSources: [
     { path: "packages/kitty/src/index.ts", blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077" },
-    { path: "packages/kitty/src/backend.ts", blobOid: "f9bf650de8b2d2ae92475d170421bde2f207d978" },
+    { path: "packages/kitty/src/backend.ts", blobOid: "f8e143b4c0b12297cb095bd1ddcde15fed49ee5a" },
     { path: "packages/kitty/build/bridge.py", blobOid: "a8fd84db4da125d493088cb595804138248c639e" },
   ],
   engine: {

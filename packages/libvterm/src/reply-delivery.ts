@@ -16,7 +16,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "6b4f3e08d3cf4aa84e3a73ab659f078892d98c6e",
+      blobOid: "bb0c9ebedc00048158ea7a8c70be3574f7bd437f",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",

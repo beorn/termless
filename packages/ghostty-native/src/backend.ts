@@ -188,6 +188,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: nc.blink,
+    overline: null,
     hidden: false,
     wide: nc.wide === 1,
     continuation: nc.wide === 2, // spacer_tail

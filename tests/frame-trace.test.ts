@@ -400,6 +400,7 @@ test("frame fingerprints retain each null attribute separately from measured fal
     italic: false as boolean | null,
     strikethrough: false as boolean | null,
     blink: false as boolean | null,
+    overline: null,
   }
   term.getRows = () => [[cell]]
   const tracer = createFrameTracer(term, {

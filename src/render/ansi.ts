@@ -78,6 +78,7 @@ export interface CellStyle {
   strikethrough: boolean
   inverse: boolean
   blink: boolean
+  overline: boolean
 }
 
 /** Style produced by SGR 0 — used to seed a row's state-machine. */
@@ -92,6 +93,7 @@ export function freshStyle(): CellStyle {
     strikethrough: false,
     inverse: false,
     blink: false,
+    overline: false,
   }
 }
 
@@ -118,6 +120,7 @@ export function sgrDelta(prev: CellStyle, next: CellStyle): string {
     (prev.strikethrough && !next.strikethrough) ||
     (prev.inverse && !next.inverse) ||
     (prev.blink && !next.blink) ||
+    (prev.overline && !next.overline) ||
     (prev.fg !== null && next.fg === null) ||
     (prev.bg !== null && next.bg === null)
 
@@ -134,6 +137,7 @@ export function sgrDelta(prev: CellStyle, next: CellStyle): string {
   if (next.italic && !base.italic) codes.push("3")
   if (next.underline && !base.underline) codes.push("4")
   if (next.blink && !base.blink) codes.push("5")
+  if (next.overline && !base.overline) codes.push("53")
   if (next.inverse && !base.inverse) codes.push("7")
   if (next.strikethrough && !base.strikethrough) codes.push("9")
 
@@ -161,6 +165,7 @@ function styleOf(cell: Cell): CellStyle {
     strikethrough: cell.strikethrough === true,
     inverse: cell.inverse,
     blink: cell.blink === true,
+    overline: cell.overline === true,
   }
 }
 

@@ -25,7 +25,7 @@ import type { Cell, Color, Cursor, CursorStyle, ScrollbackState, Terminal, Termi
  * match of vterm.js's `ScreenCell` (see `packages/vterm/src/backend.ts`'s
  * `convertCell`), minus the fields no engine snapshot needs for a read-only
  * fold. Missing faint/italic/strikethrough/blink readback remains null; it is not measured false.
- * (`overline` is optional on {@link Cell}; this snapshot fold does not copy it).
+ * Missing overline readback stays null, the same as faint, italic, strikethrough, and blink.
  */
 export interface EngineSnapshotCell {
   char: string
@@ -39,6 +39,7 @@ export interface EngineSnapshotCell {
   strikethrough?: boolean | null
   inverse: boolean
   blink?: boolean | null
+  overline?: boolean | null
   hidden: boolean
   wide: boolean
   url: string | null
@@ -98,6 +99,7 @@ const BLANK_CELL: Cell = {
   strikethrough: false,
   inverse: false,
   blink: false,
+  overline: false,
   hidden: false,
   wide: false,
   continuation: false,
@@ -123,6 +125,7 @@ function convertCell(sc: EngineSnapshotCell | undefined, prevWide: boolean): Cel
     strikethrough: sc.strikethrough ?? null,
     inverse: sc.inverse,
     blink: sc.blink ?? null,
+    overline: sc.overline ?? null,
     hidden: sc.hidden,
     wide: sc.wide,
     continuation,

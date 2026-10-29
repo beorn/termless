@@ -335,6 +335,7 @@ export interface CellAttrs {
   italic?: boolean
   dim?: boolean
   strikethrough?: boolean
+  overline?: boolean
   inverse?: boolean
   wide?: boolean
   /** `true` matches any underline style; a string matches a specific style. */
@@ -350,7 +351,7 @@ export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResu
   let allMatch = true
 
   const check = (label: string, expected: unknown, actual: unknown, pass: boolean) => {
-    if (actual === null && ["dim", "italic", "strikethrough"].includes(label)) {
+    if (actual === null && ["dim", "italic", "strikethrough", "overline"].includes(label)) {
       details.push(`  ${label} is unreported by this producer`)
       allMatch = false
     } else if (pass) {
@@ -366,6 +367,9 @@ export function assertHaveAttrs(cell: CellView, attrs: CellAttrs): AssertionResu
   if (attrs.dim !== undefined) check("dim", attrs.dim, cell.dim, cell.dim === attrs.dim)
   if (attrs.strikethrough !== undefined) {
     check("strikethrough", attrs.strikethrough, cell.strikethrough, cell.strikethrough === attrs.strikethrough)
+  }
+  if (attrs.overline !== undefined) {
+    check("overline", attrs.overline, cell.overline, cell.overline === attrs.overline)
   }
   if (attrs.inverse !== undefined) check("inverse", attrs.inverse, cell.inverse, cell.inverse === attrs.inverse)
   if (attrs.wide !== undefined) check("wide", attrs.wide, cell.wide, cell.wide === attrs.wide)

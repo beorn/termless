@@ -33,6 +33,7 @@ const BLANK_CELL: Cell = {
   strikethrough: false,
   inverse: false,
   blink: false,
+  overline: false,
   hidden: false,
   wide: false,
   continuation: false,

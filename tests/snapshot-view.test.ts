@@ -20,6 +20,7 @@ const BLANK: EngineSnapshotCell = {
   strikethrough: false,
   inverse: false,
   blink: false,
+  overline: false,
   hidden: false,
   wide: false,
   url: null,

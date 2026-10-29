@@ -123,6 +123,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: null,
+    overline: null,
     hidden: false,
     wide: nc.wide,
     continuation: false,
