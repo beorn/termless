@@ -152,8 +152,8 @@ describe("cross-backend conformance", () => {
         feedText(b, "\x1b[1;3;4;9mStyled\x1b[0mPlain")
         const plain = b.getCell(0, 6) // 'P' in 'Plain'
         expect(plain.bold).toBe(false)
-        expect(plain.italic).toBe(false)
-        expect(plain.strikethrough).toBe(false)
+        expect(plain.italic).toBe(isModern(_name) ? false : null)
+        expect(plain.strikethrough).toBe(isModern(_name) ? false : null)
         expect(plain.underline).toBe(false)
       })
 
