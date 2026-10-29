@@ -231,28 +231,29 @@ export function createXtermBackend(
     if (typeof inputHandler?.onColor !== "function") {
       throw new Error("xterm.js headless color-event API is unavailable (_core._inputHandler.onColor)")
     }
-    inputHandler.onColor((events) => {
-      if (!Array.isArray(events)) {
+    inputHandler.onColor((events: readonly XtermColorEvent[]) => {
+      if (!Array.isArray(events as unknown)) {
         throw new Error("xterm.js headless color-event payload is invalid")
       }
       for (const ev of events) {
         if (ev.type === 1) {
+          const color = ev.color
           if (
             typeof ev.index === "number" &&
             ev.index >= 0 &&
             ev.index < 256 &&
-            Array.isArray(ev.color) &&
-            ev.color.length === 3
+            color !== undefined &&
+            color.length === 3
           ) {
-            palette[ev.index] = { r: ev.color[0], g: ev.color[1], b: ev.color[2] }
+            palette[ev.index] = { r: color[0], g: color[1], b: color[2] }
           }
         } else if (ev.type === 2) {
           if (ev.index === undefined) {
             for (let i = 0; i < 256; i++) {
-              palette[i] = { ...PALETTE_256[i]! }
+              palette[i] = { ...paletteToRgb(i) }
             }
           } else if (typeof ev.index === "number" && ev.index >= 0 && ev.index < 256) {
-            palette[ev.index] = { ...PALETTE_256[ev.index]! }
+            palette[ev.index] = { ...paletteToRgb(ev.index) }
           }
         }
       }
@@ -364,7 +365,7 @@ export function createXtermBackend(
     inputHandler._iconNameStack.length = 0
     inputHandler._windowTitleStack.length = 0
     for (let i = 0; i < 256; i++) {
-      palette[i] = { ...PALETTE_256[i]! }
+      palette[i] = { ...paletteToRgb(i) }
     }
   }
 
