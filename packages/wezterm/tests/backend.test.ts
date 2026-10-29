@@ -433,6 +433,38 @@ describe.skipIf(nativeBuildError !== null)(
         const sb = backend.getScrollback()
         expect(sb.totalLines).toBeGreaterThan(24)
       })
+
+      // Existing tests above observe totals only, never the absolute buffer row the
+      // contract defines, so a bottom-relative 0 passed off as an absolute row stays green.
+      test("reports the absolute viewport row at the live bottom", () => {
+        const local = createWeztermBackend({ cols: 20, rows: 3 })
+        try {
+          expect(local.getScrollback()).toEqual({
+            viewportTop: 0,
+            totalRows: 3,
+            screenRows: 3,
+            viewportOffset: 0,
+            totalLines: 3,
+            screenLines: 3,
+          })
+          local.feed(encode("0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7"))
+          // Eight rows of history over a three-row screen: at the live bottom the
+          // absolute start row is 5, not 0. WezTerm's headless fork has no viewport
+          // scroll state, so scrollViewport is a no-op and the row must not move.
+          expect(local.getScrollback()).toEqual({
+            viewportTop: 5,
+            totalRows: 8,
+            screenRows: 3,
+            viewportOffset: 5,
+            totalLines: 8,
+            screenLines: 3,
+          })
+          local.scrollViewport(-2)
+          expect(local.getScrollback().viewportTop).toBe(5)
+        } finally {
+          local.destroy()
+        }
+      })
     })
 
     // ── Resize ──

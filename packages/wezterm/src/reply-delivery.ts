@@ -20,7 +20,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "d5b3e8c34307e0c3f2515fff5138734fff6020cc",
+      blobOid: "ae6f7aab356690484cd32e432a8105486e6f44d2",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
