@@ -324,11 +324,16 @@ export function createWeztermBackend(
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     const sb = t.getScrollback()
+    // The headless fork exposes no viewport scroll state, so the viewport is pinned at
+    // the live bottom and the absolute start row is totalLines - screenLines (0 with an
+    // offset of 0). Passing the bottom-relative offset straight through published
+    // "oldest retained row" instead.
+    const viewportTop = sb.totalLines - sb.screenLines - sb.viewportOffset
     return {
-      viewportTop: sb.viewportOffset,
+      viewportTop,
       totalRows: sb.totalLines,
       screenRows: sb.screenLines,
-      viewportOffset: sb.viewportOffset,
+      viewportOffset: viewportTop,
       totalLines: sb.totalLines,
       screenLines: sb.screenLines,
     }
