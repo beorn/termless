@@ -261,6 +261,35 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     expect(responses.join("")).toBe("\x1b[?62;52;c")
     backend.destroy()
   })
+
+  /**
+   * @failure A reply-bearing Kitty callback the bridge cannot reproduce reads as the terminal's silence.
+   * @level l5
+   * @consumer Terminfo headless collector harness-gap grading
+   */
+  test("reports a callback the bridge does not reproduce, once, as a warning", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    try {
+      // OSC 52 read reaches Window.clipboard_control, whose reply depends on host clipboard permission.
+      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x1b\\"))
+      backend.getCursor()
+      expect(responses).toEqual([])
+      const warning = { code: "UNREPRODUCED_CALLBACK", message: "clipboard_control", backend: "kitty" }
+      expect(backend.getWarnings()).toEqual([warning])
+      // Kitty's own Window methods answer these; the next replay re-runs OSC 52 without reporting it again.
+      backend.feed(new TextEncoder().encode("\x1b[?996n\x1b]17;?\x1b\\"))
+      backend.getCursor()
+      expect(responses.join("")).toMatch(/^\x1b\[\?997;[12]n\x1b\]17;rgb:[0-9a-f/]+\x1b\\$/)
+      expect(backend.getWarnings()).toEqual([warning])
+      backend.clearWarnings()
+      expect(backend.getWarnings()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+  })
 })
 
 describe.skipIf(kittyAvailable)("window-op probe responses — kitty backend (skipped)", () => {

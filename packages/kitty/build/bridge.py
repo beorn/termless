@@ -421,7 +421,7 @@ def batch_main():
 
         # Accumulate response data from all feed commands
         all_responses = b""
-        all_unreproduced = set()
+        all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -430,14 +430,14 @@ def batch_main():
             # Collect per-feed response data
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
-            all_unreproduced.update(result.get("unreproduced", ()))
+            all_unreproduced.extend(result.get("unreproduced", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
         if all_responses:
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
         if all_unreproduced:
-            snapshot["unreproduced"] = sorted(all_unreproduced)
+            snapshot["unreproduced"] = all_unreproduced
         sys.stdout.write(json.dumps(snapshot) + "\n")
     except Exception as e:
         sys.stdout.write(json.dumps({
