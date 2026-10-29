@@ -75,13 +75,15 @@ describe.skipIf(nativeBuildError !== null)(
         { selector: "c", payload: "c2Vjb25k", text: "second" },
         { selector: "p", payload: "cHJpbWFyeQ==", text: "primary" },
       ])
-      // The crate checks the alphabet, not base64 padding. Preserve its callback and report decoding failure.
-      native.feed(Buffer.from("\x1b]52;c;=\x07"))
-      expect(native.getClipboardState().writes[0]).toEqual({
-        selector: "c",
-        payload: "=",
-        decodeError: expect.any(String),
-      })
+      // The crate checks the alphabet, not base64 padding or decoded UTF8 validity.
+      for (const payload of ["=", "/w=="]) {
+        native.feed(Buffer.from(`\x1b]52;c;${payload}\x07`))
+        expect(native.getClipboardState().writes[0]).toEqual({
+          selector: "c",
+          payload,
+          decodeError: expect.any(String),
+        })
+      }
     })
 
     test("keeps callback state private to each native terminal and clears it on reset", () => {

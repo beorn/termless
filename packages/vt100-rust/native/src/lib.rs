@@ -28,9 +28,13 @@ impl vt100::Callbacks for TerminalCallbacks {
     }
 
     fn copy_to_clipboard(&mut self, _: &mut vt100::Screen, selector: &[u8], data: &[u8]) {
-        let (text, decode_error) = match STANDARD.decode(data) {
-            Ok(bytes) => (Some(String::from_utf8_lossy(&bytes).into_owned()), None),
-            Err(error) => (None, Some(error.to_string())),
+        let decoded = STANDARD
+            .decode(data)
+            .map_err(|error| error.to_string())
+            .and_then(|bytes| String::from_utf8(bytes).map_err(|error| error.to_string()));
+        let (text, decode_error) = match decoded {
+            Ok(text) => (Some(text), None),
+            Err(error) => (None, Some(error)),
         };
         // Retain callback arguments exactly; interpreting selector lists is host policy.
         self.clipboard.insert(
