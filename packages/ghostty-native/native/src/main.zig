@@ -16,7 +16,6 @@ const Cell = ghostty.Cell;
 const Page = ghostty.Page;
 const Style = ghostty.Style;
 const ReadonlyStream = ghostty.ReadonlyStream;
-const color = ghostty.color;
 const modes = ghostty.modes;
 const point = ghostty.point;
 const size = ghostty.size;
@@ -226,6 +225,7 @@ const JsCell = struct {
     inverse: bool,
     blink: bool,
     wide: u8, // 0=narrow, 1=wide, 2=spacer_tail
+    hyperlink: ?[]const u8,
 };
 
 fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
@@ -369,6 +369,11 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
         .inverse = inverse,
         .blink = blink,
         .wide = wide_val,
+        // napigen copies the page-owned URI into a JS string during this synchronous read.
+        .hyperlink = if (page.lookupHyperlink(cell)) |id|
+            page.hyperlink_set.get(page.memory, id).uri.slice(page.memory)
+        else
+            null,
     };
 }
 
@@ -389,6 +394,7 @@ fn defaultCell() JsCell {
         .inverse = false,
         .blink = false,
         .wide = 0,
+        .hyperlink = null,
     };
 }
 
@@ -524,25 +530,31 @@ fn scrollViewport(handle: *TerminalHandle, delta: i32) void {
 // ─── Colors ─────────────────────────────────────────────
 
 const JsColors = struct {
-    fg_r: u8,
-    fg_g: u8,
-    fg_b: u8,
-    bg_r: u8,
-    bg_g: u8,
-    bg_b: u8,
+    fg_r: i16,
+    fg_g: i16,
+    fg_b: i16,
+    bg_r: i16,
+    bg_g: i16,
+    bg_b: i16,
+    cursor_r: i16,
+    cursor_g: i16,
+    cursor_b: i16,
 };
 
 fn getDefaultColors(handle: *TerminalHandle) JsColors {
-    // Get foreground color — use configured or default (white)
-    const fg = handle.terminal.colors.foreground.get() orelse color.RGB{ .r = 255, .g = 255, .b = 255 };
-    const bg = handle.terminal.colors.background.get() orelse color.RGB{ .r = 0, .g = 0, .b = 0 };
+    const fg = handle.terminal.colors.foreground.get();
+    const bg = handle.terminal.colors.background.get();
+    const cursor = handle.terminal.colors.cursor.get();
 
     return .{
-        .fg_r = fg.r,
-        .fg_g = fg.g,
-        .fg_b = fg.b,
-        .bg_r = bg.r,
-        .bg_g = bg.g,
-        .bg_b = bg.b,
+        .fg_r = if (fg) |rgb| rgb.r else -1,
+        .fg_g = if (fg) |rgb| rgb.g else -1,
+        .fg_b = if (fg) |rgb| rgb.b else -1,
+        .bg_r = if (bg) |rgb| rgb.r else -1,
+        .bg_g = if (bg) |rgb| rgb.g else -1,
+        .bg_b = if (bg) |rgb| rgb.b else -1,
+        .cursor_r = if (cursor) |rgb| rgb.r else -1,
+        .cursor_g = if (cursor) |rgb| rgb.g else -1,
+        .cursor_b = if (cursor) |rgb| rgb.b else -1,
     };
 }

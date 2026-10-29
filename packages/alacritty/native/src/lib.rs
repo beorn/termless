@@ -122,7 +122,7 @@ fn declared_window(
 
 // ─── JS-visible cell data ────────────────────────────────
 
-#[napi(object)]
+#[napi(object, use_nullable = true)]
 pub struct JsCell {
     pub text: String,
     /// Foreground RGB as [r, g, b] or null for default
@@ -139,6 +139,7 @@ pub struct JsCell {
     pub strikethrough: bool,
     pub inverse: bool,
     pub wide: bool,
+    pub hyperlink: Option<String>,
 }
 
 #[napi(object)]
@@ -482,6 +483,7 @@ impl AlacrittyTerminal {
                     strikethrough: false,
                     inverse: false,
                     wide: false,
+                    hyperlink: None,
                 };
             }
         };
@@ -514,6 +516,7 @@ impl AlacrittyTerminal {
             strikethrough: flags.contains(CellFlags::STRIKEOUT),
             inverse: flags.contains(CellFlags::INVERSE),
             wide: flags.contains(CellFlags::WIDE_CHAR),
+            hyperlink: cell.hyperlink().map(|hyperlink| hyperlink.uri().to_owned()),
         }
     }
 

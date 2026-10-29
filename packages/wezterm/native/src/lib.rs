@@ -84,7 +84,7 @@ impl TerminalConfiguration for HeadlessConfig {
 // Exported cell type
 // ═══════════════════════════════════════════════════════
 
-#[napi(object)]
+#[napi(object, use_nullable = true)]
 pub struct NapiCell {
     pub text: String,
     pub fg_r: u8,
@@ -103,6 +103,7 @@ pub struct NapiCell {
     pub inverse: bool,
     pub blink: bool,
     pub wide: bool,
+    pub hyperlink: Option<String>,
 }
 
 #[napi(object)]
@@ -496,6 +497,7 @@ fn empty_cell() -> NapiCell {
         inverse: false,
         blink: false,
         wide: false,
+        hyperlink: None,
     }
 }
 
@@ -565,5 +567,6 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         inverse: attrs.reverse(),
         blink: attrs.blink() != tattoy_wezterm_term::Blink::None,
         wide: cell.width() > 1,
+        hyperlink: attrs.hyperlink().map(|link| link.uri().to_owned()),
     }
 }
