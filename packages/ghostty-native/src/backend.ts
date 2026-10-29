@@ -344,11 +344,12 @@ export function createGhosttyNativeBackend(
   function getScrollback(): ScrollbackState {
     const native = loadGhosttyNative()
     const ns = native.getScrollback(ensureHandle())
+    const viewportTop = ns.total_lines - ns.screen_lines - ns.viewport_offset
     return {
-      viewportTop: ns.viewport_offset,
+      viewportTop,
       totalRows: ns.total_lines,
       screenRows: ns.screen_lines,
-      viewportOffset: ns.viewport_offset,
+      viewportOffset: viewportTop,
       totalLines: ns.total_lines,
       screenLines: ns.screen_lines,
     }

@@ -66,7 +66,7 @@ interface NativeAlacrittyTerminal {
   getCursor(): NativeCursor
   getMode(mode: string): boolean | null
   getTitle(): string
-  getScrollback(): number[] // [viewportOffset, totalLines, screenLines]
+  getScrollback(): [number, number, number] // [viewportOffset, totalLines, screenLines]
   scrollViewport(delta: number): void
   destroy(): void
   /** Read pending response data (DA1/DA2/DSR/DECRPM/window-ops). Returns null if no responses pending. */
@@ -256,14 +256,15 @@ export function createAlacrittyBackend(
   }
 
   function getScrollback(): ScrollbackState {
-    const [viewportOffset, totalLines, screenLines] = ensureTerm().getScrollback()
+    const [relativeOffset, totalLines, screenLines] = ensureTerm().getScrollback()
+    const viewportTop = totalLines - screenLines - relativeOffset
     return {
-      viewportTop: viewportOffset!,
-      totalRows: totalLines!,
-      screenRows: screenLines!,
-      viewportOffset: viewportOffset!,
-      totalLines: totalLines!,
-      screenLines: screenLines!,
+      viewportTop,
+      totalRows: totalLines,
+      screenRows: screenLines,
+      viewportOffset: viewportTop,
+      totalLines,
+      screenLines,
     }
   }
 

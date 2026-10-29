@@ -496,11 +496,12 @@ export function createKittyBackend(
 
   function getScrollback(): ScrollbackState {
     const s = ensureSnapshot()
+    const viewportTop = s.scrollback.totalLines - s.scrollback.screenLines - s.scrollback.viewportOffset
     return {
-      viewportTop: s.scrollback.viewportOffset,
+      viewportTop,
       totalRows: s.scrollback.totalLines,
       screenRows: s.scrollback.screenLines,
-      viewportOffset: s.scrollback.viewportOffset,
+      viewportOffset: viewportTop,
       totalLines: s.scrollback.totalLines,
       screenLines: s.scrollback.screenLines,
     }

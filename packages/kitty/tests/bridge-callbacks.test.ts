@@ -15,6 +15,41 @@ import { fileURLToPath } from "node:url"
 import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
+// Existing snapshot tests never distinguish an absolute buffer row from distance to the bottom.
+test.skipIf(!isKittyAvailable())("reports absolute viewport rows through scrolling", () => {
+  const backend = createKittyBackend({ cols: 20, rows: 3 })
+  try {
+    expect(backend.getScrollback()).toEqual({
+      viewportTop: 0,
+      totalRows: 3,
+      screenRows: 3,
+      viewportOffset: 0,
+      totalLines: 3,
+      screenLines: 3,
+    })
+    backend.feed(new TextEncoder().encode("0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7"))
+    const expectPosition = (top: number): void => {
+      expect(backend.getScrollback()).toEqual({
+        viewportTop: top,
+        totalRows: 8,
+        screenRows: 3,
+        viewportOffset: top,
+        totalLines: 8,
+        screenLines: 3,
+      })
+    }
+    expectPosition(5)
+    backend.scrollViewport(-2)
+    expectPosition(3)
+    backend.scrollViewport(-100)
+    expectPosition(0)
+    backend.scrollViewport(100)
+    expectPosition(5)
+  } finally {
+    backend.destroy()
+  }
+})
+
 // Existing URI/callback tests never observe the distinct stored SGR 58/59 color.
 test.skipIf(!isKittyAvailable())("underline colors (requires installed Kitty or KITTY_BINARY)", () => {
   const backend = createKittyBackend({ cols: 6, rows: 1 })

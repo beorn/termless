@@ -80,7 +80,7 @@ type TerminalMode =
 
 ```typescript
 interface ScrollbackState {
-  viewportTop: number // Lines scrolled up from bottom (0 = at bottom)
+  viewportTop: number // Absolute buffer row: 0 = oldest retained row, totalRows - screenRows = live bottom; viewportOffset is the deprecated identical mirror.
   totalRows: number // Total rows in buffer (screen + scrollback)
   screenRows: number // Visible screen height
 }
