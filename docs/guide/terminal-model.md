@@ -56,7 +56,7 @@ Two separate buffers, not regions within one:
 | History above    | **scrollback**             | scrollback buffer                      | scrollback / history buffer        | scrollback                |
 | Everything       | **buffer**                 | absolute buffer (absolute coordinates) | text (`@text` = screen+scrollback) | buffer (`buffer.active`)  |
 | Alt screen       | **altScreen** mode         | alternate screen buffer                | secondary screen (`@alternate`)    | alternate (`buffer.type`) |
-| Scroll position  | **viewport** / viewportTop | viewportY (0=bottom)                   | scrolled_by                        | viewportY (0=bottom)      |
+| Scroll position  | **viewport** / absolute viewportTop (deprecated viewportOffset mirrors it) | Bottom-relative native offset | Bottom-relative scrolled_by | Absolute viewportY (0=oldest) |
 | Single character | **cell**                   | GhosttyCell                            | CPUCell / GPUCell                  | IBufferCell               |
 | Character row    | **row**                    | row                                    | line (LineBuf)                     | line (IBufferLine)        |
 

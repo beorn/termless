@@ -17,7 +17,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "d8e28a78fc15f47214c750137b879b9278293654",
+      blobOid: "a5a09304a7c742f833f1121d90ddda888aa67bf2",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",

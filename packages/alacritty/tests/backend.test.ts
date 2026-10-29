@@ -461,6 +461,38 @@ describeNative("alacritty backend", () => {
   })
 
   describe("scrollback", () => {
+    // Existing accumulation tests never distinguish an absolute buffer row from distance to the bottom.
+    test("reports absolute viewport rows through scrolling", () => {
+      backend = createBackend(20, 3)
+      expect(backend.getScrollback()).toEqual({
+        viewportTop: 0,
+        totalRows: 3,
+        screenRows: 3,
+        viewportOffset: 0,
+        totalLines: 3,
+        screenLines: 3,
+      })
+      feedText(backend, "0\r\n1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7")
+      const expectPosition = (top: number): void => {
+        expect(backend!.getScrollback()).toEqual({
+          viewportTop: top,
+          totalRows: 8,
+          screenRows: 3,
+          viewportOffset: top,
+          totalLines: 8,
+          screenLines: 3,
+        })
+      }
+      expectPosition(5)
+      // Alacritty's native scroll delta is positive toward older rows.
+      backend.scrollViewport(2)
+      expectPosition(3)
+      backend.scrollViewport(100)
+      expectPosition(0)
+      backend.scrollViewport(-100)
+      expectPosition(5)
+    })
+
     test("reports scrollback state", () => {
       backend = createBackend(20, 5)
       const state = backend.getScrollback()
