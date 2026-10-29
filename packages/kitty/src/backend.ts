@@ -30,9 +30,11 @@ import type {
   TerminalCapabilities,
   Color,
   EmulatorWarning,
+  ReplyDeliveryExtension,
   WarningExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { replyDelivery } from "./reply-delivery.ts"
 import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -220,7 +222,9 @@ export function isKittyAvailable(): boolean {
  *
  * @param opts - Optional terminal dimensions for eager initialization
  */
-export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBackend & WarningExtension {
+export function createKittyBackend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & WarningExtension & ReplyDeliveryExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let scrollbackLimit = 1000
@@ -491,7 +495,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["warnings"]),
+    extensions: new Set(["warnings", "reply-delivery"]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -504,7 +508,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
   // lazily (on next query) rather than immediately after feed(). This is fine
   // for testing but may cause timing issues with interactive PTY usage.
 
-  const backend: TerminalBackend & WarningExtension = {
+  const backend: TerminalBackend & WarningExtension & ReplyDeliveryExtension = {
     name: "kitty",
     init,
     destroy,
@@ -529,6 +533,7 @@ export function createKittyBackend(opts?: Partial<TerminalOptions>): TerminalBac
     clearWarnings: () => {
       warnings.length = 0
     },
+    replyDelivery,
   }
 
   return backend

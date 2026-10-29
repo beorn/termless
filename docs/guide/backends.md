@@ -69,9 +69,9 @@ never hashes itself. A consumer compares those facts with its measured loaded ru
 package versions alone provide no qualification. Each declaring adapter's owning tests hash its
 actual resolved import bytes, so an unaudited edit fails before commit as well as in clean CI.
 
-Xtermjs, vt100, vt220 and vterm declare complete paths. Libvterm drains queued replies but does not
-declare completeness: a large input can lose engine output before that drain. Ghostty's exposed
-response queue also does not establish delivery of every engine reply class. An absent extension
+Xtermjs, vt100, vt220, vterm, libvterm, Alacritty, WezTerm and Kitty declare complete paths; Kitty's
+replies return from its batch replay by the next `getCursor()`. Ghostty's exposed response queue does
+not establish delivery of every engine reply class. An absent extension
 provides no complete-delivery guarantee. See the [probe evidence contract](https://github.com/beorn/terminfo.dev/blob/main/packages/probe-defs/README.md)
 for the source-bound sentinel consumer and its late-reply checks.
 
