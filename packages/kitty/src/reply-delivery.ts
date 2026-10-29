@@ -10,13 +10,14 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // normalization change only the snapshot's cells, preserving response/callback collection and delivery. Bound to the
 // kitty 0.49.2 official launcher the hh flake builds at flake.lock
 // blob 6116bd61 (/nix/store/fbpk67n6fd9kb95vl7ksrc7pkh3gx3qx-kitty-official-binary-0.49.2/bin/kitty); its bytes follow the lock.
+// Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
   adapterSources: [
     { path: "packages/kitty/src/index.ts", blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077" },
-    { path: "packages/kitty/src/backend.ts", blobOid: "4d140726a97fe6d908c4cc2388e82319a7c36c40" },
-    { path: "packages/kitty/build/bridge.py", blobOid: "6306740c555808b694f8bf9b977b27e74da0d9ad" },
+    { path: "packages/kitty/src/backend.ts", blobOid: "f9bf650de8b2d2ae92475d170421bde2f207d978" },
+    { path: "packages/kitty/build/bridge.py", blobOid: "a8fd84db4da125d493088cb595804138248c639e" },
   ],
   engine: {
     kind: "native",

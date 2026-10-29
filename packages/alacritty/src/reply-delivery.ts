@@ -6,6 +6,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // these sources (Cargo.lock sha256 1f89f257), whose build receipt names the source commit.
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // Re-audited for owned OSC 8 URI readback and propagated cell-read errors: feed/getCursor/readResponse are unchanged.
+// Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -16,11 +17,11 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "7c4b8b266eafd3aaf4b95de3e3600436478486fd",
+      blobOid: "7bc63eb6bcba5c0f05c2dfb5e57e9cc94af6fdbb",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
-      blobOid: "94fffa294d31bec073b790d9c77b00eab2419233",
+      blobOid: "44a0f7ba52c64405b59f5eb45500d134ca9a56ae",
     },
     {
       path: "src/load-native.ts",
@@ -29,6 +30,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "11c87e7e7f23e6f224e9dc8c3296b0a91f5453a42038e5ad049aafa864f9bd50",
+    sha256: "d280c3fd2129f42db0d7154d6e66f5582a67fa1faf1e82ab463b6b8286f126d0",
   },
 }
