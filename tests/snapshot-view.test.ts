@@ -121,7 +121,9 @@ describe("snapshotView", () => {
 test("snapshot fields absent or null retain unknown while booleans remain measured", () => {
   const snapshot = makeSnapshot()
   const { faint: _faint, italic: _italic, strikethrough: _strike, blink: _blink, ...unreported } = cell("X")
-  snapshot.main.grid = [[unreported, cell("Y"), cell("Z", { faint: null, italic: null, strikethrough: null, blink: null })]]
+  snapshot.main.grid = [
+    [unreported, cell("Y"), cell("Z", { faint: null, italic: null, strikethrough: null, blink: null })],
+  ]
   const term = snapshotView(snapshot)
   for (const col of [0, 2]) {
     expect(term.getCell(1, col)).toMatchObject({ dim: null, italic: null, strikethrough: null, blink: null })

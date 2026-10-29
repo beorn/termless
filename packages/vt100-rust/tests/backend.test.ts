@@ -15,16 +15,19 @@ try {
   nativeBuildError = error instanceof Error ? error.message : String(error)
 }
 
-describe.skipIf(nativeBuildError !== null)(`Rust vt100 backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`, () => {
-  test("reports dim set and reset on distinct cells", () => {
-    const backend = createVt100RustBackend()
-    backend.init({ cols: 4, rows: 1 })
-    try {
-      backend.feed(new TextEncoder().encode("\x1b[2mA\x1b[22mB"))
-      expect(backend.getCell(0, 0).dim).toBe(true)
-      expect(backend.getCell(0, 1).dim).toBe(false)
-    } finally {
-      backend.destroy()
-    }
-  })
-})
+describe.skipIf(nativeBuildError !== null)(
+  `Rust vt100 backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
+  () => {
+    test("reports dim set and reset on distinct cells", () => {
+      const backend = createVt100RustBackend()
+      backend.init({ cols: 4, rows: 1 })
+      try {
+        backend.feed(new TextEncoder().encode("\x1b[2mA\x1b[22mB"))
+        expect(backend.getCell(0, 0).dim).toBe(true)
+        expect(backend.getCell(0, 1).dim).toBe(false)
+      } finally {
+        backend.destroy()
+      }
+    })
+  },
+)

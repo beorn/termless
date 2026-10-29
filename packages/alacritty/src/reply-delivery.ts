@@ -4,6 +4,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // reached the native constructor and resize: the CSI 14 t answer is appended to the same response buffer as PtyWrite,
 // in stream order (native/src/lib.rs send_event), so the path is unchanged; bound to the native artifact built from
 // these sources (Cargo.lock sha256 1f89f257), whose build receipt names the source commit.
+// Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -14,7 +15,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "7d21892bcc3f3abeb070be6c566cb114fd03e893",
+      blobOid: "a9a1f02d7bd3347108a17aa40f2f89c4b13ddc78",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
