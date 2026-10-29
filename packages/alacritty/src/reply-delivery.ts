@@ -30,6 +30,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "67736cf8d7d96156ac921566713032a445bfd8564e499f5e715c3c7f077d8af6",
+    sha256: "32d76284e5a3c7673fafbbc83a16717fa0a1c1811c7d659d982176a53ceb1aa9",
   },
 }
