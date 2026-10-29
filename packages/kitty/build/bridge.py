@@ -271,6 +271,7 @@ def make_snapshot():
                 "dim": cur.dim,
                 "italic": cur.italic,
                 "underline": decode_underline(cur.decoration),
+                "underlineColor": decode_color(cur.decoration_fg),
                 "strikethrough": cur.strikethrough,
                 "inverse": cur.reverse,
                 "blink": cur.text_blink if hasattr(cur, "text_blink") else False,

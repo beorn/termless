@@ -19,6 +19,27 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Existing URI/blink tests never observe the distinct stored SGR 58/59 color.
+    test("preserves indexed, truecolor and reset underline colors through the cell ABI", () => {
+      const backend = createGhosttyNativeBackend({ cols: 6, rows: 1 })
+      try {
+        backend.feed(new TextEncoder().encode("\x1b[4;38;5;5mC\x1b[58;5;5mI\x1b[58;2;255;0;128mR\x1b[59mD\x1b[0m"))
+        const palette5 = { r: 178, g: 148, b: 187 }
+        expect(backend.getCell(0, 0)).toMatchObject({ char: "C", fg: palette5, underlineColor: null })
+        expect(backend.getCell(0, 1)).toMatchObject({ char: "I", underline: "single", underlineColor: palette5 })
+        expect(backend.getCell(0, 2).underlineColor).toEqual({ r: 255, g: 0, b: 128 })
+        expect(backend.getCell(0, 3).underlineColor).toBeNull()
+        expect(
+          backend
+            .getLine(0)
+            .slice(0, 4)
+            .map((cell) => cell.underlineColor),
+        ).toEqual([null, palette5, { r: 255, g: 0, b: 128 }, null])
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("surfaces native cell-read errors and malformed URI metadata", () => {
       const native = loadGhosttyNative()
       const backend = createGhosttyNativeBackend()

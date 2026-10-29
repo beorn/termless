@@ -39,6 +39,10 @@ interface NapiCell {
   bgG: number
   bgB: number
   bgIsDefault: boolean
+  ulR: number
+  ulG: number
+  ulB: number
+  ulIsDefault: boolean
   bold: boolean
   faint: boolean
   italic: boolean
@@ -125,6 +129,14 @@ function convertNapiCell(cell: NapiCell): Cell {
   }
   const fg: Color | null = cell.fgIsDefault ? null : { r: cell.fgR, g: cell.fgG, b: cell.fgB }
   const bg: Color | null = cell.bgIsDefault ? null : { r: cell.bgR, g: cell.bgG, b: cell.bgB }
+  if (
+    typeof cell.ulIsDefault !== "boolean" ||
+    (!cell.ulIsDefault &&
+      ![cell.ulR, cell.ulG, cell.ulB].every((channel) => Number.isInteger(channel) && channel >= 0 && channel <= 255))
+  ) {
+    throw new Error("wezterm native underline color must report default or RGB; rebuild the native addon")
+  }
+  const underlineColor: Color | null = cell.ulIsDefault ? null : { r: cell.ulR, g: cell.ulG, b: cell.ulB }
 
   return {
     char: cell.text,
@@ -134,7 +146,7 @@ function convertNapiCell(cell: NapiCell): Cell {
     dim: cell.faint,
     italic: cell.italic,
     underline: cell.underline === "none" ? false : (cell.underline as Cell["underline"]),
-    underlineColor: null,
+    underlineColor,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
     blink: cell.blink,

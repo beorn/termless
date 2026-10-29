@@ -95,6 +95,10 @@ pub struct NapiCell {
     pub bg_g: u8,
     pub bg_b: u8,
     pub bg_is_default: bool,
+    pub ul_r: u8,
+    pub ul_g: u8,
+    pub ul_b: u8,
+    pub ul_is_default: bool,
     pub bold: bool,
     pub faint: bool,
     pub italic: bool,
@@ -489,6 +493,10 @@ fn empty_cell() -> NapiCell {
         bg_g: 0,
         bg_b: 0,
         bg_is_default: true,
+        ul_r: 0,
+        ul_g: 0,
+        ul_b: 0,
+        ul_is_default: true,
         bold: false,
         faint: false,
         italic: false,
@@ -535,6 +543,14 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         }
     };
 
+    let (ul_r, ul_g, ul_b, ul_is_default) = match attrs.underline_color() {
+        tattoy_wezterm_term::color::ColorAttribute::Default => (0, 0, 0, true),
+        ul => {
+            let (r, g, b) = srgba_rgb(palette.resolve_fg(ul));
+            (r, g, b, false)
+        }
+    };
+
     // Underline style
     let underline = match attrs.underline() {
         tattoy_wezterm_term::Underline::None => "none",
@@ -559,6 +575,10 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         bg_g,
         bg_b,
         bg_is_default,
+        ul_r,
+        ul_g,
+        ul_b,
+        ul_is_default,
         bold,
         faint,
         italic: attrs.italic(),

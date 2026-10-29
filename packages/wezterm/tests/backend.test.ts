@@ -31,6 +31,22 @@ describe.skipIf(nativeBuildError !== null)(
   () => {
     let backend: ReturnType<typeof createWeztermBackend>
 
+    // Existing URI/blink tests never observe the distinct stored SGR 58/59 color.
+    test("preserves indexed, truecolor and reset underline colors through the cell ABI", () => {
+      backend.feed(encode("\x1b[4;38;5;5mC\x1b[58;5;5mI\x1b[58;2;255;0;128mR\x1b[59mD\x1b[0m"))
+      const palette5 = { r: 204, g: 85, b: 204 }
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "C", fg: palette5, underlineColor: null })
+      expect(backend.getCell(0, 1)).toMatchObject({ char: "I", underline: "single", underlineColor: palette5 })
+      expect(backend.getCell(0, 2).underlineColor).toEqual({ r: 255, g: 0, b: 128 })
+      expect(backend.getCell(0, 3).underlineColor).toBeNull()
+      expect(
+        backend
+          .getLine(0)
+          .slice(0, 4)
+          .map((cell) => cell.underlineColor),
+      ).toEqual([null, palette5, { r: 255, g: 0, b: 128 }, null])
+    })
+
     beforeEach(() => {
       backend = createWeztermBackend()
       backend.init({ cols: 80, rows: 24 })

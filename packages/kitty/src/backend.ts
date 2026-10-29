@@ -107,6 +107,7 @@ interface BridgeCell {
   dim: boolean
   italic: boolean
   underline: string
+  underlineColor: [number, number, number] | null
   strikethrough: boolean
   inverse: boolean
   blink: boolean
@@ -152,6 +153,22 @@ function convertBridgeCell(cell: BridgeCell): Cell {
   }
   const fg: Color | null = cell.fg ? { r: cell.fg[0], g: cell.fg[1], b: cell.fg[2] } : null
   const bg: Color | null = cell.bg ? { r: cell.bg[0], g: cell.bg[1], b: cell.bg[2] } : null
+  if (
+    cell.underlineColor !== null &&
+    (!Array.isArray(cell.underlineColor) ||
+      cell.underlineColor.length !== 3 ||
+      !cell.underlineColor.every((channel) => Number.isInteger(channel) && channel >= 0 && channel <= 255))
+  ) {
+    throw new Error("Kitty bridge underlineColor must be an RGB triple or null")
+  }
+  const underlineColor: Color | null =
+    cell.underlineColor === null
+      ? null
+      : {
+          r: cell.underlineColor[0],
+          g: cell.underlineColor[1],
+          b: cell.underlineColor[2],
+        }
 
   return {
     char: cell.text,
@@ -161,7 +178,7 @@ function convertBridgeCell(cell: BridgeCell): Cell {
     dim: cell.dim,
     italic: cell.italic,
     underline: cell.underline === "none" ? false : (cell.underline as Cell["underline"]),
-    underlineColor: null,
+    underlineColor,
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
     blink: cell.blink ?? false,

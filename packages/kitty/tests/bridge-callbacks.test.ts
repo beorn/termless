@@ -15,6 +15,27 @@ import { fileURLToPath } from "node:url"
 import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
+// Existing URI/callback tests never observe the distinct stored SGR 58/59 color.
+test.skipIf(!isKittyAvailable())("underline colors (requires installed Kitty or KITTY_BINARY)", () => {
+  const backend = createKittyBackend({ cols: 6, rows: 1 })
+  try {
+    backend.feed(new TextEncoder().encode("\x1b[4;38;5;5mC\x1b[58;5;5mI\x1b[58;2;255;0;128mR\x1b[59mD\x1b[0m"))
+    const palette5 = { r: 128, g: 0, b: 128 }
+    expect(backend.getCell(0, 0)).toMatchObject({ char: "C", fg: palette5, underlineColor: null })
+    expect(backend.getCell(0, 1)).toMatchObject({ char: "I", underline: "single", underlineColor: palette5 })
+    expect(backend.getCell(0, 2).underlineColor).toEqual({ r: 255, g: 0, b: 128 })
+    expect(backend.getCell(0, 3).underlineColor).toBeNull()
+    expect(
+      backend
+        .getLine(0)
+        .slice(0, 4)
+        .map((cell) => cell.underlineColor),
+    ).toEqual([null, palette5, { r: 255, g: 0, b: 128 }, null])
+  } finally {
+    backend.destroy()
+  }
+})
+
 describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
   // OSC 4 set and OSC 104 reset run kitty's own Window.set_color_table_color, which ends in Window.refresh.
   test("a colour table change replays without a callback error", () => {

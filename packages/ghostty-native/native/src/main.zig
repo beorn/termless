@@ -217,6 +217,9 @@ const JsCell = struct {
     bg_r: i16,
     bg_g: i16,
     bg_b: i16,
+    ul_r: i16,
+    ul_g: i16,
+    ul_b: i16,
     bold: bool,
     faint: bool,
     italic: bool,
@@ -266,6 +269,9 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
     var bg_r: i16 = -1;
     var bg_g: i16 = -1;
     var bg_b: i16 = -1;
+    var ul_r: i16 = -1;
+    var ul_g: i16 = -1;
+    var ul_b: i16 = -1;
     var bold: bool = false;
     var faint: bool = false;
     var italic: bool = false;
@@ -306,6 +312,21 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
                 bg_r = rgb.r;
                 bg_g = rgb.g;
                 bg_b = rgb.b;
+            },
+            .none => {},
+        }
+
+        switch (sty.underline_color) {
+            .rgb => |rgb| {
+                ul_r = rgb.r;
+                ul_g = rgb.g;
+                ul_b = rgb.b;
+            },
+            .palette => |idx| {
+                const rgb = handle.terminal.colors.palette.current[idx];
+                ul_r = rgb.r;
+                ul_g = rgb.g;
+                ul_b = rgb.b;
             },
             .none => {},
         }
@@ -361,6 +382,9 @@ fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
         .bg_r = bg_r,
         .bg_g = bg_g,
         .bg_b = bg_b,
+        .ul_r = ul_r,
+        .ul_g = ul_g,
+        .ul_b = ul_b,
         .bold = bold,
         .faint = faint,
         .italic = italic,
@@ -386,6 +410,9 @@ fn defaultCell() JsCell {
         .bg_r = -1,
         .bg_g = -1,
         .bg_b = -1,
+        .ul_r = -1,
+        .ul_g = -1,
+        .ul_b = -1,
         .bold = false,
         .faint = false,
         .italic = false,

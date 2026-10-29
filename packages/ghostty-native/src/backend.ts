@@ -39,6 +39,9 @@ interface NativeCell {
   bg_r: number
   bg_g: number
   bg_b: number
+  ul_r: number
+  ul_g: number
+  ul_b: number
   bold: boolean
   faint: boolean
   italic: boolean
@@ -164,7 +167,7 @@ const CURSOR_STYLE_MAP: Record<number, CursorStyle> = {
 function readColor(r: number, g: number, b: number): Color | null {
   if (r === -1 && g === -1 && b === -1) return null
   if (![r, g, b].every((channel) => Number.isInteger(channel) && channel >= 0 && channel <= 255)) {
-    throw new Error("ghostty-native default color must be RGB or all -1; rebuild the native addon")
+    throw new Error("ghostty-native color must be RGB or all -1; rebuild the native addon")
   }
   return { r, g, b }
 }
@@ -181,7 +184,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     dim: nc.faint,
     italic: nc.italic,
     underline: UNDERLINE_MAP[nc.underline] ?? false,
-    underlineColor: null,
+    underlineColor: readColor(nc.ul_r, nc.ul_g, nc.ul_b),
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: nc.blink,
