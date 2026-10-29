@@ -51,6 +51,7 @@ interface NativeCell {
   blink: boolean
   wide: number // 0=narrow, 1=wide, 2=spacer_tail
   hyperlink: string | null
+  overline: boolean
 }
 
 interface NativeCursor {
@@ -188,7 +189,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     strikethrough: nc.strikethrough,
     inverse: nc.inverse,
     blink: nc.blink,
-    overline: null,
+    overline: nc.overline,
     hidden: false,
     wide: nc.wide === 1,
     continuation: nc.wide === 2, // spacer_tail
