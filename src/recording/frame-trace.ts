@@ -219,7 +219,9 @@ function bufferFingerprint(terminal: TestTerminal): {
         (cell.dim === null ? 64 : 0) |
         (cell.italic === null ? 128 : 0) |
         (cell.strikethrough === null ? 256 : 0) |
-        (cell.blink === null ? 512 : 0)
+        (cell.blink === null ? 512 : 0) |
+        (cell.overline ? 1024 : 0) |
+        (cell.overline === null ? 2048 : 0)
       const fg = cell.fg ? `${cell.fg.r},${cell.fg.g},${cell.fg.b}` : ""
       const bg = cell.bg ? `${cell.bg.r},${cell.bg.g},${cell.bg.b}` : ""
       s += `${cell.char}|${attrs}|${fg}|${bg};`

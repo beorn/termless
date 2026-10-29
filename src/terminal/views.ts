@@ -147,6 +147,7 @@ export function createCellView(cell: Cell, row: number, col: number): CellView {
     strikethrough: cell.strikethrough,
     inverse: cell.inverse,
     blink: cell.blink,
+    overline: cell.overline,
     hidden: cell.hidden,
     wide: cell.wide,
     continuation: cell.continuation,

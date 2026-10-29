@@ -231,6 +231,8 @@ function cellStyleToken(cell: Cell): string {
   if (cell.inverse) parts.push("inverse")
   if (cell.blink === null) parts.push("blink=null")
   else if (cell.blink) parts.push("blink")
+  if (cell.overline === null) parts.push("overline=null")
+  else if (cell.overline) parts.push("overline")
   if (cell.hidden) parts.push("hidden")
   if (cell.wide) parts.push("wide")
   if (cell.continuation) parts.push("continuation")

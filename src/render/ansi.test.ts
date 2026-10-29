@@ -15,6 +15,7 @@ function cell(char: string, overrides: Partial<Cell> = {}): Cell {
     strikethrough: false,
     inverse: false,
     blink: false,
+    overline: false,
     hidden: false,
     wide: false,
     continuation: false,
