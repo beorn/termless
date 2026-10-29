@@ -17,6 +17,9 @@ vendor/ghostty-web/*.patch -text
 packages/alacritty/src/index.ts text eol=lf
 packages/alacritty/src/backend.ts text eol=lf
 packages/alacritty/native/src/lib.rs text eol=lf
+packages/wezterm/src/index.ts text eol=lf
+packages/wezterm/src/backend.ts text eol=lf
+packages/wezterm/native/src/lib.rs text eol=lf
 src/load-native.ts text eol=lf
 packages/vt100/src/index.ts text eol=lf
 packages/vt100/src/backend.ts text eol=lf
