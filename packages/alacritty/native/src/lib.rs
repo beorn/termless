@@ -224,15 +224,19 @@ fn named_color_index(named: NamedColor) -> Option<u8> {
     }
 }
 
-fn color_to_rgb(color: &Color) -> Option<Vec<u8>> {
+fn color_to_rgb(color: &Color, colors: &alacritty_terminal::term::color::Colors) -> Option<Vec<u8>> {
     match color {
         Color::Spec(rgb) => Some(vec![rgb.r, rgb.g, rgb.b]),
         Color::Indexed(idx) => {
-            let (r, g, b) = palette_256(*idx);
+            let (r, g, b) = colors[*idx as usize]
+                .map(|rgb| (rgb.r, rgb.g, rgb.b))
+                .unwrap_or_else(|| palette_256(*idx));
             Some(vec![r, g, b])
         }
         Color::Named(named) => named_color_index(*named).map(|idx| {
-            let (r, g, b) = palette_256(idx);
+            let (r, g, b) = colors[idx as usize]
+                .map(|rgb| (rgb.r, rgb.g, rgb.b))
+                .unwrap_or_else(|| palette_256(idx));
             vec![r, g, b]
         }),
     }
@@ -504,15 +508,19 @@ impl AlacrittyTerminal {
             }
         }
 
+        let colors = term.colors();
         JsCell {
             text,
-            fg: color_to_rgb(&cell.fg),
-            bg: color_to_rgb(&cell.bg),
+            fg: color_to_rgb(&cell.fg, colors),
+            bg: color_to_rgb(&cell.bg, colors),
             bold: flags.contains(CellFlags::BOLD),
             faint: flags.contains(CellFlags::DIM),
             italic: flags.contains(CellFlags::ITALIC),
             underline: underline_style(flags).to_string(),
-            underline_color: cell.underline_color().as_ref().and_then(color_to_rgb),
+            underline_color: cell
+                .underline_color()
+                .as_ref()
+                .and_then(|c| color_to_rgb(c, colors)),
             strikethrough: flags.contains(CellFlags::STRIKEOUT),
             inverse: flags.contains(CellFlags::INVERSE),
             wide: flags.contains(CellFlags::WIDE_CHAR),

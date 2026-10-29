@@ -64,15 +64,69 @@ void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
   free(sink);
 }
 
-// Per-screen fixed-width observation record: visible, shape, blink. Unknown
-// remains -1 until the native reset/property callback emits the corresponding
-// value. The callback runs before libvterm stores the property, so read val.
+// Per-screen fixed-width observation record: visible, shape, blink at offsets 0..2,
+// plus engine-delivered VTERM_PROP_TITLE fragments accumulated per libvterm's
+// VTermStringFragment initial/final contract. The callback runs before libvterm
+// stores the property, so read val.
+typedef struct {
+  int32_t visible;
+  int32_t shape;
+  int32_t blink;
+  char *title;
+  size_t title_len;
+  size_t title_cap;
+  char *staging;
+  size_t staging_len;
+  size_t staging_cap;
+} TermlessPropRecord;
+
+static void clear_prop_title(TermlessPropRecord *rec) {
+  free(rec->title);
+  free(rec->staging);
+  rec->title = NULL;
+  rec->title_len = 0;
+  rec->title_cap = 0;
+  rec->staging = NULL;
+  rec->staging_len = 0;
+  rec->staging_cap = 0;
+}
+
 static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
-  int32_t *record = user;
+  TermlessPropRecord *rec = user;
   switch (prop) {
-    case VTERM_PROP_CURSORVISIBLE: record[0] = val->boolean; break;
-    case VTERM_PROP_CURSORSHAPE: record[1] = val->number; break;
-    case VTERM_PROP_CURSORBLINK: record[2] = val->boolean; break;
+    case VTERM_PROP_CURSORVISIBLE: rec->visible = val->boolean; break;
+    case VTERM_PROP_CURSORSHAPE: rec->shape = val->number; break;
+    case VTERM_PROP_CURSORBLINK: rec->blink = val->boolean; break;
+    case VTERM_PROP_TITLE: {
+      VTermStringFragment frag = val->string;
+      if (frag.initial) rec->staging_len = 0;
+      if (frag.len > 0) {
+        size_t needed = rec->staging_len + frag.len;
+        if (needed > rec->staging_cap) {
+          size_t cap = rec->staging_cap ? rec->staging_cap : 64;
+          while (cap < needed) cap *= 2;
+          char *grown = realloc(rec->staging, cap);
+          if (!grown) return 1;
+          rec->staging = grown;
+          rec->staging_cap = cap;
+        }
+        memcpy(rec->staging + rec->staging_len, frag.str, frag.len);
+        rec->staging_len = needed;
+      }
+      if (frag.final) {
+        size_t needed = rec->staging_len + 1;
+        if (needed > rec->title_cap) {
+          char *grown = realloc(rec->title, needed);
+          if (!grown) return 1;
+          rec->title = grown;
+          rec->title_cap = needed;
+        }
+        if (rec->staging_len > 0) memcpy(rec->title, rec->staging, rec->staging_len);
+        rec->title[rec->staging_len] = '\0';
+        rec->title_len = rec->staging_len;
+      }
+      break;
+    }
     default: break;
   }
   // Returning zero would veto native property storage, including properties
@@ -85,12 +139,28 @@ static const VTermScreenCallbacks observer_callbacks = {
 };
 
 void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
-  if (record) {
-    record[0] = record[1] = record[2] = -1;
-    vterm_screen_set_callbacks(screen, &observer_callbacks, record);
-  } else {
+  if (screen && record) {
+    TermlessPropRecord *rec = (TermlessPropRecord *)record;
+    memset(rec, 0, sizeof(*rec));
+    rec->visible = rec->shape = rec->blink = -1;
+    vterm_screen_set_callbacks(screen, &observer_callbacks, rec);
+  } else if (screen) {
     vterm_screen_set_callbacks(screen, NULL, NULL);
+  } else if (record) {
+    clear_prop_title((TermlessPropRecord *)record);
   }
+}
+
+const char *termless_vterm_screen_get_title(const int32_t *record) {
+  if (!record) return "";
+  const TermlessPropRecord *rec = (const TermlessPropRecord *)record;
+  return rec->title ? rec->title : "";
+}
+
+int termless_vterm_screen_get_title_len(const int32_t *record) {
+  if (!record) return 0;
+  const TermlessPropRecord *rec = (const TermlessPropRecord *)record;
+  return (int)rec->title_len;
 }
 
 // Emscripten cwrap accepts scalar arguments; libvterm's cell/text APIs take

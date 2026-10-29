@@ -362,6 +362,8 @@ export declare class GhosttyTerminal {
     isRowWrapped(row: number): boolean;
     /** Read the stored URI at an absolute buffer row (history first, then active). */
     getHyperlinkAt(row: number, col: number): string | null;
+    /** Read the current window title set by OSC 0 / OSC 2, cleared on full reset. */
+    getTitle(): string;
     /**
      * Legacy ID-only stub: hyperlink_id is only a presence bit; use getHyperlinkAt(row,col) for a URI.
      * Browser-provider cleanup waits on @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
@@ -485,6 +487,7 @@ declare interface GhosttyWasmExports extends WebAssembly.Exports {
     ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
     ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
     ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
+    ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
     ghostty_terminal_get_scrollback_length(terminal: TerminalHandle): number;
     ghostty_terminal_get_scrollback_line(terminal: TerminalHandle, offset: number, bufPtr: number, bufLen: number): number;
     ghostty_terminal_get_scrollback_grapheme(terminal: TerminalHandle, offset: number, col: number, bufPtr: number, bufLen: number): number;

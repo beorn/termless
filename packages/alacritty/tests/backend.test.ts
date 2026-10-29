@@ -30,7 +30,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "d280c3fd2129f42db0d7154d6e66f5582a67fa1faf1e82ab463b6b8286f126d0",
+    sha256: "67736cf8d7d96156ac921566713032a445bfd8564e499f5e715c3c7f077d8af6",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -335,6 +335,27 @@ describeNative("alacritty backend", () => {
       const reset = backend.getCell(0, 2)
       expect(reset.underline).toBe("single")
       expect(reset.underlineColor).toBeNull()
+    })
+
+    test("resolves indexed and named cell colors through term.colors() after OSC 4 and OSC 104 (#31735)", () => {
+      backend = createBackend()
+      // Set palette index 1 to an RGB distinct from our display default { r: 128, g: 0, b: 0 }
+      feedText(backend, "\x1b]4;1;rgb:12/34/56\x07\x1b[31;48;5;1;4;58;5;1mA\x1b[0m")
+      expect(backend.getCell(0, 0)).toMatchObject({
+        char: "A",
+        fg: { r: 0x12, g: 0x34, b: 0x56 },
+        bg: { r: 0x12, g: 0x34, b: 0x56 },
+        underline: "single",
+        underlineColor: { r: 0x12, g: 0x34, b: 0x56 },
+      })
+      // OSC 104 clears term.colors()[1] back to None, restoring our display default fallback
+      feedText(backend, "\x1b]104;1\x07")
+      expect(backend.getCell(0, 0)).toMatchObject({
+        char: "A",
+        fg: { r: 128, g: 0, b: 0 },
+        bg: { r: 128, g: 0, b: 0 },
+        underlineColor: { r: 128, g: 0, b: 0 },
+      })
     })
 
     test("detects wide characters", () => {

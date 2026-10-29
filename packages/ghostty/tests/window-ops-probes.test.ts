@@ -28,9 +28,10 @@ async function probeBackend(backend: TerminalBackend, query: string): Promise<st
 }
 
 describe("window-op probe responses — ghostty backend", () => {
-  test("does not synthesize constant CSI 14t or mirror CSI 18t responses when ghostty-web is silent", async () => {
+  test("leaves pixel CSI 14t/16t silent and formats CSI 18t cell size from Ghostty Termio.zig:540-546 (#31735)", async () => {
     await initGhostty()
     expect(await probeBackend(createGhosttyBackend(), "\x1b[14t")).toEqual([])
-    expect(await probeBackend(createGhosttyBackend(), "\x1b[18t")).toEqual([])
+    expect(await probeBackend(createGhosttyBackend(), "\x1b[16t")).toEqual([])
+    expect(await probeBackend(createGhosttyBackend(), "\x1b[18t")).toEqual(["\x1b[8;24;80t"])
   })
 })

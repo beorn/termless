@@ -255,7 +255,6 @@ export function createGhosttyBackend(
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
-  let title = ""
   let defaultColors: { fg: Color; bg: Color } = {
     fg: { r: 0, g: 0, b: 0 },
     bg: { r: 0, g: 0, b: 0 },
@@ -338,7 +337,6 @@ export function createGhosttyBackend(
 
     cols = options.cols
     rows = options.rows
-    title = ""
 
     term = ghosttyInstance.createTerminal(cols, rows, {
       scrollbackLimit: options.scrollbackLimit ?? 1000,
@@ -404,7 +402,6 @@ export function createGhosttyBackend(
     // Send RIS (Reset to Initial State)
     t.write("\x1bc")
     t.update()
-    title = ""
   }
 
   function getText(): string {
@@ -587,7 +584,7 @@ export function createGhosttyBackend(
   }
 
   function getTitle(): string {
-    return title
+    return ensureTerm().getTitle()
   }
 
   function getScrollback(): ScrollbackState {

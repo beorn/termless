@@ -83,22 +83,13 @@ def palette_256(index):
 
 
 def decode_color(val):
-    """Decode kitty's internal color_type to [r, g, b] or None."""
+    """Decode kitty's internal color_type to [r, g, b] or None via the engine's live ColorProfile."""
     if val == 0:
         return None  # default color
-    flags = val & 0xFF
-    if flags & 2:
-        # Truecolor: (R << 24) | (G << 16) | (B << 8) | 0x02
-        r = (val >> 24) & 0xFF
-        g = (val >> 16) & 0xFF
-        b = (val >> 8) & 0xFF
-        return [r, g, b]
-    elif flags & 1:
-        # Indexed: (index << 8) | 0x01
-        index = (val >> 8) & 0xFF
-        rgb = palette_256(index)
-        return list(rgb)
-    return None
+    color = screen.color_profile.as_color(int(val) & 0xFFFFFFFF)
+    if color is None:
+        return None
+    return [color.red, color.green, color.blue]
 
 
 def decode_underline(decoration):

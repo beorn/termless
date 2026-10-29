@@ -173,11 +173,10 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
   let module: LibvtermModule | null = mod ?? getLoadedModule()
   let cols = opts?.cols ?? DEFAULT_COLS
   let rows = opts?.rows ?? DEFAULT_ROWS
-  let title = ""
 
   // Reusable cell struct allocation (allocated once per backend instance)
   let cellPtr: number = 0
-  // Three int32 values owned by this instance: visibility, native shape, blink.
+  // Observation record owned by this instance: visibility, native shape, blink, and VTERM_PROP_TITLE buffers.
   let cursorPropsPtr = 0
 
   function ensureInit(): LibvtermModule {
@@ -202,7 +201,6 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
     cols = options.cols
     rows = options.rows
-    title = ""
 
     // Create the VTerm instance
     vt = module.vterm_new(rows, cols)
@@ -217,7 +215,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     screen = module.vterm_obtain_screen(vt)
     state = module.vterm_obtain_state(vt)
 
-    cursorPropsPtr = module._malloc(3 * 4)
+    cursorPropsPtr = module._malloc(9 * 4)
     if (!cursorPropsPtr) {
       destroy()
       throw new Error("libvterm cursor observation allocation failed")
@@ -239,6 +237,7 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
       // A failed init can destroy before the screen handle exists; libvterm dereferences the screen it is given.
       if (screen) module.termless_vterm_screen_observe_props(screen, 0)
       if (cursorPropsPtr) {
+        module.termless_vterm_screen_observe_props(0, cursorPropsPtr)
         module._free(cursorPropsPtr)
         cursorPropsPtr = 0
       }
@@ -295,13 +294,13 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
 
   function reset(): void {
     const m = ensureInit()
+    if (cursorPropsPtr) m.termless_vterm_screen_observe_props(0, cursorPropsPtr)
     // Feed RIS (Reset to Initial State) escape sequence
     const ris = encoder.encode("\x1bc")
     const ptr = m._malloc(ris.length)
     writeBytes(m, ptr, ris)
     m.vterm_input_write(vt, ptr, ris.length)
     m._free(ptr)
-    title = ""
   }
 
   function getText(): string {
@@ -412,7 +411,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
   }
 
   function getTitle(): string {
-    return title
+    const m = ensureInit()
+    const len = m.termless_vterm_screen_get_title_len(cursorPropsPtr)
+    if (len <= 0) return ""
+    const ptr = m.termless_vterm_screen_get_title(cursorPropsPtr)
+    return m.UTF8ToString(ptr, len)
   }
 
   function getScrollback(): ScrollbackState {

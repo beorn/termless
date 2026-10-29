@@ -17,11 +17,18 @@ interface XtermInternalLine {
   replaceCells?(start: number, end: number, fill: unknown): void
 }
 
+interface XtermColorEvent {
+  readonly type: number
+  readonly index?: number
+  readonly color?: readonly [number, number, number]
+}
+
 interface XtermInternalInputHandler {
   _iconName?: unknown
   _windowTitle?: unknown
   _iconNameStack?: unknown
   _windowTitleStack?: unknown
+  onColor?(listener: (events: readonly XtermColorEvent[]) => void): { dispose(): void }
 }
 
 interface XtermInternalCore {
@@ -142,6 +149,13 @@ export function createXtermBackend(
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
+  // Host-mirrored 256-color table updated from xterm.js InputHandler's typed onColor events (OSC 4 set / OSC 104 restore).
+  // Initialized and restored from PALETTE_256 (our display default).
+  let palette: Color[] = PALETTE_256.map((c) => ({ ...c }))
+
+  function instancePaletteToRgb(index: number): Color {
+    return palette[index] ?? paletteToRgb(index)
+  }
 
   function coreOf(t: XTerminal): XtermInternalCore {
     const core = (t as unknown as { _core?: XtermInternalCore })._core
@@ -210,6 +224,38 @@ export function createXtermBackend(
     title = ""
     term.onTitleChange((t: string) => {
       title = t
+    })
+
+    palette = PALETTE_256.map((c) => ({ ...c }))
+    const inputHandler = coreOf(term)._inputHandler
+    if (typeof inputHandler?.onColor !== "function") {
+      throw new Error("xterm.js headless color-event API is unavailable (_core._inputHandler.onColor)")
+    }
+    inputHandler.onColor((events) => {
+      if (!Array.isArray(events)) {
+        throw new Error("xterm.js headless color-event payload is invalid")
+      }
+      for (const ev of events) {
+        if (ev.type === 1) {
+          if (
+            typeof ev.index === "number" &&
+            ev.index >= 0 &&
+            ev.index < 256 &&
+            Array.isArray(ev.color) &&
+            ev.color.length === 3
+          ) {
+            palette[ev.index] = { r: ev.color[0], g: ev.color[1], b: ev.color[2] }
+          }
+        } else if (ev.type === 2) {
+          if (ev.index === undefined) {
+            for (let i = 0; i < 256; i++) {
+              palette[i] = { ...PALETTE_256[i]! }
+            }
+          } else if (typeof ev.index === "number" && ev.index >= 0 && ev.index < 256) {
+            palette[ev.index] = { ...PALETTE_256[ev.index]! }
+          }
+        }
+      }
     })
 
     // Forward DA1/DA2/DSR + window-op responses to the terminal layer
@@ -317,6 +363,9 @@ export function createXtermBackend(
     inputHandler._windowTitle = ""
     inputHandler._iconNameStack.length = 0
     inputHandler._windowTitleStack.length = 0
+    for (let i = 0; i < 256; i++) {
+      palette[i] = { ...PALETTE_256[i]! }
+    }
   }
 
   function getText(): string {
@@ -383,7 +432,7 @@ export function createXtermBackend(
             break
           case 0x1000000:
           case 0x2000000:
-            color = paletteToRgb(rawColor & 0xff)
+            color = instancePaletteToRgb(rawColor & 0xff)
             break
           case 0x3000000:
             color = truecolorToRgb(rawColor & 0xffffff)
@@ -426,7 +475,7 @@ export function createXtermBackend(
     if (bufCell.isFgRGB()) {
       fg = truecolorToRgb(bufCell.getFgColor())
     } else if (bufCell.isFgPalette()) {
-      fg = paletteToRgb(bufCell.getFgColor())
+      fg = instancePaletteToRgb(bufCell.getFgColor())
     }
 
     // Background color
@@ -434,7 +483,7 @@ export function createXtermBackend(
     if (bufCell.isBgRGB()) {
       bg = truecolorToRgb(bufCell.getBgColor())
     } else if (bufCell.isBgPalette()) {
-      bg = paletteToRgb(bufCell.getBgColor())
+      bg = instancePaletteToRgb(bufCell.getBgColor())
     }
 
     // Read extended attributes for accurate underline style

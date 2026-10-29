@@ -32,6 +32,8 @@ export interface LibvtermModule {
   vterm_screen_enable_altscreen(screen: number, enable: number): void
   /** One flat C observer; a zero record detaches before its allocation is freed. */
   termless_vterm_screen_observe_props(screen: number, record: number): void
+  termless_vterm_screen_get_title(record: number): number
+  termless_vterm_screen_get_title_len(record: number): number
   vterm_screen_get_cell(screen: number, row: number, col: number, cellPtr: number): number
   vterm_screen_get_text(
     screen: number,
@@ -127,6 +129,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "number",
       "number",
     ])
+    module.termless_vterm_screen_get_title = cwrap("termless_vterm_screen_get_title", "number", ["number"])
+    module.termless_vterm_screen_get_title_len = cwrap("termless_vterm_screen_get_title_len", "number", ["number"])
     module.vterm_screen_get_cell = cwrap("termless_vterm_screen_get_cell_flat", "number", [
       "number",
       "number",

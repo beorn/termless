@@ -291,4 +291,31 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     expect(await probeBackend("\x1b[14t")).toEqual([])
     expect(await probeBackend("\x1b[18t")).toEqual([])
   })
+
+  test("observes native VTERM_PROP_TITLE across OSC 0, OSC 2, fragmented writes, reset, and isolated instances (#31735)", () => {
+    const backend = createLibvtermBackend(undefined, wasmModule!)
+    const isolated = createLibvtermBackend(undefined, wasmModule!)
+    backend.init({ cols: 40, rows: 4 })
+    isolated.init({ cols: 40, rows: 4 })
+    try {
+      expect(backend.getTitle()).toBe("")
+      backend.feed(new TextEncoder().encode("\x1b]0;osc0-title\x07"))
+      expect(backend.getTitle()).toBe("osc0-title")
+      expect(isolated.getTitle()).toBe("")
+
+      backend.feed(new TextEncoder().encode("\x1b]2;osc2-title\x1b\\"))
+      expect(backend.getTitle()).toBe("osc2-title")
+
+      // Split write across two feed() calls exercises VTermStringFragment initial/final accumulation
+      backend.feed(new TextEncoder().encode("\x1b]2;split-"))
+      backend.feed(new TextEncoder().encode("title-é世\x07"))
+      expect(backend.getTitle()).toBe("split-title-é世")
+
+      backend.reset()
+      expect(backend.getTitle()).toBe("")
+    } finally {
+      backend.destroy()
+      isolated.destroy()
+    }
+  })
 })

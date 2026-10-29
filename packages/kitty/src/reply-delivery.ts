@@ -17,7 +17,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   adapterSources: [
     { path: "packages/kitty/src/index.ts", blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077" },
     { path: "packages/kitty/src/backend.ts", blobOid: "f8e143b4c0b12297cb095bd1ddcde15fed49ee5a" },
-    { path: "packages/kitty/build/bridge.py", blobOid: "a8fd84db4da125d493088cb595804138248c639e" },
+    { path: "packages/kitty/build/bridge.py", blobOid: "c12fdf6aad9c7e2bc998b6958461d711713b48de" },
   ],
   engine: {
     kind: "native",

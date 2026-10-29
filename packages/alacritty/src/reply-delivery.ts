@@ -21,7 +21,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
-      blobOid: "44a0f7ba52c64405b59f5eb45500d134ca9a56ae",
+      blobOid: "f8d4ef7a2c4f389dd80ecbd3f9dae38600446a1e",
     },
     {
       path: "src/load-native.ts",
@@ -30,6 +30,6 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   ],
   engine: {
     kind: "native",
-    sha256: "d280c3fd2129f42db0d7154d6e66f5582a67fa1faf1e82ab463b6b8286f126d0",
+    sha256: "67736cf8d7d96156ac921566713032a445bfd8564e499f5e715c3c7f077d8af6",
   },
 }
