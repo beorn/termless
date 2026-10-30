@@ -273,19 +273,11 @@ describe("cross-backend conformance", () => {
   })
 
   describe("OSC title", () => {
-    forEachBackend((name, create) => {
+    forEachBackend((_name, create) => {
       test("OSC 2 sets title", () => {
         const b = init(create)
         feedText(b, "\x1b]2;My Title\x07")
-        if (name === "ghostty") {
-          // ghostty-web WASM: no title change callback, always returns ""
-          expect(b.getTitle()).toBe("")
-        } else if (name === "vt100") {
-          // vt100.js supports OSC 0/2 title
-          expect(b.getTitle()).toBe("My Title")
-        } else {
-          expect(b.getTitle()).toBe("My Title")
-        }
+        expect(b.getTitle()).toBe("My Title")
       })
     })
   })

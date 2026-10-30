@@ -125,7 +125,7 @@ Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-acceler
 - **Engine**: ghostty-web 0.4 (WebAssembly)
 - **Upstream**: `npm:ghostty-web`
 - **Best for**: Testing against a modern, standards-compliant parser. Verifying Kitty keyboard protocol support.
-- **Limitations**: WASM build does not support viewport scrolling or Kitty graphics. OSC title changes have no callback in WASM mode.
+- **Limitations**: WASM build does not support viewport scrolling or Kitty graphics. Read OSC titles with `getTitle()`; title push/pop is unimplemented.
 - **Install**: `bunx termless backends install ghostty` (or `npm install -D @termless/ghostty`)
 
 ```typescript
