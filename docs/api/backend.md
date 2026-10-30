@@ -30,12 +30,20 @@ interface TerminalBackend extends Terminal {
   encodeKey(key: KeyDescriptor): Uint8Array
 
   // Scrollback
+  // Compatibility no-op when capabilities.productViewport declares absence;
+  // probes omit this control for that library subject.
   scrollViewport(delta: number): void
 
   // Capabilities
   readonly capabilities: TerminalCapabilities
 }
 ```
+
+`capabilities.productViewport?: { available: false; reason: string }` records audited
+absence of a viewport in the library subject. Undefined means undeclared. WezTerm
+Screen and libvterm retain the required `scrollViewport` compatibility no-op;
+probes never read it when this declaration is present. The reason cites the pinned
+library interface, not the enclosing application's viewport.
 
 ## TerminalOptions
 

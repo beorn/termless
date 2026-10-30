@@ -6,6 +6,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // the sink lost a reply to a failed allocation (src/backend.ts feed). Whole DA1, DA2 and DECRQSS replies behind a
 // 5600-byte backlog were measured on this artifact (tests/window-ops-probes.test.ts). The WASM is the receipt's pair,
 // built from build/flat-api.c and build/build.sh at libvterm v0.3.3.
+// Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -16,7 +17,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "63d6406b52cc48347fef2b9129e56905fb486060",
+      blobOid: "042e2726974e5bc72b2789a885e0823d0336bb34",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",

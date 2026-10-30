@@ -354,6 +354,11 @@ export function createWeztermBackend(
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
+    productViewport: {
+      available: false,
+      reason:
+        "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
+    },
     extensions: new Set(["hyperlinks", "reply-delivery"]),
   }
 

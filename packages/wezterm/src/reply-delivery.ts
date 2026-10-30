@@ -10,6 +10,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // Re-audited for owned OSC 8 URI readback: the existing synchronous reply path is unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
+// Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
@@ -20,7 +21,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "ae6f7aab356690484cd32e432a8105486e6f44d2",
+      blobOid: "aa6cacb182875a69db79a2a0ffda1ca6912696cd",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",

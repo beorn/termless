@@ -450,6 +450,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
     semanticPrompts: false,
     unicode: "15.1",
     reflow: false,
+    productViewport: {
+      available: false,
+      reason:
+        "libvterm v0.3.3 library subject hands rows through sb_pushline/sb_popline and retains neither history nor a viewport: include/vterm.h:534-548; src/screen.c:208-226,677-680 (9d6d2112335080312ef8c36667fa717ded4f7daf). An embedding application's viewport is a different subject.",
+    },
     extensions: new Set<string>(["reply-delivery"]),
   }
 

@@ -111,6 +111,8 @@ export interface TerminalCapabilities {
   semanticPrompts: boolean
   unicode: string
   reflow: boolean
+  /** Audited absence for this library subject. Undefined means undeclared, not supported or absent. */
+  productViewport?: { available: false; reason: string }
   extensions: Set<string>
 }
 
