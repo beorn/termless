@@ -31,10 +31,33 @@ interface XtermInternalInputHandler {
   onColor?(listener: (events: readonly XtermColorEvent[]) => void): { dispose(): void }
 }
 
+interface XtermInternalDisposable {
+  dispose(): void
+}
+
+interface XtermInternalCoreMouseEvent {
+  col: number
+  row: number
+  x: number
+  y: number
+  button: number
+  action: number
+  ctrl?: boolean
+  alt?: boolean
+  shift?: boolean
+}
+
 interface XtermInternalCore {
   readonly _writeBuffer?: { writeSync(data: string): void }
   readonly _inputHandler?: XtermInternalInputHandler
-  readonly coreService?: { readonly isCursorHidden?: unknown }
+  readonly coreService?: {
+    readonly isCursorHidden?: unknown
+    onData?(listener: (data: string) => void): XtermInternalDisposable
+    onBinary?(listener: (data: string) => void): XtermInternalDisposable
+  }
+  readonly coreMouseService?: {
+    triggerMouseEvent?(event: XtermInternalCoreMouseEvent): boolean
+  }
   readonly buffer?: {
     readonly lines?: { readonly length: number; get(index: number): XtermInternalLine | undefined }
     getNullCell?(): unknown
@@ -55,6 +78,8 @@ import type {
   TerminalBackend,
   ReplyDeliveryExtension,
   HyperlinkExtension,
+  MouseEncodingExtension,
+  MouseEvent,
   TerminalOptions,
   Cell,
   Cursor,
@@ -145,7 +170,7 @@ const DEFAULT_ROWS = 24
 export function createXtermBackend(
   opts?: Partial<TerminalOptions>,
   // oxlint-disable-next-line typescript/no-deprecated -- Registered adapter still implements this lifecycle.
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension {
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
@@ -637,6 +662,108 @@ export function createXtermBackend(
     ensureTerm().scrollLines(delta)
   }
 
+  function toCoreMouseEvent(event: MouseEvent): XtermInternalCoreMouseEvent {
+    let button: number
+    switch (event.button) {
+      case "left":
+        button = 0
+        break
+      case "middle":
+        button = 1
+        break
+      case "right":
+        button = 2
+        break
+      case "none":
+        button = 3
+        break
+      case "wheelUp":
+      case "wheelDown":
+        button = 4
+        break
+    }
+
+    let action: number
+    if (event.button === "wheelUp") {
+      action = event.action === "press" ? 0 : 32
+    } else if (event.button === "wheelDown") {
+      action = event.action === "press" ? 1 : 32
+    } else {
+      switch (event.action) {
+        case "release":
+          action = 0
+          break
+        case "press":
+          action = 1
+          break
+        case "move":
+          action = 32
+          break
+      }
+    }
+
+    return {
+      col: event.x,
+      row: event.y,
+      x: 0,
+      y: 0,
+      button,
+      action,
+      ctrl: Boolean(event.ctrl),
+      alt: Boolean(event.alt),
+      shift: Boolean(event.shift),
+    }
+  }
+
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    const t = ensureTerm()
+    const core = coreOf(t)
+    const coreService = core.coreService
+    const coreMouseService = core.coreMouseService
+    if (
+      typeof coreService?.onData !== "function" ||
+      typeof coreService.onBinary !== "function" ||
+      typeof coreMouseService?.triggerMouseEvent !== "function"
+    ) {
+      throw new Error("xterm.js headless mouse encoding service is unavailable")
+    }
+
+    const emissions: Uint8Array[] = []
+    const textEncoder = new TextEncoder()
+    const dataSub = coreService.onData((data: string) => {
+      emissions.push(textEncoder.encode(data))
+    })
+    const binarySub = coreService.onBinary((data: string) => {
+      emissions.push(Uint8Array.from(data, (ch) => ch.charCodeAt(0) & 0xff))
+    })
+
+    let accepted = false
+    try {
+      accepted = coreMouseService.triggerMouseEvent(toCoreMouseEvent(event))
+    } finally {
+      dataSub.dispose()
+      binarySub.dispose()
+    }
+
+    if (!accepted) {
+      if (emissions.length > 0) {
+        throw new Error(
+          `xterm.js mouse encoding delegate emitted ${emissions.length} report(s) after triggerMouseEvent returned false`,
+        )
+      }
+      return null
+    }
+
+    const [singleEmission] = emissions
+    if (emissions.length !== 1 || singleEmission === undefined) {
+      throw new Error(
+        `xterm.js mouse encoding delegate emitted ${emissions.length} report(s) after triggerMouseEvent returned true (expected 1)`,
+      )
+    }
+
+    return singleEmission
+  }
+
   const capabilities: TerminalCapabilities = {
     name: "xterm",
     version: "6.0.0",
@@ -648,11 +775,11 @@ export function createXtermBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["hyperlinks", "reply-delivery"]),
+    extensions: new Set(["hyperlinks", "reply-delivery", "mouse-encoding"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension = {
     name: "xterm",
     init,
     destroy,
@@ -678,6 +805,7 @@ export function createXtermBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodeMouse,
     capabilities,
     replyDelivery,
   }

@@ -1,4 +1,4 @@
-import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import type { MouseEncodingExtension, MouseEvent, ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
@@ -764,6 +764,130 @@ describe("createXtermBackend", () => {
       )
     } finally {
       inputHandlerProto.setIconName = origSetIconName
+      backend.destroy()
+    }
+  })
+
+  // ── MouseEncodingExtension (CoreMouseService delegate) ──
+
+  test("declares mouse-encoding extension and delegates encodeMouse to CoreMouseService without mutating caller events", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const encode = (s: string) => new TextEncoder().encode(s)
+    const parseSgrReport = (bytes: Uint8Array | null) => {
+      if (bytes === null) {
+        throw new Error("expected non-null SGR mouse report bytes")
+      }
+      expect(bytes[0]).toBe(0x1b)
+      expect(bytes[1]).toBe(0x5b)
+      expect(bytes[2]).toBe(0x3c)
+      const finalByte = bytes[bytes.length - 1]
+      if (finalByte === undefined) {
+        throw new Error("expected SGR mouse report final byte")
+      }
+      const finalChar = String.fromCharCode(finalByte)
+      const [buttonCode, col1Based, row1Based] = new TextDecoder()
+        .decode(bytes.slice(3, -1))
+        .split(";")
+        .map((part) => Number.parseInt(part, 10))
+      return { buttonCode, col1Based, row1Based, finalChar }
+    }
+
+    try {
+      expect(hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")).toBe(true)
+
+      const pressEvent: MouseEvent = { x: 4, y: 2, button: "left", action: "press" }
+      // Modes off by default: CoreMouseService activeProtocol is NONE, so encodeMouse returns null
+      expect(backend.encodeMouse(pressEvent)).toBeNull()
+      expect(pressEvent).toEqual({ x: 4, y: 2, button: "left", action: "press" })
+
+      // Enable VT200 button tracking (?1000h) + SGR mouse encoding (?1006h)
+      backend.feed(encode("\x1b[?1000h\x1b[?1006h"))
+      const firstPress = parseSgrReport(backend.encodeMouse(pressEvent))
+      expect(firstPress).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "M" })
+      expect(pressEvent).toEqual({ x: 4, y: 2, button: "left", action: "press" })
+
+      // Re-using the same event object must not drift coordinates despite CoreMouseService's in-place e.col++/e.row++
+      const secondPress = parseSgrReport(backend.encodeMouse(pressEvent))
+      expect(secondPress).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "M" })
+
+      const releaseReport = parseSgrReport(backend.encodeMouse({ x: 4, y: 2, button: "left", action: "release" }))
+      expect(releaseReport).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "m" })
+
+      // DEFAULT (X10/VT200 binary) encoding emits via coreService.onBinary
+      backend.feed(encode("\x1b[?1006l\x1b[?1000h"))
+      const binaryBytes = backend.encodeMouse(pressEvent)
+      if (binaryBytes === null) {
+        throw new Error("expected non-null DEFAULT binary mouse report bytes")
+      }
+      expect(Array.from(binaryBytes)).toEqual([0x1b, 0x5b, 0x4d, 32, 4 + 1 + 32, 2 + 1 + 32])
+
+      // Disable mouse modes (?1000l, ?1006l): encodeMouse returns null again
+      backend.feed(encode("\x1b[?1000l\x1b[?1006l"))
+      expect(backend.encodeMouse(pressEvent)).toBeNull()
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("encodeMouse enforces exact 1:1 emission contract on CoreMouseService.triggerMouseEvent", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    const term = new xterm.Terminal({ cols: 80, rows: 24, allowProposedApi: true })
+    const core = (
+      term as unknown as {
+        _core?: {
+          coreMouseService?: {
+            triggerMouseEvent(event: unknown): boolean
+          }
+          coreService?: {
+            triggerDataEvent(data: string, wasUserInput?: boolean): void
+          }
+        }
+      }
+    )._core
+    const coreMouseService = core?.coreMouseService
+    if (!coreMouseService) {
+      throw new Error("expected @xterm/headless _core.coreMouseService")
+    }
+    const mouseProto = Object.getPrototypeOf(coreMouseService) as {
+      triggerMouseEvent(
+        this: { _coreService: { triggerDataEvent(data: string, wasUserInput?: boolean): void } },
+        event: { col: number },
+      ): boolean
+    }
+    const origTriggerMouseEvent = mouseProto.triggerMouseEvent
+    term.dispose()
+
+    try {
+      mouseProto.triggerMouseEvent = function (event) {
+        if (event.col === 10) {
+          // Accepted = true, 0 emissions
+          return true
+        }
+        if (event.col === 11) {
+          // Accepted = true, 2 emissions
+          this._coreService.triggerDataEvent("first", true)
+          this._coreService.triggerDataEvent("second", true)
+          return true
+        }
+        if (event.col === 12) {
+          // Accepted = false, 1 emission
+          this._coreService.triggerDataEvent("spurious", true)
+          return false
+        }
+        return origTriggerMouseEvent.call(this, event)
+      }
+
+      expect(() => backend.encodeMouse({ x: 10, y: 0, button: "left", action: "press" })).toThrow(
+        "xterm.js mouse encoding delegate emitted 0 report(s) after triggerMouseEvent returned true (expected 1)",
+      )
+      expect(() => backend.encodeMouse({ x: 11, y: 0, button: "left", action: "press" })).toThrow(
+        "xterm.js mouse encoding delegate emitted 2 report(s) after triggerMouseEvent returned true (expected 1)",
+      )
+      expect(() => backend.encodeMouse({ x: 12, y: 0, button: "left", action: "press" })).toThrow(
+        "xterm.js mouse encoding delegate emitted 1 report(s) after triggerMouseEvent returned false",
+      )
+    } finally {
+      mouseProto.triggerMouseEvent = origTriggerMouseEvent
       backend.destroy()
     }
   })
