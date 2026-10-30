@@ -28,7 +28,58 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
    // ==========================================================================
-@@ -582,6 +583,11 @@
+@@ -544,6 +545,50 @@
+     return this.exports.ghostty_terminal_get_scrollback_length(this.handle);
+   }
+ 
++  /**
++   * Read the core viewport of the active screen: total rows (history + active),
++   * absolute row of the viewport top (0 = oldest history row), visible rows.
++   */
++  getViewportState(): { totalRows: number; viewportTop: number; screenRows: number } {
++    if (!this.handle) throw new Error('Ghostty terminal has been freed');
++    const read = this.exports.ghostty_terminal_get_viewport_state;
++    if (typeof read !== 'function') {
++      throw new Error('Ghostty WASM is missing ghostty_terminal_get_viewport_state');
++    }
++    const scratch = this.exports.ghostty_wasm_alloc_u8_array(12);
++    if (!scratch) throw new Error('Failed to allocate viewport state');
++    try {
++      const status = read(this.handle, scratch);
++      if (status !== 0) throw new Error(`Ghostty viewport state read failed with status ${status}`);
++      const view = new DataView(this.memory.buffer, scratch, 12);
++      return {
++        totalRows: view.getUint32(0, true),
++        viewportTop: view.getUint32(4, true),
++        screenRows: view.getUint32(8, true),
++      };
++    } finally {
++      this.exports.ghostty_wasm_free_u8_array(scratch, 12);
++    }
++  }
++
++  /**
++   * Scroll the core viewport of the active screen by delta rows: negative moves
++   * up into history, positive moves down; the core clamps at top and bottom.
++   * delta must be an integer in [-2147483647, 2147483647].
++   */
++  scrollViewport(delta: number): void {
++    if (!this.handle) throw new Error('Ghostty terminal has been freed');
++    if (!Number.isInteger(delta) || delta < -2147483647 || delta > 2147483647) {
++      throw new RangeError(`Ghostty viewport delta must be an integer in [-2147483647, 2147483647]; got ${delta}`);
++    }
++    const scroll = this.exports.ghostty_terminal_scroll_viewport;
++    if (typeof scroll !== 'function') {
++      throw new Error('Ghostty WASM is missing ghostty_terminal_scroll_viewport');
++    }
++    const status = scroll(this.handle, delta);
++    if (status !== 0) throw new Error(`Ghostty viewport scroll failed with status ${status}`);
++  }
++
+   /**
+    * Get a line from the scrollback buffer.
+    * Ensures render state is fresh by calling update().
+@@ -582,6 +627,11 @@
  
      for (let i = 0; i < count; i++) {
        const cellOffset = i * GhosttyTerminal.CELL_SIZE;
@@ -40,7 +91,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
        cells.push({
          codepoint: view.getUint32(cellOffset, true),
          fg_r: u8[cellOffset + 4],
-@@ -590,10 +596,11 @@
+@@ -590,10 +640,11 @@
          bg_r: u8[cellOffset + 7],
          bg_g: u8[cellOffset + 8],
          bg_b: u8[cellOffset + 9],
@@ -53,7 +104,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
        });
      }
  
-@@ -605,9 +612,60 @@
+@@ -605,9 +656,60 @@
      return this.exports.ghostty_terminal_is_row_wrapped(this.handle, row) !== 0;
    }
  
@@ -116,7 +167,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
    /**
-@@ -673,6 +731,7 @@
+@@ -673,6 +775,7 @@
            width: 1,
            hyperlink_id: 0,
            grapheme_len: 0,
@@ -124,7 +175,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
          });
        }
      }
-@@ -697,6 +756,10 @@
+@@ -697,6 +800,10 @@
        cell.width = u8[offset + 11];
        cell.hyperlink_id = view.getUint16(offset + 12, true);
        cell.grapheme_len = u8[offset + 14]; // grapheme_len is at byte 14
@@ -138,7 +189,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
 diff --git a/lib/types.ts b/lib/types.ts
 --- a/lib/types.ts
 +++ b/lib/types.ts
-@@ -438,10 +438,19 @@
+@@ -438,13 +438,24 @@
      bufLen: number
    ): number; // Returns count of codepoints or -1 on error
  
@@ -158,7 +209,12 @@ diff --git a/lib/types.ts b/lib/types.ts
  
    // Scrollback API
    ghostty_terminal_get_scrollback_length(terminal: TerminalHandle): number;
-@@ -550,6 +559,7 @@
++  ghostty_terminal_get_viewport_state(terminal: TerminalHandle, outPtr: number): number;
++  ghostty_terminal_scroll_viewport(terminal: TerminalHandle, delta: number): number;
+   ghostty_terminal_get_scrollback_line(
+     terminal: TerminalHandle,
+     offset: number,
+@@ -550,6 +561,7 @@
    width: number; // u8 (character width: 1=normal, 2=wide, etc.)
    hyperlink_id: number; // u16 (0 = no link, >0 = hyperlink ID in set)
    grapheme_len: number; // u8 (number of extra codepoints beyond first)
@@ -202,7 +258,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/include/ghostty/vt/terminal.h
 -@@ -0,0 +1,249 @@
-+@@ -0,0 +1,273 @@
++@@ -0,0 +1,290 @@
  +/**
  + * @file terminal.h
  + *
@@ -253,7 +309,31 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Scrollback API
  + * ========================================================================= */
-@@ -283,10 +304,9 @@
+@@ -223,6 +244,23 @@
+ +int ghostty_terminal_get_scrollback_length(GhosttyTerminal term);
+ +
+ +/**
+++ * Read the active screen's viewport position from the core page list.
+++ * out receives three uint32_t words: total rows (history + active),
+++ * absolute row of the viewport top (0 = oldest history row), visible rows.
+++ * Nothing is written on error.
+++ * @return 0 on success, -1 on error
+++ */
+++int ghostty_terminal_get_viewport_state(GhosttyTerminal term, uint32_t* out);
+++
+++/**
+++ * Scroll the active screen's viewport by delta rows: negative moves up
+++ * into history, positive moves down; the core clamps at top and bottom.
+++ * INT_MIN is rejected.
+++ * @return 0 on success, -1 on error
+++ */
+++int ghostty_terminal_scroll_viewport(GhosttyTerminal term, int delta);
+++
+++/**
+ + * Get a line from the scrollback buffer.
+ + * @param offset 0 = oldest line, (length-1) = most recent scrollback line
+ + * @param out_buffer Buffer to write cells to
+@@ -283,10 +321,9 @@
  +
  +#endif /* GHOSTTY_VT_TERMINAL_H */
  diff --git a/src/lib_vt.zig b/src/lib_vt.zig
@@ -261,11 +341,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- a/src/lib_vt.zig
  +++ b/src/lib_vt.zig
 -@@ -140,6 +140,41 @@ comptime {
-+@@ -140,6 +140,43 @@
++@@ -140,6 +140,45 @@
           @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
           @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
           @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
-@@ -310,11 +330,13 @@
+@@ -310,14 +347,18 @@
  +        @export(&c.render_state_mark_clean, .{ .name = "ghostty_render_state_mark_clean" });
  +        @export(&c.render_state_get_viewport, .{ .name = "ghostty_render_state_get_viewport" });
  +        @export(&c.render_state_get_grapheme, .{ .name = "ghostty_render_state_get_grapheme" });
@@ -279,7 +359,12 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +        // Scrollback API
  +        @export(&c.terminal_get_scrollback_length, .{ .name = "ghostty_terminal_get_scrollback_length" });
-@@ -329,10 +351,9 @@
+++        @export(&c.terminal_get_viewport_state, .{ .name = "ghostty_terminal_get_viewport_state" });
+++        @export(&c.terminal_scroll_viewport, .{ .name = "ghostty_terminal_scroll_viewport" });
+ +        @export(&c.terminal_get_scrollback_line, .{ .name = "ghostty_terminal_get_scrollback_line" });
+ +        @export(&c.terminal_get_scrollback_grapheme, .{ .name = "ghostty_terminal_get_scrollback_grapheme" });
+ +        @export(&c.terminal_is_row_wrapped, .{ .name = "ghostty_terminal_is_row_wrapped" });
+@@ -329,10 +370,9 @@
           // On Wasm we need to export our allocator convenience functions.
           if (builtin.target.cpu.arch.isWasm()) {
  diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
@@ -291,16 +376,16 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   pub const key_encode = @import("key_encode.zig");
   pub const paste = @import("paste.zig");
   pub const sgr = @import("sgr.zig");
-@@ -340,7 +361,7 @@
+@@ -340,7 +380,7 @@
   
   // The full C API, unexported.
   pub const osc_new = osc.new;
 -@@ -52,6 +53,42 @@ pub const key_encoder_encode = key_encode.encode;
-+@@ -52,6 +53,44 @@
++@@ -52,6 +53,46 @@
   
   pub const paste_is_safe = paste.is_safe;
   
-@@ -364,11 +385,13 @@
+@@ -364,14 +404,18 @@
  +pub const render_state_mark_clean = terminal.renderStateMarkClean;
  +pub const render_state_get_viewport = terminal.renderStateGetViewport;
  +pub const render_state_get_grapheme = terminal.renderStateGetGrapheme;
@@ -314,16 +399,21 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +// Scrollback API
  +pub const terminal_get_scrollback_length = terminal.getScrollbackLength;
-@@ -383,7 +406,7 @@
+++pub const terminal_get_viewport_state = terminal.getViewportState;
+++pub const terminal_scroll_viewport = terminal.scrollViewport;
+ +pub const terminal_get_scrollback_line = terminal.getScrollbackLine;
+ +pub const terminal_get_scrollback_grapheme = terminal.getScrollbackGrapheme;
+ +pub const terminal_is_row_wrapped = terminal.isRowWrapped;
+@@ -383,7 +427,7 @@
   test {
       _ = color;
       _ = osc;
 -@@ -59,6 +96,7 @@ test {
-+@@ -59,6 +98,7 @@
++@@ -59,6 +100,7 @@
       _ = key_encode;
       _ = paste;
       _ = sgr;
-@@ -393,10 +416,9 @@
+@@ -393,10 +437,9 @@
       _ = @import("../../lib/allocator.zig");
  diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
  new file mode 100644
@@ -331,11 +421,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1097 @@
++@@ -0,0 +1,1124 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
-@@ -435,12 +457,19 @@
+@@ -435,12 +478,19 @@
  +    alloc: Allocator,
  +    terminal: *Terminal,
  +    response_buffer: *std.ArrayList(u8),
@@ -357,7 +447,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        };
  +    }
  +
-@@ -561,7 +590,10 @@
+@@ -561,7 +611,10 @@
  +            },
  +            .active_status_display => self.terminal.status_display = value,
  +            .decaln => try self.terminal.decaln(),
@@ -369,7 +459,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
  +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
  +            .prompt_start => {
-@@ -575,6 +607,31 @@
+@@ -575,6 +628,31 @@
  +            .mouse_shape => self.terminal.mouse_shape = value,
  +            .color_operation => try self.colorOperation(value.op, &value.requests),
  +            .kitty_color_report => try self.kittyColorOperation(value),
@@ -401,7 +491,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +            // Actions that require no response and have no terminal effect
  +            .dcs_hook,
-@@ -587,15 +644,13 @@
+@@ -587,15 +665,13 @@
  +            .enquiry,
  +            .request_mode,
  +            .request_mode_unknown,
@@ -418,7 +508,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .title_push,
  +            .title_pop,
  +            => {},
-@@ -700,6 +755,8 @@
+@@ -700,6 +776,8 @@
  +    render_state: RenderState,
  +    /// Response buffer for DSR and other query responses
  +    response_buffer: std.ArrayList(u8),
@@ -427,7 +517,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    /// Track alternate screen state to detect screen switches
  +    last_screen_is_alternate: bool = false,
  +};
-@@ -717,7 +774,7 @@
+@@ -717,7 +795,7 @@
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
@@ -436,7 +526,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +};
  +
  +/// Dirty state
-@@ -812,11 +869,12 @@
+@@ -812,11 +890,12 @@
  +        return null;
  +    };
  +
@@ -452,7 +542,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +    // Initialize stream with the handler
  +    wrapper.stream = ResponseStream.init(wrapper.handler);
-@@ -828,6 +886,7 @@
+@@ -828,6 +907,7 @@
  +        .stream = wrapper.stream,
  +        .render_state = RenderState.empty,
  +        .response_buffer = wrapper.response_buffer,
@@ -460,7 +550,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    };
  +
  +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
-@@ -847,6 +906,7 @@
+@@ -847,6 +927,7 @@
  +    const alloc = wrapper.alloc;
  +    wrapper.stream.deinit();
  +    wrapper.response_buffer.deinit(alloc);
@@ -468,7 +558,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    wrapper.render_state.deinit(alloc);
  +    wrapper.terminal.deinit(alloc);
  +    alloc.destroy(wrapper);
-@@ -1072,6 +1132,7 @@
+@@ -1072,6 +1153,7 @@
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
@@ -476,7 +566,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            };
  +            idx += 1;
  +        }
-@@ -1130,6 +1191,43 @@
+@@ -1130,6 +1212,43 @@
  +    return @intCast(count);
  +}
  +
@@ -520,7 +610,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Terminal Modes (minimal set for compatibility)
  +// ============================================================================
-@@ -1154,6 +1252,22 @@
+@@ -1154,6 +1273,22 @@
  +    return wrapper.terminal.modes.get(mode);
  +}
  +
@@ -543,7 +633,41 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Scrollback API
  +// ============================================================================
-@@ -1264,6 +1378,7 @@
+@@ -1168,6 +1303,33 @@
+ +    return @intCast(pages.total_rows - pages.rows);
+ +}
+ +
+++/// Read the active screen's viewport position from PageList.scrollbar().
+++/// out receives three u32 words: total rows, absolute viewport top, visible
+++/// rows. Nothing is written on error. Returns 0 on success, -1 on error.
+++pub fn getViewportState(ptr: ?*anyopaque, out: ?[*]u32) callconv(.c) c_int {
+++    const wrapper: *TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
+++    const dst = out orelse return -1;
+++    const bar = wrapper.terminal.screens.active.pages.scrollbar();
+++    const total = std.math.cast(u32, bar.total) orelse return -1;
+++    const top = std.math.cast(u32, bar.offset) orelse return -1;
+++    const len = std.math.cast(u32, bar.len) orelse return -1;
+++    dst[0] = total;
+++    dst[1] = top;
+++    dst[2] = len;
+++    return 0;
+++}
+++
+++/// Scroll the active screen's viewport by delta rows through
+++/// Terminal.scrollViewport(.delta): negative is up, positive is down, and the
+++/// core clamps. minInt is rejected: the page list negates the delta.
+++/// Returns 0 on success, -1 on error.
+++pub fn scrollViewport(ptr: ?*anyopaque, delta: c_int) callconv(.c) c_int {
+++    const wrapper: *TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
+++    if (delta == std.math.minInt(c_int)) return -1;
+++    wrapper.terminal.scrollViewport(.{ .delta = delta }) catch return -1;
+++    return 0;
+++}
+++
+ +/// Get a line from the scrollback buffer
+ +/// offset 0 = oldest line in scrollback, offset (length-1) = most recent scrollback line
+ +/// Returns number of cells written, or -1 on error
+@@ -1264,6 +1426,7 @@
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
@@ -551,7 +675,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        };
  +    }
  +    return @intCast(cols);
-@@ -1402,10 +1517,9 @@
+@@ -1402,10 +1565,9 @@
  +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
  +}
  diff --git a/src/terminal/render.zig b/src/terminal/render.zig

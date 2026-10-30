@@ -12,8 +12,8 @@
     "commit": "5714ed07a1012573261b7b7e3ed2add9c1504496",
     "archiveSha256": "55cee28558945de6e984bc183cd51f28eefdbf805544da2e70d4635476178790"
   },
-  "patchSha256": "ab9925ee5c8e00bff51b282cf61c41b2363b4a88f59a319438e040cf1d6f2ca0",
-  "innerPatchSha256": "3cc91382e0c13429d32f0b17b6d39d7f4f0e18493322c4133c98c3f4990ff10b",
+  "patchSha256": "475683062789a70aa8fa9dc18573446f265b0885e5ff9ef4457f8ffb69078704",
+  "innerPatchSha256": "70a624b67125f7643925af64e6ca52075febe76f612c5ab87bc62c35e1a50b30",
   "upstreamLockSha256": "f956fc4300424f4195e454084d3c749d3b9ca4ef68079e21c192772380b4168a",
   "toolchain": {
     "bun": "1.4.4",
@@ -24,11 +24,11 @@
     "flakeLockSha256": "282d1098337a5705a7c1d13188a74d2fe34565766619e8d6b21a48d5b67451be"
   },
   "outputs": {
-    "ghostty-vt.wasm": "d80a8110258a124fb6ff52a6fe149b8e39b5180d986907cc9fb7dc9143c3f3d9",
-    "dist/ghostty-vt.wasm": "d80a8110258a124fb6ff52a6fe149b8e39b5180d986907cc9fb7dc9143c3f3d9",
-    "dist/ghostty-web.js": "29166253a8ba5862e6d8db4a82de8de26b4d79a7f98618f69f667f243d87182f",
-    "dist/ghostty-web.umd.cjs": "d29b4456df2342f6e7b24e86cabff9c935b1887b0235e57f1687a0bc7311bfb2",
-    "dist/index.d.ts": "ad02c770e69c07e7e15d61fd4490f26b26c604ef695ea852149e9751a97feccd",
+    "ghostty-vt.wasm": "5c38594a17329b24e826f785d3156d6e498490517835f12b0730eeab2fc63da7",
+    "dist/ghostty-vt.wasm": "5c38594a17329b24e826f785d3156d6e498490517835f12b0730eeab2fc63da7",
+    "dist/ghostty-web.js": "1cafc023aa5074ca33400212828a60dfdf5bc70125e5d52bf592c1938da062a7",
+    "dist/ghostty-web.umd.cjs": "d7fff56fc97f37c8365ca058c2f16326ce8d880558e9709961396cebdaaf0b68",
+    "dist/index.d.ts": "0465e37b29059bda68387699f12d28a372c9cf351e74f2e3d834eeb7c95a4dad",
     "dist/__vite-browser-external-2447137e.js": "f8c456031e5001c0cda4837cd9ee3a33d79beeba120ec633ec9d990632fb2aa6"
   },
   "removal": "@si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty",
