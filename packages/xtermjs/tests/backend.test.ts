@@ -795,16 +795,29 @@ describe("createXtermBackend", () => {
     try {
       expect(hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")).toBe(true)
 
+      const forwardedResponses: string[] = []
+      backend.onResponse = (data: Uint8Array) => {
+        forwardedResponses.push(new TextDecoder().decode(data))
+      }
+
       const pressEvent: MouseEvent = { x: 4, y: 2, button: "left", action: "press" }
       // Modes off by default: CoreMouseService activeProtocol is NONE, so encodeMouse returns null
       expect(backend.encodeMouse(pressEvent)).toBeNull()
       expect(pressEvent).toEqual({ x: 4, y: 2, button: "left", action: "press" })
+      expect(forwardedResponses).toEqual([])
 
       // Enable VT200 button tracking (?1000h) + SGR mouse encoding (?1006h)
       backend.feed(encode("\x1b[?1000h\x1b[?1006h"))
       const firstPress = parseSgrReport(backend.encodeMouse(pressEvent))
       expect(firstPress).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "M" })
       expect(pressEvent).toEqual({ x: 4, y: 2, button: "left", action: "press" })
+      // encodeMouse must not forward its captured report through backend.onResponse
+      expect(forwardedResponses).toEqual([])
+
+      // Ordinary feed() terminal responses still forward through backend.onResponse
+      backend.feed(encode("\x1b[5n"))
+      expect(forwardedResponses).toEqual(["\x1b[0n"])
+      forwardedResponses.length = 0
 
       // Re-using the same event object must not drift coordinates despite CoreMouseService's in-place e.col++/e.row++
       const secondPress = parseSgrReport(backend.encodeMouse(pressEvent))
@@ -813,16 +826,42 @@ describe("createXtermBackend", () => {
       const releaseReport = parseSgrReport(backend.encodeMouse({ x: 4, y: 2, button: "left", action: "release" }))
       expect(releaseReport).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "m" })
 
-      // DEFAULT (X10/VT200 binary) encoding emits via coreService.onBinary
-      backend.feed(encode("\x1b[?1006l\x1b[?1000h"))
-      const binaryBytes = backend.encodeMouse(pressEvent)
+      // Modifiers, wheel, and move/drag under ?1003h + ?1006h
+      backend.feed(encode("\x1b[?1003h\x1b[?1006h"))
+      const modifiedRight = parseSgrReport(
+        backend.encodeMouse({ x: 7, y: 9, button: "right", action: "press", shift: true, alt: true, ctrl: true }),
+      )
+      expect(modifiedRight).toEqual({ buttonCode: 2 + 4 + 8 + 16, col1Based: 8, row1Based: 10, finalChar: "M" })
+
+      const wheelDown = parseSgrReport(backend.encodeMouse({ x: 1, y: 2, button: "wheelDown", action: "press" }))
+      expect(wheelDown).toEqual({ buttonCode: 65, col1Based: 2, row1Based: 3, finalChar: "M" })
+      expect(backend.encodeMouse({ x: 1, y: 2, button: "wheelUp", action: "release" })).toBeNull()
+
+      const moveOne = parseSgrReport(backend.encodeMouse({ x: 5, y: 3, button: "none", action: "move" }))
+      const moveTwo = parseSgrReport(backend.encodeMouse({ x: 6, y: 4, button: "none", action: "move" }))
+      expect(moveOne).toEqual({ buttonCode: 35, col1Based: 6, row1Based: 4, finalChar: "M" })
+      expect(moveTwo).toEqual({ buttonCode: 35, col1Based: 7, row1Based: 5, finalChar: "M" })
+      expect(forwardedResponses).toEqual([])
+
+      // SGR-Pixels (?1016h) requires pixel coordinates not present on cell-coordinate MouseEvent: refuse loudly
+      backend.feed(encode("\x1b[?1016h"))
+      expect(() => backend.encodeMouse(pressEvent)).toThrow(
+        "xterm.js headless SGR-Pixels (DECSET 1016) mouse encoding requires pixel geometry not present on cell-coordinate MouseEvent",
+      )
+      expect(forwardedResponses).toEqual([])
+
+      // DEFAULT (X10/VT200 binary) encoding emits via coreService.onBinary and preserves high-bit coordinate bytes
+      backend.resize(120, 120)
+      backend.feed(encode("\x1b[?1016l\x1b[?1006l\x1b[?1000h"))
+      const binaryBytes = backend.encodeMouse({ x: 100, y: 105, button: "left", action: "press" })
       if (binaryBytes === null) {
         throw new Error("expected non-null DEFAULT binary mouse report bytes")
       }
-      expect(Array.from(binaryBytes)).toEqual([0x1b, 0x5b, 0x4d, 32, 4 + 1 + 32, 2 + 1 + 32])
+      expect(Array.from(binaryBytes)).toEqual([0x1b, 0x5b, 0x4d, 32, 100 + 1 + 32, 105 + 1 + 32])
+      expect(forwardedResponses).toEqual([])
 
-      // Disable mouse modes (?1000l, ?1006l): encodeMouse returns null again
-      backend.feed(encode("\x1b[?1000l\x1b[?1006l"))
+      // Disable mouse modes (?1003l, ?1000l, ?1006l): encodeMouse returns null again
+      backend.feed(encode("\x1b[?1003l\x1b[?1000l\x1b[?1006l"))
       expect(backend.encodeMouse(pressEvent)).toBeNull()
     } finally {
       backend.destroy()

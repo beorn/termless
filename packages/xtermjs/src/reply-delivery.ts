@@ -11,7 +11,7 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
     },
     {
       path: "packages/xtermjs/src/backend.ts",
-      blobOid: "ec7139f4208553d299897f3434ae8576869980f1",
+      blobOid: "8f0c3aabd76b8e5b25439eb7e95d0664320c7d0e",
     },
   ],
   engine: {

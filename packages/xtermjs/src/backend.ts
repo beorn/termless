@@ -56,6 +56,7 @@ interface XtermInternalCore {
     onBinary?(listener: (data: string) => void): XtermInternalDisposable
   }
   readonly coreMouseService?: {
+    readonly activeEncoding?: unknown
     triggerMouseEvent?(event: XtermInternalCoreMouseEvent): boolean
   }
   readonly buffer?: {
@@ -174,6 +175,7 @@ export function createXtermBackend(
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()
+  let encodingMouseDepth = 0
   // Host-mirrored 256-color table updated from xterm.js InputHandler's typed onColor events (OSC 4 set / OSC 104 restore).
   // Initialized and restored from PALETTE_256 (our display default).
   let palette: Color[] = PALETTE_256.map((c) => ({ ...c }))
@@ -284,9 +286,11 @@ export function createXtermBackend(
       }
     })
 
-    // Forward DA1/DA2/DSR + window-op responses to the terminal layer
+    // Forward DA1/DA2/DSR + window-op responses to the terminal layer.
+    // Synchronous CoreMouseService emissions during encodeMouse() are captured and
+    // returned to the caller, not forwarded a second time through onResponse.
     term.onData((data: string) => {
-      if (backend.onResponse) {
+      if (encodingMouseDepth === 0 && backend.onResponse) {
         backend.onResponse(new TextEncoder().encode(data))
       }
     })
@@ -723,26 +727,38 @@ export function createXtermBackend(
     if (
       typeof coreService?.onData !== "function" ||
       typeof coreService.onBinary !== "function" ||
-      typeof coreMouseService?.triggerMouseEvent !== "function"
+      typeof coreMouseService?.triggerMouseEvent !== "function" ||
+      typeof coreMouseService.activeEncoding !== "string"
     ) {
       throw new Error("xterm.js headless mouse encoding service is unavailable")
+    }
+    if (coreMouseService.activeEncoding === "SGR_PIXELS") {
+      throw new Error(
+        "xterm.js headless SGR-Pixels (DECSET 1016) mouse encoding requires pixel geometry not present on cell-coordinate MouseEvent",
+      )
     }
 
     const emissions: Uint8Array[] = []
     const textEncoder = new TextEncoder()
-    const dataSub = coreService.onData((data: string) => {
-      emissions.push(textEncoder.encode(data))
-    })
-    const binarySub = coreService.onBinary((data: string) => {
-      emissions.push(Uint8Array.from(data, (ch) => ch.charCodeAt(0) & 0xff))
-    })
-
+    let dataSub: XtermInternalDisposable | undefined
+    let binarySub: XtermInternalDisposable | undefined
     let accepted = false
+    encodingMouseDepth++
     try {
+      dataSub = coreService.onData((data: string) => {
+        emissions.push(textEncoder.encode(data))
+      })
+      binarySub = coreService.onBinary((data: string) => {
+        emissions.push(Uint8Array.from(data, (ch) => ch.charCodeAt(0) & 0xff))
+      })
       accepted = coreMouseService.triggerMouseEvent(toCoreMouseEvent(event))
     } finally {
-      dataSub.dispose()
-      binarySub.dispose()
+      encodingMouseDepth--
+      try {
+        dataSub?.dispose()
+      } finally {
+        binarySub?.dispose()
+      }
     }
 
     if (!accepted) {
