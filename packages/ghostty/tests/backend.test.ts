@@ -94,6 +94,68 @@ describe("ghostty backend", () => {
     expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/freed/)
   })
 
+  // @failure The viewport wrapper reads a detached view after memory growth, leaks scratch on a failed read, coerces a
+  // bad delta, or reports a default instead of failing (#31392).
+  // @level l0 @consumer GhosttyTerminal viewport ABI. The real engine cannot force a failed status, allocation or growth.
+  test("reads viewport words after memory growth, frees scratch on every outcome and rejects bad deltas", () => {
+    const memory = new WebAssembly.Memory({ initial: 1, maximum: 32 })
+    let status = 0
+    let outOfMemory = false
+    const release = vi.fn()
+    const deltas: number[] = []
+    // Only the FFI is controlled here; the wrapper and WebAssembly.Memory are production/real.
+    const exports: Record<string, unknown> = {
+      memory,
+      ghostty_terminal_new: () => 1,
+      ghostty_terminal_free: () => {},
+      ghostty_wasm_alloc_u8_array: () => (outOfMemory ? 0 : 16),
+      ghostty_wasm_free_u8_array: release,
+      ghostty_terminal_get_viewport_state: (_handle: number, out: number) => {
+        memory.grow(1)
+        const words = new DataView(memory.buffer, out, 12)
+        words.setUint32(0, 40, true)
+        words.setUint32(4, 30, true)
+        words.setUint32(8, 10, true)
+        return status
+      },
+      ghostty_terminal_scroll_viewport: (_handle: number, delta: number) => {
+        deltas.push(delta)
+        return status
+      },
+    }
+    const terminal = new GhosttyTerminal(
+      exports as unknown as ConstructorParameters<typeof GhosttyTerminal>[0],
+      memory,
+      2,
+      10,
+    )
+    expect(terminal.getViewportState()).toEqual({ totalRows: 40, viewportTop: 30, screenRows: 10 })
+    expect(release).toHaveBeenLastCalledWith(16, 12)
+    terminal.scrollViewport(-2147483647)
+    terminal.scrollViewport(2147483647)
+    expect(deltas).toEqual([-2147483647, 2147483647])
+    for (const invalid of [-2147483648, 2147483648, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => terminal.scrollViewport(invalid)).toThrow(RangeError)
+    }
+    expect(deltas).toHaveLength(2)
+    status = -1
+    const frees = release.mock.calls.length
+    expect(() => terminal.getViewportState()).toThrow("status -1")
+    expect(release.mock.calls.length).toBe(frees + 1)
+    expect(() => terminal.scrollViewport(1)).toThrow("status -1")
+    status = 0
+    outOfMemory = true
+    expect(() => terminal.getViewportState()).toThrow(/allocate/)
+    expect(release.mock.calls.length).toBe(frees + 1)
+    exports.ghostty_terminal_get_viewport_state = undefined
+    exports.ghostty_terminal_scroll_viewport = undefined
+    expect(() => terminal.getViewportState()).toThrow(/missing ghostty_terminal_get_viewport_state/)
+    expect(() => terminal.scrollViewport(1)).toThrow(/missing ghostty_terminal_scroll_viewport/)
+    terminal.free()
+    expect(() => terminal.getViewportState()).toThrow(/freed/)
+    expect(() => terminal.scrollViewport(1)).toThrow(/freed/)
+  })
+
   test("committed producer outputs match the pinned build receipt", () => {
     const directory = join(import.meta.dirname, "../../../vendor/ghostty-web")
     const receipt = JSON.parse(readFileSync(join(directory, "RECEIPT.json"), "utf8")) as {
@@ -583,6 +645,71 @@ describe("ghostty backend", () => {
       }
       const state = backend.getScrollback()
       expect(state.totalLines).toBeGreaterThan(3)
+    })
+
+    // @failure The adapter reports a bottom-pinned viewport and drops scrollViewport, so a viewport probe reads a
+    // frozen position (#31392). The tests above only count rows and never move the viewport.
+    // @level l1 @consumer TerminalBackend.getScrollback and scrollViewport through the real WASM engine
+    test("moves and reports the engine viewport while absolute reads stay put (#31392)", () => {
+      backend = createBackend(20, 3)
+      for (let i = 0; i < 10; i++) feedText(backend, `Line ${i}\r\n`)
+      const text = backend.getText()
+      const bottom = backend.getScrollback()
+      expect(bottom.totalRows).toBeGreaterThan(bottom.screenRows)
+      expect(bottom.viewportTop).toBe(bottom.totalRows - bottom.screenRows)
+      const at = (viewportTop: number) => {
+        const state = backend.getScrollback()
+        expect(state).toMatchObject({ viewportTop, totalRows: bottom.totalRows, screenRows: 3 })
+        expect(state).toMatchObject({ viewportOffset: viewportTop, totalLines: bottom.totalRows, screenLines: 3 })
+        expect(backend.getText()).toBe(text)
+      }
+
+      backend.scrollViewport(-1)
+      at(bottom.viewportTop - 1)
+      backend.scrollViewport(1)
+      at(bottom.viewportTop)
+      backend.scrollViewport(-2147483647)
+      at(0)
+      backend.scrollViewport(2)
+      at(2)
+      backend.scrollViewport(2147483647)
+      at(bottom.viewportTop)
+      for (const invalid of [-2147483648, 2147483648, 0.5, Number.NaN]) {
+        expect(() => backend.scrollViewport(invalid)).toThrow(RangeError)
+      }
+      at(bottom.viewportTop)
+    })
+
+    // @failure The bridge caches a viewport across screen changes, so alternate screen, reset or resize report stale
+    // rows (#31392). The engine owns this state; the adapter must only read it.
+    // @level l1 @consumer TerminalBackend.getScrollback through the real WASM engine
+    test("reads the engine viewport across alternate screen, output, resize and reset (#31392)", () => {
+      backend = createBackend(20, 3)
+      for (let i = 0; i < 10; i++) feedText(backend, `Line ${i}\r\n`)
+      backend.scrollViewport(-2)
+      feedText(backend, "\x1b[?1049h")
+      expect(backend.getScrollback()).toMatchObject({ viewportTop: 0, totalRows: 3, screenRows: 3 })
+      feedText(backend, "\x1b[?1049l")
+      const primary = backend.getScrollback()
+      expect(primary.totalRows).toBeGreaterThan(3)
+      expect(primary.viewportTop).toBeGreaterThanOrEqual(0)
+      expect(primary.viewportTop).toBeLessThanOrEqual(primary.totalRows - 3)
+
+      // Output while scrolled: whether the engine snaps to the bottom or holds is the engine's; only bounds are fixed.
+      backend.scrollViewport(-2)
+      feedText(backend, "more\r\n")
+      const after = backend.getScrollback()
+      expect(after.viewportTop).toBeGreaterThanOrEqual(0)
+      expect(after.viewportTop).toBeLessThanOrEqual(after.totalRows - 3)
+
+      backend.resize(20, 5)
+      const resized = backend.getScrollback()
+      expect(resized.screenRows).toBe(5)
+      expect(resized.viewportTop).toBeLessThanOrEqual(resized.totalRows - 5)
+
+      backend.reset()
+      const reset = backend.getScrollback()
+      expect(reset.viewportTop).toBe(reset.totalRows - reset.screenRows)
     })
   })
 

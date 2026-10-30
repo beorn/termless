@@ -353,6 +353,21 @@ export declare class GhosttyTerminal {
     /** Get number of scrollback lines (history, not including active screen) */
     getScrollbackLength(): number;
     /**
+     * Read the core viewport of the active screen: total rows (history + active),
+     * absolute row of the viewport top (0 = oldest history row), visible rows.
+     */
+    getViewportState(): {
+        totalRows: number;
+        viewportTop: number;
+        screenRows: number;
+    };
+    /**
+     * Scroll the core viewport of the active screen by delta rows: negative moves
+     * up into history, positive moves down; the core clamps at top and bottom.
+     * delta must be an integer in [-2147483647, 2147483647].
+     */
+    scrollViewport(delta: number): void;
+    /**
      * Get a line from the scrollback buffer.
      * Ensures render state is fresh by calling update().
      * @param offset 0 = oldest line, (length-1) = most recent scrollback line
@@ -489,6 +504,8 @@ declare interface GhosttyWasmExports extends WebAssembly.Exports {
     ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
     ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
     ghostty_terminal_get_scrollback_length(terminal: TerminalHandle): number;
+    ghostty_terminal_get_viewport_state(terminal: TerminalHandle, outPtr: number): number;
+    ghostty_terminal_scroll_viewport(terminal: TerminalHandle, delta: number): number;
     ghostty_terminal_get_scrollback_line(terminal: TerminalHandle, offset: number, bufPtr: number, bufLen: number): number;
     ghostty_terminal_get_scrollback_grapheme(terminal: TerminalHandle, offset: number, col: number, bufPtr: number, bufLen: number): number;
     ghostty_terminal_is_row_wrapped(terminal: TerminalHandle, row: number): number;

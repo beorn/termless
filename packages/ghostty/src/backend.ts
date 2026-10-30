@@ -590,25 +590,23 @@ export function createGhosttyBackend(
   function getScrollback(): ScrollbackState {
     const t = ensureTerm()
     t.update()
-    const scrollbackLength = t.getScrollbackLength()
+    // The core page list owns the viewport; read it, never assume the bottom.
+    const { totalRows, viewportTop, screenRows } = t.getViewportState()
     return {
-      // Ghostty WASM doesn't expose viewport scroll position in headless mode,
-      // so assume viewport is at the bottom (absolute top row = scrollbackLength).
-      viewportTop: scrollbackLength,
-      totalRows: scrollbackLength + rows,
-      screenRows: rows,
+      viewportTop,
+      totalRows,
+      screenRows,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
-      viewportOffset: scrollbackLength,
+      viewportOffset: viewportTop,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
-      totalLines: scrollbackLength + rows,
+      totalLines: totalRows,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
-      screenLines: rows,
+      screenLines: screenRows,
     }
   }
 
-  function scrollViewport(_delta: number): void {
-    // Ghostty WASM doesn't support viewport scrolling in headless mode
-    // (no scroll position state without a renderer)
+  function scrollViewport(delta: number): void {
+    ensureTerm().scrollViewport(delta)
   }
 
   const capabilities: TerminalCapabilities = {

@@ -29,7 +29,7 @@ diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,273 @@
+@@ -0,0 +1,290 @@
 +/**
 + * @file terminal.h
 + *
@@ -244,6 +244,23 @@ new file mode 100644
 +int ghostty_terminal_get_scrollback_length(GhosttyTerminal term);
 +
 +/**
++ * Read the active screen's viewport position from the core page list.
++ * out receives three uint32_t words: total rows (history + active),
++ * absolute row of the viewport top (0 = oldest history row), visible rows.
++ * Nothing is written on error.
++ * @return 0 on success, -1 on error
++ */
++int ghostty_terminal_get_viewport_state(GhosttyTerminal term, uint32_t* out);
++
++/**
++ * Scroll the active screen's viewport by delta rows: negative moves up
++ * into history, positive moves down; the core clamps at top and bottom.
++ * INT_MIN is rejected.
++ * @return 0 on success, -1 on error
++ */
++int ghostty_terminal_scroll_viewport(GhosttyTerminal term, int delta);
++
++/**
 + * Get a line from the scrollback buffer.
 + * @param offset 0 = oldest line, (length-1) = most recent scrollback line
 + * @param out_buffer Buffer to write cells to
@@ -306,7 +323,7 @@ new file mode 100644
 diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 --- a/src/lib_vt.zig
 +++ b/src/lib_vt.zig
-@@ -140,6 +140,43 @@
+@@ -140,6 +140,45 @@
          @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
          @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
          @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
@@ -340,6 +357,8 @@ diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 +
 +        // Scrollback API
 +        @export(&c.terminal_get_scrollback_length, .{ .name = "ghostty_terminal_get_scrollback_length" });
++        @export(&c.terminal_get_viewport_state, .{ .name = "ghostty_terminal_get_viewport_state" });
++        @export(&c.terminal_scroll_viewport, .{ .name = "ghostty_terminal_scroll_viewport" });
 +        @export(&c.terminal_get_scrollback_line, .{ .name = "ghostty_terminal_get_scrollback_line" });
 +        @export(&c.terminal_get_scrollback_grapheme, .{ .name = "ghostty_terminal_get_scrollback_grapheme" });
 +        @export(&c.terminal_is_row_wrapped, .{ .name = "ghostty_terminal_is_row_wrapped" });
@@ -361,7 +380,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  
  // The full C API, unexported.
  pub const osc_new = osc.new;
-@@ -52,6 +53,44 @@
+@@ -52,6 +53,46 @@
  
  pub const paste_is_safe = paste.is_safe;
  
@@ -395,6 +414,8 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
 +
 +// Scrollback API
 +pub const terminal_get_scrollback_length = terminal.getScrollbackLength;
++pub const terminal_get_viewport_state = terminal.getViewportState;
++pub const terminal_scroll_viewport = terminal.scrollViewport;
 +pub const terminal_get_scrollback_line = terminal.getScrollbackLine;
 +pub const terminal_get_scrollback_grapheme = terminal.getScrollbackGrapheme;
 +pub const terminal_is_row_wrapped = terminal.isRowWrapped;
@@ -406,7 +427,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  test {
      _ = color;
      _ = osc;
-@@ -59,6 +98,7 @@
+@@ -59,6 +100,7 @@
      _ = key_encode;
      _ = paste;
      _ = sgr;
@@ -418,7 +439,7 @@ diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1097 @@
+@@ -0,0 +1,1124 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -1280,6 +1301,33 @@ new file mode 100644
 +    // We subtract rows (active area) to get just scrollback
 +    if (pages.total_rows <= pages.rows) return 0;
 +    return @intCast(pages.total_rows - pages.rows);
++}
++
++/// Read the active screen's viewport position from PageList.scrollbar().
++/// out receives three u32 words: total rows, absolute viewport top, visible
++/// rows. Nothing is written on error. Returns 0 on success, -1 on error.
++pub fn getViewportState(ptr: ?*anyopaque, out: ?[*]u32) callconv(.c) c_int {
++    const wrapper: *TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    const dst = out orelse return -1;
++    const bar = wrapper.terminal.screens.active.pages.scrollbar();
++    const total = std.math.cast(u32, bar.total) orelse return -1;
++    const top = std.math.cast(u32, bar.offset) orelse return -1;
++    const len = std.math.cast(u32, bar.len) orelse return -1;
++    dst[0] = total;
++    dst[1] = top;
++    dst[2] = len;
++    return 0;
++}
++
++/// Scroll the active screen's viewport by delta rows through
++/// Terminal.scrollViewport(.delta): negative is up, positive is down, and the
++/// core clamps. minInt is rejected: the page list negates the delta.
++/// Returns 0 on success, -1 on error.
++pub fn scrollViewport(ptr: ?*anyopaque, delta: c_int) callconv(.c) c_int {
++    const wrapper: *TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    if (delta == std.math.minInt(c_int)) return -1;
++    wrapper.terminal.scrollViewport(.{ .delta = delta }) catch return -1;
++    return 0;
 +}
 +
 +/// Get a line from the scrollback buffer
