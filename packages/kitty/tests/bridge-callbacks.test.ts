@@ -73,6 +73,38 @@ test.skipIf(!isKittyAvailable())("underline colors (requires installed Kitty or 
 })
 
 describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
+  // Capability detection must reach kitty's real reply handler; the colour/viewport cases never send OSC99.
+  test("answers OSC99 capability queries while retaining unreproduced display warnings", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    let response = ""
+    backend.onResponse = (bytes) => {
+      response += new TextDecoder().decode(bytes)
+    }
+    try {
+      for (const [index, terminator] of ["\x07", "\x1b\\"].entries()) {
+        const nonce = `termless-notify-${index}`
+        response = ""
+        backend.feed(new TextEncoder().encode(`\x1b]99;i=${nonce}:p=?;${terminator}`))
+        backend.getCursor()
+        const frame = new RegExp(`\\x1b\\]99;i=${nonce}:p=\\?;([^\\x07\\x1b]*)(?:\\x07|\\x1b\\\\)`).exec(response)
+        expect(
+          frame?.[1]?.split(":").some((field) => field.startsWith("p=") && field.slice(2).split(",").includes("title")),
+        ).toBe(true)
+        expect(backend.getWarnings().some((warning) => warning.message === "desktop_notify")).toBe(false)
+      }
+      backend.feed(new TextEncoder().encode("\x1b]99;i=unreproduced-display:p=title;test\x1b\\"))
+      backend.getCursor()
+      expect(backend.getWarnings()).toContainEqual({
+        code: "UNREPRODUCED_CALLBACK",
+        message: "desktop_notify",
+        backend: "kitty",
+      })
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // OSC 4 set and OSC 104 reset run kitty's own Window.set_color_table_color, which ends in Window.refresh.
   test("a colour table change replays without a callback error", () => {
     const backend = createKittyBackend()

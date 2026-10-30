@@ -36,7 +36,8 @@ import sys
 import traceback
 from collections import deque
 
-from kitty.fast_data_types import Screen, set_boss, set_options
+from kitty.fast_data_types import Screen, get_boss, set_boss, set_options
+from kitty.notifications import DesktopIntegration, NotificationManager, PayloadType
 from kitty.options.types import defaults
 from kitty.window import Window
 
@@ -108,7 +109,15 @@ def decode_cursor_shape(shape):
 
 
 class HeadlessBoss:
-    """The one boss method a reproduced Window callback reaches; in kitty it only redraws host windows."""
+    """Host context for reproduced Window callbacks, without desktop notification effects."""
+
+    def __init__(self, window):
+        self.window_id_map = {window.id: window}
+        self.active_window = window
+        # Kitty's protocol base supplies its own capability response without starting a desktop/GLFW integration.
+        integration = DesktopIntegration(None)
+        self.notification_manager = NotificationManager(desktop_integration=integration)
+        integration.notification_manager = self.notification_manager
 
     def default_bg_changed_for(self, window_id, via_escape_code=False):
         pass
@@ -130,6 +139,7 @@ class Callbacks:
     color_control = Window.color_control
     report_color_scheme_preference = Window.report_color_scheme_preference
     is_dark = Window.is_dark
+    destroyed = False
 
     def refresh(self, reload_all_gpu_data=False):
         """kitty's Window.refresh marks the screen dirty, then wakes the host I/O and main loops to redraw; it writes no
@@ -161,6 +171,14 @@ class Callbacks:
         # OSC 1337 only sets user variables (Window.osc_1337), and OSC 9 and 777 only show a notification;
         # OSC 99 can answer through the boss's notification manager, which is host state.
         if osc_code == 99:
+            manager = get_boss().notification_manager
+            command = manager.create_notification_cmd()
+            metadata = str(raw_data, "utf-8", "replace").partition(";")[0]
+            payload_type, _ = command.parse_metadata(metadata, command)
+            if payload_type is PayloadType.query:
+                # Reproduce only capability detection, using kitty's Window/manager and original reply encoding.
+                Window.desktop_notify(self, osc_code, raw_data)
+                return
             self.unreproduced.append("desktop_notify")
 
     def title_changed(self, title, raw=None):
@@ -339,8 +357,8 @@ def handle_command(cmd):
         scrollback_limit = cmd.get("scrollbackLimit", 1000)
 
         set_options(defaults)
-        set_boss(HeadlessBoss())
         callbacks = Callbacks()
+        set_boss(HeadlessBoss(callbacks))
         # Screen(callbacks, lines, cols, scrollback, cell_width, cell_height, window_id, test_child)
         # Kitty answers CSI 14t/16t from this cell size and keeps it across resize. It is the caller's declared
         # pixel geometry; none declared keeps 0x0, so headless Screen never invents pixel metrics.

@@ -11,13 +11,16 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // kitty 0.49.2 official launcher the hh flake builds at flake.lock
 // blob 6116bd61 (/nix/store/fbpk67n6fd9kb95vl7ksrc7pkh3gx3qx-kitty-official-binary-0.49.2/bin/kitty); its bytes follow the lock.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
+// Re-audited for OSC99 capability queries: Window.desktop_notify and NotificationManager use kitty own protocol
+// DesktopIntegration and Channel in the single headless window; replies reach Callbacks.write synchronously.
+// Non-query notification payloads remain UNREPRODUCED_CALLBACK; no desktop integration/display is initialized.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
   boundary: "feed-and-getCursor",
   adapterSources: [
     { path: "packages/kitty/src/index.ts", blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077" },
     { path: "packages/kitty/src/backend.ts", blobOid: "7d308b0d0dae99e53dd13bf0606f31e02359a7d3" },
-    { path: "packages/kitty/build/bridge.py", blobOid: "c12fdf6aad9c7e2bc998b6958461d711713b48de" },
+    { path: "packages/kitty/build/bridge.py", blobOid: "c5af1cd5fd0e054a96a603c20ab8278f655b462d" },
   ],
   engine: {
     kind: "native",
