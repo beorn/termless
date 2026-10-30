@@ -42,6 +42,7 @@
     }
   },
   "scripts": {
+    "build": "tsdown",
     "build:native": "cd native && cargo build --release",
     "postbuild:native": "bash ../../scripts/copy-native-addon.sh libtermless_wezterm_native termless-wezterm.node"
   },
