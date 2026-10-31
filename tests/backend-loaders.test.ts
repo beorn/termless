@@ -39,8 +39,9 @@ describe("backendLoaders matches backends.json", () => {
       const module = (await loader()) as { resolve(): Promise<TerminalBackend> }
       const backend = await module.resolve()
       expect(hasExtension<AdapterSourcesExtension>(backend, "adapter-sources"), name).toBe(true)
-      if (!hasExtension<AdapterSourcesExtension>(backend, "adapter-sources"))
+      if (!hasExtension<AdapterSourcesExtension>(backend, "adapter-sources")) {
         throw new Error(`Missing adapter sources ${name}`)
+      }
       const sources = backend.getAdapterSources()
       expect(sources.length, name).toBeGreaterThan(0)
       expect(new Set(sources.map((source) => source.path)).size, name).toBe(sources.length)
