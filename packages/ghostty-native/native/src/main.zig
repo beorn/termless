@@ -15,7 +15,8 @@ const PageList = ghostty.PageList;
 const Cell = ghostty.Cell;
 const Page = ghostty.Page;
 const Style = ghostty.Style;
-const ReadonlyStream = ghostty.ReadonlyStream;
+const ReadonlyHandler = ghostty.ReadonlyHandler;
+const StreamAction = ghostty.StreamAction;
 const modes = ghostty.modes;
 const point = ghostty.point;
 const size = ghostty.size;
@@ -25,14 +26,72 @@ const size = ghostty.size;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
 
+// ─── Reply handler ──────────────────────────────────────
+
+/// Ghostty's readonly handler (`Terminal.vtStream()`) applies every state change but has no
+/// writer, so the engine's query actions are dropped. This handler keeps the readonly handler for
+/// all state changes and writes the replies Ghostty itself writes for the same actions, formatted
+/// as in Ghostty 332b2aef src/termio/stream_handler.zig (requestMode :602-618, requestModeUnknown
+/// :620-632, deviceStatusReport :838-870, queryKittyKeyboard :961-973). Every other query stays
+/// silent, including the size reports Ghostty answers from its window (src/termio/Termio.zig) and
+/// the answers that need app state a headless terminal lacks (DA, XTVERSION, color scheme, clipboard).
+const ResponseHandler = struct {
+    readonly: ReadonlyHandler,
+    /// Reply bytes not yet read by `readResponse`, in stream order.
+    pending: std.ArrayList(u8) = .empty,
+    /// The bytes handed to JS by the last `readResponse`; valid until the next read.
+    read: std.ArrayList(u8) = .empty,
+
+    pub fn deinit(self: *ResponseHandler) void {
+        self.pending.deinit(allocator);
+        self.read.deinit(allocator);
+        self.readonly.deinit();
+    }
+
+    pub fn vt(
+        self: *ResponseHandler,
+        comptime action: StreamAction.Tag,
+        value: StreamAction.Value(action),
+    ) !void {
+        const terminal = self.readonly.terminal;
+        switch (action) {
+            .request_mode => {
+                const tag: modes.ModeTag = @bitCast(@intFromEnum(value.mode));
+                const code: u8 = if (terminal.modes.get(value.mode)) 1 else 2;
+                try self.reply("\x1B[{s}{};{}$y", .{ if (tag.ansi) "" else "?", tag.value, code });
+            },
+            .request_mode_unknown => try self.reply("\x1B[{s}{};0$y", .{ if (value.ansi) "" else "?", value.mode }),
+            .device_status => switch (value.request) {
+                .operating_status => try self.reply("\x1B[0n", .{}),
+                .cursor_position => {
+                    const cursor = terminal.screens.active.cursor;
+                    const origin = terminal.modes.get(.origin);
+                    const x = if (origin) cursor.x -| terminal.scrolling_region.left else cursor.x;
+                    const y = if (origin) cursor.y -| terminal.scrolling_region.top else cursor.y;
+                    try self.reply("\x1B[{};{}R", .{ y + 1, x + 1 });
+                },
+                .color_scheme => {},
+            },
+            .kitty_keyboard_query => try self.reply("\x1b[?{}u", .{terminal.screens.active.kitty_keyboard.current().int()}),
+            else => try self.readonly.vt(action, value),
+        }
+    }
+
+    fn reply(self: *ResponseHandler, comptime fmt: []const u8, args: anytype) !void {
+        try self.pending.print(allocator, fmt, args);
+    }
+};
+
+const ResponseStream = ghostty.Stream(ResponseHandler);
+
 // ─── Terminal handle ────────────────────────────────────
 
 /// Wraps a Ghostty Terminal + VT stream for the JS side.
-/// The stream handles parsing of escape sequences and feeding
-/// them into the terminal state machine.
+/// The stream handles parsing of escape sequences, feeding
+/// them into the terminal state machine, and buffering replies.
 const TerminalHandle = struct {
     terminal: Terminal,
-    stream: ReadonlyStream,
+    stream: ResponseStream,
     cols: size.CellCountInt,
     rows: size.CellCountInt,
     title: []const u8,
@@ -61,6 +120,8 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "getScrollback", try js.createFunction(getScrollback));
     try js.setNamedProperty(exports, "scrollViewport", try js.createFunction(scrollViewport));
     try js.setNamedProperty(exports, "getDefaultColors", try js.createFunction(getDefaultColors));
+    try js.setNamedProperty(exports, "hasResponse", try js.createFunction(hasResponse));
+    try js.setNamedProperty(exports, "readResponse", try js.createFunction(readResponse));
     return exports;
 }
 
@@ -77,7 +138,7 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     }) catch return error.TerminalCreationFailed;
     errdefer handle.terminal.deinit(allocator);
 
-    handle.stream = handle.terminal.vtStream();
+    handle.stream = .initAlloc(allocator, .{ .readonly = handle.terminal.vtHandler() });
     handle.cols = cols;
     handle.rows = rows;
     handle.title = "";
@@ -129,6 +190,22 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     // Fall back to string
     const str = js.readString(data_val) catch return;
     handle.stream.nextSlice(str) catch {};
+}
+
+// ─── Replies ────────────────────────────────────────────
+
+fn hasResponse(handle: *TerminalHandle) bool {
+    return handle.stream.handler.pending.items.len > 0;
+}
+
+/// Hands every pending reply byte to JS (napigen copies it into a string before the next call)
+/// and clears the pending buffer; null when nothing is pending.
+fn readResponse(handle: *TerminalHandle) ?[]const u8 {
+    const handler = &handle.stream.handler;
+    if (handler.pending.items.len == 0) return null;
+    std.mem.swap(std.ArrayList(u8), &handler.read, &handler.pending);
+    handler.pending.clearRetainingCapacity();
+    return handler.read.items;
 }
 
 fn resizeTerm(handle: *TerminalHandle, cols: u16, rows: u16) void {
