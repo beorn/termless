@@ -628,6 +628,14 @@ export interface HyperlinkExtension {
   getHyperlinkAt(row: number, col: number): string | null
 }
 
+/** Parser metadata exposed through "osc-metadata"; notification payloads do not attest OS delivery. */
+export interface OscMetadataExtension {
+  /** Exact OSC 7 URI; null means the engine reports no working directory. */
+  getCwd(): string | null
+  /** A copy of the engine's ordered OSC 9 payloads, without invented title/body fields. */
+  getNotifications(): readonly string[]
+}
+
 export interface BellExtension {
   getBellCount(): number
   clearBellCount(): void

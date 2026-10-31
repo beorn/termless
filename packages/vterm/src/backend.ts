@@ -13,6 +13,7 @@ import type {
   TerminalBackend,
   ReplyDeliveryExtension,
   HyperlinkExtension,
+  OscMetadataExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -62,7 +63,7 @@ const BLANK_CELL: Cell = {
  */
 export function createVtermBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
+): TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -215,6 +216,15 @@ export function createVtermBackend(
     return iconLabel
   }
 
+  function getCwd(): string | null {
+    const cwd = ensureScreen().getCwd()
+    return cwd === "" ? null : cwd
+  }
+
+  function getNotifications(): readonly string[] {
+    return ensureScreen().getNotifications()
+  }
+
   function getScrollback(): ScrollbackState {
     const s = ensureScreen()
     const scrollbackLength = s.getScrollbackLength()
@@ -274,6 +284,7 @@ export function createVtermBackend(
     extensions: new Set([
       "reply-delivery",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
+      "osc-metadata", // Exact cwd URI and copied notification payloads
       "osc52", // Clipboard read/write via OSC 52
       "osc7", // CWD reporting via OSC 7
       "osc9", // Desktop notifications via OSC 9
@@ -293,11 +304,10 @@ export function createVtermBackend(
       "osc117", // Reset selection bg
       "osc119", // Reset selection fg
       "iterm2Images", // iTerm2 inline images (OSC 1337 File=)
-      "modifyOtherKeys", // CSI > 4 ; Pm m keyboard mode
     ]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension = {
     name: "vterm",
     init,
     destroy,
@@ -318,6 +328,8 @@ export function createVtermBackend(
     getMode,
     getTitle,
     getIconLabel,
+    getCwd,
+    getNotifications,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
