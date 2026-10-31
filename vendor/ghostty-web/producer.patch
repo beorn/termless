@@ -421,7 +421,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1124 @@
++@@ -0,0 +1,1141 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -459,7 +459,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
  +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
  +            .prompt_start => {
-@@ -575,6 +628,31 @@
+@@ -575,6 +628,50 @@
  +            .mouse_shape => self.terminal.mouse_shape = value,
  +            .color_operation => try self.colorOperation(value.op, &value.requests),
  +            .kitty_color_report => try self.kittyColorOperation(value),
@@ -467,6 +467,25 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 ++                const flags = self.terminal.screens.active.kitty_keyboard.current().int();
 ++                var buf: [32]u8 = undefined;
 ++                const resp = try std.fmt.bufPrint(&buf, "\x1B[?{}u", .{flags});
+++                try self.response_buffer.appendSlice(self.alloc, resp);
+++            },
+++            // DECRPM replies, transcribed from Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496
+++            // src/termio/stream_handler.zig:525-555 (requestMode / requestModeUnknown).
+++            .request_mode => {
+++                const tag: modespkg.ModeTag = @bitCast(@intFromEnum(value.mode));
+++                const code: u8 = if (self.terminal.modes.get(value.mode)) 1 else 2;
+++                var buf: [32]u8 = undefined;
+++                const resp = try std.fmt.bufPrint(&buf, "\x1B[{s}{};{}$y", .{
+++                    if (tag.ansi) "" else "?", tag.value, code,
+++                });
+++                try self.response_buffer.appendSlice(self.alloc, resp);
+++            },
+++            // Modes outside core's table answer `;0$y` (not recognized), as DECRPM specifies.
+++            .request_mode_unknown => {
+++                var buf: [32]u8 = undefined;
+++                const resp = try std.fmt.bufPrint(&buf, "\x1B[{s}{};0$y", .{
+++                    if (value.ansi) "" else "?", value.mode,
+++                });
 ++                try self.response_buffer.appendSlice(self.alloc, resp);
 ++            },
 ++            .window_title => {
@@ -491,10 +510,12 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +            // Actions that require no response and have no terminal effect
  +            .dcs_hook,
-@@ -587,15 +665,13 @@
+@@ -585,17 +682,13 @@
+ +            .apc_put,
+ +            .bell,
  +            .enquiry,
- +            .request_mode,
- +            .request_mode_unknown,
+-+            .request_mode,
+-+            .request_mode_unknown,
 -+            .size_report,
  +            .xtversion,
  +            .device_attributes,
@@ -508,7 +529,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .title_push,
  +            .title_pop,
  +            => {},
-@@ -700,6 +776,8 @@
+@@ -700,6 +793,8 @@
  +    render_state: RenderState,
  +    /// Response buffer for DSR and other query responses
  +    response_buffer: std.ArrayList(u8),
@@ -517,7 +538,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    /// Track alternate screen state to detect screen switches
  +    last_screen_is_alternate: bool = false,
  +};
-@@ -717,7 +795,7 @@
+@@ -717,7 +812,7 @@
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
@@ -526,7 +547,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +};
  +
  +/// Dirty state
-@@ -812,11 +890,12 @@
+@@ -812,11 +907,12 @@
  +        return null;
  +    };
  +
@@ -542,7 +563,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +    // Initialize stream with the handler
  +    wrapper.stream = ResponseStream.init(wrapper.handler);
-@@ -828,6 +907,7 @@
+@@ -828,6 +924,7 @@
  +        .stream = wrapper.stream,
  +        .render_state = RenderState.empty,
  +        .response_buffer = wrapper.response_buffer,
@@ -550,7 +571,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    };
  +
  +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
-@@ -847,6 +927,7 @@
+@@ -847,6 +944,7 @@
  +    const alloc = wrapper.alloc;
  +    wrapper.stream.deinit();
  +    wrapper.response_buffer.deinit(alloc);
@@ -558,7 +579,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    wrapper.render_state.deinit(alloc);
  +    wrapper.terminal.deinit(alloc);
  +    alloc.destroy(wrapper);
-@@ -1072,6 +1153,7 @@
+@@ -1072,6 +1170,7 @@
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
@@ -566,7 +587,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            };
  +            idx += 1;
  +        }
-@@ -1130,6 +1212,43 @@
+@@ -1130,6 +1229,43 @@
  +    return @intCast(count);
  +}
  +
@@ -610,7 +631,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Terminal Modes (minimal set for compatibility)
  +// ============================================================================
-@@ -1154,6 +1273,22 @@
+@@ -1154,6 +1290,22 @@
  +    return wrapper.terminal.modes.get(mode);
  +}
  +
@@ -633,7 +654,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Scrollback API
  +// ============================================================================
-@@ -1168,6 +1303,33 @@
+@@ -1168,6 +1320,33 @@
  +    return @intCast(pages.total_rows - pages.rows);
  +}
  +
@@ -667,7 +688,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/// Get a line from the scrollback buffer
  +/// offset 0 = oldest line in scrollback, offset (length-1) = most recent scrollback line
  +/// Returns number of cells written, or -1 on error
-@@ -1264,6 +1426,7 @@
+@@ -1264,6 +1443,7 @@
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
@@ -675,7 +696,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        };
  +    }
  +    return @intCast(cols);
-@@ -1402,10 +1565,9 @@
+@@ -1402,10 +1582,9 @@
  +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
  +}
  diff --git a/src/terminal/render.zig b/src/terminal/render.zig
