@@ -47,6 +47,43 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // The handler answers four query actions and hands every other action to ghostty's readonly handler. These
+    // queries are answered by Ghostty's app (window, config, clipboard) or not at all, so a headless reply here
+    // would be one this binding made up.
+    test.each([
+      ["DA1", "\x1b[c"],
+      ["DA2", "\x1b[>c"],
+      ["DA3", "\x1b[=c"],
+      ["XTVERSION", "\x1b[>q"],
+      ["ENQ", "\x05"],
+      ["DSR 996 color scheme", "\x1b[?996n"],
+      ["CSI 14 t", "\x1b[14t"],
+      ["CSI 16 t", "\x1b[16t"],
+      ["CSI 21 t", "\x1b[21t"],
+      ["DECRQSS", "\x1bP$qm\x1b\\"],
+      ["XTGETTCAP", "\x1bP+q544e\x1b\\"],
+      ["OSC 4 palette query", "\x1b]4;1;?\x1b\\"],
+      ["OSC 5 special color query", "\x1b]5;0;?\x1b\\"],
+      ["OSC 10 foreground query", "\x1b]10;?\x1b\\"],
+      ["OSC 11 background query", "\x1b]11;?\x1b\\"],
+      ["OSC 12 cursor color query", "\x1b]12;?\x1b\\"],
+      ["OSC 17 highlight background query", "\x1b]17;?\x1b\\"],
+      ["OSC 19 highlight foreground query", "\x1b]19;?\x1b\\"],
+      ["OSC 21 kitty color query", "\x1b]21;foreground=?\x1b\\"],
+      ["OSC 52 clipboard read", "\x1b]52;c;?\x1b\\"],
+      ["kitty graphics query", "\x1b_Gi=1,a=q;\x1b\\"],
+    ])("delivers nothing for %s, which the engine does not answer", (_name, query) => {
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 3 })
+      const replies: string[] = []
+      backend.onResponse = (data) => replies.push(decoder.decode(data))
+      try {
+        backend.feed(encoder.encode(query))
+        expect(replies).toEqual([])
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("keeps two replies from one feed in order", () => {
       const backend = createGhosttyNativeBackend({ cols: 10, rows: 3 })
       const replies: string[] = []
