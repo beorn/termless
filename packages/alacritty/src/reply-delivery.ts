@@ -8,16 +8,15 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for owned OSC 8 URI readback and propagated cell-read errors: feed/getCursor/readResponse are unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // This declaration excludes itself; determining adapter edits require re-audit.
-export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
-  boundary: "feed-and-getCursor",
-  adapterSources: [
+export const adapterDeclaration = {
+  sources: [
     {
       path: "packages/alacritty/src/index.ts",
       blobOid: "b4154cbd6ef4a83ce2cbf3dcf26ff13d645efd05",
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "a5a09304a7c742f833f1121d90ddda888aa67bf2",
+      blobOid: "09508f3a9e9a59a7973e67c6e734c277b149b667",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
@@ -28,8 +27,16 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
       blobOid: "34e142550085450ab02138184626716ad0d6b546",
     },
   ],
-  engine: {
-    kind: "native",
-    sha256: "32d76284e5a3c7673fafbbc83a16717fa0a1c1811c7d659d982176a53ceb1aa9",
+  delivery: {
+    boundary: "feed-and-getCursor",
+    engine: {
+      kind: "native",
+      sha256: "32d76284e5a3c7673fafbbc83a16717fa0a1c1811c7d659d982176a53ceb1aa9",
+    },
   },
+} as const
+
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  ...adapterDeclaration.delivery,
+  adapterSources: adapterDeclaration.sources,
 }

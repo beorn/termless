@@ -7,9 +7,10 @@
  * Supports every SGR attribute, cursor shapes, OSC 8 hyperlinks, and more.
  */
 
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   HyperlinkExtension,
@@ -282,6 +283,7 @@ export function createVtermBackend(
     reflow: true,
 
     extensions: new Set([
+      "adapter-sources",
       "reply-delivery",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc-metadata", // Exact cwd URI and copied notification payloads
@@ -307,7 +309,12 @@ export function createVtermBackend(
     ]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension = {
+  const backend: TerminalBackend &
+    HyperlinkExtension &
+    OscMetadataExtension &
+    ReplyDeliveryExtension &
+    AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "vterm",
     init,
     destroy,

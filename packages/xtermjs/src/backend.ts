@@ -6,7 +6,7 @@
  */
 
 // @xterm/headless is CJS — use default import for Node.js ESM compat
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import xterm from "@xterm/headless"
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
@@ -76,6 +76,7 @@ interface XtermInternalCore {
 // adjacent cells. Loading + activating V11 fixes this.
 import { Unicode11Addon } from "@xterm/addon-unicode11"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   HyperlinkExtension,
@@ -791,11 +792,16 @@ export function createXtermBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["hyperlinks", "reply-delivery", "mouse-encoding"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery", "mouse-encoding"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
-  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension = {
+  const backend: TerminalBackend &
+    HyperlinkExtension &
+    ReplyDeliveryExtension &
+    MouseEncodingExtension &
+    AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "xterm",
     init,
     destroy,

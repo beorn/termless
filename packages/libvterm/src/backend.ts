@@ -24,6 +24,7 @@
 
 import { getLoadedModule, readCell, CELL_SIZE, type LibvtermModule } from "./wasm-bindings.ts"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -35,7 +36,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
 // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
 type LegacyBackend = TerminalBackend
@@ -455,10 +456,11 @@ export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: Lib
       reason:
         "libvterm v0.3.3 library subject hands rows through sb_pushline/sb_popline and retains neither history nor a viewport: include/vterm.h:541-543; src/screen.c:208-226,676-681,830-837 (raw source at 9d6d2112335080312ef8c36667fa717ded4f7daf). An embedding application's viewport is a different subject.",
     },
-    extensions: new Set<string>(["reply-delivery"]),
+    extensions: new Set<string>(["adapter-sources", "reply-delivery"]),
   }
 
-  const backend: LegacyBackend & ReplyDeliveryExtension = {
+  const backend: LegacyBackend & ReplyDeliveryExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "libvterm",
     init,
     destroy,

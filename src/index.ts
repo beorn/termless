@@ -28,6 +28,7 @@ export type {
   HyperlinkExtension,
   MouseEncodingExtension,
   OscMetadataExtension,
+  AdapterSourcesExtension,
   ReplyDeliveryExtension,
   MouseButton,
   MouseEvent,

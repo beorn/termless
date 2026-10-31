@@ -7,6 +7,7 @@
  */
 
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -22,7 +23,7 @@ import type {
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module types (from napi-rs)
@@ -283,10 +284,11 @@ export function createAlacrittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["reply-delivery", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "reply-delivery", "hyperlinks"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension = {
+  const backend: TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "alacritty",
     init,
     destroy,

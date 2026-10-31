@@ -8,16 +8,15 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // built from build/flat-api.c and build/build.sh at libvterm v0.3.3.
 // Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
-export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
-  boundary: "feed-and-getCursor",
-  adapterSources: [
+export const adapterDeclaration = {
+  sources: [
     {
       path: "packages/libvterm/src/index.ts",
       blobOid: "2b4708b1081e701b99893ca055ded781dc46cf25",
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "1cb5c6d6c74287a2f1de8e21543f9b38599b662d",
+      blobOid: "0bb679829c7e3bcbcb281f5877fbb6c171cd8ed1",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
@@ -28,8 +27,16 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
       blobOid: "973341a8e2303d25cb17f1a36d491aad6c55b3a1",
     },
   ],
-  engine: {
-    kind: "wasm",
-    sha256: "5937bd79139ee5856bcf1bd619cc44fcd2d750d3def3066a74956678cdaaaeb2",
+  delivery: {
+    boundary: "feed-and-getCursor",
+    engine: {
+      kind: "wasm",
+      sha256: "5937bd79139ee5856bcf1bd619cc44fcd2d750d3def3066a74956678cdaaaeb2",
+    },
   },
+} as const
+
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  ...adapterDeclaration.delivery,
+  adapterSources: adapterDeclaration.sources,
 }

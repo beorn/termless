@@ -6,9 +6,10 @@
  * inspired by the Rust vt100 crate's design.
  */
 
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   TerminalOptions,
@@ -279,10 +280,11 @@ export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["reply-delivery"]),
+    extensions: new Set(["adapter-sources", "reply-delivery"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100",
     init,
     destroy,

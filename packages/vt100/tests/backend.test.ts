@@ -551,7 +551,7 @@ describe("createVt100Backend", () => {
     expect(backend.capabilities.osc8Hyperlinks).toBe(false)
     expect(backend.capabilities.reflow).toBe(false)
     expect(backend.capabilities.extensions).toBeInstanceOf(Set)
-    expect(backend.capabilities.extensions).toEqual(new Set(["reply-delivery"]))
+    expect(backend.capabilities.extensions).toEqual(new Set(["adapter-sources", "reply-delivery"]))
     backend.destroy()
   })
 

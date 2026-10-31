@@ -1,3 +1,4 @@
+import { adapterDeclaration } from "./adapter-sources.ts"
 /**
  * Native Ghostty backend for termless.
  *
@@ -9,6 +10,7 @@
  */
 
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -372,7 +374,7 @@ export function createGhosttyNativeBackend(
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["hyperlinks", "default-colors"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors"]),
   }
 
   // There is nothing to wire here: libghostty-vt 1.3.1 has no reply path (#30730, @cto (B) 7c077d3d).
@@ -384,7 +386,8 @@ export function createGhosttyNativeBackend(
   // reason at the cut (#30711 row 13). A port was tried and refused; the patch and its smoke logs
   // stay as evidence under /hh/var/@dev8/30730/.
 
-  const backend: TerminalBackend & HyperlinkExtension & DefaultColorsExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & DefaultColorsExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty-native",
     init,
     destroy,

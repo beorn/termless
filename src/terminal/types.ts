@@ -574,6 +574,11 @@ export interface WarningExtension {
 // Extension Interfaces (optional)
 // ═══════════════════════════════════════════════════════
 
+/** Declared adapter implementation identity, independent of reply delivery capability. */
+export interface AdapterSourcesExtension {
+  getAdapterSources(): ReplyDeliveryExtension["replyDelivery"]["adapterSources"]
+}
+
 /**
  * An adapter-owned audit of complete, synchronous engine reply delivery.
  * Absence gives no delivery guarantee; this never declares protocol support.

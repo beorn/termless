@@ -6,9 +6,10 @@
  * insert mode (IRM), selective erase (DECSED/DECSEL), and soft reset (DECSTR).
  */
 
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVt220Screen as createScreen, type ScreenCell, type Vt220Screen as Screen } from "vt220.js"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   TerminalOptions,
@@ -261,10 +262,11 @@ export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBac
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["reply-delivery"]),
+    extensions: new Set(["adapter-sources", "reply-delivery"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "vt220",
     init,
     destroy,

@@ -15,15 +15,31 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // DesktopIntegration and Channel in the single headless window; replies reach Callbacks.write synchronously.
 // Non-query notification payloads remain UNREPRODUCED_CALLBACK; no desktop integration/display is initialized.
 // This declaration excludes itself; determining adapter edits require re-audit.
-export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
-  boundary: "feed-and-getCursor",
-  adapterSources: [
-    { path: "packages/kitty/src/index.ts", blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077" },
-    { path: "packages/kitty/src/backend.ts", blobOid: "7d308b0d0dae99e53dd13bf0606f31e02359a7d3" },
-    { path: "packages/kitty/build/bridge.py", blobOid: "c5af1cd5fd0e054a96a603c20ab8278f655b462d" },
+export const adapterDeclaration = {
+  sources: [
+    {
+      path: "packages/kitty/src/index.ts",
+      blobOid: "3f207f911646613cdc3d8b04f155f0686a96a077",
+    },
+    {
+      path: "packages/kitty/src/backend.ts",
+      blobOid: "e59d918eb9620b44f42f8fb1bbe74770d05a5596",
+    },
+    {
+      path: "packages/kitty/build/bridge.py",
+      blobOid: "c5af1cd5fd0e054a96a603c20ab8278f655b462d",
+    },
   ],
-  engine: {
-    kind: "native",
-    sha256: "bb65c2d57e56eecca8143d73771432cf7dd386bccd36ae658950e5923a661886",
+  delivery: {
+    boundary: "feed-and-getCursor",
+    engine: {
+      kind: "native",
+      sha256: "bb65c2d57e56eecca8143d73771432cf7dd386bccd36ae658950e5923a661886",
+    },
   },
+} as const
+
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  ...adapterDeclaration.delivery,
+  adapterSources: adapterDeclaration.sources,
 }

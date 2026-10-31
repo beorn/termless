@@ -1,3 +1,4 @@
+import { adapterDeclaration } from "./adapter-sources.ts"
 /**
  * Rust vt100 backend for termless.
  *
@@ -9,6 +10,7 @@
  */
 
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -321,7 +323,7 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
     semanticPrompts: false,
     unicode: "13.0",
     reflow: false,
-    extensions: new Set(),
+    extensions: new Set(["adapter-sources"]),
   }
 
   // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
@@ -332,7 +334,8 @@ export function createVt100RustBackend(opts?: Partial<TerminalOptions>, native?:
   //   2. Add #[napi] pub fn read_response(&self) -> Option<Buffer> that drains it
   // The TS side is already wired — it calls readResponse() after each feed().
 
-  const backend: TerminalBackend = {
+  const backend: TerminalBackend & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100-rust",
     init,
     destroy,

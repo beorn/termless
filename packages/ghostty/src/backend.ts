@@ -1,3 +1,4 @@
+import { adapterDeclaration } from "./adapter-sources.ts"
 /**
  * Ghostty backend for termless.
  *
@@ -29,6 +30,7 @@ import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
 import { resolveGhosttyWebWasm } from "./load-native.ts"
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -620,7 +622,7 @@ export function createGhosttyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["dirtyTracking", "warnings", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "dirtyTracking", "warnings", "hyperlinks"]),
   }
 
   function getWarnings(): EmulatorWarning[] {
@@ -649,7 +651,8 @@ export function createGhosttyBackend(
     return renderTerminalPng(backend, opts as RenderOptions | undefined)
   }
 
-  const backend: LegacyBackend & WarningExtension & HyperlinkExtension = {
+  const backend: LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty",
     init,
     destroy,

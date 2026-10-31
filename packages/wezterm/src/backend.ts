@@ -9,6 +9,7 @@
  */
 
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -23,7 +24,7 @@ import type {
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module loading
@@ -359,10 +360,11 @@ export function createWeztermBackend(
       reason:
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
-    extensions: new Set(["hyperlinks", "reply-delivery"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery"]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension = {
+  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "wezterm",
     init,
     destroy,

@@ -21,6 +21,7 @@
 /* oxlint-disable typescript/no-deprecated -- This adapter still implements the required TerminalBackend compatibility contract until unterm A4. */
 
 import type {
+  AdapterSourcesExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -36,7 +37,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
-import { replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -524,7 +525,7 @@ export function createKittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["warnings", "reply-delivery", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "warnings", "reply-delivery", "hyperlinks"]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -537,7 +538,12 @@ export function createKittyBackend(
   // lazily (on next query) rather than immediately after feed(). This is fine
   // for testing but may cause timing issues with interactive PTY usage.
 
-  const backend: TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension = {
+  const backend: TerminalBackend &
+    WarningExtension &
+    ReplyDeliveryExtension &
+    HyperlinkExtension &
+    AdapterSourcesExtension = {
+    getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
     init,
     destroy,

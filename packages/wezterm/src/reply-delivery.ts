@@ -12,16 +12,15 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
-export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
-  boundary: "feed-and-getCursor",
-  adapterSources: [
+export const adapterDeclaration = {
+  sources: [
     {
       path: "packages/wezterm/src/index.ts",
       blobOid: "512606c5270ffd0cff55c1b70f5b3eda18a92df0",
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "aa6cacb182875a69db79a2a0ffda1ca6912696cd",
+      blobOid: "7b252081bd9ec57653357be54ada11ce4915b744",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
@@ -32,8 +31,16 @@ export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
       blobOid: "34e142550085450ab02138184626716ad0d6b546",
     },
   ],
-  engine: {
-    kind: "native",
-    sha256: "0f56a805793d7d829daa617f1323aacff0d73fe868747b0d077c6af315e2aab8",
+  delivery: {
+    boundary: "feed-and-getCursor",
+    engine: {
+      kind: "native",
+      sha256: "0f56a805793d7d829daa617f1323aacff0d73fe868747b0d077c6af315e2aab8",
+    },
   },
+} as const
+
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  ...adapterDeclaration.delivery,
+  adapterSources: adapterDeclaration.sources,
 }
