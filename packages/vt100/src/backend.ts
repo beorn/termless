@@ -40,7 +40,9 @@ const DEFAULT_ROWS = 24
  * OSC title, and more. No color, hidden text, or wide chars — use
  * vterm.js for those.
  */
-export function createVt100Backend(opts?: Partial<TerminalOptions>): TerminalBackend & ReplyDeliveryExtension {
+export function createVt100Backend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {

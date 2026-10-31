@@ -172,7 +172,7 @@ const DEFAULT_ROWS = 24
 export function createXtermBackend(
   opts?: Partial<TerminalOptions>,
   // oxlint-disable-next-line typescript/no-deprecated -- Registered adapter still implements this lifecycle.
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension {
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension & AdapterSourcesExtension {
   let term: XTerminal | null = null
   let title = ""
   let decoder = new TextDecoder()

@@ -64,7 +64,7 @@ const BLANK_CELL: Cell = {
  */
 export function createVtermBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension {
+): TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension & AdapterSourcesExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {

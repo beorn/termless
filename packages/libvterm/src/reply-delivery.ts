@@ -16,7 +16,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "0bb679829c7e3bcbcb281f5877fbb6c171cd8ed1",
+      blobOid: "9191b6f79617372717848713411b78ac2faa353e",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",

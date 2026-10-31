@@ -166,7 +166,10 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
  * @param mod - Optional pre-loaded LibvtermModule (for test isolation).
  *   Falls back to the shared instance from initLibvterm().
  */
-export function createLibvtermBackend(opts?: Partial<TerminalOptions>, mod?: LibvtermModule): LegacyBackend {
+export function createLibvtermBackend(
+  opts?: Partial<TerminalOptions>,
+  mod?: LibvtermModule,
+): LegacyBackend & AdapterSourcesExtension {
   let vt: number = 0 // VTerm* pointer
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer

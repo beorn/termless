@@ -250,7 +250,7 @@ export function isKittyAvailable(): boolean {
  */
 export function createKittyBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension {
+): TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let scrollbackLimit = 1000

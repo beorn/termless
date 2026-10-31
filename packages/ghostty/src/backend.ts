@@ -251,7 +251,7 @@ const DEFAULT_ROWS = 24
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
   ghostty?: Ghostty,
-): LegacyBackend & WarningExtension & HyperlinkExtension {
+): LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined

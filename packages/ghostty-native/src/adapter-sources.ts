@@ -7,7 +7,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty-native/src/backend.ts",
-      blobOid: "98e927fb3bb1dabd3e2e9fa4109fa19601fa9032",
+      blobOid: "772d0c051539c367452632d029cb3505c30168c2",
     },
   ],
 } as const

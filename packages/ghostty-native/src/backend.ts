@@ -218,7 +218,7 @@ const DEFAULT_ROWS = 24
  */
 export function createGhosttyNativeBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & HyperlinkExtension & DefaultColorsExtension {
+): TerminalBackend & HyperlinkExtension & DefaultColorsExtension & AdapterSourcesExtension {
   let handle: NativeTerminalHandle | null = null
 
   function ensureHandle(): NativeTerminalHandle {

@@ -151,7 +151,7 @@ const DEFAULT_ROWS = 24
  */
 export function createAlacrittyBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension {
+): TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension {
   let term: NativeAlacrittyTerminal | null = null
 
   function ensureTerm(): NativeAlacrittyTerminal {

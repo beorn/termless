@@ -198,7 +198,7 @@ const DEFAULT_ROWS = 24
 export function createWeztermBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension {
+): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & AdapterSourcesExtension {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS

@@ -37,7 +37,9 @@ const DEFAULT_ROWS = 24
  * (SGR 8/28), and soft reset (DECSTR). No truecolor, no 256 colors, no wide
  * chars — use vterm.js for those.
  */
-export function createVt220Backend(opts?: Partial<TerminalOptions>): TerminalBackend & ReplyDeliveryExtension {
+export function createVt220Backend(
+  opts?: Partial<TerminalOptions>,
+): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
