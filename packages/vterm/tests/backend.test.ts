@@ -1,4 +1,4 @@
-import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import type { OscMetadataExtension, ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { dirname, join, relative } from "node:path"
@@ -10,6 +10,37 @@ import { createVtermScreen } from "vterm.js"
 import { createVtermBackend } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
+  // @failure The adapter advertises OSC metadata but drops payloads or exposes the engine's mutable notification array.
+  // @level l0
+  // @consumer Headless cwd and notification probes through OscMetadataExtension.
+  test("exposes exact cwd and copied notification metadata from the engine", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    try {
+      expect(hasExtension(backend, "osc-metadata")).toBe(true)
+      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata")) throw new Error("missing OSC metadata")
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      expect(backend.getCwd()).toBeNull()
+      expect(backend.getNotifications()).toEqual([])
+      feed("\x1b]7;file://localhost/a%20b\x07")
+      expect(backend.getCwd()).toBe("file://localhost/a%20b")
+      feed("\x1b]7;file://localhost/second\x1b\\")
+      expect(backend.getCwd()).toBe("file://localhost/second")
+      feed("\x1b]7;\x07")
+      expect(backend.getCwd()).toBeNull()
+      feed("\x1b]9;first;payload\x07")
+      const first = backend.getNotifications()
+      expect(first).toEqual(["first;payload"])
+      feed("\x1b]9;second payload\x1b\\")
+      expect(first).toEqual(["first;payload"])
+      expect(backend.getNotifications()).toEqual(["first;payload", "second payload"])
+      // The public type is readonly, but JS callers must not be able to mutate engine state either.
+      ;(first as string[]).push("external mutation")
+      expect(backend.getNotifications()).toEqual(["first;payload", "second payload"])
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // Adapter-byte pins remain mandatory with source and packed/registry engines.
   test("declares reply delivery bound to actual imported adapter bytes", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
@@ -757,7 +788,7 @@ describe("createVtermBackend", () => {
     expect(backend.capabilities.extensions.has("osc52")).toBe(true)
     expect(backend.capabilities.extensions.has("osc7")).toBe(true)
     expect(backend.capabilities.extensions.has("iterm2Images")).toBe(true)
-    expect(backend.capabilities.extensions.has("modifyOtherKeys")).toBe(true)
+    expect(backend.capabilities.extensions.has("modifyOtherKeys")).toBe(false)
     backend.destroy()
   })
 

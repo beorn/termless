@@ -217,9 +217,22 @@ interface HyperlinkExtension {
   getHyperlinkAt(row: number, col: number): string | null
 }
 
+// OSC parser metadata (extension name "osc-metadata")
+interface OscMetadataExtension {
+  getCwd(): string | null
+  getNotifications(): readonly string[]
+}
+
 // Bell counter
 interface BellExtension {
   getBellCount(): number
   clearBellCount(): void
 }
 ```
+
+`OscMetadataExtension` exposes the engine's exact OSC 7 URI and copied, ordered
+OSC 9 payloads. Null cwd means the engine reports no URI. Notification payloads
+retain their raw strings; this reader does not attest an OS notification appearing
+or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
+"osc-metadata")` before calling these methods. The vterm backend implements them;
+other backends can omit the extension.
