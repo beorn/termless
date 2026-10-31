@@ -73,7 +73,10 @@ export function snapshotVisualState(readable: Terminal): string {
   parts.push(`T:${readable.getTitle()}`)
 
   // Visual modes
-  const modeFlags = VISUAL_MODES.map((m) => (readable.getMode(m) ? "1" : "0")).join("")
+  const modeFlags = VISUAL_MODES.map((m) => {
+    const state = readable.getMode(m)
+    return state === null ? "?" : state ? "1" : "0"
+  }).join("")
   parts.push(`M:${modeFlags}`)
 
   // Cell grid — every cell's full visual state

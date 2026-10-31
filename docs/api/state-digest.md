@@ -21,7 +21,7 @@ interface TerminalStateDigest {
   size: { cols: number; rows: number } // terminal geometry
   cursor: DigestCursor // row/col + visibility + shape
   title: string
-  modes: Record<TerminalMode, boolean> // every TerminalMode, fixed order
+  modes: Record<TerminalMode, boolean | null> // every TerminalMode, fixed order
   rows: DigestRow[] // the visible grid (the screen)
 }
 

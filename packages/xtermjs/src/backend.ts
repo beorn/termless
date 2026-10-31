@@ -610,7 +610,7 @@ export function createXtermBackend(
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- This adapter still implements the legacy mode signature.
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): boolean | null {
     const t = ensureTerm()
 
     switch (mode) {
@@ -635,7 +635,9 @@ export function createXtermBackend(
       case "insertMode":
         return t.modes.insertMode
       case "reverseVideo":
-        return false // not exposed by xterm.js headless
+        return null // not exposed by xterm.js headless
+      default:
+        return null
     }
   }
 

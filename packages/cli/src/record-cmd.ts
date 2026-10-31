@@ -727,9 +727,9 @@ async function interactiveRecord(
       const altScreen = headlessTerminal.getMode("altScreen")
       // A TUI that has left the alt screen has exited — anything it paints now
       // is the restored shell, not a recording frame. Stop capturing.
-      if (frameGate.enteredAltScreen() && !altScreen) return
+      if (frameGate.enteredAltScreen() && altScreen === false) return
       const currentText = headlessTerminal.getText()
-      const { capture, resetPrior } = frameGate.observe(currentText, altScreen)
+      const { capture, resetPrior } = frameGate.observe(currentText, altScreen === true)
       if (resetPrior) {
         // The command just entered the alt screen — everything captured so far
         // was pre-UI noise. Discard it; this paint becomes frame 0.
@@ -831,7 +831,7 @@ async function interactiveRecord(
     // tick — but skip the post-exit screen: a TUI that exits restores the
     // shell, and that restored primary screen is not a real recording frame.
     const finalText = headlessTerminal.getText()
-    const tuiExited = frameGate.enteredAltScreen() && !headlessTerminal.getMode("altScreen")
+    const tuiExited = frameGate.enteredAltScreen() && headlessTerminal.getMode("altScreen") === false
     if (
       finalText.trim().length > 0 &&
       !tuiExited &&

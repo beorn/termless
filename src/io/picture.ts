@@ -102,6 +102,10 @@ export type Mode =
   | "originMode"
   | "insertMode"
   | "reverseVideo"
+  | "altScroll"
+  | "syncOutput"
+  | "colorSchemeReporting"
+  | "smoothScroll"
 
 /** Every {@link Mode}, in declaration order — the exhaustive mode vocabulary. */
 export const MODES: readonly Mode[] = [
@@ -116,11 +120,14 @@ export const MODES: readonly Mode[] = [
   "originMode",
   "insertMode",
   "reverseVideo",
+  "altScroll",
+  "syncOutput",
+  "colorSchemeReporting",
+  "smoothScroll",
 ]
 
-/**
- * A snapshot of every mode's state. Every {@link Mode} is present — a mode the
- * emulator does not track reports `false`, never absent, so a reader can never
- * confuse "off" with "unknown by omission".
- */
-export type Modes = Readonly<Record<Mode, boolean>>
+/** A reported set/reset state, or null when the adapter does not expose the mode. */
+export type ModeState = boolean | null
+
+/** Every mode is present; null preserves an unavailable readback separately from false (reset). */
+export type Modes = Readonly<Record<Mode, ModeState>>

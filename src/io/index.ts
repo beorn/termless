@@ -59,7 +59,7 @@ export type { Recording, RecordingHeader } from "./recording.ts"
 export { byType, filter, retime, trim } from "./transforms.ts"
 
 // ── The readable picture ──
-export type { Cell, Color, Cursor, CursorStyle, Mode, Modes, Size, UnderlineStyle } from "./picture.ts"
+export type { Cell, Color, Cursor, CursorStyle, Mode, Modes, ModeState, Size, UnderlineStyle } from "./picture.ts"
 export { MODES } from "./picture.ts"
 
 // ── The timebase — integer microseconds, one monotonic clock ──

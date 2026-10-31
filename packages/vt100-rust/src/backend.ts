@@ -282,7 +282,7 @@ export function createVt100RustBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): boolean | null {
     return ensureTerm().getMode(mode)
   }
 

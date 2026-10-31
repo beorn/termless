@@ -191,7 +191,7 @@ export function snapshotView(snapshot: EngineSnapshot): Terminal {
       const c = snapshot.cursor
       return { col: c.x, row: c.y, x: c.x, y: c.y, visible: c.visible, style: mapCursorShape(c.shape) }
     },
-    getMode(mode: TerminalMode): boolean {
+    getMode(mode: TerminalMode): boolean | null {
       const m = snapshot.modes
       switch (mode) {
         case "altScreen":
@@ -217,7 +217,7 @@ export function snapshotView(snapshot: EngineSnapshot): Terminal {
         case "reverseVideo":
           return m.reverseVideo
         default:
-          return false
+          return null
       }
     },
     getTitle(): string {

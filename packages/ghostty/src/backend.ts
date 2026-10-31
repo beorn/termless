@@ -556,7 +556,7 @@ export function createGhosttyBackend(
     }
   }
 
-  function getMode(mode: Mode): boolean {
+  function getMode(mode: Mode): boolean | null {
     const t = ensureTerm()
 
     switch (mode) {
@@ -582,6 +582,8 @@ export function createGhosttyBackend(
         return t.getMode(4, true) // IRM (ANSI mode)
       case "reverseVideo":
         return t.getMode(5) // DECSCNM
+      default:
+        return null
     }
   }
 

@@ -25,6 +25,7 @@ export type {
   ScrollbackState,
   Terminal,
   TerminalBackend,
+  ModeState,
   TerminalCapabilities,
   TerminalMode,
   TerminalOptions,

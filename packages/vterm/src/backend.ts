@@ -201,7 +201,7 @@ export function createVtermBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): boolean | null {
     return ensureScreen().getMode(mode)
   }
 

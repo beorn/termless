@@ -407,11 +407,11 @@ export function createLibvtermBackend(
     }
   }
 
-  function getMode(_mode: Mode): boolean {
+  function getMode(_mode: Mode): boolean | null {
     // libvterm's C API doesn't expose terminal modes directly through
     // simple function calls; return null when state cannot be read from
     // the engine rather than fabricating hard-coded boolean defaults.
-    return null as unknown as boolean
+    return null
   }
 
   function getTitle(): string {

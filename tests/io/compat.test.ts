@@ -8,6 +8,10 @@
 
 import { describe, expect, test } from "vitest"
 import { createXtermBackend } from "../../packages/xtermjs/src/backend.ts"
+import { createVtermBackend } from "../../packages/vterm/src/backend.ts"
+import { createVt100Backend } from "../../packages/vt100/src/backend.ts"
+import { createVt220Backend } from "../../packages/vt220/src/backend.ts"
+import type { Mode } from "../../src/io/picture.ts"
 import { emulatorFromBackend } from "../../src/terminal/io-compat.ts"
 import { eventFromIoEvent, ioEventFromEvent } from "../../src/recording/io-compat.ts"
 import { micros, pipe, type Event } from "../../src/io/index.ts"
@@ -77,16 +81,42 @@ describe("emulatorFromBackend", () => {
     backend.destroy()
   })
 
-  test("reports every mode, so 'off' is never confused with 'not tracked'", async () => {
+  // @failure An unexposed mode is serialized as disabled or omitted from the io picture.
+  // @level l0
+  // @consumer Emulator readers and recorded state comparisons.
+  test("retains disabled and unexposed modes separately in the complete picture", () => {
     const backend = createXtermBackend()
     backend.init({ cols: 80, rows: 24 })
     const emulator = emulatorFromBackend(backend, FIXTURE_SIZE)
 
     const modes = emulator.modes
-    expect(Object.keys(modes)).toHaveLength(11)
-    expect(Object.values(modes).every((v) => typeof v === "boolean")).toBe(true)
+    expect(Object.keys(modes)).toHaveLength(15)
+    expect(modes.applicationCursor).toBe(false)
+    expect(modes.reverseVideo).toBeNull()
+    expect(modes.altScroll).toBeNull()
+    expect(modes.syncOutput).toBeNull()
+    expect(modes.colorSchemeReporting).toBeNull()
+    expect(modes.smoothScroll).toBeNull()
 
     backend.destroy()
+  })
+
+  // @failure A JS caller's unknown mode is fabricated as false by an adapter fallback.
+  // @level l0
+  // @consumer TerminalBackend callers crossing the untyped JS boundary.
+  test.each([
+    ["xtermjs", createXtermBackend],
+    ["vterm", createVtermBackend],
+    ["vt100", createVt100Backend],
+    ["vt220", createVt220Backend],
+  ] as const)("%s returns null for an unknown mode", (_name, create) => {
+    const backend = create()
+    backend.init({ cols: 20, rows: 4 })
+    try {
+      expect(backend.getMode("unknown-mode" as Mode)).toBeNull()
+    } finally {
+      backend.destroy()
+    }
   })
 
   test("throws on a mode control event rather than dropping it", async () => {

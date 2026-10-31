@@ -48,6 +48,7 @@ export type {
   Terminal,
   // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
   TerminalBackend,
+  ModeState,
   TerminalCapabilities,
   TerminalCreateOptions,
   // oxlint-disable-next-line typescript/no-deprecated -- Root compatibility export remains until unterm phase A4.
