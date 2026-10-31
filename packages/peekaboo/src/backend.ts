@@ -36,6 +36,7 @@ import type {
   Cursor,
   KeyDescriptor,
   TerminalMode,
+  ModeState,
   ScrollbackState,
   TerminalCapabilities,
 } from "../../../src/terminal/types.ts"
@@ -524,7 +525,7 @@ export function createPeekabooBackend(opts?: PeekabooOptions): PeekabooBackend {
     return dataBackend.getCursor()
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): ModeState {
     return dataBackend.getMode(mode)
   }
 

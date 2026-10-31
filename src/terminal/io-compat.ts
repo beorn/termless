@@ -14,7 +14,7 @@
 
 import type { Emulator } from "../io/emulator.ts"
 import type { Event } from "../io/event.ts"
-import { MODES, type Cell, type Cursor, type Modes, type Size } from "../io/picture.ts"
+import { MODES, type Cell, type Cursor, type Modes, type ModeState, type Size } from "../io/picture.ts"
 import type { TerminalBackend } from "./types.ts"
 
 /**
@@ -94,7 +94,7 @@ export function emulatorFromBackend(backend: TerminalBackend, size: Size): Emula
     },
 
     get modes(): Modes {
-      const modes = {} as Record<(typeof MODES)[number], boolean>
+      const modes = {} as Record<(typeof MODES)[number], ModeState>
       for (const mode of MODES) modes[mode] = backend.getMode(mode)
       return modes
     },

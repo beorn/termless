@@ -15,6 +15,7 @@ import type {
   Cell,
   Cursor,
   TerminalMode,
+  ModeState,
   ScrollbackState,
   TerminalCapabilities,
   Color,
@@ -314,8 +315,8 @@ export function createWeztermBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
-    return ensureTerm().getMode(mode) as unknown as boolean
+  function getMode(mode: TerminalMode): ModeState {
+    return ensureTerm().getMode(mode)
   }
 
   function getTitle(): string {

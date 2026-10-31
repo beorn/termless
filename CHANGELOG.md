@@ -2,6 +2,13 @@
 
 ## 0.10.2 (unreleased)
 
+### Changed
+
+- `getMode` and mode snapshots expose `ModeState` (`boolean | null`): null means
+  the adapter does not expose the mode, separately from a measured reset state.
+  The vocabulary adds `altScroll`, `syncOutput`, `colorSchemeReporting` and
+  `smoothScroll` (DECSCLM, not DECSSCLS). Scope: [tri-state ruling](/hh/var/@cto/getmode-tristate-scope-ruling-20261031.md).
+
 ### Fixed
 
 - `@termless/cli` pins its native canvas dependency to 1.0.9, the version already resolved by the lockfile.

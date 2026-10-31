@@ -96,6 +96,25 @@ describe("terminalStateDigest", () => {
 })
 
 describe("diffTerminalStates", () => {
+  // @failure A missing mode readback compares equal to measured false after serialization.
+  // @level l0
+  // @consumer Digest comparisons and visual frame change detection.
+  test("unknown mode state survives serialization and differs from a measured reset", () => {
+    const known = fed("X", 1, 1)
+    const unknown = {
+      ...known,
+      getMode: (mode: Parameters<TerminalBackend["getMode"]>[0]) =>
+        mode === "reverseVideo" ? null : known.getMode(mode),
+    }
+    const digest = terminalStateDigest(unknown)
+    const round = JSON.parse(JSON.stringify(digest)) as TerminalStateDigest
+    expect(round.modes.reverseVideo).toBeNull()
+    expect(diffTerminalStates(terminalStateDigest(known), round).modes).toEqual([
+      { mode: "reverseVideo", a: false, b: null },
+    ])
+    expect(snapshotVisualState(unknown)).not.toBe(snapshotVisualState(known))
+  })
+
   test("a one-cell fg difference produces a diff naming the row", () => {
     // Identical text on every row; only row 1's pen color differs.
     const a = terminalStateDigest(fed(`abc\r\n${ESC}[31mdef${ESC}[0m\r\nghi`))
@@ -189,12 +208,12 @@ test.each(["dim", "italic", "strikethrough", "blink"] as const)(
   },
 )
 
-// Pre-change real-vterm boolean-only recording input; fixed hashes prove legacy wire identity.
-test("retained boolean-only recording keeps legacy digest and visual bytes", () => {
+// The four added mode keys intentionally extend digest bytes; rendered visual bytes stay stable.
+test("retained recording has the expanded mode digest and unchanged visual bytes", () => {
   const term = fed("\x1b[1;2;3;9mX\x1b[0mY", 8, 2)
   const hash = (value: string) => createHash("sha256").update(value).digest("hex")
   expect(hash(JSON.stringify(terminalStateDigest(term)))).toBe(
-    "c84a4a38b234d54fd7ca8ebd276fd9b0b75496429fffcf0580ac1ebe3b1945ff",
+    "8d9160798a546610daedc06a7440f482f8ee54a0f89b13d45994c7e3e2d7828d",
   )
   expect(hash(snapshotVisualState(term))).toBe("41611b76d1676e78dbae650e298af3b0c36fb0f7316f19acdb78319c25f54580")
 })

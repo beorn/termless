@@ -535,7 +535,8 @@ export function assertHaveCursor(term: Terminal, props: CursorProps): AssertionR
 
 /** Assert a specific terminal mode is enabled. */
 export function assertInMode(term: Terminal, mode: TerminalMode): AssertionResult {
-  const pass = term.getMode(mode)
+  const state = term.getMode(mode)
+  const pass = state === true
   return {
     pass,
     message: pass ? `Expected terminal not to be in mode "${mode}"` : `Expected terminal to be in mode "${mode}"`,

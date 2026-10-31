@@ -18,6 +18,7 @@ import type {
   TerminalBackend,
   TerminalCreateOptions,
   TerminalMode,
+  ModeState,
   TextMatch,
   MouseOptions,
   MouseModifiers,
@@ -159,7 +160,7 @@ export function createTerminal(options: TerminalCreateOptions): TestTerminal {
     return { ...c, col, row, x: col, y: row }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): ModeState {
     return backend.getMode(mode)
   }
 

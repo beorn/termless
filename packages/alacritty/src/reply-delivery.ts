@@ -16,7 +16,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "3c2cd926fa2a20ff686aecc4c77d7cd908e2e9df",
+      blobOid: "4210383129879c4e8756e6975674632cf69ecce9",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",

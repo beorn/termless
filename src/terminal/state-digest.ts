@@ -31,7 +31,7 @@
  * replaces the other.
  */
 
-import type { Cell, CursorStyle, Color, TerminalMode, Terminal } from "./types.ts"
+import type { Cell, CursorStyle, Color, ModeState, TerminalMode, Terminal } from "./types.ts"
 
 // =============================================================================
 // Types
@@ -79,15 +79,15 @@ export interface TerminalStateDigest {
   size: { cols: number; rows: number }
   cursor: DigestCursor
   title: string
-  modes: Record<TerminalMode, boolean>
+  modes: Record<TerminalMode, ModeState>
   rows: DigestRow[]
 }
 
 /** One mode that differs between two digests. */
 export interface ModeDiff {
   mode: TerminalMode
-  a: boolean
-  b: boolean
+  a: ModeState
+  b: ModeState
 }
 
 /** One screen row that differs between two digests (`row` = screen row index). */
@@ -136,6 +136,10 @@ const DIGEST_MODES = [
   "originMode",
   "insertMode",
   "reverseVideo",
+  "altScroll",
+  "syncOutput",
+  "colorSchemeReporting",
+  "smoothScroll",
 ] as const satisfies readonly TerminalMode[]
 
 // Compile-time completeness: `UncoveredMode` is `never` iff every TerminalMode
@@ -169,7 +173,7 @@ export function terminalStateDigest(term: Terminal, opts: TerminalStateDigestOpt
 
   const cursor = term.getCursor()
 
-  const modes = {} as Record<TerminalMode, boolean>
+  const modes = {} as Record<TerminalMode, ModeState>
   for (const mode of DIGEST_MODES) modes[mode] = term.getMode(mode)
 
   return {

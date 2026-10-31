@@ -10,7 +10,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vterm/src/backend.ts",
-      blobOid: "8599e301dd046b1264403069289477ab65d71d3a",
+      blobOid: "e7eb83f44a4ae1368cbf7b78ef6783219757002a",
     },
   ],
   delivery: {
@@ -18,7 +18,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "617ae6002c7befea7b3e43d11bf23e6b433e3d65",
+      treeOid: "24434d10612d8da4efb697ea39ae21f005477fe6",
     },
   },
 } as const

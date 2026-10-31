@@ -328,28 +328,28 @@ describe("createVt100Backend", () => {
 
   // ── Modes ──
 
-  test("alt screen mode is not supported (always false)", () => {
+  test("alt screen mode has no exposed readback", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    expect(backend.getMode("altScreen")).toBe(false)
+    expect(backend.getMode("altScreen")).toBeNull()
     // Sequence silently ignored
     backend.feed(new TextEncoder().encode("\x1b[?1049h"))
-    expect(backend.getMode("altScreen")).toBe(false)
+    expect(backend.getMode("altScreen")).toBeNull()
     backend.destroy()
   })
 
-  test("bracketed paste mode is not supported (always false)", () => {
+  test("bracketed paste mode has no exposed readback", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    expect(backend.getMode("bracketedPaste")).toBe(false)
+    expect(backend.getMode("bracketedPaste")).toBeNull()
     backend.feed(new TextEncoder().encode("\x1b[?2004h"))
-    expect(backend.getMode("bracketedPaste")).toBe(false)
+    expect(backend.getMode("bracketedPaste")).toBeNull()
     backend.destroy()
   })
 
-  test("mouse tracking mode is not supported (always false)", () => {
+  test("mouse tracking mode has no exposed readback", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    expect(backend.getMode("mouseTracking")).toBe(false)
+    expect(backend.getMode("mouseTracking")).toBeNull()
     backend.feed(new TextEncoder().encode("\x1b[?1000h"))
-    expect(backend.getMode("mouseTracking")).toBe(false)
+    expect(backend.getMode("mouseTracking")).toBeNull()
     backend.destroy()
   })
 

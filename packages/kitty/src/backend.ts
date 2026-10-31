@@ -27,6 +27,7 @@ import type {
   Cell,
   Cursor,
   TerminalMode,
+  ModeState,
   ScrollbackState,
   TerminalCapabilities,
   Color,
@@ -485,9 +486,9 @@ export function createKittyBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): ModeState {
     const s = ensureSnapshot()
-    return (s.modes[mode] ?? null) as unknown as boolean
+    return s.modes[mode] ?? null
   }
 
   function getTitle(): string {

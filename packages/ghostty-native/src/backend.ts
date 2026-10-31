@@ -334,7 +334,7 @@ export function createGhosttyNativeBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
+  function getMode(mode: TerminalMode): boolean | null {
     const native = loadGhosttyNative()
     return native.getMode(ensureHandle(), mode)
   }

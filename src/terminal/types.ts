@@ -1,4 +1,4 @@
-import type { Cell, Color, Cursor, Mode } from "../io/picture.ts"
+import type { Cell, Color, Cursor, Mode, ModeState } from "../io/picture.ts"
 import type { SpawnOptions as IoSpawnOptions } from "../io/session.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -45,7 +45,7 @@ export function declaredPixelGeometry(
 // depends on nothing) and re-exported here. There is exactly one declaration of
 // each in the package; every existing import path keeps working.
 
-export type { Cell, Color, Cursor, CursorStyle, UnderlineStyle } from "../io/picture.ts"
+export type { Cell, Color, Cursor, CursorStyle, ModeState, UnderlineStyle } from "../io/picture.ts"
 
 // ── Modes ──
 
@@ -210,7 +210,8 @@ export interface Terminal {
   /** @deprecated REMOVING in unterm phase A4 — renamed to {@link Terminal.getRows} (row = cells). Kept required during the migration window. */
   getLines(): Cell[][]
   getCursor(): Cursor
-  getMode(mode: TerminalMode): boolean
+  /** null means this adapter does not expose the mode; it is not a support verdict. */
+  getMode(mode: TerminalMode): ModeState
   getTitle(): string
   getIconLabel?(): string
   /** Present only when the backend exposes the engine's clipboard callback state. */

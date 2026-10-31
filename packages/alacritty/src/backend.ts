@@ -14,6 +14,7 @@ import type {
   Cursor,
   CursorStyle,
   TerminalMode,
+  ModeState,
   ScrollbackState,
   TerminalCapabilities,
   Color,
@@ -248,8 +249,8 @@ export function createAlacrittyBackend(
     }
   }
 
-  function getMode(mode: TerminalMode): boolean {
-    return ensureTerm().getMode(mode) as unknown as boolean
+  function getMode(mode: TerminalMode): ModeState {
+    return ensureTerm().getMode(mode)
   }
 
   function getTitle(): string {
