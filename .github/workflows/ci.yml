@@ -24,8 +24,7 @@ jobs:
         os:
           - ubuntu-latest # linux-x64-gnu
           - ubuntu-22.04-arm # linux-arm64-gnu (GitHub's newer ARM runner)
-          - macos-latest # darwin-x64 (Intel)
-          - macos-14 # darwin-arm64 (Apple Silicon)
+          - macos-latest # darwin-arm64 (Apple Silicon)
           - windows-latest # win32-x64-msvc
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +52,6 @@ jobs:
           - ubuntu-latest
           - ubuntu-22.04-arm
           - macos-latest
-          - macos-14
           - windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,8 +83,7 @@ jobs:
         os:
           - ubuntu-latest # linux-x64-gnu
           - ubuntu-22.04-arm # linux-arm64-gnu
-          - macos-latest # darwin-x64
-          - macos-14 # darwin-arm64
+          - macos-latest # darwin-arm64
           - windows-latest # win32-x64-msvc
     env:
       TERMLESS_CI_PLATFORM: ${{ matrix.os }}
