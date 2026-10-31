@@ -7,7 +7,8 @@
 - `getMode` and mode snapshots expose `ModeState` (`boolean | null`): null means
   the adapter does not expose the mode, separately from a measured reset state.
   The vocabulary adds `altScroll`, `syncOutput`, `colorSchemeReporting` and
-  `smoothScroll` (DECSCLM, not DECSSCLS). Scope: [tri-state ruling](/hh/var/@cto/getmode-tristate-scope-ruling-20261031.md).
+  `smoothScroll` (DECSCLM, not DECSSCLS). Scope ruling:
+  `/hh/var/@cto/getmode-tristate-scope-ruling-20261031.md` (2026-10-31).
 
 ### Fixed
 
