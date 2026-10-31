@@ -439,7 +439,7 @@ diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1124 @@
+@@ -0,0 +1,1141 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -634,6 +634,25 @@ new file mode 100644
 +                const resp = try std.fmt.bufPrint(&buf, "\x1B[?{}u", .{flags});
 +                try self.response_buffer.appendSlice(self.alloc, resp);
 +            },
++            // DECRPM replies, transcribed from Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496
++            // src/termio/stream_handler.zig:525-555 (requestMode / requestModeUnknown).
++            .request_mode => {
++                const tag: modespkg.ModeTag = @bitCast(@intFromEnum(value.mode));
++                const code: u8 = if (self.terminal.modes.get(value.mode)) 1 else 2;
++                var buf: [32]u8 = undefined;
++                const resp = try std.fmt.bufPrint(&buf, "\x1B[{s}{};{}$y", .{
++                    if (tag.ansi) "" else "?", tag.value, code,
++                });
++                try self.response_buffer.appendSlice(self.alloc, resp);
++            },
++            // Modes outside core's table answer `;0$y` (not recognized), as DECRPM specifies.
++            .request_mode_unknown => {
++                var buf: [32]u8 = undefined;
++                const resp = try std.fmt.bufPrint(&buf, "\x1B[{s}{};0$y", .{
++                    if (value.ansi) "" else "?", value.mode,
++                });
++                try self.response_buffer.appendSlice(self.alloc, resp);
++            },
 +            .window_title => {
 +                self.title.clearRetainingCapacity();
 +                try self.title.appendSlice(self.alloc, value.title);
@@ -663,8 +682,6 @@ new file mode 100644
 +            .apc_put,
 +            .bell,
 +            .enquiry,
-+            .request_mode,
-+            .request_mode_unknown,
 +            .xtversion,
 +            .device_attributes,
 +            .report_pwd,

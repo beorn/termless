@@ -323,6 +323,68 @@ describe("ghostty backend", () => {
     },
   )
 
+  // @failure The WASM patch filed .request_mode / .request_mode_unknown under "Actions that require no
+  // response", so the DECRPM reply core formats never reached response_buffer (#32024). Rendering/receipt
+  // tests cannot detect a dropped reply; only the real producer's reply bytes can.
+  test.each(["direct", "adapter"] as const)("DECRPM queries reach the reply path via %s", (path) => {
+    const create = () => {
+      if (path === "direct") {
+        const terminal = ghostty.createTerminal(80, 24, { scrollbackLimit: 1000 })
+        return {
+          write(text: string) {
+            terminal.write(text)
+            terminal.update()
+            let response = ""
+            while (terminal.hasResponse()) response += terminal.readResponse() ?? ""
+            return response
+          },
+          dispose: () => terminal.free(),
+        }
+      }
+      const terminal = createBackend()
+      let response = ""
+      terminal.onResponse = (bytes) => {
+        response += new TextDecoder().decode(bytes)
+      }
+      return {
+        write(text: string) {
+          response = ""
+          feedText(terminal, text)
+          return response
+        },
+        dispose: () => terminal.destroy(),
+      }
+    }
+    const first = create()
+    const second = create()
+    try {
+      // The seven headlessDecrpmArm modes (terminfo.dev probe-defs modes.ts): set reports Ps 1, reset Ps 2.
+      for (const mode of [1, 1000, 1003, 1004, 1005, 1006, 2004]) {
+        expect(first.write(`\x1b[?${mode}$p`)).toBe(`\x1b[?${mode};2$y`)
+        expect(first.write(`\x1b[?${mode}h\x1b[?${mode}$p`)).toBe(`\x1b[?${mode};1$y`)
+        expect(first.write(`\x1b[?${mode}l\x1b[?${mode}$p`)).toBe(`\x1b[?${mode};2$y`)
+      }
+      // Deliberate re-baselines (ghostty-reply-fix-spec-1031 "Risk"): device.decrpm queries mode 7, which
+      // core defaults on, and extensions.osc5522-clipboard queries 5522, which is outside core's mode table
+      // and therefore answers Ps 0 ("not recognized") instead of staying silent.
+      expect(first.write("\x1b[?7$p")).toBe("\x1b[?7;1$y")
+      expect(first.write("\x1b[?5522$p")).toBe("\x1b[?5522;0$y")
+      expect(first.write("\x1b[?7l\x1b[?7$p\x1b[?7h")).toBe("\x1b[?7;2$y")
+      // Private modes outside core's table answer Ps 0 the same way. (ANSI `CSI Ps $ p` never reaches the
+      // handler: core 5714ed07 src/terminal/stream.zig:1583 dispatches DECRQM only for the `?$` form.)
+      expect(first.write("\x1b[?9999$p")).toBe("\x1b[?9999;0$y")
+      // Replies keep stream order with the existing DSR and kitty replies, and stay per instance.
+      expect(first.write("\x1b[?2004h\x1b[5n\x1b[?2004$p\x1b[?u\x1b[6n")).toBe("\x1b[0n\x1b[?2004;1$y\x1b[?0u\x1b[1;1R")
+      expect(second.write("\x1b[?2004$p")).toBe("\x1b[?2004;2$y")
+      expect(first.write("\x1b[?2004l\x1b[?2004$p")).toBe("\x1b[?2004;2$y")
+      // Reset restores the defaults the reply reports.
+      expect(first.write("\x1b[?1h\x1bc\x1b[?1$p\x1b[?7$p")).toBe("\x1b[?1;2$y\x1b[?7;1$y")
+    } finally {
+      first.dispose()
+      second.dispose()
+    }
+  })
+
   test.each(["viewport", "scrollback"] as const)("rejects invalid producer ordinals in %s with its digest", (path) => {
     const original = ghostty.createTerminal.bind(ghostty)
     const spy = vi.spyOn(ghostty, "createTerminal").mockImplementation((...args) => {
