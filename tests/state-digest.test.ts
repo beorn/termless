@@ -208,12 +208,12 @@ test.each(["dim", "italic", "strikethrough", "blink"] as const)(
   },
 )
 
-// The four added mode keys intentionally extend digest bytes; rendered visual bytes stay stable.
+// Tracked alternate scroll now reads false instead of null; rendered visual bytes stay stable.
 test("retained recording has the expanded mode digest and unchanged visual bytes", () => {
   const term = fed("\x1b[1;2;3;9mX\x1b[0mY", 8, 2)
   const hash = (value: string) => createHash("sha256").update(value).digest("hex")
   expect(hash(JSON.stringify(terminalStateDigest(term)))).toBe(
-    "8d9160798a546610daedc06a7440f482f8ee54a0f89b13d45994c7e3e2d7828d",
+    "0f87ab66cc17f3d4d0a5944701ed58ec5c4b79dd45c8b3d2cb2bcd29c1fc50fe",
   )
   expect(hash(snapshotVisualState(term))).toBe("41611b76d1676e78dbae650e298af3b0c36fb0f7316f19acdb78319c25f54580")
 })

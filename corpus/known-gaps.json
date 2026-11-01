@@ -1,5 +1,5 @@
 {
-  "_engine": "vterm.js@0.10.0",
+  "_engine": "vterm.js@0.10.1",
   "ghostty::libvterm/13state_edit.test::IL": "IL (insert line) within the scrolling region.",
   "ghostty::libvterm/16state_resize.test::Resize grow doesn't cancel phantom": "Resize semantics beyond reflow: scrolling content off on shrink, popping scrollback on grow, preserving the cursor's line, and resize while on the alternate screen.",
   "ghostty::libvterm/20state_wrapping.test::80th column causes linefeed on wraparound": "Deferred-wrap (phantom column) cursor convention: libvterm reports the cursor ON the last column with a separate pending-wrap flag; this engine reports col == cols, one PAST the last column. Not a rendering difference — the glyphs match. Decide the reporting convention before treating it as an engine bug.",
