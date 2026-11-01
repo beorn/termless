@@ -13,6 +13,10 @@ Assert that a specific terminal mode is enabled.
 expect(term).toBeInMode(mode: TerminalMode, options?: { timeout?: number })
 ```
 
+If the backend returns `null`, it cannot report the requested mode. Both
+`toBeInMode` and `.not.toBeInMode` throw an error naming that mode; an unknown
+state cannot establish whether a mode is enabled or disabled.
+
 ## Parameters
 
 | Parameter         | Type           | Description                                 |

@@ -533,9 +533,12 @@ export function assertHaveCursor(term: Terminal, props: CursorProps): AssertionR
   }
 }
 
-/** Assert a specific terminal mode is enabled. */
+/** Assert a specific terminal mode is enabled. Throws if the backend cannot report it. */
 export function assertInMode(term: Terminal, mode: TerminalMode): AssertionResult {
   const state = term.getMode(mode)
+  if (state === null) {
+    throw new Error(`Cannot assert mode "${mode}": backend does not report this mode (null)`)
+  }
   const pass = state === true
   return {
     pass,

@@ -513,6 +513,16 @@ describe("terminal mode matchers", () => {
     const term = createMockTerminal({ modes: { altScreen: true } })
     expect(() => expect(term).not.toBeInMode("altScreen")).toThrow()
   })
+
+  test("toBeInMode rejects an unreported mode in both polarities", () => {
+    const term = createMockTerminal()
+    term.getMode = () => null
+    const unreported = /Cannot assert mode "smoothScroll": backend does not report this mode \(null\)/
+
+    // Unknown is not disabled: .not must not turn missing readback into success.
+    expect.soft(() => expect(term).toBeInMode("smoothScroll")).toThrow(unreported)
+    expect.soft(() => expect(term).not.toBeInMode("smoothScroll")).toThrow(unreported)
+  })
 })
 
 // =============================================================================
