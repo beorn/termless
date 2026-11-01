@@ -644,8 +644,8 @@ export interface OscMetadataExtension {
   getNotifications(): readonly string[]
 }
 
-/** A stored start marker, not a bounded command zone or a command-completion event. */
-export interface SemanticMark {
+/** A stored start marker with insertion coordinates, not a bounded command zone. */
+export interface SemanticStartMark {
   readonly type: "prompt" | "command" | "output"
   /** Zero-based screen row at insertion, not an absolute buffer row or a tracked range. */
   readonly startRow: number
@@ -653,9 +653,12 @@ export interface SemanticMark {
   readonly startCol: number
 }
 
+/** An engine observation: a positional start or a raw command-end callback without coordinates. */
+export type SemanticMark = SemanticStartMark | { readonly type: "command-end"; readonly rawStatus: string }
+
 /** Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b. */
 export interface SemanticMarkExtension {
-  /** Ordered, copied engine start markers; "semantic-marks" declares this reader. */
+  /** Ordered copies; "semantic-marks" declares starts, "semantic-command-end" declares ends. Lifetime is engine-specific. */
   getSemanticMarks(): readonly SemanticMark[]
 }
 

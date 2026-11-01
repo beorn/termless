@@ -178,6 +178,9 @@ Full-featured TypeScript terminal emulator targeting 100% of the [terminfo.dev](
 The `semantic-marks` extension exposes `SemanticMarkExtension.getSemanticMarks()`:
 copied, ordered prompt/command/output start markers in zero-based screen coordinates
 at insertion. These are not absolute buffer rows, bounded zones or completion events.
+The shared `SemanticMark` type also includes command-end entries; narrow its `type`
+before reading `startRow` or `startCol`. vterm declares only `semantic-marks` and
+returns the unchanged `SemanticStartMark` shape.
 Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
 
 The `sixel-storage` extension exposes `SixelStorageExtension.getSixelImages()`:
@@ -342,6 +345,19 @@ const term = createTerminal({ backend: b })
 ```
 
 ### @termless/kitty
+
+The `semantic-command-end` extension exposes the same
+`SemanticMarkExtension.getSemanticMarks()` getter, returning copied, ordered
+`{ type: "command-end", rawStatus: string }` entries from native OSC 133 D
+callbacks. There are no coordinates or validated process exit codes: raw status
+strings, including empty, zero, negative-looking and nonnumeric values, survive
+verbatim. Kitty declares only this key, not the start-marker key `semantic-marks`.
+An engine recording both kinds declares both keys on the one reader.
+
+Kitty's callback history preserves equal entries and survives reset and batch
+replay. Cached rereads add nothing; `init()` starts fresh and `destroy()` clears
+the history. Check the extension with `hasExtension()` before reading. Track A
+compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
 
 Kitty's VT parser built from GPL-3.0 source. Kitty is a modern, feature-rich terminal with its own keyboard protocol and graphics protocol.
 

@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking type change (Track A compatibility reader):** `SemanticMark` is now
+  a union of the unchanged exported `SemanticStartMark` and
+  `{ type: "command-end", rawStatus: string }`. Consumers must narrow `type`
+  before accessing start coordinates. Kitty exposes raw native command ends
+  through the existing getter under `semantic-command-end`; `semantic-marks`
+  retains its start-marker meaning. Ships with the next Termless publication
+  after bridge step 3; no publication between bridge steps 1 and 3.
 - `getMode` and mode snapshots expose `ModeState` (`boolean | null`): null means
   the adapter does not expose the mode, separately from a measured reset state.
   The vocabulary adds `altScroll`, `syncOutput`, `colorSchemeReporting` and

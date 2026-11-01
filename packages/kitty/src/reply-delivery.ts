@@ -24,6 +24,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for chronological retained-buffer snapshots: negative CPU-cell coordinates and borrowed HistoryBuf Lines
 // change cell/text enumeration only. Alternate snapshots exclude primary history. Response draining, replay ordering,
 // Window callbacks, clipboard permissions and private command-mark recording below the cell loop remain unchanged.
+// Re-audited for public command-end projection: the existing cached snapshot supplies copied raw entries; retaining
+// that cache while dirty permits prefix validation. Command replay, response draining and the native bridge are unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -32,7 +34,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "5e98a200eab31eeef6505e81470d350637b5959c",
+      blobOid: "8f053f3435800a53860549021fe09b3e775d3499",
     },
     {
       path: "packages/kitty/build/bridge.py",

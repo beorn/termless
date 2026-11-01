@@ -35,6 +35,7 @@ import type {
   ReplyDeliveryExtension,
   WarningExtension,
   HyperlinkExtension,
+  SemanticMarkExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -139,6 +140,8 @@ interface BridgeSnapshot {
   clipboard?: ClipboardState
   /** Permission prompts kitty raised for a human (default read-clipboard-ask), in feed order; host input, never answered */
   prompts?: BridgePrompt[]
+  /** Cumulative native tuples, including duplicates and entries before reset. Omitted only for empty history. */
+  cmdOutputMarkings?: ([false] | [true, string] | [null, string])[]
 }
 
 interface BridgePrompt {
@@ -266,7 +269,12 @@ export function isKittyAvailable(): boolean {
  */
 export function createKittyBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & WarningExtension & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension {
+): TerminalBackend &
+  WarningExtension &
+  ReplyDeliveryExtension &
+  HyperlinkExtension &
+  AdapterSourcesExtension &
+  SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
   let scrollbackLimit = 1000
@@ -277,6 +285,8 @@ export function createKittyBackend(
 
   // Cached snapshot from last query
   let snapshot: BridgeSnapshot | null = null
+  // Retain that snapshot through mutations so cumulative callback history can be prefix-checked on replay.
+  let snapshotDirty = true
 
   // Batch replay includes every earlier response. Keep the observed prefix so
   // a later snapshot only delivers replies generated since the previous one.
@@ -301,7 +311,7 @@ export function createKittyBackend(
   }
 
   function invalidateSnapshot(): void {
-    snapshot = null
+    snapshotDirty = true
   }
 
   /**
@@ -353,8 +363,16 @@ export function createKittyBackend(
 
   function ensureSnapshot(): BridgeSnapshot {
     ensureInit()
-    if (snapshot) return snapshot
+    if (snapshot && !snapshotDirty) return snapshot
     const nextSnapshot = replayAndSnapshot()
+
+    // Native batch_main omits this key only for empty history; a previously observed prefix must still be present.
+    const commandMarks = nextSnapshot.cmdOutputMarkings ?? []
+    if (
+      snapshot?.cmdOutputMarkings?.some((mark, index) => JSON.stringify(commandMarks[index]) !== JSON.stringify(mark))
+    ) {
+      throw new Error("Kitty bridge changed an earlier command callback during batch replay")
+    }
 
     const responseBytes = nextSnapshot.responses ? Buffer.from(nextSnapshot.responses, "base64") : Buffer.alloc(0)
     if (!responseBytes.subarray(0, observedResponses.length).equals(observedResponses)) {
@@ -383,6 +401,7 @@ export function createKittyBackend(
       warnings.push({ code: "PERMISSION_PROMPT", message, backend: "kitty" })
     }
     snapshot = nextSnapshot
+    snapshotDirty = false
     observedResponses = responseBytes
     observedUnreproduced = unreproduced
     observedPrompts = prompts
@@ -567,7 +586,7 @@ export function createKittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "warnings", "reply-delivery", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "warnings", "reply-delivery", "hyperlinks", "semantic-command-end"]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -584,6 +603,7 @@ export function createKittyBackend(
     WarningExtension &
     ReplyDeliveryExtension &
     HyperlinkExtension &
+    SemanticMarkExtension &
     AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
@@ -604,6 +624,10 @@ export function createKittyBackend(
     getMode,
     getTitle,
     getClipboardState,
+    getSemanticMarks: () =>
+      (ensureSnapshot().cmdOutputMarkings ?? []).flatMap((mark) =>
+        mark[0] === null ? [{ type: "command-end" as const, rawStatus: mark[1] }] : [],
+      ),
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
