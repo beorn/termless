@@ -11,6 +11,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for owned OSC 8 URI readback: the existing synchronous reply path is unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
+// Re-audited for absolute retained-row readback and enumeration: feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -20,11 +21,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "43464f5118e4442b3910fad63e3b3e3998af6214",
+      blobOid: "42a196995a5f8845ab2e3bb6227192556c470071",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "b83bbf08bb20c6b7965cd0b6492a827707644a8f",
+      blobOid: "445f5484027aebbea01a641a96dd92dfea273693",
     },
     {
       path: "src/load-native.ts",
@@ -35,7 +36,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "0f56a805793d7d829daa617f1323aacff0d73fe868747b0d077c6af315e2aab8",
+      sha256: "6722b331de7489c14cb599d939e5d2314f054220728f83c5c29f454e70273e47",
     },
   },
 } as const

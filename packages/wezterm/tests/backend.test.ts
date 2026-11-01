@@ -56,6 +56,60 @@ describe.skipIf(nativeBuildError !== null)(
       backend.destroy()
     })
 
+    // Counter-only tests miss the absolute-row origin once the engine retains primary history.
+    test("reads retained physical rows across alternate screens, resize and eviction", () => {
+      backend.destroy()
+      backend = createWeztermBackend()
+      backend.init({ cols: 80, rows: 24, scrollbackLimit: 12 })
+      const uri = "https://example.test/retained"
+      backend.feed(
+        encode(
+          Array.from({ length: 36 }, (_, row) => {
+            const text = `S${String(row).padStart(2, "0")}`
+            return row === 0 || row === 24 ? `\x1b[1m\x1b]8;;${uri}\x1b\\${text}\x1b]8;;\x1b\\\x1b[0m` : text
+          }).join("\r\n"),
+        ),
+      )
+      const lineText = (row: number) =>
+        backend
+          .getLine(row)
+          .map((cell) => cell.char)
+          .join("")
+          .trimEnd()
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(lineText(0)).toBe("S00")
+      expect(lineText(12)).toBe("S12")
+      expect(backend.getLines()).toHaveLength(36)
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "S", bold: true, hyperlink: uri })
+      expect(backend.getCell(24, 0)).toMatchObject({ char: "S", bold: true, hyperlink: uri })
+      expect(backend.getTextRange(0, 0, 0, 3)).toBe("S00")
+      expect(backend.getTextRange(10, 0, 13, 3)).toBe("S10\nS11\nS12\nS13")
+      expect(
+        backend
+          .getText()
+          .split("\n")
+          .map((line) => line.trimEnd()),
+      ).toEqual(Array.from({ length: 36 }, (_, row) => `S${String(row).padStart(2, "0")}`))
+
+      backend.feed(encode("\x1b[?1049h\x1b[1;1HALT"))
+      expect(backend.getMode("altScreen")).toBe(true)
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 24, screenLines: 24 })
+      expect(backend.getLines()).toHaveLength(24)
+      expect(lineText(0)).toBe("ALT")
+      backend.feed(encode("\x1b[?1049l"))
+      expect(backend.getMode("altScreen")).toBe(false)
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(lineText(0)).toBe("S00")
+      expect(lineText(12)).toBe("S12")
+
+      backend.resize(60, 24)
+      expect(lineText(0)).toBe("S00")
+      expect(lineText(12)).toBe("S12")
+      backend.feed(encode("\r\nS36"))
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(lineText(0)).toBe("S01")
+    })
+
     // ── Lifecycle ──
 
     describe("lifecycle", () => {
@@ -230,17 +284,19 @@ describe.skipIf(nativeBuildError !== null)(
         expect(backend.getHyperlinkAt(24, 80)).toBeNull()
       })
 
-      test("uses the live active-screen origin after scrollback and preserves wide-column observations", () => {
+      test("uses absolute primary rows after scrollback and preserves wide-column observations", () => {
         backend.init({ cols: 12, rows: 3 })
         const mainUri = "https://main.example.test/"
         const altUri = "https://alt.example.test/"
         backend.feed(encode(`old0\r\nold1\r\nold2\r\n\x1b]8;;${mainUri}\x1b\\M\x1b]8;;\x1b\\`))
-        expect(backend.getScrollback().totalLines).toBeGreaterThan(3)
+        const mainState = backend.getScrollback()
+        expect(mainState.totalLines).toBeGreaterThan(3)
+        const mainRow = mainState.totalLines - mainState.screenLines + 2
         expect(backend.getCell(0, 0).char).toBe("o")
         expect(backend.getHyperlinkAt(0, 0)).toBeNull()
-        expect(backend.getCell(2, 0).char).toBe("M")
-        expect(backend.getRow(2)[0]!.hyperlink).toBe(mainUri)
-        expect(backend.getHyperlinkAt(2, 0)).toBe(mainUri)
+        expect(backend.getCell(mainRow, 0).char).toBe("M")
+        expect(backend.getRow(mainRow)[0]!.hyperlink).toBe(mainUri)
+        expect(backend.getHyperlinkAt(mainRow, 0)).toBe(mainUri)
         backend.feed(encode(`\x1b[?1049hX\x1b]8;;${altUri}\x1b\\你\x1b]8;;\x1b\\Z`))
         expect(backend.getMode("altScreen")).toBe(true)
         expect(backend.getCell(0, 1)).toMatchObject({ char: "你", wide: true, hyperlink: altUri })
@@ -257,8 +313,9 @@ describe.skipIf(nativeBuildError !== null)(
         }
         backend.feed(encode("\x1b[?1049l"))
         expect(backend.getMode("altScreen")).toBe(false)
-        expect(backend.getCell(2, 0).char).toBe("M")
-        expect(backend.getHyperlinkAt(2, 0)).toBe(mainUri)
+        expect(backend.getScrollback().totalLines).toBe(mainState.totalLines)
+        expect(backend.getCell(mainRow, 0).char).toBe("M")
+        expect(backend.getHyperlinkAt(mainRow, 0)).toBe(mainUri)
       })
 
       test.each([undefined, 42])("rejects missing or invalid native URI metadata (%s)", (hyperlink) => {

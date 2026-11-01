@@ -293,7 +293,8 @@ export function createWeztermBackend(
 
   function getLines(): Cell[][] {
     const result: Cell[][] = []
-    for (let row = 0; row < rows; row++) {
+    const totalLines = ensureTerm().getScrollback().totalLines
+    for (let row = 0; row < totalLines; row++) {
       result.push(getLine(row))
     }
     return result

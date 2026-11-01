@@ -298,9 +298,6 @@ impl WeztermTerminal {
         end_col: i32,
     ) -> String {
         let screen = self.term.screen();
-        let total_lines = screen.scrollback_rows();
-        let visible_rows = screen.physical_rows;
-        let scrollback_count = total_lines.saturating_sub(visible_rows);
         let mut parts = Vec::new();
 
         // Collect lines from the screen using for_each_phys_line
@@ -310,7 +307,7 @@ impl WeztermTerminal {
         });
 
         for row in start_row..=end_row {
-            let phys = scrollback_count as i32 + row;
+            let phys = row;
             if phys < 0 || phys >= all_lines.len() as i32 {
                 continue;
             }
@@ -342,9 +339,7 @@ impl WeztermTerminal {
     pub fn get_cell(&self, row: u32, col: u32) -> NapiCell {
         let screen = self.term.screen();
         let total_lines = screen.scrollback_rows();
-        let visible_rows = screen.physical_rows;
-        let scrollback_count = total_lines.saturating_sub(visible_rows);
-        let phys = scrollback_count + row as usize;
+        let phys = row as usize;
 
         if phys >= total_lines || col as usize >= self.cols {
             return empty_cell();
@@ -368,9 +363,7 @@ impl WeztermTerminal {
     pub fn get_line(&self, row: u32) -> Vec<NapiCell> {
         let screen = self.term.screen();
         let total_lines = screen.scrollback_rows();
-        let visible_rows = screen.physical_rows;
-        let scrollback_count = total_lines.saturating_sub(visible_rows);
-        let phys = scrollback_count + row as usize;
+        let phys = row as usize;
 
         if phys >= total_lines {
             return (0..self.cols).map(|_| empty_cell()).collect();
