@@ -833,6 +833,69 @@ describe("ghostty backend", () => {
   })
 
   describe("resize", () => {
+    // @failure ReleaseSmall WASM reuses unzeroed pages, exposing junk in widened history padding (#32121).
+    // @level l1 @consumer TerminalBackend.getLine after history reflow through the real WASM engine.
+    // Existing resize coverage reads viewport text only; this retains the reported c669 seed in history.
+    test("preserves seeded history and blank padding when growing from 12 to 20 columns", () => {
+      backend = createBackend(80, 24)
+      const clear = "\x1b[?1049l\x1b[?7h\x1b[2J\x1b[H"
+      // Replay the retained main-screen phases before history-grow: reset recycles their WASM pages.
+      for (const [from, to] of [
+        [12, 20],
+        [20, 12],
+      ]) {
+        backend.resize(from, 24)
+        feedText(backend, `${clear}${"W".repeat(from)}Z`)
+        backend.getLines()
+        feedText(backend, `${clear}ABCDEFGHIJKLMNOPQR\r\nHARD-a\r\nHARD-b\r\n\x1b[22;1H`)
+        backend.getLines()
+        backend.resize(to, 24)
+        backend.getLines()
+        feedText(backend, `${clear}${"W".repeat(to)}Z`)
+        backend.getLines()
+      }
+      backend.reset()
+      backend.resize(12, 24)
+      backend.getLines()
+      feedText(backend, `${clear}WWWWWWWWWWWWZ`)
+      backend.getLines()
+      feedText(backend, clear)
+      const seed = [
+        "ABCDEFGHIJKLMNOPQR",
+        "HARD-a",
+        "HARD-b",
+        ...Array.from({ length: 48 }, (_, i) => `R${String(i).padStart(3, "0")}`),
+      ]
+      feedText(backend, seed.join("\r\n"))
+      const before = backend.getScrollback()
+      expect(before.totalRows).toBeGreaterThan(24)
+      expect(
+        backend
+          .getLine(0)
+          .map((cell) => cell.char)
+          .join(""),
+      ).toBe("ABCDEFGHIJKL")
+      backend.resize(20, 24)
+      expect(backend.getScrollback().totalRows).toBe(seed.length)
+      for (const [row, text] of seed.entries()) {
+        const cells = backend.getLine(row)
+        expect(
+          cells
+            .slice(0, text.length)
+            .map((cell) => cell.char)
+            .join(""),
+          `seed row ${row}`,
+        ).toBe(text)
+        expect(
+          cells
+            .slice(text.length)
+            .map((cell) => cell.char)
+            .join(""),
+          `blank padding row ${row}`,
+        ).toMatch(/^ *$/)
+      }
+    })
+
     test("resizes terminal", () => {
       backend = createBackend(40, 10)
       feedText(backend, "Before resize")
