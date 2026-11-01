@@ -644,6 +644,37 @@ export interface OscMetadataExtension {
   getNotifications(): readonly string[]
 }
 
+/** A stored start marker, not a bounded command zone or a command-completion event. */
+export interface SemanticMark {
+  readonly type: "prompt" | "command" | "output"
+  /** Zero-based screen row at insertion, not an absolute buffer row or a tracked range. */
+  readonly startRow: number
+  /** Zero-based screen column at insertion. */
+  readonly startCol: number
+}
+
+/** Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b. */
+export interface SemanticMarkExtension {
+  /** Ordered, copied engine start markers; "semantic-marks" declares this reader. */
+  getSemanticMarks(): readonly SemanticMark[]
+}
+
+/** Raw payload storage, without decoded pixels, raster dimensions, or image cell geometry. */
+export interface SixelImage {
+  /** Exact stored Sixel payload after q; DCS framing and parameters are not included. */
+  readonly data: string
+  /** Zero-based screen row where the DCS started. */
+  readonly row: number
+  /** Zero-based screen column where the DCS started. */
+  readonly col: number
+}
+
+/** Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b. */
+export interface SixelStorageExtension {
+  /** Ordered, copied payload records; "sixel-storage" declares storage readback, not rendering. */
+  getSixelImages(): readonly SixelImage[]
+}
+
 export interface BellExtension {
   getBellCount(): number
   clearBellCount(): void

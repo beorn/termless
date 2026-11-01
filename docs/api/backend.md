@@ -223,6 +223,26 @@ interface OscMetadataExtension {
   getNotifications(): readonly string[]
 }
 
+// Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
+// Extension name "semantic-marks".
+interface SemanticMarkExtension {
+  getSemanticMarks(): readonly {
+    readonly type: "prompt" | "command" | "output"
+    readonly startRow: number
+    readonly startCol: number
+  }[]
+}
+
+// Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
+// Extension name "sixel-storage"; storage is not raster rendering.
+interface SixelStorageExtension {
+  getSixelImages(): readonly {
+    readonly data: string
+    readonly row: number
+    readonly col: number
+  }[]
+}
+
 // Bell counter
 interface BellExtension {
   getBellCount(): number
@@ -236,3 +256,18 @@ retain their raw strings; this reader does not attest an OS notification appeari
 or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
 "osc-metadata")` before calling these methods. The vterm backend implements them;
 other backends can omit the extension.
+
+Check `hasExtension<SemanticMarkExtension>(backend, "semantic-marks")` before
+reading start markers, and `hasExtension<SixelStorageExtension>(backend,
+"sixel-storage")` before reading raw image payloads. The vterm backend implements
+both. Each returns copied, ordered records; an empty array means no stored records,
+while an absent extension means no reader. Reset and snapshot restore clear these
+vterm records; they are observations of engine state, not durable snapshot data.
+
+Mark positions are zero-based screen coordinates captured at insertion, not
+absolute buffer rows or tracked zone boundaries. Marks contain only prompt,
+command and output starts; they do not supply completion status, command text or
+properties. Sixel `data` is the exact stored payload after `q`, without DCS framing
+or parameters. Its row/column locate the DCS start, not the image extent. Neither
+this reader nor the protocol capability flag establishes raster rendering or cell
+geometry.

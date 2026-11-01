@@ -172,8 +172,22 @@ Full-featured TypeScript terminal emulator targeting 100% of the [terminfo.dev](
 - **Engine**: Built-in (pure TypeScript, zero deps)
 - **Upstream**: `npm:vterm.js`
 - **Best for**: Full-standards conformance testing — 100% terminfo.dev coverage, Kitty keyboard protocol, OSC 8 hyperlinks, semantic prompts (OSC 133/633), and the DEC private modes other in-memory backends skip.
-- **Limitations**: Kitty graphics and sixel sequences are parsed and preserved (`getSixelImages()`) but not decoded to pixels — there's no framebuffer in a headless emulator, so pixel-level graphics assertions still need `kitty` or `wezterm`.
+- **Limitations**: Sixel payloads are preserved through the optional `sixel-storage` extension, without decoded pixels or image cell geometry. Kitty graphics are not rendered by this backend.
 - **Install**: `bunx termless backends install vterm` (or `npm install -D @termless/vterm`)
+
+The `semantic-marks` extension exposes `SemanticMarkExtension.getSemanticMarks()`:
+copied, ordered prompt/command/output start markers in zero-based screen coordinates
+at insertion. These are not absolute buffer rows, bounded zones or completion events.
+Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
+
+The `sixel-storage` extension exposes `SixelStorageExtension.getSixelImages()`:
+copied raw payloads after `q`, with the row/column where their DCS started. It supplies
+neither raster dimensions nor decoded pixels or cell geometry. Track A compatibility
+read; migrate onto Emulator or delete with TerminalBackend at A4b.
+
+Check the relevant extension with `hasExtension()` before reading. Empty arrays mean
+no stored records; an absent extension means no reader. Reset and snapshot restore
+clear vterm's mark and image records. See the [extension API](../api/backend#extension-interfaces).
 
 ```typescript
 // Factory function (preferred — explicit, sync)
