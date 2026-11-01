@@ -529,7 +529,9 @@ export function createKittyBackend(
   /** kitty's committed clipboard writes; the bridge holds them in memory in place of the GLFW system clipboard. */
   function getClipboardState(): ClipboardState {
     const s = ensureSnapshot()
-    if (!s.clipboard || !Array.isArray(s.clipboard.writes)) throw new Error("Kitty bridge snapshot has no clipboard state")
+    if (!s.clipboard || !Array.isArray(s.clipboard.writes)) {
+      throw new Error("Kitty bridge snapshot has no clipboard state")
+    }
     return { writes: s.clipboard.writes.map((write) => ({ ...write })) }
   }
 
