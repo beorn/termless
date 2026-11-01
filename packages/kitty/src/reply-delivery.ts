@@ -14,10 +14,11 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for OSC99 capability queries: Window.desktop_notify and NotificationManager use kitty own protocol
 // DesktopIntegration and Channel in the single headless window; replies reach Callbacks.write synchronously.
 // Non-query notification payloads remain UNREPRODUCED_CALLBACK; no desktop integration/display is initialized.
-// Re-audited for OSC 52 (#32091): Window.clipboard_control runs kitty's own ClipboardRequestManager under default
-// clipboard_control; an OSC 52 write commits to kitty's Clipboard held in process memory (no GLFW) and writes no child
-// bytes; a read reaches the read-clipboard-ask prompt (boss.confirm/choose), host input a human supplies: the bridge
-// answers nothing and reports it as a PERMISSION_PROMPT warning, replay-checked, never as UNREPRODUCED_CALLBACK.
+// Re-audited for OSC 52 (#32091): Window.clipboard_control runs kitty's own ClipboardRequestManager; an OSC 52 write
+// commits to kitty's Clipboard held in process memory (no GLFW) and writes no child bytes. The headless window's one
+// non-default option is clipboard_control read-clipboard/read-primary (kitty's default asks a human), reported in
+// getClipboardState().control, so a read answers through kitty's own legacy OSC 52 encoder. A prompt kitty still
+// raises (boss.confirm/choose) is answered with nothing and reported as a PERMISSION_PROMPT warning, replay-checked.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -27,11 +28,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "5418421dc2f827d7e2d17f5b816255b29499b62a",
+      blobOid: "5e98a200eab31eeef6505e81470d350637b5959c",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "875c664a930dffc2ce41412fb02add06226b8751",
+      blobOid: "7736a826f38162406a46a530727464b066431392",
     },
   ],
   delivery: {

@@ -109,7 +109,7 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
    * @failure #32091: every OSC 52 callback was unreproduced, so kitty's clipboard cells measured nothing.
    * @consumer Terminfo extensions.osc52-write through getClipboardState
    */
-  test("commits an OSC 52 write through kitty's own clipboard_control and asks before a read", () => {
+  test("commits an OSC 52 write through kitty's own clipboard_control and answers a read with the supplied permission", () => {
     const backend = createKittyBackend()
     backend.init({ cols: 80, rows: 24 })
     let response = ""
@@ -119,21 +119,16 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
     try {
       const payload = btoa("termless-osc52")
       backend.feed(new TextEncoder().encode(`\x1b]52;c;${payload}\x07`))
-      expect(backend.getClipboardState?.()).toEqual({ writes: [{ selector: "c", payload, text: "termless-osc52" }] })
+      // kitty's default is read-clipboard-ask (a human prompt); the headless window supplies the read permission and
+      // reports the option it runs under, so a consumer records that host input from the engine.
+      expect(backend.getClipboardState?.()).toEqual({
+        writes: [{ selector: "c", payload, text: "termless-osc52" }],
+        control: ["write-clipboard", "write-primary", "read-clipboard", "read-primary"],
+      })
+      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
+      backend.getCursor()
+      expect(response).toBe(`\x1b]52;c;${payload}\x1b\\`)
       expect(backend.getWarnings()).toEqual([])
-      // Default clipboard_control is read-clipboard-ask: kitty asks a human. That consent is host input, so the bridge
-      // records the prompt by name (never as an unreproduced callback) and answers nothing.
-      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
-      backend.getCursor()
-      expect(response).toBe("")
-      const prompt = { code: "PERMISSION_PROMPT", message: "confirm", backend: "kitty" }
-      expect(backend.getWarnings()).toEqual([prompt])
-      // The first read stays pending, so kitty's own currently_asking_permission_for rejects a second read with an empty
-      // OSC 52 reply; the replay re-runs the first prompt without reporting it again.
-      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
-      backend.getCursor()
-      expect(response).toMatch(/^\x1b\]52;c;(?:\x07|\x1b\\)$/)
-      expect(backend.getWarnings()).toEqual([prompt])
     } finally {
       backend.destroy()
     }

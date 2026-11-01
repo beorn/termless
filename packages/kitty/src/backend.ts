@@ -148,6 +148,8 @@ interface BridgePrompt {
 
 interface ClipboardState {
   writes: { selector: string; payload: string; text?: string }[]
+  /** kitty's effective clipboard_control in the headless window, as the engine reports it */
+  control: string[]
 }
 
 // ===============================================================
@@ -529,10 +531,10 @@ export function createKittyBackend(
   /** kitty's committed clipboard writes; the bridge holds them in memory in place of the GLFW system clipboard. */
   function getClipboardState(): ClipboardState {
     const s = ensureSnapshot()
-    if (!s.clipboard || !Array.isArray(s.clipboard.writes)) {
+    if (!s.clipboard || !Array.isArray(s.clipboard.writes) || !Array.isArray(s.clipboard.control)) {
       throw new Error("Kitty bridge snapshot has no clipboard state")
     }
-    return { writes: s.clipboard.writes.map((write) => ({ ...write })) }
+    return { writes: s.clipboard.writes.map((write) => ({ ...write })), control: [...s.clipboard.control] }
   }
 
   function getScrollback(): ScrollbackState {

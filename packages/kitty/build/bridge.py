@@ -37,9 +37,15 @@ import traceback
 from collections import deque
 
 from kitty.clipboard import Clipboard, ClipboardRequestManager, ClipboardType
-from kitty.fast_data_types import Screen, get_boss, set_boss, set_options
+from kitty.fast_data_types import Screen, get_boss, get_options, set_boss, set_options
 from kitty.notifications import DesktopIntegration, NotificationManager, PayloadType
 from kitty.options.types import defaults
+
+# The headless window's one non-default option: kitty's own clipboard_control values with the read permission a human
+# would grant at kitty's default read-clipboard-ask / read-primary-ask prompt supplied up front, so an OSC 52 read
+# answers through kitty's own request manager instead of waiting on a prompt nobody can answer. Reported in every
+# snapshot's clipboard.control so a consumer records the supplied host input from the engine, not from this comment.
+HEADLESS_CLIPBOARD_CONTROL = ("write-clipboard", "write-primary", "read-clipboard", "read-primary")
 from kitty.window import Window
 
 # kitty's C Screen prints an exception raised inside a Window callback through sys.excepthook and replays on, so a reply
@@ -420,7 +426,12 @@ def make_snapshot():
     if prompts:
         result["prompts"] = prompts
     boss = get_boss()
-    result["clipboard"] = {"writes": boss.clipboard_writes() if boss is not None else []}
+    if boss is None:
+        raise RuntimeError("kitty bridge snapshot has no boss; clipboard state is unknown, never empty")
+    result["clipboard"] = {
+        "writes": boss.clipboard_writes(),
+        "control": list(get_options().clipboard_control),
+    }
     return result
 
 
@@ -435,7 +446,7 @@ def handle_command(cmd):
         rows = cmd.get("rows", 24)
         scrollback_limit = cmd.get("scrollbackLimit", 1000)
 
-        set_options(defaults)
+        set_options(defaults._replace(clipboard_control=HEADLESS_CLIPBOARD_CONTROL))
         callbacks = Callbacks()
         set_boss(HeadlessBoss(callbacks))
         # Screen(callbacks, lines, cols, scrollback, cell_width, cell_height, window_id, test_child)
