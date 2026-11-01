@@ -7,7 +7,7 @@
  * @testonly none
  */
 import { describe, expect, test } from "vitest"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -44,7 +44,7 @@ test.skipIf(!isKittyAvailable())(
     try {
       for (const mode of ["stream", "batch", "batch", "fresh"] as const) {
         const history = mode === "fresh" ? [commands[0], negative, { op: "snapshot" }] : commands
-        const result = execFileSync(
+        const result = spawnSync(
           process.env.KITTY_BINARY ?? "kitty",
           [
             "+runpy",
@@ -60,7 +60,14 @@ test.skipIf(!isKittyAvailable())(
             env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir },
           },
         )
-        const outputs = result
+        expect(result.error).toBeUndefined()
+        expect(result.status).toBe(0)
+        // The OSC633 negative deliberately reaches Kitty's unsupported parser path. Assert its diagnostic without
+        // forwarding it to the root harness as unexpected test output; every other stderr byte remains a failure.
+        expect(result.stderr).toMatch(
+          /^\[\d+\.\d+\] \[PARSE ERROR\] Ignoring OSC 633, use by Windows Terminal for VSCode actions\n$/,
+        )
+        const outputs = result.stdout
           .trim()
           .split("\n")
           .map((line) => JSON.parse(line) as Record<string, unknown>)
