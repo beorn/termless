@@ -280,8 +280,9 @@ export function createLibvtermBackend(
     try {
       for (;;) {
         const bytesRead = m.termless_vterm_output_read(output, outBuf, outBufLen)
-        if (bytesRead < 0)
+        if (bytesRead < 0) {
           throw new Error("libvterm callback buffer could not grow; response or selection data was lost")
+        }
         if (bytesRead === 0) break
         backend.onResponse?.(readBytes(m, outBuf, bytesRead))
       }
