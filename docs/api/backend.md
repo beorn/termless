@@ -230,10 +230,12 @@ interface SemanticStartMark {
   readonly startRow: number
   readonly startCol: number
 }
-type SemanticMark = SemanticStartMark | {
-  readonly type: "command-end"
-  readonly rawStatus: string
-}
+type SemanticMark =
+  | SemanticStartMark
+  | {
+      readonly type: "command-end"
+      readonly rawStatus: string
+    }
 interface SemanticMarkExtension {
   getSemanticMarks(): readonly SemanticMark[]
 }
