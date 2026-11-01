@@ -40,6 +40,9 @@
       }
     }
   },
+  "scripts": {
+    "build": "tsdown"
+  },
   "dependencies": {
     "vterm.js": "^0.10.0"
   },
