@@ -3,11 +3,13 @@
  *          km-daemon closure digest silently misses that backend and a change to it never restarts km
  *          (27837, @cto 26cf4eaa). The literal per-backend import map is what lets the closure follow every backend;
  *          a name in one list but not the other would silently hide a backend from the graph.
+ *          A stale adapter source declaration prevents the collector from qualifying the real backend.
  * @level l2 - the real backends.json read beside the real loader map
  * @consumer @ag/hab/27754-assignment-unmanned-pages-a-working-seat-during-the-tribe-restart-a-landing-promotion-causes/27837-promotion-restarts-wire-unchanged
  * @reach fs-walk <fixture-only: reads backends.json beside the module, no source-tree walk>
  * @testonly none
  */
+import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -26,8 +28,9 @@ interface Manifest {
 
 describe("backendLoaders matches backends.json", () => {
   // Universal identity AC: existing delivery tests cover only the eight delivery-capable engines.
-  // This exercises the actual loader and keeps the three non-delivery engines outside that membership.
-  test("every library backend exposes one source list without widening reply delivery", async () => {
+  // Real-file hashes catch stale runtime declarations that synthetic qualification identities cannot exercise.
+  // Keep the three non-delivery engines outside the reply-delivery membership.
+  test("every library backend exposes its exact source list without widening reply delivery", async () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
     const manifest = JSON.parse(readFileSync(join(root, "backends.json"), "utf8")) as Manifest
     const delivery: string[] = []
@@ -48,6 +51,8 @@ describe("backendLoaders matches backends.json", () => {
       for (const source of sources) {
         expect(source.path, name).not.toMatch(/^(?:\/|\.\.)/)
         expect(source.blobOid, name).toMatch(/^[0-9a-f]{40}$/)
+        const actual = execFileSync("git", ["hash-object", source.path], { cwd: root, encoding: "utf8" }).trim()
+        expect.soft(source.blobOid, `${name}: ${source.path}`).toBe(actual)
       }
       if (hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
         delivery.push(name)

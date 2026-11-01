@@ -7,7 +7,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt100-rust/src/backend.ts",
-      blobOid: "e24139c7ecc4935b060040091bb1520256cffced",
+      blobOid: "abbbfd01d9e6ac880e02b00d9acccdc9ec70bc63",
     },
   ],
 } as const
