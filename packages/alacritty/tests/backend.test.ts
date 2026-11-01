@@ -499,10 +499,22 @@ describeNative("alacritty backend", () => {
           )
           .join("\r\n"),
       )
-      const rowText = (row: number) => terminal.getRow(row).slice(0, 3).map((cell) => cell.char).join("")
+      const rowText = (row: number) =>
+        terminal
+          .getRow(row)
+          .slice(0, 3)
+          .map((cell) => cell.char)
+          .join("")
       expect(terminal.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
       expect(rowText(0)).toBe("S00")
-      expect(terminal.getRows().map((row) => row.slice(0, 3).map((cell) => cell.char).join(""))).toEqual(markers)
+      expect(
+        terminal.getRows().map((row) =>
+          row
+            .slice(0, 3)
+            .map((cell) => cell.char)
+            .join(""),
+        ),
+      ).toEqual(markers)
       for (const row of [0, 12, 24, 35]) {
         expect(terminal.getCell(row, 0).char).toBe("S")
         expect(rowText(row)).toBe(markers[row])
