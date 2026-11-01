@@ -85,6 +85,98 @@ test.skipIf(!isKittyAvailable())(
   },
 )
 
+// Counter-only coverage misses the absolute-buffer contract: retained content must have the same row in every reader.
+test.skipIf(!isKittyAvailable())("reads retained rows across alternate screens, resize and eviction", () => {
+  const backend = createKittyBackend({ cols: 80, rows: 24, scrollbackLimit: 24 })
+  const encode = (text: string) => new TextEncoder().encode(text)
+  const markers = Array.from(
+    { length: 48 },
+    (_, row) => `S${String(row).padStart(2, "0")}${row === 1 || row === 25 ? "界e\u0301" : ""}`,
+  )
+  const uri = "https://example.test:8443/retained:row"
+  const lineText = (row: number) =>
+    backend
+      .getLine(row)
+      .map((cell) => cell.char)
+      .join("")
+      .trimEnd()
+  try {
+    backend.feed(
+      encode(
+        markers
+          .map((marker, row) =>
+            row === 0 || row === 24
+              ? `\x1b[1;38;2;17;34;51m\x1b]8;;${uri}\x1b\\${marker}\x1b]8;;\x1b\\\x1b[0m`
+              : marker,
+          )
+          .join("\r\n"),
+      ),
+    )
+    expect(backend.getScrollback()).toMatchObject({ totalLines: 48, screenLines: 24 })
+    expect(lineText(0)).toBe("S00")
+    expect(
+      backend.getLines().map((line) =>
+        line
+          .map((cell) => cell.char)
+          .join("")
+          .trimEnd(),
+      ),
+    ).toEqual(markers)
+    for (const row of [0, 1, 23, 24, 25, 47]) {
+      expect(lineText(row)).toBe(markers[row])
+      expect(backend.getTextRange(row, 0, row, 3)).toBe(markers[row]!.slice(0, 3))
+    }
+    expect(backend.getTextRange(23, 0, 24, 3)).toBe("S23\nS24")
+    for (const row of [1, 25]) {
+      expect(backend.getCell(row, 3)).toMatchObject({ char: "界", wide: true })
+      expect(backend.getCell(row, 5).char).toBe("e\u0301")
+    }
+    expect(
+      backend
+        .getText()
+        .split("\n")
+        .map((line) => line.trimEnd()),
+    ).toEqual(markers)
+    for (const row of [0, 24]) {
+      const styled = { char: "S", bold: true, fg: { r: 17, g: 34, b: 51 }, hyperlink: uri }
+      expect(backend.getCell(row, 0)).toMatchObject(styled)
+      expect(backend.getLine(row)[0]).toMatchObject(styled)
+      expect(backend.getLines()[row]?.[0]).toMatchObject(styled)
+    }
+    backend.scrollViewport(-5)
+    expect(backend.getScrollback().viewportTop).toBe(19)
+    expect(lineText(0)).toBe("S00")
+    expect(lineText(12)).toBe("S12")
+    backend.scrollViewport(5)
+    backend.feed(encode("\x1b[?1049h\x1b[HALT"))
+    expect(backend.getMode("altScreen")).toBe(true)
+    expect(backend.getScrollback()).toMatchObject({ totalLines: 24, screenLines: 24, viewportTop: 0 })
+    expect(backend.getLines()).toHaveLength(24)
+    expect(lineText(0)).toBe("ALT")
+    expect(backend.getText()).not.toContain("S00")
+    backend.feed(encode("\x1b[?1049l"))
+    expect(backend.getMode("altScreen")).toBe(false)
+    expect(backend.getLines()).toHaveLength(48)
+    expect(lineText(0)).toBe("S00")
+    expect(lineText(12)).toBe("S12")
+    backend.resize(60, 24)
+    expect(backend.getLines()).toHaveLength(48)
+    expect(backend.getLines().every((line) => line.length === 60)).toBe(true)
+    expect(
+      backend
+        .getText()
+        .split("\n")
+        .map((line) => line.trimEnd()),
+    ).toEqual(markers)
+    backend.feed(encode("\r\nS48"))
+    expect(backend.getScrollback()).toMatchObject({ totalLines: 48, screenLines: 24 })
+    expect(lineText(0)).toBe(markers[1])
+    expect(lineText(47)).toBe("S48")
+  } finally {
+    backend.destroy()
+  }
+})
+
 // Existing snapshot tests never distinguish an absolute buffer row from distance to the bottom.
 test.skipIf(!isKittyAvailable())("reports absolute viewport rows through scrolling", () => {
   const backend = createKittyBackend({ cols: 20, rows: 3 })
@@ -270,11 +362,14 @@ test.skipIf(!isKittyAvailable())(
       backend.resize(22, 4)
       expect(backend.getHyperlinkAt(0, 1)).toBe(uri)
       feed("\r\n\r\n\r\n")
-      expect(backend.getCell(0, 1).hyperlink).toBe(other)
-      expect(backend.getHyperlinkAt(0, 1)).toBe(other)
+      const firstScreenRow = backend.getScrollback().totalLines - backend.getScrollback().screenLines
+      expect(backend.getCell(firstScreenRow, 1).hyperlink).toBe(other)
+      expect(backend.getHyperlinkAt(firstScreenRow, 1)).toBe(other)
+      expect(backend.getCell(0, 1).hyperlink).toBe(uri)
       backend.scrollViewport(-1)
-      // Preserve Kitty's existing getCell origin: live Screen rows, even while scrolled.
-      expect(backend.getHyperlinkAt(0, 1)).toBe(backend.getCell(0, 1).hyperlink)
+      // Absolute rows and their hyperlinks stay fixed when only the viewport moves.
+      expect(backend.getHyperlinkAt(firstScreenRow, 1)).toBe(other)
+      expect(backend.getHyperlinkAt(0, 1)).toBe(uri)
       backend.reset()
       expect(backend.getHyperlinkAt(0, 1)).toBeNull()
       expect(saved.hyperlink).toBe(uri)

@@ -21,6 +21,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // raises (boss.confirm/choose) is answered with nothing and reported as a PERMISSION_PROMPT warning, replay-checked.
 // This declaration excludes itself; determining adapter edits require re-audit.
 // Re-audited for raw command-mark snapshots: callback recording adds no child replies or host lifecycle.
+// Re-audited for chronological retained-buffer snapshots: negative CPU-cell coordinates and borrowed HistoryBuf Lines
+// change cell/text enumeration only. Alternate snapshots exclude primary history. Response draining, replay ordering,
+// Window callbacks, clipboard permissions and private command-mark recording below the cell loop remain unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -33,7 +36,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "c20ef9dbc3f975e00a73224cd39a2be81e96ab4e",
+      blobOid: "02b4fb4c49975c4b9f9856385f1e6a5acd2492df",
     },
   ],
   delivery: {

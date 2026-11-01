@@ -336,11 +336,17 @@ def make_snapshot():
     if screen is None:
         return {"error": "not initialized"}
 
-    # Cells
+    # All readers use chronological rows in the selected buffer, independent of viewport scrolling.
+    alternate = screen.is_using_alternate_linebuf()
+    hist = screen.historybuf
+    history_rows = 0 if alternate else hist.count
     cell_rows = []
-    for row in range(rows):
-        line = screen.line(row)
-        cpu = screen.cpu_cells(row)
+    text_lines = []
+    for row in range(history_rows + rows):
+        screen_row = row - history_rows
+        # HistoryBuf.line returns a borrowed Line: serialize it before requesting another history row.
+        line = hist.line(history_rows - 1 - row) if screen_row < 0 else screen.line(screen_row)
+        cpu = screen.cpu_cells(screen_row)
         cell_row = []
         for col in range(cols):
             cell_data = cpu[col]
@@ -376,6 +382,10 @@ def make_snapshot():
                 "wide": _safe_width(line, col),
             })
         cell_rows.append(cell_row)
+        text_lines.append("".join(
+            cell["text"] or ("" if col > 0 and cell_row[col - 1]["wide"] else " ")
+            for col, cell in enumerate(cell_row)
+        ).rstrip())
 
     # Cursor
     cursor = {
@@ -391,7 +401,7 @@ def make_snapshot():
     # Modes (only expose modes backed by Kitty Python Screen properties;
     # modes without a Python Screen getter stay absent so getMode returns null)
     modes = {
-        "altScreen": screen.is_using_alternate_linebuf(),
+        "altScreen": alternate,
         "bracketedPaste": screen.in_bracketed_paste_mode,
         "applicationCursor": screen.cursor_key_mode,
         "cursorVisible": screen.cursor_visible,
@@ -399,21 +409,14 @@ def make_snapshot():
     }
 
     # Scrollback
-    hist = screen.historybuf
     scrollback = {
         "viewportOffset": screen.scrolled_by,
-        "totalLines": hist.count + rows,
+        "totalLines": history_rows + rows,
         "screenLines": rows,
     }
 
     # Full text
-    lines = []
-    for row in range(rows):
-        lines.append(screen.line(row).as_ansi())
-    # Strip ANSI escapes for plain text
-    import re
-    ansi_escape = re.compile(r"\033\[[0-9;]*m")
-    text = "\n".join(ansi_escape.sub("", l) for l in lines)
+    text = "\n".join(text_lines)
 
     # Drain any accumulated response data (DA1/DA2/DSR responses)
     response_data = callbacks.drain_responses() if callbacks else b""
