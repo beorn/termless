@@ -30,7 +30,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "8232209bd7273d68eb0bc9a71c5acf94fd8ebd96612604ff901c09c4d6cb8344",
+    sha256: "21d4b43c1d4c401c5b9f8114de85b3e837605242363c322c2dcb37e4a42fba61",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -452,11 +452,17 @@ describeNative("alacritty backend", () => {
       expect(backend.getMode("autoWrap")).toBe(true)
     })
 
-    test("detects application cursor mode", () => {
+    test.each([
+      ["applicationCursor", 1],
+      ["altScroll", 1007],
+    ] as const)("reads %s through reset, set and reset", (mode, number) => {
       backend = createBackend()
-      expect(backend.getMode("applicationCursor")).toBe(false)
-      feedText(backend, "\x1b[?1h") // Enable DECCKM
-      expect(backend.getMode("applicationCursor")).toBe(true)
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
+      feedText(backend, `\x1b[?${number}h`)
+      expect(backend.getMode(mode)).toBe(true)
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
     })
 
     test("returns null for modes not tracked by alacritty_terminal TermMode", () => {
