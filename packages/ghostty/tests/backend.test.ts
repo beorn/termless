@@ -698,6 +698,24 @@ describe("ghostty backend", () => {
   })
 
   describe("modes", () => {
+    // A parsed mode must expose its actual state, not remain an unknown adapter readback.
+    test.each([
+      ["altScroll", 1007],
+      ["syncOutput", 2026],
+      ["colorSchemeReporting", 2031],
+      ["smoothScroll", 4],
+    ] as const)("reads %s after private-mode reset and set", (mode, number) => {
+      backend = createBackend()
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
+      feedText(backend, `\x1b[?${number}h`)
+      expect(backend.getMode(mode)).toBe(true)
+      // Private mode 4 is DECSCLM; it must not read or alter ANSI insert mode.
+      expect(backend.getMode("insertMode")).toBe(false)
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
+    })
+
     test("detects alt screen mode", () => {
       backend = createBackend()
       expect(backend.getMode("altScreen")).toBe(false)

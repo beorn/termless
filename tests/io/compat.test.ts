@@ -94,7 +94,7 @@ describe("emulatorFromBackend", () => {
     expect(modes.applicationCursor).toBe(false)
     expect(modes.reverseVideo).toBeNull()
     expect(modes.altScroll).toBeNull()
-    expect(modes.syncOutput).toBeNull()
+    expect(modes.syncOutput).toBe(false)
     expect(modes.colorSchemeReporting).toBeNull()
     expect(modes.smoothScroll).toBeNull()
 
