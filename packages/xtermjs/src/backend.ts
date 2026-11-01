@@ -634,6 +634,8 @@ export function createXtermBackend(
         return t.modes.originMode
       case "insertMode":
         return t.modes.insertMode
+      case "syncOutput":
+        return t.modes.synchronizedOutputMode
       case "reverseVideo":
         return null // not exposed by xterm.js headless
       default:

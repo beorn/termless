@@ -299,6 +299,21 @@ describe("createXtermBackend", () => {
 
   // ── Modes ──
 
+  test("synchronized output exposes reset and set state", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[?2026l"))
+      expect(backend.getMode("syncOutput")).toBe(false)
+      backend.feed(new TextEncoder().encode("\x1b[?2026h"))
+      expect(backend.getMode("syncOutput")).toBe(true)
+      backend.feed(new TextEncoder().encode("\x1b[?2026l"))
+      expect(backend.getMode("syncOutput")).toBe(false)
+      expect(backend.getMode("altScroll")).toBeNull()
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("alt screen mode detection", () => {
     const backend = createXtermBackend({ cols: 80, rows: 24 })
     expect(backend.getMode("altScreen")).toBe(false)

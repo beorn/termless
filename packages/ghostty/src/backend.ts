@@ -582,6 +582,14 @@ export function createGhosttyBackend(
         return t.getMode(4, true) // IRM (ANSI mode)
       case "reverseVideo":
         return t.getMode(5) // DECSCNM
+      case "altScroll":
+        return t.getMode(1007)
+      case "syncOutput":
+        return t.getMode(2026)
+      case "colorSchemeReporting":
+        return t.getMode(2031)
+      case "smoothScroll":
+        return t.getMode(4) // DECSCLM (DEC private mode 4, distinct from ANSI IRM)
       default:
         return null
     }
