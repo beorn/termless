@@ -50,6 +50,7 @@ interface NativeCell {
   underline: number // 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed
   strikethrough: boolean
   inverse: boolean
+  hidden: boolean
   blink: boolean
   wide: number // 0=narrow, 1=wide, 2=spacer_tail
   hyperlink: string | null
@@ -192,7 +193,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     inverse: nc.inverse,
     blink: nc.blink,
     overline: nc.overline,
-    hidden: false,
+    hidden: nc.hidden,
     wide: nc.wide === 1,
     continuation: nc.wide === 2, // spacer_tail
     hyperlink: nc.hyperlink,

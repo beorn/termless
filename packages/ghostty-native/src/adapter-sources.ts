@@ -1,6 +1,5 @@
 // Adapter identity only. This engine's reply-delivery capability is unchanged.
 // Re-audited for chronological retained native rows: the rebuilt engine receipt binds the changed Zig source tree.
-// Both TypeScript sources stay unchanged; cell conversion, feed/response draining and mode forwarding retain their paths.
 export const adapterDeclaration = {
   sources: [
     {
@@ -9,7 +8,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty-native/src/backend.ts",
-      blobOid: "f5832c21a5837f636effa3ee2dfc1f8a4e7b8b25",
+      blobOid: "427b9d4782a9924135ff0c32e2406b117df9cf22",
     },
   ],
 } as const

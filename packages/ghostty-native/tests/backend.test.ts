@@ -50,6 +50,34 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // Existing style cases never observe conceal, which is independent of inverse video.
+    test("preserves conceal enable and reset state through native cell and row readback", () => {
+      const backend = createGhosttyNativeBackend({ cols: 6, rows: 1 })
+      try {
+        backend.feed(new TextEncoder().encode("A\x1b[8mB\x1b[28mC\x1b[7mD"))
+        expect(backend.getCell(0, 0).hidden).toBe(false)
+        expect(backend.getCell(0, 1).hidden).toBe(true)
+        expect(backend.getCell(0, 2).hidden).toBe(false)
+        expect(backend.getCell(0, 3)).toMatchObject({ inverse: true, hidden: false })
+        expect(
+          backend
+            .getLine(0)
+            .slice(0, 4)
+            .map((cell) => cell.hidden),
+        ).toEqual([false, true, false, false])
+        expect(
+          backend
+            .getLines()[0]!
+            .slice(0, 4)
+            .map((cell) => cell.hidden),
+        ).toEqual([false, true, false, false])
+        backend.reset()
+        expect(backend.getCell(0, 0).hidden).toBe(false)
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // Existing URI/color cases never observe SGR 53/55 through the native cell projection.
     test("preserves overline enable and reset state through native cell and row readback", () => {
       const backend = createGhosttyNativeBackend({ cols: 6, rows: 1 })

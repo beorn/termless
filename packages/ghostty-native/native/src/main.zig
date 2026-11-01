@@ -306,6 +306,7 @@ const JsCell = struct {
     underline: i8, // 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed
     strikethrough: bool,
     inverse: bool,
+    hidden: bool,
     blink: bool,
     wide: u8, // 0=narrow, 1=wide, 2=spacer_tail
     hyperlink: ?[]const u8,
@@ -359,6 +360,7 @@ fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
     var underline: i8 = 0;
     var strikethrough: bool = false;
     var inverse: bool = false;
+    var hidden: bool = false;
     var blink: bool = false;
     var overline: bool = false;
 
@@ -420,6 +422,7 @@ fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
         underline = @intCast(@intFromEnum(sty.flags.underline));
         strikethrough = sty.flags.strikethrough;
         inverse = sty.flags.inverse;
+        hidden = sty.flags.invisible;
         blink = sty.flags.blink;
         overline = sty.flags.overline;
     } else {
@@ -474,6 +477,7 @@ fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
         .underline = underline,
         .strikethrough = strikethrough,
         .inverse = inverse,
+        .hidden = hidden,
         .blink = blink,
         .wide = wide_val,
         // napigen copies the page-owned URI into a JS string during this synchronous read.
@@ -503,6 +507,7 @@ fn defaultCell() JsCell {
         .underline = 0,
         .strikethrough = false,
         .inverse = false,
+        .hidden = false,
         .blink = false,
         .wide = 0,
         .hyperlink = null,
