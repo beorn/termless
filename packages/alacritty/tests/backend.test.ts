@@ -452,11 +452,17 @@ describeNative("alacritty backend", () => {
       expect(backend.getMode("autoWrap")).toBe(true)
     })
 
-    test("detects application cursor mode", () => {
+    test.each([
+      ["applicationCursor", 1],
+      ["altScroll", 1007],
+    ] as const)("reads %s through reset, set and reset", (mode, number) => {
       backend = createBackend()
-      expect(backend.getMode("applicationCursor")).toBe(false)
-      feedText(backend, "\x1b[?1h") // Enable DECCKM
-      expect(backend.getMode("applicationCursor")).toBe(true)
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
+      feedText(backend, `\x1b[?${number}h`)
+      expect(backend.getMode(mode)).toBe(true)
+      feedText(backend, `\x1b[?${number}l`)
+      expect(backend.getMode(mode)).toBe(false)
     })
 
     test("returns null for modes not tracked by alacritty_terminal TermMode", () => {
