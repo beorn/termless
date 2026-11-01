@@ -68,7 +68,7 @@ interface Vt100RustTerminal {
   getCell(row: number, col: number): NapiCell
   getLine(row: number): NapiCell[]
   getCursor(): NapiCursor
-  getMode(mode: string): boolean
+  getMode(mode: string): boolean | null
   getTitle(): string
   getIconLabel(): string
   getClipboardState(): {

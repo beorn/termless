@@ -270,20 +270,20 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
   describe("modes", () => {
     test("alt screen toggle", () => {
       const { ts, rust } = init()
-      // vt100.js is VT100-era — no alt screen support
+      // vt100.js does not expose alternate-screen mode state.
       feedBoth(ts, rust, "\x1b[?1049h")
-      expect(ts.getMode("altScreen")).toBe(false) // VT100: ignored
+      expect(ts.getMode("altScreen")).toBeNull()
       expect(rust.getMode("altScreen")).toBe(true) // Rust: supported
       feedBoth(ts, rust, "\x1b[?1049l")
-      expect(ts.getMode("altScreen")).toBe(false)
+      expect(ts.getMode("altScreen")).toBeNull()
       expect(rust.getMode("altScreen")).toBe(false)
     })
 
     test("bracketed paste", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[?2004h")
-      // vt100.js is VT100-era — no bracketed paste
-      expect(ts.getMode("bracketedPaste")).toBe(false) // VT100: ignored
+      // vt100.js does not expose bracketed-paste mode state.
+      expect(ts.getMode("bracketedPaste")).toBeNull()
       expect(rust.getMode("bracketedPaste")).toBe(true) // Rust: supported
     })
   })
