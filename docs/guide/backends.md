@@ -365,7 +365,7 @@ Uses the separately installed Kitty executable through a `kitty +runpy` Python s
 - **Upstream**: `github:kovidgoyal/kitty`
 - **Best for**: Testing Kitty keyboard protocol, Kitty graphics protocol, and cross-checking against kitty's parser behavior. The only backend that decodes and stores Kitty graphics pixel data (`vterm` accepts the protocol handshake but does not render pixels).
 - **Limitations**: Requires a working Kitty Python environment. Native `reverseVideo` and `syncOutput` reads require the attested runtime described below.
-- **Install**: Install Kitty separately, then install `@termless/kitty` from npm. Source verification uses Nix; see the [Kitty package setup](../../packages/kitty/README.md#prerequisites).
+- **Install**: Install Kitty separately, then install `@termless/kitty` from npm. Source verification uses Nix; see the [Kitty package setup](https://github.com/beorn/termless/blob/main/packages/kitty/README.md#prerequisites).
 
 The runtime loads no Termless `.node` binding or helper executable.
 At build time, a C emitter measures the exact pinned Kitty headers through `.#kitty-native-mode-layout` in the declared Nix flake.
