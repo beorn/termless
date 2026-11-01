@@ -7,6 +7,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // Re-audited for owned OSC 8 URI readback and propagated cell-read errors: feed/getCursor/readResponse are unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
+// Re-audited for absolute retained-row cell/line/range reads: feed, getCursor and readResponse are unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -20,7 +21,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
-      blobOid: "f8d4ef7a2c4f389dd80ecbd3f9dae38600446a1e",
+      blobOid: "f6bd100a60de8bcbc54e28b4c293ca6920cbc18d",
     },
     {
       path: "src/load-native.ts",
@@ -31,7 +32,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "32d76284e5a3c7673fafbbc83a16717fa0a1c1811c7d659d982176a53ceb1aa9",
+      sha256: "8232209bd7273d68eb0bc9a71c5acf94fd8ebd96612604ff901c09c4d6cb8344",
     },
   },
 } as const
