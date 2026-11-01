@@ -439,7 +439,7 @@ diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1141 @@
+@@ -0,0 +1,1240 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -469,6 +469,9 @@ new file mode 100644
 +const point = @import("../point.zig");
 +const Style = @import("../style.zig").Style;
 +const device_status = @import("../device_status.zig");
++const dcspkg = @import("../dcs.zig");
++const terminfo = @import("../../terminfo/main.zig");
++const general_options = @import("build_options");
 +
 +const log = std.log.scoped(.terminal_c);
 +
@@ -479,6 +482,7 @@ new file mode 100644
 +    terminal: *Terminal,
 +    response_buffer: *std.ArrayList(u8),
 +    title: *std.ArrayList(u8),
++    dcs: dcspkg.Handler = .{},
 +
 +    pub fn init(
 +        alloc: Allocator,
@@ -495,7 +499,7 @@ new file mode 100644
 +    }
 +
 +    pub fn deinit(self: *ResponseHandler) void {
-+        _ = self;
++        self.dcs.deinit();
 +    }
 +
 +    pub fn vt(
@@ -673,17 +677,34 @@ new file mode 100644
 +                }
 +            },
 +
++            // Device attributes, transcribed from Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496
++            // src/termio/stream_handler.zig:736-758. WASM has no clipboard, so primary DA takes core's
++            // clipboard-deny reply (:747). Core has no tertiary DA reply (:757), so it stays silent.
++            .device_attributes => switch (value) {
++                .primary => try self.response_buffer.appendSlice(self.alloc, "\x1B[?62;22c"),
++                .secondary => try self.response_buffer.appendSlice(self.alloc, "\x1B[>1;10;0c"),
++                else => {},
++            },
++            // XTVERSION, transcribed from stream_handler.zig:896-910.
++            .xtversion => {
++                var buf: [288]u8 = undefined;
++                const resp = try std.fmt.bufPrint(&buf, "\x1BP>|{s} {s}\x1B\\", .{
++                    "ghostty",
++                    general_options.app_version_string,
++                });
++                try self.response_buffer.appendSlice(self.alloc, resp);
++            },
++            // DCS requests (XTGETTCAP, DECRQSS), transcribed from stream_handler.zig:350-455.
++            .dcs_hook => try self.dcsHook(value),
++            .dcs_put => try self.dcsPut(value),
++            .dcs_unhook => try self.dcsUnhook(),
++
 +            // Actions that require no response and have no terminal effect
-+            .dcs_hook,
-+            .dcs_put,
-+            .dcs_unhook,
 +            .apc_start,
 +            .apc_end,
 +            .apc_put,
 +            .bell,
 +            .enquiry,
-+            .xtversion,
-+            .device_attributes,
 +            .report_pwd,
 +            .show_desktop_notification,
 +            .progress_report,
@@ -692,6 +713,84 @@ new file mode 100644
 +            .title_push,
 +            .title_pop,
 +            => {},
++        }
++    }
++
++    inline fn dcsHook(self: *ResponseHandler, dcs: Action.Value(.dcs_hook)) !void {
++        var cmd = self.dcs.hook(self.alloc, dcs) orelse return;
++        defer cmd.deinit();
++        try self.dcsCommand(&cmd);
++    }
++
++    inline fn dcsPut(self: *ResponseHandler, byte: u8) !void {
++        var cmd = self.dcs.put(byte) orelse return;
++        defer cmd.deinit();
++        try self.dcsCommand(&cmd);
++    }
++
++    inline fn dcsUnhook(self: *ResponseHandler) !void {
++        var cmd = self.dcs.unhook() orelse return;
++        defer cmd.deinit();
++        try self.dcsCommand(&cmd);
++    }
++
++    fn dcsCommand(self: *ResponseHandler, cmd: *dcspkg.Command) !void {
++        switch (cmd.*) {
++            // Tmux control mode needs Oniguruma, which lib-vt does not build.
++            .tmux => {},
++
++            .xtgettcap => |*gettcap| {
++                const map = comptime terminfo.ghostty.xtgettcapMap();
++                while (gettcap.next()) |key| {
++                    const response = map.get(key) orelse continue;
++                    try self.response_buffer.appendSlice(self.alloc, response);
++                }
++            },
++
++            .decrqss => |decrqss| {
++                var response: [128]u8 = undefined;
++                var fbs = std.io.fixedBufferStream(&response);
++                const writer = fbs.writer();
++
++                // Offset past the response prefix; an empty payload is an invalid DECRPSS.
++                const prefix_fmt = "\x1bP{d}$r";
++                const prefix_len = std.fmt.comptimePrint(prefix_fmt, .{0}).len;
++                fbs.pos = prefix_len;
++
++                switch (decrqss) {
++                    .none => {},
++                    .sgr => {
++                        const buf = try self.terminal.printAttributes(fbs.buffer[fbs.pos..]);
++                        fbs.pos += buf.len;
++                        try writer.writeByte('m');
++                    },
++                    .decscusr => {
++                        const blink = self.terminal.modes.get(.cursor_blinking);
++                        const style: u8 = switch (self.terminal.screens.active.cursor.cursor_style) {
++                            .block => if (blink) 1 else 2,
++                            .underline => if (blink) 3 else 4,
++                            .bar => if (blink) 5 else 6,
++                            .block_hollow => if (blink) 1 else 2,
++                        };
++                        try writer.print("{d} q", .{style});
++                    },
++                    .decstbm => try writer.print("{d};{d}r", .{
++                        self.terminal.scrolling_region.top + 1,
++                        self.terminal.scrolling_region.bottom + 1,
++                    }),
++                    .decslrm => if (self.terminal.modes.get(.enable_left_and_right_margin)) {
++                        try writer.print("{d};{d}s", .{
++                            self.terminal.scrolling_region.left + 1,
++                            self.terminal.scrolling_region.right + 1,
++                        });
++                    },
++                }
++
++                const valid = fbs.pos > prefix_len;
++                try writer.writeAll("\x1b\\");
++                _ = try std.fmt.bufPrint(response[0..prefix_len], prefix_fmt, .{@intFromBool(valid)});
++                try self.response_buffer.appendSlice(self.alloc, response[0..fbs.pos]);
++            },
 +        }
 +    }
 +

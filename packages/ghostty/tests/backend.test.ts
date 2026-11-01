@@ -29,6 +29,37 @@ function feedText(backend: TerminalBackend, text: string): void {
   backend.feed(new TextEncoder().encode(text))
 }
 
+// The two reply paths a consumer reads: the WASM terminal's own response buffer, and the termless backend's
+// onResponse. Each write returns only the reply bytes that write produced.
+function replyChannel(path: "direct" | "adapter"): { write(text: string): string; dispose(): void } {
+  if (path === "direct") {
+    const terminal = ghostty.createTerminal(80, 24, { scrollbackLimit: 1000 })
+    return {
+      write(text: string) {
+        terminal.write(text)
+        terminal.update()
+        let response = ""
+        while (terminal.hasResponse()) response += terminal.readResponse() ?? ""
+        return response
+      },
+      dispose: () => terminal.free(),
+    }
+  }
+  const terminal = createBackend()
+  let response = ""
+  terminal.onResponse = (bytes) => {
+    response += new TextDecoder().decode(bytes)
+  }
+  return {
+    write(text: string) {
+      response = ""
+      feedText(terminal, text)
+      return response
+    },
+    dispose: () => terminal.destroy(),
+  }
+}
+
 describe("ghostty backend", () => {
   let backend: TerminalBackend
 
@@ -263,34 +294,7 @@ describe("ghostty backend", () => {
   test.each(["direct", "adapter"] as const)(
     "Kitty flags queries preserve lifecycle and response order via %s",
     (path) => {
-      const create = () => {
-        if (path === "direct") {
-          const terminal = ghostty.createTerminal(80, 24, { scrollbackLimit: 1000 })
-          return {
-            write(text: string) {
-              terminal.write(text)
-              terminal.update()
-              let response = ""
-              while (terminal.hasResponse()) response += terminal.readResponse() ?? ""
-              return response
-            },
-            dispose: () => terminal.free(),
-          }
-        }
-        const terminal = createBackend()
-        let response = ""
-        terminal.onResponse = (bytes) => {
-          response += new TextDecoder().decode(bytes)
-        }
-        return {
-          write(text: string) {
-            response = ""
-            feedText(terminal, text)
-            return response
-          },
-          dispose: () => terminal.destroy(),
-        }
-      }
+      const create = () => replyChannel(path)
       const first = create()
       const second = create()
       try {
@@ -327,34 +331,7 @@ describe("ghostty backend", () => {
   // response", so the DECRPM reply core formats never reached response_buffer (#32024). Rendering/receipt
   // tests cannot detect a dropped reply; only the real producer's reply bytes can.
   test.each(["direct", "adapter"] as const)("DECRPM queries reach the reply path via %s", (path) => {
-    const create = () => {
-      if (path === "direct") {
-        const terminal = ghostty.createTerminal(80, 24, { scrollbackLimit: 1000 })
-        return {
-          write(text: string) {
-            terminal.write(text)
-            terminal.update()
-            let response = ""
-            while (terminal.hasResponse()) response += terminal.readResponse() ?? ""
-            return response
-          },
-          dispose: () => terminal.free(),
-        }
-      }
-      const terminal = createBackend()
-      let response = ""
-      terminal.onResponse = (bytes) => {
-        response += new TextDecoder().decode(bytes)
-      }
-      return {
-        write(text: string) {
-          response = ""
-          feedText(terminal, text)
-          return response
-        },
-        dispose: () => terminal.destroy(),
-      }
-    }
+    const create = () => replyChannel(path)
     const first = create()
     const second = create()
     try {
@@ -384,6 +361,68 @@ describe("ghostty backend", () => {
       second.dispose()
     }
   })
+
+  // @failure The WASM patch filed .device_attributes, .xtversion and .dcs_hook/.dcs_put/.dcs_unhook under "Actions
+  // that require no response", so DA1, DA2, XTVERSION, DECRQSS and XTGETTCAP never reached response_buffer (#32057).
+  // Only the real producer's reply bytes show a dropped reply. The stays are pinned too: each is a reply core with its
+  // default config does not give from this artifact, and a stray reply there is as wrong as a missing one.
+  test.each(["direct", "adapter"] as const)(
+    "identity, DECRQSS and XTGETTCAP queries reach the reply path via %s",
+    (path) => {
+      const first = replyChannel(path)
+      const second = replyChannel(path)
+      try {
+        // DA1 in the clipboard-deny form (no 52: the shim has no clipboard write) and no 4 (no sixel); DA2; XTVERSION.
+        expect(first.write("\x1b[c")).toBe("\x1b[?62;22c")
+        expect(first.write("\x1b[>c")).toBe("\x1b[>1;10;0c")
+        expect(first.write("\x1b[>q")).toBe("\x1bP>|ghostty 1.3.0-dev+0000000\x1b\\")
+        // DECRQSS reports the live state: SGR, DECSTBM, DECSCUSR (default steady block, matching the DECRQM ?12 reset
+        // reply), and the invalid form for DECSLRM while left/right margin mode is off and for an unknown setting.
+        expect(first.write("\x1bP$qm\x1b\\")).toBe("\x1bP1$r0m\x1b\\")
+        expect(first.write("\x1b[1;31m\x1bP$qm\x1b\\\x1b[0m")).toBe("\x1bP1$r0;1;31m\x1b\\")
+        expect(first.write("\x1bP$qr\x1b\\")).toBe("\x1bP1$r1;24r\x1b\\")
+        expect(first.write("\x1b[5;20r\x1bP$qr\x1b\\\x1b[r")).toBe("\x1bP1$r5;20r\x1b\\")
+        expect(first.write("\x1b[?12$p\x1bP$q q\x1b\\")).toBe("\x1b[?12;2$y\x1bP1$r2 q\x1b\\")
+        expect(first.write("\x1b[4 q\x1bP$q q\x1b\\\x1b[0 q")).toBe("\x1bP1$r4 q\x1b\\")
+        expect(first.write("\x1bP$qs\x1b\\")).toBe("\x1bP0$r\x1b\\")
+        expect(first.write("\x1bP$qx\x1b\\")).toBe("\x1bP0$r\x1b\\")
+        // XTGETTCAP answers from core's terminfo map, one reply per known key; an unknown key is skipped, as core does.
+        expect(first.write("\x1bP+q544e\x1b\\")).toBe("\x1bP1+r544E=787465726D2D67686F73747479\x1b\\")
+        expect(first.write("\x1bP+q544e;7a7a7a;436f\x1b\\")).toBe(
+          "\x1bP1+r544E=787465726D2D67686F73747479\x1b\\\x1bP1+r436F=323536\x1b\\",
+        )
+        // The 12 stays (@cto 25157a35): DA3, XTWINOPS 14/16/21 (21: title-report defaults off), XTGETXRES, OSC 52
+        // queries x3, DSR 996, and kitty graphics x3 (compiled out of lib-vt with oniguruma).
+        for (const query of [
+          "\x1b[=c",
+          "\x1b[14t",
+          "\x1b[16t",
+          "\x1b[21t",
+          "\x1bP+Q666f726567726f756e64\x1b\\",
+          "\x1b]52;c;?\x07",
+          "\x1b]52;p;?\x1b\\",
+          "\x1b]52;s;?\x07",
+          "\x1b[?996n",
+          "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\",
+          "\x1b_Gi=32,s=1,v=1,a=T,f=24;AAAA\x1b\\",
+          "\x1b_Ga=p,i=31\x1b\\",
+        ]) {
+          expect(first.write(query), JSON.stringify(query)).toBe("")
+        }
+        // Replies keep stream order with the existing DSR and DECRPM replies, and DCS state stays per instance:
+        // a DCS left open in one terminal does not swallow the next instance's query.
+        expect(first.write("\x1b[5n\x1b[c\x1bP$qr\x1b\\\x1b[?2004$p\x1b[6n")).toBe(
+          "\x1b[0n\x1b[?62;22c\x1bP1$r1;24r\x1b\\\x1b[?2004;2$y\x1b[1;1R",
+        )
+        expect(first.write("\x1bP$q")).toBe("")
+        expect(second.write("\x1bP+q436f\x1b\\")).toBe("\x1bP1+r436F=323536\x1b\\")
+        expect(first.write("m\x1b\\")).toBe("\x1bP1$r0m\x1b\\")
+      } finally {
+        first.dispose()
+        second.dispose()
+      }
+    },
+  )
 
   test.each(["viewport", "scrollback"] as const)("rejects invalid producer ordinals in %s with its digest", (path) => {
     const original = ghostty.createTerminal.bind(ghostty)
