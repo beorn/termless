@@ -8,6 +8,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // built from build/flat-api.c and build/build.sh at libvterm v0.3.3.
 // Re-audited for per-instance OSC 52 clipboard callbacks and the upstream unsigned-byte selection fix;
 // feed/response delivery is unchanged, including replies behind the 5600-byte backlog.
+// Re-audited for native reverse-property observation; callback acceptance and the reply sink are unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -17,7 +18,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "caa5dc6c4ac4e3dac45977466919d2c1dcd3e851",
+      blobOid: "eb513ccd443e30c7a869a8ba41f8126e1c0ddf00",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
@@ -32,7 +33,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "7ebe1b994b58ca867dcd19e9cdeb10b8839b6c1f0dbdea024f875a9f57560a23",
+      sha256: "3d67045bb43c5e4081c70dc58088af8f735416c20df2d7843d765e5aad8ef62a",
     },
   },
 } as const

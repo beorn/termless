@@ -138,13 +138,13 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     }
   })
 
-  // Cursor observations must come from native state and survive instance lifecycles.
-  // The former null assertions could not detect missing native property readback.
-  // @failure Missing or shared cursor observation hides native visibility/shape transitions.
+  // Native observations must survive instance lifecycles without overriding engine reset semantics.
+  // The former reply-only reverse assertion could not detect missing native property readback.
+  // @failure Missing or shared observations hide native cursor/reverse transitions.
   // @level l2
-  // @consumer Terminfo cursor probes
+  // @consumer Terminfo cursor and mode probes
   // @testonly none
-  test("observes native cursor properties across reset and isolated instance lifetimes", () => {
+  test("observes native properties across reset and isolated instance lifetimes", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
     const isolated = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 8, rows: 2 })
@@ -153,6 +153,12 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     backend.onResponse = (data) => responses.push(new TextDecoder().decode(data))
     try {
       expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      expect(backend.getMode("reverseVideo")).toBeNull()
+      backend.feed(new TextEncoder().encode("\x1b[?5l\x1b[?5$p"))
+      expect(responses.join("")).toBe("\x1b[?5;2$y")
+      expect(backend.getMode("reverseVideo")).toBe(false)
+      expect(isolated.getMode("reverseVideo")).toBeNull()
+      responses.length = 0
       backend.feed(new TextEncoder().encode("\x1b[2;4H\x1b[?25l\x1b[6 q"))
       expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: false, style: "beam" })
       expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
@@ -162,20 +168,35 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
       responses.length = 0
       backend.feed(new TextEncoder().encode("\x1b[?5h\x1b[?5$p"))
       expect(responses.join("")).toBe("\x1b[?5;1$y")
-      backend.feed(new TextEncoder().encode("\x1b[?5l"))
-      backend.feed(new TextEncoder().encode("\x1b[?25h\x1b[2 q"))
+      expect(backend.getMode("reverseVideo")).toBe(true)
+      // libvterm 0.3.3 preserves reverse mode through API reset and direct RIS.
+      backend.reset()
+      expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      responses.length = 0
+      backend.feed(new TextEncoder().encode("\x1bc\x1b[?5$p"))
+      expect(responses.join("")).toBe("\x1b[?5;1$y")
+      expect(backend.getMode("reverseVideo")).toBe(true)
+      responses.length = 0
+      backend.feed(new TextEncoder().encode("\x1b[?5l\x1b[?5$p"))
+      expect(responses.join("")).toBe("\x1b[?5;2$y")
+      expect(backend.getMode("reverseVideo")).toBe(false)
+      backend.feed(new TextEncoder().encode("\x1b[2;4H\x1b[?25h\x1b[2 q"))
       expect(backend.getCursor()).toMatchObject({ row: 1, col: 3, visible: true, style: "block" })
       backend.feed(new TextEncoder().encode("\x1b[?25l\x1b[6 q"))
       backend.reset()
       expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      expect(backend.getMode("reverseVideo")).toBe(false)
 
-      isolated.feed(new TextEncoder().encode("\x1b[?25l\x1b[6 q"))
+      isolated.feed(new TextEncoder().encode("\x1b[?25l\x1b[6 q\x1b[?5h"))
       backend.destroy()
       backend.init({ cols: 8, rows: 2 })
       expect(backend.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      expect(backend.getMode("reverseVideo")).toBeNull()
       expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: false, style: "beam" })
+      expect(isolated.getMode("reverseVideo")).toBe(true)
       isolated.reset()
       expect(isolated.getCursor()).toMatchObject({ row: 0, col: 0, visible: true, style: "block" })
+      expect(isolated.getMode("reverseVideo")).toBe(true)
     } finally {
       backend.destroy()
       isolated.destroy()
@@ -200,7 +221,6 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         "focusTracking",
         "originMode",
         "insertMode",
-        "reverseVideo",
       ] as const) {
         expect(backend.getMode(mode), `expected null for unobserved mode ${mode}`).toBeNull()
       }

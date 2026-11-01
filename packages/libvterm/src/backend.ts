@@ -219,7 +219,7 @@ export function createLibvtermBackend(
     screen = module.vterm_obtain_screen(vt)
     state = module.vterm_obtain_state(vt)
 
-    cursorPropsPtr = module._malloc(9 * 4)
+    cursorPropsPtr = module._malloc(10 * 4)
     if (!cursorPropsPtr) {
       destroy()
       throw new Error("libvterm cursor observation allocation failed")
@@ -409,10 +409,12 @@ export function createLibvtermBackend(
     }
   }
 
-  function getMode(_mode: Mode): boolean | null {
-    // libvterm's C API doesn't expose terminal modes directly through
-    // simple function calls; return null when state cannot be read from
-    // the engine rather than fabricating hard-coded boolean defaults.
+  function getMode(mode: Mode): boolean | null {
+    if (mode === "reverseVideo") {
+      // Native VTERM_PROP_REVERSE observations survive reset exactly as the engine's mode does.
+      const reverse = ensureInit().getValue(cursorPropsPtr + 36, "i32")
+      return reverse === -1 ? null : reverse !== 0
+    }
     return null
   }
 

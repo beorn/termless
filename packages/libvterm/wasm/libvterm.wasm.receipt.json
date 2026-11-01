@@ -1,20 +1,20 @@
 {
-  "sha256": "7ebe1b994b58ca867dcd19e9cdeb10b8839b6c1f0dbdea024f875a9f57560a23",
+  "sha256": "3d67045bb43c5e4081c70dc58088af8f735416c20df2d7843d765e5aad8ef62a",
   "jsSha256": "d3350200bb902103fc20d4212a0cbbed8c01d28b8c222f74b5fe2adf41df3e00",
   "engineVersion": "0.3.3",
   "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
-  "buildHash": "5186e1284529ac95915204c3e1817d54d550c5b601c2d824572d10b2fe63fef1",
+  "buildHash": "e24ffb1abaa3c88f1b764937427dab310c494b83d96f0bf21d27de9cca5c10f3",
   "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23-git",
-  "wrapperBaseCommit": "d9d450554432336ace708b4efe1efa161dc1a087",
-  "wrapperTreeOid": "57d89ca3c565894265d7e57632a3dbbfb0933178",
+  "wrapperBaseCommit": "762364cd845b4b6f3b27d62d6b2d62049d847a45",
+  "wrapperTreeOid": "1085b187ad7dde050e0adab89815b955e19e7585",
   "upstreamTag": "v0.3.3",
   "buildInputs": {
     "runtimeTarget": "node",
     "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
-    "wrapperBaseCommit": "d9d450554432336ace708b4efe1efa161dc1a087",
-    "wrapperTreeOid": "57d89ca3c565894265d7e57632a3dbbfb0933178",
+    "wrapperBaseCommit": "762364cd845b4b6f3b27d62d6b2d62049d847a45",
+    "wrapperTreeOid": "1085b187ad7dde050e0adab89815b955e19e7585",
     "buildScriptSha256": "71b1a20f9a90f832ace108a32693bf2f59150429f3f45b8be24417140013a1b5",
-    "flatApiSha256": "3055344983fd782f9911f78aa9906755fcde57656ed51afad713826d17c1c958",
+    "flatApiSha256": "51d6c105014fd74d686a1dc4b03ecfde13a2bca03b6b350fdf03e5fae1ba43b0",
     "dtsSha256": "54e0b056b2c9c2c92e5346095fb71cedbc4b08224761ac60fafaf15ad44d41fc",
     "generatedIncludes": [
       [

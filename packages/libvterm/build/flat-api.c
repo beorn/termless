@@ -132,6 +132,7 @@ typedef struct {
   char *staging;
   size_t staging_len;
   size_t staging_cap;
+  int32_t reverse; // Appended after the existing title fields (WASM32 byte offset 36).
 } TermlessPropRecord;
 
 static void clear_prop_title(TermlessPropRecord *rec) {
@@ -151,6 +152,7 @@ static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
     case VTERM_PROP_CURSORVISIBLE: rec->visible = val->boolean; break;
     case VTERM_PROP_CURSORSHAPE: rec->shape = val->number; break;
     case VTERM_PROP_CURSORBLINK: rec->blink = val->boolean; break;
+    case VTERM_PROP_REVERSE: rec->reverse = val->boolean; break;
     case VTERM_PROP_TITLE: {
       VTermStringFragment frag = val->string;
       if (frag.initial) rec->staging_len = 0;
@@ -184,7 +186,7 @@ static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
     default: break;
   }
   // Returning zero would veto native property storage, including properties
-  // this observer does not expose (reverse, alternate screen, title, etc.).
+  // this observer does not expose (alternate screen, etc.).
   return 1;
 }
 
@@ -196,7 +198,7 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
   if (screen && record) {
     TermlessPropRecord *rec = (TermlessPropRecord *)record;
     memset(rec, 0, sizeof(*rec));
-    rec->visible = rec->shape = rec->blink = -1;
+    rec->visible = rec->shape = rec->blink = rec->reverse = -1;
     vterm_screen_set_callbacks(screen, &observer_callbacks, rec);
   } else if (screen) {
     vterm_screen_set_callbacks(screen, NULL, NULL);
