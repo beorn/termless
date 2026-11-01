@@ -63,19 +63,20 @@ test.skipIf(!isKittyAvailable())(
         const outputs = result
           .trim()
           .split("\n")
-        .map((line) => JSON.parse(line) as Record<string, unknown>)
+          .map((line) => JSON.parse(line) as Record<string, unknown>)
+        expect(outputs).toHaveLength(mode === "stream" ? history.length + 1 : 1)
         for (const output of outputs) expect(output.error).toBeUndefined()
         if (mode === "stream") {
           expect(outputs.shift()).toEqual({ ready: true })
-          expect(outputs[1].cmdOutputMarkings).toBeUndefined()
-          expect(outputs[2].cmdOutputMarkings).toEqual(first)
-          expect(outputs[3].cmdOutputMarkings).toEqual(statuses)
-          expect(outputs[5].cmdOutputMarkings).toEqual([[null, "0"]])
-          expect(outputs[6].cmdOutputMarkings).toBeUndefined()
+          expect(outputs[1]!.cmdOutputMarkings).toBeUndefined()
+          expect(outputs[2]!.cmdOutputMarkings).toEqual(first)
+          expect(outputs[3]!.cmdOutputMarkings).toEqual(statuses)
+          expect(outputs[5]!.cmdOutputMarkings).toEqual([[null, "0"]])
+          expect(outputs[6]!.cmdOutputMarkings).toBeUndefined()
         } else if (mode === "fresh") {
-          expect(outputs[0].cmdOutputMarkings).toBeUndefined()
+          expect(outputs[0]!.cmdOutputMarkings).toBeUndefined()
         } else {
-          expect(outputs[0].cmdOutputMarkings).toEqual(expected)
+          expect(outputs[0]!.cmdOutputMarkings).toEqual(expected)
         }
       }
     } finally {
