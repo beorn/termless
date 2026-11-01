@@ -30,7 +30,9 @@ bun vitest run packages/xtermjs/  # Run tests for a specific package
 
 Write tests for all new functionality. For rendering/terminal behavior, use the `@termless/test` matchers.
 
-An entry in [`source-siblings.json`](https://github.com/beorn/termless/blob/main/source-siblings.json) exists only while unreleased source is under test; remove it in the change that locks the released version.
+Standalone CI tests `vt100.js`, `vt220.js`, and `vterm.js` from the public engine commits in [`source-siblings.json`](https://github.com/beorn/termless/blob/main/source-siblings.json). Keep these three engine entries together and update their commit in the same Termless change that consumes an engine API change. The existing source-sibling action installs those sources for Bun tests, so CI does not wait for an engine npm release.
+
+Keep `package.json` ranges and `bun.lock` on published versions: the action first installs the frozen lock, then applies its source overrides. The engine source pins remain in CI after a release; other temporary source-sibling entries leave in the change that locks their released version.
 
 ### Type Checking
 

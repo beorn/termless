@@ -2,6 +2,27 @@
   "schema": "vendor-kit/source-siblings/v1",
   "siblings": [
     {
+      "name": "vt100.js",
+      "repository": "beorn/vterm",
+      "commit": "6cc7eef05cde6a8578479c6cdb480f606758eb2c",
+      "directory": "packages/vt100",
+      "pack": false
+    },
+    {
+      "name": "vt220.js",
+      "repository": "beorn/vterm",
+      "commit": "6cc7eef05cde6a8578479c6cdb480f606758eb2c",
+      "directory": "packages/vt220",
+      "pack": false
+    },
+    {
+      "name": "vterm.js",
+      "repository": "beorn/vterm",
+      "commit": "6cc7eef05cde6a8578479c6cdb480f606758eb2c",
+      "directory": "packages/vterm",
+      "pack": false
+    },
+    {
       "name": "@silvery/commander",
       "repository": "beorn/silvery",
       "commit": "c375b961de8f8cb8ada240e929a72c646fb20145",
