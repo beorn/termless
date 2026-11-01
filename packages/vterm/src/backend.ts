@@ -143,8 +143,10 @@ export function createVtermBackend(
 
   function snapshotRows(): Cell[][] {
     const snap = ensureScreen().snapshot()
-    const scrollback = snap.scrollback
-    const grid = snap.activeBuffer === "alt" ? snap.alt.grid : snap.main.grid
+    const altScreen = snap.activeBuffer === "alt"
+    // The engine retains primary history while alt is active; it is not part of the selected buffer.
+    const scrollback = altScreen ? [] : snap.scrollback
+    const grid = altScreen ? snap.alt.grid : snap.main.grid
     const rows = new Array<Cell[]>(scrollback.length + grid.length)
     for (let row = 0; row < scrollback.length; row++) rows[row] = convertRow(scrollback[row])
     for (let row = 0; row < grid.length; row++) rows[scrollback.length + row] = convertRow(grid[row])
@@ -228,11 +230,12 @@ export function createVtermBackend(
 
   function getScrollback(): ScrollbackState {
     const s = ensureScreen()
-    const scrollbackLength = s.getScrollbackLength()
+    const altScreen = s.getMode("altScreen")
+    const scrollbackLength = altScreen ? 0 : s.getScrollbackLength()
     // Convert relative offset (lines from bottom) to absolute viewport top row.
     // At bottom (relativeOffset=0): absolute = scrollbackLength (= totalLines - screenLines)
     // Scrolled up by N: absolute = scrollbackLength - N
-    const relativeOffset = s.getViewportOffset()
+    const relativeOffset = altScreen ? 0 : s.getViewportOffset()
     return {
       viewportTop: scrollbackLength - relativeOffset,
       totalRows: scrollbackLength + s.rows,

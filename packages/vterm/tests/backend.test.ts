@@ -847,6 +847,53 @@ describe("createVtermBackend", () => {
 
   // ── Alternate screen buffer ──
 
+  // Existing alternate tests start without history; primary-only row tests miss saved history leaking into alt.
+  test("alternate readers exclude saved primary history and restore it on exit", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    const rowText = (row: number) =>
+      backend
+        .getRow(row)
+        .map((cell) => cell.char)
+        .join("")
+        .trimEnd()
+    try {
+      feed(Array.from({ length: 36 }, (_, row) => `S${String(row).padStart(2, "0")}`).join("\r\n"))
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24, viewportTop: 12 })
+      expect(rowText(0)).toBe("S00")
+      expect(rowText(12)).toBe("S12")
+      const primaryRows = backend.getRows()
+      expect(primaryRows).toHaveLength(36)
+
+      feed("\x1b[?1049h\x1b[1;1H\x1b[1mALT\x1b[0m")
+      expect(backend.getMode("altScreen")).toBe(true)
+      expect(backend.getScrollback()).toMatchObject({
+        totalLines: 24,
+        screenLines: 24,
+        totalRows: 24,
+        screenRows: 24,
+        viewportTop: 0,
+        viewportOffset: 0,
+      })
+      expect(backend.getRows()).toHaveLength(24)
+      expect(backend.getLines()).toEqual(backend.getRows())
+      expect(rowText(0)).toBe("ALT")
+      expect(backend.getLine(0)).toEqual(backend.getRow(0))
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "A", bold: true })
+      expect(backend.getTextRange(0, 0, 0, 3)).toBe("ALT")
+      expect(backend.getText()).not.toContain("S00")
+
+      feed("\x1b[?1049l")
+      expect(backend.getMode("altScreen")).toBe(false)
+      expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24, viewportTop: 12 })
+      expect(backend.getRows()).toEqual(primaryRows)
+      expect(rowText(0)).toBe("S00")
+      expect(rowText(12)).toBe("S12")
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("alternate screen preserves main screen content", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("main content"))
