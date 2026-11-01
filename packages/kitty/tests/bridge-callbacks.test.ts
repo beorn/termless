@@ -105,6 +105,32 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
     }
   })
 
+  /**
+   * @failure #32091: every OSC 52 callback was unreproduced, so kitty's clipboard cells measured nothing.
+   * @consumer Terminfo extensions.osc52-write through getClipboardState
+   */
+  test("commits an OSC 52 write through kitty's own clipboard_control and asks before a read", () => {
+    const backend = createKittyBackend()
+    backend.init({ cols: 80, rows: 24 })
+    let response = ""
+    backend.onResponse = (bytes) => {
+      response += new TextDecoder().decode(bytes)
+    }
+    try {
+      const payload = btoa("termless-osc52")
+      backend.feed(new TextEncoder().encode(`\x1b]52;c;${payload}\x07`))
+      expect(backend.getClipboardState()).toEqual({ writes: [{ selector: "c", payload, text: "termless-osc52" }] })
+      expect(backend.getWarnings()).toEqual([])
+      // Default clipboard_control is read-clipboard-ask: kitty asks a human; the bridge records the prompt, never answers.
+      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
+      backend.getCursor()
+      expect(response).toBe("")
+      expect(backend.getWarnings()).toEqual([{ code: "UNREPRODUCED_CALLBACK", message: "confirm", backend: "kitty" }])
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // OSC 4 set and OSC 104 reset run kitty's own Window.set_color_table_color, which ends in Window.refresh.
   test("a colour table change replays without a callback error", () => {
     const backend = createKittyBackend()
