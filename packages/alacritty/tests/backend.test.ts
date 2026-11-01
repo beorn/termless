@@ -30,7 +30,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "32d76284e5a3c7673fafbbc83a16717fa0a1c1811c7d659d982176a53ceb1aa9",
+    sha256: "8232209bd7273d68eb0bc9a71c5acf94fd8ebd96612604ff901c09c4d6cb8344",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -482,6 +482,81 @@ describeNative("alacritty backend", () => {
   })
 
   describe("scrollback", () => {
+    // The absolute-buffer contract includes styled retained cells; counter-only cases never read them.
+    test("reads retained rows by absolute index through alternate screens, resize and eviction", () => {
+      backend = createAlacrittyBackend()
+      backend.init({ cols: 80, rows: 24, scrollbackLimit: 12 })
+      const terminal = backend
+      const markers = Array.from({ length: 36 }, (_, row) => `S${String(row).padStart(2, "0")}`)
+      const uri = "https://example.test:8443/retained:row"
+      feedText(
+        terminal,
+        markers
+          .map((marker, row) =>
+            row === 0 || row === 24
+              ? `\x1b[1;38;2;17;34;51m\x1b]8;;${uri}\x1b\\${marker}\x1b]8;;\x1b\\\x1b[0m`
+              : marker,
+          )
+          .join("\r\n"),
+      )
+      const rowText = (row: number) =>
+        terminal
+          .getRow(row)
+          .slice(0, 3)
+          .map((cell) => cell.char)
+          .join("")
+      expect(terminal.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(rowText(0)).toBe("S00")
+      expect(
+        terminal.getRows().map((row) =>
+          row
+            .slice(0, 3)
+            .map((cell) => cell.char)
+            .join(""),
+        ),
+      ).toEqual(markers)
+      for (const row of [0, 12, 24, 35]) {
+        expect(terminal.getCell(row, 0).char).toBe("S")
+        expect(rowText(row)).toBe(markers[row])
+        expect(terminal.getTextRange(row, 0, row, 3)).toBe(markers[row])
+      }
+      expect(terminal.getTextRange(11, 0, 12, 3)).toBe("S11\nS12")
+      for (const row of [0, 24]) {
+        const styled = { char: "S", bold: true, fg: { r: 17, g: 34, b: 51 }, hyperlink: uri }
+        expect(terminal.getCell(row, 0)).toMatchObject(styled)
+        expect(terminal.getRow(row)[0]).toMatchObject(styled)
+        expect(terminal.getRows()[row]?.[0]).toMatchObject(styled)
+      }
+
+      terminal.scrollViewport(5)
+      expect(terminal.getScrollback().viewportTop).toBe(7)
+      expect(rowText(0)).toBe("S00")
+      expect(rowText(12)).toBe("S12")
+      terminal.scrollViewport(-5)
+
+      feedText(terminal, "\x1b[?1049h\x1b[HALT")
+      expect(terminal.getMode("altScreen")).toBe(true)
+      expect(terminal.getScrollback()).toMatchObject({ totalLines: 24, screenLines: 24 })
+      expect(terminal.getRows()).toHaveLength(24)
+      expect(rowText(0)).toBe("ALT")
+      expect(terminal.getText()).not.toContain("S00")
+      feedText(terminal, "\x1b[?1049l")
+      expect(terminal.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(terminal.getRows()).toHaveLength(36)
+      expect(rowText(0)).toBe("S00")
+      expect(rowText(12)).toBe("S12")
+
+      terminal.resize(60, 24)
+      expect(terminal.getRows()).toHaveLength(36)
+      expect(terminal.getRows().every((row) => row.length === 60)).toBe(true)
+      expect(terminal.getText().split("\n")).toEqual(markers)
+      feedText(terminal, "\r\nS36")
+      expect(terminal.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+      expect(rowText(0)).toBe("S01")
+      expect(rowText(35)).toBe("S36")
+      expect(terminal.getRows()).toHaveLength(36)
+    })
+
     // Existing accumulation tests never distinguish an absolute buffer row from distance to the bottom.
     test("reports absolute viewport rows through scrolling", () => {
       backend = createBackend(20, 3)

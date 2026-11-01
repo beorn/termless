@@ -413,7 +413,7 @@ impl AlacrittyTerminal {
         lines.join("\n")
     }
 
-    /// Get text from a rectangular region (screen coordinates only).
+    /// Get text from a rectangular region using absolute retained-buffer rows.
     #[napi]
     pub fn get_text_range(
         &self,
@@ -421,18 +421,25 @@ impl AlacrittyTerminal {
         start_col: u32,
         end_row: u32,
         end_col: u32,
-    ) -> String {
+    ) -> Result<String> {
         let term = match &self.term {
             Some(t) => t,
-            None => return String::new(),
+            None => return Err(Error::from_reason("Alacritty terminal has been destroyed")),
         };
 
         let grid = term.grid();
         let cols = grid.columns();
+        let total = grid.total_lines();
+        if start_row as usize >= total || end_row as usize >= total {
+            return Err(Error::from_reason(format!(
+                "Buffer rows {start_row}..={end_row} are outside retained rows 0..{total}"
+            )));
+        }
+        let history = grid.history_size() as i32;
         let mut parts = Vec::new();
 
         for row in start_row..=end_row {
-            let line = Line(row as i32);
+            let line = Line(row as i32 - history);
             let col_start = if row == start_row {
                 start_col as usize
             } else {
@@ -466,34 +473,26 @@ impl AlacrittyTerminal {
             parts.push(text.trim_end().to_string());
         }
 
-        parts.join("\n")
+        Ok(parts.join("\n"))
     }
 
-    /// Get a single cell at screen coordinates (row, col).
+    /// Get a single cell at an absolute retained-buffer row and column.
     #[napi]
-    pub fn get_cell(&self, row: u32, col: u32) -> JsCell {
+    pub fn get_cell(&self, row: u32, col: u32) -> Result<JsCell> {
         let term = match &self.term {
             Some(t) => t,
-            None => {
-                return JsCell {
-                    text: String::new(),
-                    fg: None,
-                    bg: None,
-                    bold: false,
-                    faint: false,
-                    italic: false,
-                    underline: "none".to_string(),
-                    underline_color: None,
-                    strikethrough: false,
-                    inverse: false,
-                    wide: false,
-                    hyperlink: None,
-                };
-            }
+            None => return Err(Error::from_reason("Alacritty terminal has been destroyed")),
         };
 
         let grid = term.grid();
-        let point = Point::new(Line(row as i32), Column(col as usize));
+        if row as usize >= grid.total_lines() || col as usize >= grid.columns() {
+            return Err(Error::from_reason(format!(
+                "Buffer cell ({row}, {col}) is outside retained rows 0..{} and columns 0..{}",
+                grid.total_lines(),
+                grid.columns()
+            )));
+        }
+        let point = Point::new(Line(row as i32 - grid.history_size() as i32), Column(col as usize));
         let cell = &grid[point];
         let flags = cell.flags;
 
@@ -509,7 +508,7 @@ impl AlacrittyTerminal {
         }
 
         let colors = term.colors();
-        JsCell {
+        Ok(JsCell {
             text,
             fg: color_to_rgb(&cell.fg, colors),
             bg: color_to_rgb(&cell.bg, colors),
@@ -525,27 +524,32 @@ impl AlacrittyTerminal {
             inverse: flags.contains(CellFlags::INVERSE),
             wide: flags.contains(CellFlags::WIDE_CHAR),
             hyperlink: cell.hyperlink().map(|hyperlink| hyperlink.uri().to_owned()),
-        }
+        })
     }
 
     /// Get all cells in a row as an array.
     #[napi]
-    pub fn get_line(&self, row: u32) -> Vec<JsCell> {
+    pub fn get_line(&self, row: u32) -> Result<Vec<JsCell>> {
         let mut cells = Vec::with_capacity(self.cols);
         for col in 0..self.cols as u32 {
-            cells.push(self.get_cell(row, col));
+            cells.push(self.get_cell(row, col)?);
         }
-        cells
+        Ok(cells)
     }
 
-    /// Get all screen rows.
+    /// Get all retained-buffer rows, from the oldest history through the active screen.
     #[napi]
-    pub fn get_lines(&self) -> Vec<Vec<JsCell>> {
-        let mut rows = Vec::with_capacity(self.rows);
-        for row in 0..self.rows as u32 {
-            rows.push(self.get_line(row));
+    pub fn get_lines(&self) -> Result<Vec<Vec<JsCell>>> {
+        let term = self
+            .term
+            .as_ref()
+            .ok_or_else(|| Error::from_reason("Alacritty terminal has been destroyed"))?;
+        let total = term.grid().total_lines();
+        let mut rows = Vec::with_capacity(total);
+        for row in 0..total as u32 {
+            rows.push(self.get_line(row)?);
         }
-        rows
+        Ok(rows)
     }
 
     /// Get cursor position and state.
