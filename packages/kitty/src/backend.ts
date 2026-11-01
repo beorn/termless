@@ -137,6 +137,13 @@ interface BridgeSnapshot {
   unreproduced?: string[]
   /** Clipboard commits kitty's own OSC 52 request manager made under its default clipboard_control */
   clipboard?: ClipboardState
+  /** Permission prompts kitty raised for a human (default read-clipboard-ask), in feed order; host input, never answered */
+  prompts?: BridgePrompt[]
+}
+
+interface BridgePrompt {
+  name: string
+  humanName?: string
 }
 
 interface ClipboardState {
@@ -273,6 +280,7 @@ export function createKittyBackend(
   // a later snapshot only delivers replies generated since the previous one.
   let observedResponses = Buffer.alloc(0)
   let observedUnreproduced: string[] = []
+  let observedPrompts: BridgePrompt[] = []
   const warnings: EmulatorWarning[] = []
   let kittyConfigDir: string | null = null
 
@@ -359,9 +367,23 @@ export function createKittyBackend(
     for (const callback of unreproduced.slice(observedUnreproduced.length)) {
       warnings.push({ code: "UNREPRODUCED_CALLBACK", message: callback, backend: "kitty" })
     }
+    const prompts = nextSnapshot.prompts ?? []
+    if (
+      observedPrompts.some(
+        (prompt, index) => prompts[index]?.name !== prompt.name || prompts[index]?.humanName !== prompt.humanName,
+      )
+    ) {
+      throw new Error("Kitty bridge changed an earlier permission prompt during batch replay")
+    }
+    // A consent prompt waits on host input a human supplies; it is not a callback this bridge failed to reproduce.
+    for (const prompt of prompts.slice(observedPrompts.length)) {
+      const message = prompt.humanName === undefined ? prompt.name : `${prompt.name} ${prompt.humanName}`
+      warnings.push({ code: "PERMISSION_PROMPT", message, backend: "kitty" })
+    }
     snapshot = nextSnapshot
     observedResponses = responseBytes
     observedUnreproduced = unreproduced
+    observedPrompts = prompts
     if (backend.onResponse && newResponses.length > 0) {
       backend.onResponse(new Uint8Array(newResponses))
     }
@@ -382,6 +404,7 @@ export function createKittyBackend(
     snapshot = null
     observedResponses = Buffer.alloc(0)
     observedUnreproduced = []
+    observedPrompts = []
   }
 
   // Eagerly init if opts provided
@@ -400,6 +423,7 @@ export function createKittyBackend(
     snapshot = null
     observedResponses = Buffer.alloc(0)
     observedUnreproduced = []
+    observedPrompts = []
     if (kittyConfigDir) {
       rmSync(kittyConfigDir, { recursive: true, force: true })
       kittyConfigDir = null

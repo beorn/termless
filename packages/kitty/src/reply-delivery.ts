@@ -16,7 +16,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Non-query notification payloads remain UNREPRODUCED_CALLBACK; no desktop integration/display is initialized.
 // Re-audited for OSC 52 (#32091): Window.clipboard_control runs kitty's own ClipboardRequestManager under default
 // clipboard_control; an OSC 52 write commits to kitty's Clipboard held in process memory (no GLFW) and writes no child
-// bytes; a read reaches the read-clipboard-ask prompt, recorded as UNREPRODUCED_CALLBACK confirm and never answered.
+// bytes; a read reaches the read-clipboard-ask prompt (boss.confirm/choose), host input a human supplies: the bridge
+// answers nothing and reports it as a PERMISSION_PROMPT warning, replay-checked, never as UNREPRODUCED_CALLBACK.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -26,11 +27,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "ccbb563ae46aac067835f0f0754374fe49e02531",
+      blobOid: "567a3b2d47c497ec7f30c136f287587c8057946c",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "50aaff3aba391eb9e33a1af394c03c73bd86e0b2",
+      blobOid: "875c664a930dffc2ce41412fb02add06226b8751",
     },
   ],
   delivery: {

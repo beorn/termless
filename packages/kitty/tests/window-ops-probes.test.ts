@@ -271,13 +271,13 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     const responses: string[] = []
     backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
     try {
-      // OSC 52 read reaches kitty's own clipboard_control, whose default read-clipboard-ask asks a human (boss.confirm).
-      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x1b\\"))
+      // A displayed OSC 99 notification reaches Window.desktop_notify, which the bridge does not reproduce.
+      backend.feed(new TextEncoder().encode("\x1b]99;i=unreproduced:p=title;test\x1b\\"))
       backend.getCursor()
       expect(responses).toEqual([])
-      const warning = { code: "UNREPRODUCED_CALLBACK", message: "confirm", backend: "kitty" }
+      const warning = { code: "UNREPRODUCED_CALLBACK", message: "desktop_notify", backend: "kitty" }
       expect(backend.getWarnings()).toEqual([warning])
-      // Kitty's own Window methods answer these; the next replay re-runs the OSC 52 prompt without reporting it again.
+      // Kitty's own Window methods answer these; the next replay re-runs the notification without reporting it again.
       backend.feed(new TextEncoder().encode("\x1b[?996n\x1b]17;?\x1b\\"))
       backend.getCursor()
       expect(responses.join("")).toMatch(/^\x1b\[\?997;[12]n\x1b\]17;rgb:[0-9a-f/]+\x1b\\$/)

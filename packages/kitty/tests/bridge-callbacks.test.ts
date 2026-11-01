@@ -121,11 +121,19 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
       backend.feed(new TextEncoder().encode(`\x1b]52;c;${payload}\x07`))
       expect(backend.getClipboardState()).toEqual({ writes: [{ selector: "c", payload, text: "termless-osc52" }] })
       expect(backend.getWarnings()).toEqual([])
-      // Default clipboard_control is read-clipboard-ask: kitty asks a human; the bridge records the prompt, never answers.
+      // Default clipboard_control is read-clipboard-ask: kitty asks a human. That consent is host input, so the bridge
+      // records the prompt by name (never as an unreproduced callback) and answers nothing.
       backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
       backend.getCursor()
       expect(response).toBe("")
-      expect(backend.getWarnings()).toEqual([{ code: "UNREPRODUCED_CALLBACK", message: "confirm", backend: "kitty" }])
+      const prompt = { code: "PERMISSION_PROMPT", message: "confirm", backend: "kitty" }
+      expect(backend.getWarnings()).toEqual([prompt])
+      // The first read stays pending, so kitty's own currently_asking_permission_for rejects a second read with an empty
+      // OSC 52 reply; the replay re-runs the first prompt without reporting it again.
+      backend.feed(new TextEncoder().encode("\x1b]52;c;?\x07"))
+      backend.getCursor()
+      expect(response).toMatch(/^\x1b\]52;c;(?:\x07|\x1b\\)$/)
+      expect(backend.getWarnings()).toEqual([prompt])
     } finally {
       backend.destroy()
     }

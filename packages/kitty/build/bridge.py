@@ -168,13 +168,21 @@ class HeadlessBoss:
         pass
 
     def confirm(self, *args, **kwargs):
-        """kitty asks a human before a program reads the clipboard (default read-clipboard-ask). Nobody answers headless:
-        record the prompt as unreproduced, never invent allow or deny."""
-        self.window.unreproduced.append("confirm")
+        """kitty asks a human before a program reads the clipboard (default read-clipboard-ask). That consent is host
+        input, not a callback this bridge failed to reproduce: record the prompt by name and answer nothing, so kitty's
+        request stays pending exactly as it does while a human has not decided."""
+        self._record_prompt("confirm")
 
     def choose(self, *args, **kwargs):
-        """The OSC 5522 password permission prompt; recorded like confirm, never answered."""
-        self.window.unreproduced.append("choose")
+        """The OSC 5522 password permission prompt (Allow/Always/Deny/Ban); recorded like confirm, never answered."""
+        self._record_prompt("choose")
+
+    def _record_prompt(self, name):
+        prompt = {"name": name}
+        pending = self.window.clipboard_request_manager.currently_asking_permission_for
+        if pending is not None and pending.human_name:
+            prompt["humanName"] = pending.human_name
+        self.window.prompts.append(prompt)
 
     def clipboard_writes(self):
         return self.clipboard.writes + self.primary_selection.writes
@@ -214,6 +222,7 @@ class Callbacks:
         self.title_stack = deque(maxlen=10)
         self.responses = b""  # Accumulated DA1/DA2/DSR response data
         self.unreproduced = []  # Callback names this feed reached that the bridge does not reproduce
+        self.prompts = []  # Permission prompts kitty raised for a human; host input, never answered
         self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
     def write(self, data):
@@ -267,6 +276,11 @@ class Callbacks:
         names = sorted(set(self.unreproduced))
         self.unreproduced = []
         return names
+
+    def drain_prompts(self):
+        prompts = self.prompts
+        self.prompts = []
+        return prompts
 
     def __getattr__(self, name):
         """Record any other callback kitty invokes (clipboard, file transfer, resize report, remote control)."""
@@ -389,6 +403,7 @@ def make_snapshot():
     # Drain any accumulated response data (DA1/DA2/DSR responses)
     response_data = callbacks.drain_responses() if callbacks else b""
     unreproduced = callbacks.drain_unreproduced() if callbacks else []
+    prompts = callbacks.drain_prompts() if callbacks else []
 
     result = {
         "cells": cell_rows,
@@ -402,6 +417,8 @@ def make_snapshot():
         result["responses"] = base64.b64encode(response_data).decode("ascii")
     if unreproduced:
         result["unreproduced"] = unreproduced
+    if prompts:
+        result["prompts"] = prompts
     boss = get_boss()
     result["clipboard"] = {"writes": boss.clipboard_writes() if boss is not None else []}
     return result
@@ -436,6 +453,7 @@ def handle_command(cmd):
         if callbacks:
             callbacks.drain_responses()
             callbacks.drain_unreproduced()
+            callbacks.drain_prompts()
         parse_bytes(screen, data)
         if callback_errors:
             raised = "".join(callback_errors)
@@ -450,6 +468,9 @@ def handle_command(cmd):
             unreproduced = callbacks.drain_unreproduced()
             if unreproduced:
                 result["unreproduced"] = unreproduced
+            prompts = callbacks.drain_prompts()
+            if prompts:
+                result["prompts"] = prompts
         return result
 
     elif op == "resize":
@@ -521,6 +542,7 @@ def batch_main():
         # Accumulate response data from all feed commands
         all_responses = b""
         all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
+        all_prompts = []  # Likewise prefix-compared
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -530,6 +552,7 @@ def batch_main():
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
             all_unreproduced.extend(result.get("unreproduced", ()))
+            all_prompts.extend(result.get("prompts", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
@@ -537,6 +560,8 @@ def batch_main():
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
         if all_unreproduced:
             snapshot["unreproduced"] = all_unreproduced
+        if all_prompts:
+            snapshot["prompts"] = all_prompts
         sys.stdout.write(json.dumps(snapshot) + "\n")
     except Exception as e:
         sys.stdout.write(json.dumps({
