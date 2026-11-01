@@ -32,6 +32,9 @@ New backend instances start in UTF-8 mode, matching the bytes supplied through
 `TerminalBackend.feed`. The low-level module's `vterm_new` binding uses the same
 UTF-8 constructor; it does not expose libvterm's legacy byte-mode default.
 
+OSC 52 clipboard selection `c` uses memory owned by each backend instance.
+The engine's selection callbacks decode writes and format query responses.
+
 ```typescript
 import { createLibvtermBackend, initLibvterm } from "@termless/libvterm"
 import { createTerminal } from "@termless/core"

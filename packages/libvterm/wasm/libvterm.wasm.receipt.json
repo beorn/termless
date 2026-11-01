@@ -1,20 +1,20 @@
 {
-  "sha256": "5937bd79139ee5856bcf1bd619cc44fcd2d750d3def3066a74956678cdaaaeb2",
-  "jsSha256": "5655b244d221b427b7006a69da834cb08dea9c7c6c67f3ee7623679dca85fc95",
+  "sha256": "7ebe1b994b58ca867dcd19e9cdeb10b8839b6c1f0dbdea024f875a9f57560a23",
+  "jsSha256": "d3350200bb902103fc20d4212a0cbbed8c01d28b8c222f74b5fe2adf41df3e00",
   "engineVersion": "0.3.3",
   "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
-  "buildHash": "acc29a0a52b50b01ce35345e2e8ff6e90da7ddbca95da30f930a368192fc806e",
-  "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.9-git",
-  "wrapperBaseCommit": "4a73030458e2bdbea34b61cf28035555f6e78d44",
-  "wrapperTreeOid": "6bbfdf3d853a3c123c6159cf478ab5af783d9283",
+  "buildHash": "5186e1284529ac95915204c3e1817d54d550c5b601c2d824572d10b2fe63fef1",
+  "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23-git",
+  "wrapperBaseCommit": "d9d450554432336ace708b4efe1efa161dc1a087",
+  "wrapperTreeOid": "57d89ca3c565894265d7e57632a3dbbfb0933178",
   "upstreamTag": "v0.3.3",
   "buildInputs": {
     "runtimeTarget": "node",
     "sourceCommit": "9d6d2112335080312ef8c36667fa717ded4f7daf",
-    "wrapperBaseCommit": "4a73030458e2bdbea34b61cf28035555f6e78d44",
-    "wrapperTreeOid": "6bbfdf3d853a3c123c6159cf478ab5af783d9283",
-    "buildScriptSha256": "0f14cd2c9bb91ba532a5629ab450027a47dd19c3efed3b5e2ead39278c5453e5",
-    "flatApiSha256": "6c5766f2a31ae66f4f06a8d7de4b47a6e0367880a45cf0e470092858f68b72f0",
+    "wrapperBaseCommit": "d9d450554432336ace708b4efe1efa161dc1a087",
+    "wrapperTreeOid": "57d89ca3c565894265d7e57632a3dbbfb0933178",
+    "buildScriptSha256": "71b1a20f9a90f832ace108a32693bf2f59150429f3f45b8be24417140013a1b5",
+    "flatApiSha256": "3055344983fd782f9911f78aa9906755fcde57656ed51afad713826d17c1c958",
     "dtsSha256": "54e0b056b2c9c2c92e5346095fb71cedbc4b08224761ac60fafaf15ad44d41fc",
     "generatedIncludes": [
       [
@@ -30,6 +30,6 @@
         "41c4b4a0722cd8d269e66225c04e922454039405903fefb2c8b07c9de0cf57f1"
       ]
     ],
-    "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.9-git"
+    "toolchain": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23-git"
   }
 }

@@ -1,0 +1,13 @@
+diff --git a/src/state.c b/src/state.c
+index ce8e034..3460749 100644
+--- a/src/state.c
++++ b/src/state.c
+@@ -2297,7 +2297,7 @@ void vterm_state_send_selection(VTermState *state, VTermSelectionMask mask, VTer
+     }
+ 
+     while((state->selection.buflen - bufcur) >= 4 && frag.len) {
+-      x = (x << 8) | frag.str[0];
++      x = (x << 8) | (unsigned char)frag.str[0];
+       n++;
+       frag.str++, frag.len--;
+ 

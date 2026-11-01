@@ -27,7 +27,10 @@ if (wasmPath !== join(packageDir, "wasm", "libvterm.wasm") || jsPath !== join(pa
   throw new Error("libvterm receipt paths must name the pair loaded by the adapter")
 }
 const changedSource = git(sourceDir, "status", "--porcelain", "--untracked-files=no")
-if (changedSource) throw new Error(`Tracked libvterm source changed during build:\n${changedSource}`)
+const expectedSourcePatch = readFileSync(join(packageDir, "build", "selection-bytes.patch"), "utf8").trim()
+if (git(sourceDir, "diff", "HEAD", "--") !== expectedSourcePatch) {
+  throw new Error(`libvterm source differs from the declared build/selection-bytes.patch:\n${changedSource}`)
+}
 // The receipt attests the STAGED inputs, so the inputs, the rebuilt pair and this receipt land as one commit. A
 // working-tree byte that differs from the index would attest what that commit does not carry. Unparsed: trimming
 // would drop the leading worktree-status column of the first line.

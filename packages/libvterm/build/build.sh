@@ -28,6 +28,15 @@ if [ "$ACTUAL_COMMIT" != "$LIBVTERM_COMMIT" ]; then
   exit 1
 fi
 
+# Upstream's selection encoder promotes signed char bytes before base64.
+# The declared patch keeps non-ASCII clipboard bytes intact; the receipt binds
+# this build subtree and requires precisely this upstream source difference.
+if git apply --reverse --check "$SCRIPT_DIR/selection-bytes.patch" 2>/dev/null; then
+  echo "libvterm selection-byte patch already applied"
+else
+  git apply "$SCRIPT_DIR/selection-bytes.patch"
+fi
+
 echo "Building libvterm with Emscripten..."
 
 # Release source keeps encoding tables as .tbl files; the upstream Makefile

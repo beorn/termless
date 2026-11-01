@@ -6,7 +6,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // the sink lost a reply to a failed allocation (src/backend.ts feed). Whole DA1, DA2 and DECRQSS replies behind a
 // 5600-byte backlog were measured on this artifact (tests/window-ops-probes.test.ts). The WASM is the receipt's pair,
 // built from build/flat-api.c and build/build.sh at libvterm v0.3.3.
-// Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
+// Re-audited for per-instance OSC 52 clipboard callbacks and the upstream unsigned-byte selection fix;
+// feed/response delivery is unchanged, including replies behind the 5600-byte backlog.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -16,7 +17,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "6ae281ac2862dfe7fe79e0bd144f9343756659bf",
+      blobOid: "d6ad6d6b5c0ed408098cfb2407d563219937668c",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
@@ -24,14 +25,14 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "973341a8e2303d25cb17f1a36d491aad6c55b3a1",
+      blobOid: "1e784be87614ab924b96844009919b7c21ce150e",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "5937bd79139ee5856bcf1bd619cc44fcd2d750d3def3066a74956678cdaaaeb2",
+      sha256: "7ebe1b994b58ca867dcd19e9cdeb10b8839b6c1f0dbdea024f875a9f57560a23",
     },
   },
 } as const

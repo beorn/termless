@@ -41,10 +41,60 @@ static void sink_output(const char *bytes, size_t len, void *user) {
   sink->len += len;
 }
 
+// The headless embedder owns the clipboard; libvterm owns OSC parsing,
+// base64 decoding and reply formatting. Reuse the output sink's byte storage
+// for complete and in-progress selection data, without touching the OS clipboard.
+typedef struct {
+  TermlessOutputSink output; // First member preserves the existing opaque sink ABI.
+  TermlessOutputSink clipboard;
+  TermlessOutputSink staging;
+  VTermState *state;
+  char selection_buffer[4096];
+} TermlessSelectionHost;
+
+static int selection_set(VTermSelectionMask mask, VTermStringFragment frag, void *user) {
+  TermlessSelectionHost *host = user;
+  if (!(mask & VTERM_SELECTION_CLIPBOARD)) return 0;
+  if (frag.initial) host->staging.len = 0;
+  if (frag.len) sink_output(frag.str, frag.len, &host->staging);
+  if (host->staging.failed) {
+    host->output.failed = 1;
+    return 0;
+  }
+  if (frag.final) {
+    TermlessOutputSink previous = host->clipboard;
+    host->clipboard = host->staging;
+    host->staging = previous;
+    host->staging.len = 0;
+  }
+  return 1;
+}
+
+static int selection_query(VTermSelectionMask mask, void *user) {
+  TermlessSelectionHost *host = user;
+  if (!(mask & VTERM_SELECTION_CLIPBOARD) || host->output.failed) return 0;
+  vterm_state_send_selection(host->state, VTERM_SELECTION_CLIPBOARD, (VTermStringFragment){
+    .str = host->clipboard.bytes,
+    .len = host->clipboard.len,
+    .initial = 1,
+    .final = 1,
+  });
+  return 1;
+}
+
+static const VTermSelectionCallbacks selection_callbacks = {
+  .set = selection_set,
+  .query = selection_query,
+};
+
 TermlessOutputSink *termless_vterm_output_attach(VTerm *vt) {
-  TermlessOutputSink *sink = calloc(1, sizeof *sink);
-  if (sink) vterm_output_set_callback(vt, sink_output, sink);
-  return sink;
+  TermlessSelectionHost *host = calloc(1, sizeof *host);
+  if (!host) return NULL;
+  host->state = vterm_obtain_state(vt);
+  vterm_output_set_callback(vt, sink_output, &host->output);
+  vterm_state_set_selection_callbacks(host->state, &selection_callbacks, host,
+      host->selection_buffer, sizeof host->selection_buffer);
+  return &host->output;
 }
 
 // Copies up to len pending reply bytes in order and removes them from the sink.
@@ -59,9 +109,13 @@ int termless_vterm_output_read(TermlessOutputSink *sink, char *buf, int len) {
 }
 
 void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
+  TermlessSelectionHost *host = (TermlessSelectionHost *)sink;
+  vterm_state_set_selection_callbacks(host->state, NULL, NULL, NULL, 0);
   vterm_output_set_callback(vt, NULL, NULL);
   free(sink->bytes);
-  free(sink);
+  free(host->clipboard.bytes);
+  free(host->staging.bytes);
+  free(host);
 }
 
 // Per-screen fixed-width observation record: visible, shape, blink at offsets 0..2,
