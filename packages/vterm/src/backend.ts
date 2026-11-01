@@ -15,6 +15,10 @@ import type {
   ReplyDeliveryExtension,
   HyperlinkExtension,
   OscMetadataExtension,
+  SemanticMark,
+  SemanticMarkExtension,
+  SixelImage,
+  SixelStorageExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -64,7 +68,13 @@ const BLANK_CELL: Cell = {
  */
 export function createVtermBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & HyperlinkExtension & OscMetadataExtension & ReplyDeliveryExtension & AdapterSourcesExtension {
+): TerminalBackend &
+  HyperlinkExtension &
+  OscMetadataExtension &
+  SemanticMarkExtension &
+  SixelStorageExtension &
+  ReplyDeliveryExtension &
+  AdapterSourcesExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -228,6 +238,14 @@ export function createVtermBackend(
     return ensureScreen().getNotifications()
   }
 
+  function getSemanticMarks(): readonly SemanticMark[] {
+    return ensureScreen().getSemanticZones()
+  }
+
+  function getSixelImages(): readonly SixelImage[] {
+    return ensureScreen().getSixelImages()
+  }
+
   function getScrollback(): ScrollbackState {
     const s = ensureScreen()
     const altScreen = s.getMode("altScreen")
@@ -277,7 +295,7 @@ export function createVtermBackend(
     // Genuinely implemented: stores URL on cell attributes via OSC 8
     osc8Hyperlinks: true,
 
-    // Genuinely implemented: stores zone markers (prompt/command/output) from OSC 133/633
+    // Stores prompt/command/output start markers from OSC 133/633.
     semanticPrompts: true,
 
     unicode: "15.1",
@@ -290,6 +308,8 @@ export function createVtermBackend(
       "reply-delivery",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc-metadata", // Exact cwd URI and copied notification payloads
+      "semantic-marks", // Copied start markers, without invented zone boundaries
+      "sixel-storage", // Raw payload and DCS start position, not raster rendering
       "osc52", // Clipboard read/write via OSC 52
       "osc7", // CWD reporting via OSC 7
       "osc9", // Desktop notifications via OSC 9
@@ -308,13 +328,14 @@ export function createVtermBackend(
       "osc112", // Reset cursor color
       "osc117", // Reset selection bg
       "osc119", // Reset selection fg
-      "iterm2Images", // iTerm2 inline images (OSC 1337 File=)
     ]),
   }
 
   const backend: TerminalBackend &
     HyperlinkExtension &
     OscMetadataExtension &
+    SemanticMarkExtension &
+    SixelStorageExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
@@ -340,6 +361,8 @@ export function createVtermBackend(
     getIconLabel,
     getCwd,
     getNotifications,
+    getSemanticMarks,
+    getSixelImages,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

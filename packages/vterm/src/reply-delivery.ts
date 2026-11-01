@@ -1,7 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
-// Re-audited for selected-buffer history reads: only snapshots/counts changed; feed/response delivery is unchanged.
+// Re-audited for copied mark/Sixel readers and declarations; feed/response delivery and selected-buffer history are unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -11,7 +11,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vterm/src/backend.ts",
-      blobOid: "ae08fca0a071207d6dfc1ec2735ea6b3e72c0e18",
+      blobOid: "308a934578c044ae95feaa29299531d9aa9eb4f7",
     },
   ],
   delivery: {

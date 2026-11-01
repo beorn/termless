@@ -1,4 +1,9 @@
-import type { OscMetadataExtension, ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import type {
+  OscMetadataExtension,
+  ReplyDeliveryExtension,
+  SemanticMarkExtension,
+  SixelStorageExtension,
+} from "../../../src/terminal/types.ts"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { dirname, join, relative } from "node:path"
@@ -10,6 +15,68 @@ import { createVtermScreen } from "vterm.js"
 import { createVtermBackend } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
+  // @failure Missing, cached, or mutable adapter readback hides the engine's actual start markers.
+  // @level l0
+  // @consumer Conformance probes through the shared SemanticMarkExtension.
+  test.each([133, 633])("exposes copied, screen-relative OSC %i start marks", (selector) => {
+    const backend = createVtermBackend({ cols: 12, rows: 4 })
+    try {
+      expect(hasExtension(backend, "semantic-marks")).toBe(true)
+      if (!hasExtension<SemanticMarkExtension>(backend, "semantic-marks")) throw new Error("missing semantic marks")
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      expect(backend.getSemanticMarks()).toEqual([])
+      // Saved history distinguishes native screen coordinates from absolute buffer rows.
+      feed("a\r\nb\r\nc\r\nd\r\ne\r\nf\r\ng\r\nh")
+      expect(backend.getScrollback().totalRows).toBeGreaterThan(4)
+      for (const [marker, type, row, col] of [
+        ["A", "prompt", 0, 1],
+        ["B", "command", 1, 3],
+        ["C", "output", 2, 5],
+      ] as const) {
+        const before = backend.getSemanticMarks()
+        feed(`\x1b[${row + 1};${col + 1}H\x1b]${selector};${marker}\x07`)
+        expect(backend.getSemanticMarks()).toEqual([...before, { type, startRow: row, startCol: col }])
+        expect(before).toHaveLength(backend.getSemanticMarks().length - 1)
+      }
+      const copy = backend.getSemanticMarks()
+      Object.assign(copy[0]!, { startRow: 999 })
+      expect(backend.getSemanticMarks()[0]).toEqual({ type: "prompt", startRow: 0, startCol: 1 })
+      backend.reset()
+      expect(backend.getSemanticMarks()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // @failure A declared storage reader drops payload/position, caches an earlier image, or leaks engine records.
+  // @level l0
+  // @consumer The Sixel library storage facet; this does not assert raster rendering.
+  test("exposes copied raw Sixel payloads at their DCS start positions", () => {
+    const backend = createVtermBackend({ cols: 12, rows: 4 })
+    try {
+      expect(hasExtension(backend, "sixel-storage")).toBe(true)
+      if (!hasExtension<SixelStorageExtension>(backend, "sixel-storage")) throw new Error("missing Sixel storage")
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      expect(backend.getSixelImages()).toEqual([])
+      for (const [data, row, col] of [
+        ["#1;2;100;0;0~", 1, 2],
+        ["#2;2;0;100;0!2~", 2, 4],
+      ] as const) {
+        const before = backend.getSixelImages()
+        feed(`\x1b[${row + 1};${col + 1}H\x1bP0;0;0q${data}\x1b\\`)
+        expect(backend.getSixelImages()).toEqual([...before, { data, row, col }])
+        expect(before).toHaveLength(backend.getSixelImages().length - 1)
+      }
+      const copy = backend.getSixelImages()
+      Object.assign(copy[0]!, { data: "external mutation", row: 999 })
+      expect(backend.getSixelImages()[0]).toEqual({ data: "#1;2;100;0;0~", row: 1, col: 2 })
+      backend.reset()
+      expect(backend.getSixelImages()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // @failure The adapter advertises OSC metadata but drops payloads or exposes the engine's mutable notification array.
   // @level l0
   // @consumer Headless cwd and notification probes through OscMetadataExtension.
@@ -787,7 +854,7 @@ describe("createVtermBackend", () => {
     expect(backend.capabilities.extensions).toBeInstanceOf(Set)
     expect(backend.capabilities.extensions.has("osc52")).toBe(true)
     expect(backend.capabilities.extensions.has("osc7")).toBe(true)
-    expect(backend.capabilities.extensions.has("iterm2Images")).toBe(true)
+    expect(backend.capabilities.extensions.has("iterm2Images")).toBe(false)
     expect(backend.capabilities.extensions.has("modifyOtherKeys")).toBe(false)
     backend.destroy()
   })
