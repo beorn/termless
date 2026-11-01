@@ -20,6 +20,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // getClipboardState().control, so a read answers through kitty's own legacy OSC 52 encoder. A prompt kitty still
 // raises (boss.confirm/choose) is answered with nothing and reported as a PERMISSION_PROMPT warning, replay-checked.
 // This declaration excludes itself; determining adapter edits require re-audit.
+// Re-audited for raw command-mark snapshots: callback recording adds no child replies or host lifecycle.
 export const adapterDeclaration = {
   sources: [
     {
@@ -32,7 +33,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "7736a826f38162406a46a530727464b066431392",
+      blobOid: "c20ef9dbc3f975e00a73224cd39a2be81e96ab4e",
     },
   ],
   delivery: {
