@@ -29,6 +29,7 @@ export type {
   MouseEncodingExtension,
   OscMetadataExtension,
   SemanticMark,
+  SemanticStartMark,
   SemanticMarkExtension,
   SixelImage,
   SixelStorageExtension,

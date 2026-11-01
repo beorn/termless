@@ -6,7 +6,8 @@
  * @consumer Terminfo Kitty colour-query criteria and their DA1-sentinel negatives
  * @testonly none
  */
-import { describe, expect, test } from "vitest"
+import { describe, expect, test, vi } from "vitest"
+import * as childProcess from "node:child_process"
 import { execFileSync, spawnSync } from "node:child_process"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -15,8 +16,13 @@ import { fileURLToPath } from "node:url"
 import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
-// The factory does not expose this private recording yet. Exercise the actual bridge protocol: the existing eight
-// callback cases miss dropped command marks, raw status coercion and losses/duplicates at feed/reset/replay boundaries.
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>()
+  return { ...actual, execFileSync: vi.fn(actual.execFileSync) }
+})
+
+// Exercise the full native callback protocol, including starts that the public command-end reader does not expose.
+// Other callback cases miss dropped command marks, raw status coercion and feed/reset/replay losses or duplicates.
 test.skipIf(!isKittyAvailable())(
   "retains native command callback arguments exactly once across feed/reset/replay",
   () => {
@@ -91,6 +97,79 @@ test.skipIf(!isKittyAvailable())(
     }
   },
 )
+
+// Private bridge coverage cannot catch an absent public reader, cache-object leaks, fabricated coordinates,
+// or reset clearing callback history that native replay retains. This tests the public projection/lifetime contract.
+test.skipIf(!isKittyAvailable())(
+  "projects copied command ends through the public reader across reset and replay",
+  () => {
+    const backend = createKittyBackend({ cols: 30, rows: 3 })
+    const feed = (value: string) => backend.feed(new TextEncoder().encode(value))
+    try {
+      expect(hasExtension(backend, "semantic-command-end")).toBe(true)
+      expect(hasExtension(backend, "semantic-marks")).toBe(false)
+      expect(backend.getSemanticMarks()).toEqual([])
+      feed("\x1b]133;A\x07\x1b]133;C;cmdline=echo hi\x07")
+      expect(backend.getSemanticMarks()).toEqual([])
+      const expected: { type: "command-end"; rawStatus: string }[] = []
+      for (const status of ["0", "17", "", "not-a-code", "-2", "0", "0"]) {
+        const before = backend.getSemanticMarks()
+        feed(`\x1b]133;D;${status}\x07`)
+        expected.push({ type: "command-end", rawStatus: status })
+        const after = backend.getSemanticMarks()
+        expect(after).toHaveLength(before.length + 1)
+        expect(after.slice(0, -1)).toEqual(before)
+        expect(after).toEqual(expected)
+        expect(backend.getSemanticMarks()).toEqual(expected)
+        const end = after.at(-1)!
+        if (end.type !== "command-end") throw new Error("Expected a command-end entry")
+        Object.assign(end, { rawStatus: "mutated", startRow: 99 })
+        expect(backend.getSemanticMarks()).toEqual(expected)
+      }
+      backend.reset()
+      expect(backend.getSemanticMarks()).toEqual(expected)
+      feed("\x1b]133;D;17\x07")
+      expect(backend.getSemanticMarks()).toEqual([...expected, { type: "command-end", rawStatus: "17" }])
+      backend.init({ cols: 30, rows: 3 })
+      expect(backend.getSemanticMarks()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+  },
+)
+
+// Native replay is consistent, so private subprocess tests miss the adapter accepting lost/rewritten history.
+test.each([
+  { history: undefined },
+  { history: [] },
+  { history: [[false], [true, "changed"], [null, "0"]] },
+  { history: [[false], [true, "cmd"], [null, "17"]] },
+])("rejects lost or changed command callback history: $history", ({ history }) => {
+  // The subprocess is mocked for corruption injection; discovery still requires an existing executable path.
+  vi.stubEnv("KITTY_BINARY", process.execPath)
+  const snapshot = {
+    cells: [],
+    cursor: { x: 0, y: 0, visible: true, style: "block" },
+    title: "",
+    modes: {},
+    scrollback: { viewportOffset: 0, totalLines: 3, screenLines: 3 },
+    text: "",
+  }
+  const replay = vi
+    .mocked(childProcess.execFileSync)
+    .mockReturnValueOnce(JSON.stringify({ ...snapshot, cmdOutputMarkings: [[false], [true, "cmd"], [null, "0"]] }))
+    .mockReturnValueOnce(JSON.stringify({ ...snapshot, cmdOutputMarkings: history }))
+  const backend = createKittyBackend({ cols: 30, rows: 3 })
+  try {
+    backend.getCursor()
+    backend.feed(new Uint8Array([65]))
+    expect(() => backend.getCursor()).toThrow(/earlier command callback.*batch replay/)
+  } finally {
+    backend.destroy()
+    replay.mockClear()
+    vi.unstubAllEnvs()
+  }
+})
 
 // Counter-only coverage misses the absolute-buffer contract: retained content must have the same row in every reader.
 test.skipIf(!isKittyAvailable())("reads retained rows across alternate screens, resize and eviction", () => {

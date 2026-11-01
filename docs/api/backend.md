@@ -224,13 +224,18 @@ interface OscMetadataExtension {
 }
 
 // Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
-// Extension name "semantic-marks".
+// "semantic-marks" declares starts; "semantic-command-end" declares ends.
+interface SemanticStartMark {
+  readonly type: "prompt" | "command" | "output"
+  readonly startRow: number
+  readonly startCol: number
+}
+type SemanticMark = SemanticStartMark | {
+  readonly type: "command-end"
+  readonly rawStatus: string
+}
 interface SemanticMarkExtension {
-  getSemanticMarks(): readonly {
-    readonly type: "prompt" | "command" | "output"
-    readonly startRow: number
-    readonly startCol: number
-  }[]
+  getSemanticMarks(): readonly SemanticMark[]
 }
 
 // Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
@@ -257,17 +262,24 @@ or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
 "osc-metadata")` before calling these methods. The vterm backend implements them;
 other backends can omit the extension.
 
-Check `hasExtension<SemanticMarkExtension>(backend, "semantic-marks")` before
-reading start markers, and `hasExtension<SixelStorageExtension>(backend,
-"sixel-storage")` before reading raw image payloads. The vterm backend implements
-both. Each returns copied, ordered records; an empty array means no stored records,
-while an absent extension means no reader. Reset and snapshot restore clear these
-vterm records; they are observations of engine state, not durable snapshot data.
+Check `hasExtension<SemanticMarkExtension>(backend, "semantic-marks")` for start
+observations or `hasExtension<SemanticMarkExtension>(backend, "semantic-command-end")`
+for end observations. Both keys use the same getter; an engine recording both kinds
+declares both keys. Narrow `mark.type` before reading variant fields. vterm declares
+only starts; Kitty declares only ends. Each read returns copied, ordered records;
+an empty array means no stored records, while an absent key means that kind of
+observation is not declared. vterm reset and snapshot restore clear its starts.
+Kitty's cumulative callback history survives reset and batch replay, preserves
+duplicate entries and is cleared by a new `init()` or `destroy()`.
 
-Mark positions are zero-based screen coordinates captured at insertion, not
-absolute buffer rows or tracked zone boundaries. Marks contain only prompt,
-command and output starts; they do not supply completion status, command text or
-properties. Sixel `data` is the exact stored payload after `q`, without DCS framing
+Start positions are zero-based screen coordinates captured at insertion, not
+absolute buffer rows or tracked zone boundaries. Command-end entries have no
+coordinates. Kitty preserves the native raw status string verbatim, including an
+empty string, `"0"`, negative-looking and nonnumeric strings; it is not a validated
+process exit status. Neither variant supplies command text or bounded zones.
+Check `hasExtension<SixelStorageExtension>(backend, "sixel-storage")` before reading
+vterm's copied raw image records; reset and snapshot restore clear those records.
+Sixel `data` is the exact stored payload after `q`, without DCS framing
 or parameters. Its row/column locate the DCS start, not the image extent. Neither
 this reader nor the protocol capability flag establishes raster rendering or cell
 geometry.
