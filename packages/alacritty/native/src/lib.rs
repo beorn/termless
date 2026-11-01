@@ -609,6 +609,9 @@ impl AlacrittyTerminal {
             "applicationKeypad" => {
                 Some(term_mode.contains(alacritty_terminal::term::TermMode::APP_KEYPAD))
             }
+            "altScroll" => {
+                Some(term_mode.contains(alacritty_terminal::term::TermMode::ALTERNATE_SCROLL))
+            }
             "autoWrap" => Some(term_mode.contains(alacritty_terminal::term::TermMode::LINE_WRAP)),
             "mouseTracking" => Some(
                 term_mode.intersects(
