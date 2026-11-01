@@ -406,6 +406,7 @@ def make_snapshot():
         "applicationCursor": screen.cursor_key_mode,
         "cursorVisible": screen.cursor_visible,
         "focusTracking": screen.focus_tracking_enabled,
+        "colorSchemeReporting": screen.color_preference_notification,
     }
 
     # Scrollback

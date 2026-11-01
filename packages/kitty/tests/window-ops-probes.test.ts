@@ -199,7 +199,11 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     backend.destroy()
   })
 
-  test("returns null from getMode for modes not exposed by Kitty's Python Screen API and forwards DECRPM", () => {
+  // @failure Missing or stale snapshot mode properties disagree with Kitty's actual DECRPM state.
+  // @level l2
+  // @consumer Terminfo mode readback criteria
+  // @testonly none
+  test("reads exposed modes, keeps other modes unknown and forwards DECRPM", () => {
     const backend = createKittyBackend()
     backend.init({ cols: 80, rows: 24 })
     const responses: string[] = []
@@ -215,6 +219,17 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     expect(backend.getMode("insertMode")).toBeNull()
     expect(backend.getMode("sgrMouse" as never)).toBeNull()
     expect(responses.join("")).toBe("\x1b[?1000;1$y\x1b[?1003;1$y\x1b[?1006;1$y")
+    for (const [control, enabled, reported] of [
+      ["l", false, 2],
+      ["h", true, 1],
+      ["l", false, 2],
+    ] as const) {
+      responses.length = 0
+      backend.feed(new TextEncoder().encode(`\x1b[?2031${control}\x1b[?2031$p`))
+      backend.getCursor() // Replay the native parser and deliver its independent query reply.
+      expect(responses.join("")).toBe(`\x1b[?2031;${reported}$y`)
+      expect(backend.getMode("colorSchemeReporting")).toBe(enabled)
+    }
     backend.destroy()
   })
 

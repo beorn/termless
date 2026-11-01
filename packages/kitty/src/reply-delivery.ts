@@ -26,6 +26,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Window callbacks, clipboard permissions and private command-mark recording below the cell loop remain unchanged.
 // Re-audited for public command-end projection: the existing cached snapshot supplies copied raw entries; retaining
 // that cache while dirty permits prefix validation. Command replay, response draining and the native bridge are unchanged.
+// Re-audited for the native colour-preference mode property in the existing snapshot map.
+// Command replay, native reply collection and callback delivery are unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -38,7 +40,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "02b4fb4c49975c4b9f9856385f1e6a5acd2492df",
+      blobOid: "4b9576285f8a217e324be305a788ac48f0af4196",
     },
   ],
   delivery: {
