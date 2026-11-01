@@ -273,7 +273,7 @@ export function createVt100Backend(
 
   const capabilities: TerminalCapabilities = {
     name: "vt100",
-    version: "0.10.0",
+    version: "0.10.1",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,
