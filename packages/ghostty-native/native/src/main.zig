@@ -559,7 +559,7 @@ fn getCursor(handle: *TerminalHandle) JsCursor {
 
 // ─── Modes ──────────────────────────────────────────────
 
-fn getMode(handle: *TerminalHandle, mode_name: []const u8) bool {
+fn getMode(handle: *TerminalHandle, mode_name: []const u8) ?bool {
     if (std.mem.eql(u8, mode_name, "altScreen")) {
         return handle.terminal.modes.get(.alt_screen) or
             handle.terminal.modes.get(.alt_screen_save_cursor_clear_enter);
@@ -574,7 +574,11 @@ fn getMode(handle: *TerminalHandle, mode_name: []const u8) bool {
     if (std.mem.eql(u8, mode_name, "originMode")) return handle.terminal.modes.get(.origin);
     if (std.mem.eql(u8, mode_name, "insertMode")) return handle.terminal.modes.get(.insert);
     if (std.mem.eql(u8, mode_name, "reverseVideo")) return handle.terminal.modes.get(.reverse_colors);
-    return false;
+    if (std.mem.eql(u8, mode_name, "altScroll")) return handle.terminal.modes.get(.mouse_alternate_scroll);
+    if (std.mem.eql(u8, mode_name, "syncOutput")) return handle.terminal.modes.get(.synchronized_output);
+    if (std.mem.eql(u8, mode_name, "colorSchemeReporting")) return handle.terminal.modes.get(.report_color_scheme);
+    if (std.mem.eql(u8, mode_name, "smoothScroll")) return handle.terminal.modes.get(.slow_scroll);
+    return null;
 }
 
 // ─── Title ──────────────────────────────────────────────

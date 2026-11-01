@@ -329,7 +329,7 @@ impl Vt100RustTerminal {
     }
 
     #[napi]
-    pub fn get_mode(&self, mode: String) -> Result<bool> {
+    pub fn get_mode(&self, mode: String) -> Result<Option<bool>> {
         let parser = self
             .parser
             .lock()
@@ -337,19 +337,13 @@ impl Vt100RustTerminal {
         let screen = parser.screen();
 
         Ok(match mode.as_str() {
-            "altScreen" => screen.alternate_screen(),
-            "cursorVisible" => !screen.hide_cursor(),
-            "bracketedPaste" => screen.bracketed_paste(),
-            "applicationCursor" => screen.application_cursor(),
-            "applicationKeypad" => screen.application_keypad(),
-            "mouseTracking" => screen.mouse_protocol_mode() != vt100::MouseProtocolMode::None,
-            // Modes not directly exposed by the vt100 crate
-            "autoWrap" => true, // Default on, not queryable
-            "focusTracking" => false,
-            "originMode" => false,
-            "insertMode" => false,
-            "reverseVideo" => false,
-            _ => false,
+            "altScreen" => Some(screen.alternate_screen()),
+            "cursorVisible" => Some(!screen.hide_cursor()),
+            "bracketedPaste" => Some(screen.bracketed_paste()),
+            "applicationCursor" => Some(screen.application_cursor()),
+            "applicationKeypad" => Some(screen.application_keypad()),
+            "mouseTracking" => Some(screen.mouse_protocol_mode() != vt100::MouseProtocolMode::None),
+            _ => None,
         })
     }
 

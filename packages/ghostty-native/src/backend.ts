@@ -93,7 +93,7 @@ interface NativeModule {
   getLine(handle: NativeTerminalHandle, row: number): NativeCell[]
   getLines(handle: NativeTerminalHandle): NativeCell[][]
   getCursor(handle: NativeTerminalHandle): NativeCursor
-  getMode(handle: NativeTerminalHandle, mode: string): boolean
+  getMode(handle: NativeTerminalHandle, mode: string): boolean | null
   getTitle(handle: NativeTerminalHandle): string
   getScrollback(handle: NativeTerminalHandle): NativeScrollback
   scrollViewport(handle: NativeTerminalHandle, delta: number): void
