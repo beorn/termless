@@ -9,7 +9,8 @@
     "gitBlob": "49c0beef4424190e89d2884eac5efe4da50e3630",
     "sha256": "36473c67c5ec580b46ead3c1ceeddb94e8ca3d096ab6a52ba07149173dc6e6f6"
   },
-  "flakeSha256": "778ea0b1ccf49a1d5bf3bd66167987762acc399b67c3b7c897003a6f4f959372",
+  "recipeSha256": "c3c8dfdbe3e3f4e4b3524524dc71825b48779ece3f0ed3fb765f08c5dc40338c",
+  "flakeLockSha256": "c35dfce676cb9829405d83938d67155bad2818583f2c56f347efbe96e0d295ea",
   "headers": [
     {
       "path": "3rdparty/verstable.h",

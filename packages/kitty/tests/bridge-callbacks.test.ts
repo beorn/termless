@@ -27,6 +27,7 @@ vi.mock("node:child_process", async (importOriginal) => {
 test.skipIf(!isKittyAvailable()).each([
   { fault: "missing manifest", cause: "missing" },
   { fault: "malformed manifest", cause: "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)" },
+  { fault: "stale receipt", cause: "stale" },
   {
     fault: "Kitty version",
     edit: (layout: Record<string, unknown>) => {
@@ -85,7 +86,8 @@ test.skipIf(!isKittyAvailable()).each([
     string,
     unknown
   >
-  receipt.sha256 = createHash("sha256").update(rawLayout).digest("hex")
+  const actualLayoutSha = createHash("sha256").update(rawLayout).digest("hex")
+  if (fault !== "stale receipt") receipt.sha256 = actualLayoutSha
   writeFileSync(receiptPath, JSON.stringify(receipt))
   const actual = await vi.importActual<typeof childProcess>("node:child_process")
   const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
@@ -111,7 +113,12 @@ test.skipIf(!isKittyAvailable()).each([
     expect(backend.getCell(0, 0).char).toBe("A")
     expect(backend.getCursor()).toMatchObject({ x: 1, y: 0 })
     expect(backend.getMode("colorSchemeReporting")).toBe(false)
-    const reason = cause === "missing" ? `[Errno 2] No such file or directory: '${layoutPath}'` : cause
+    const reason =
+      cause === "missing"
+        ? `[Errno 2] No such file or directory: '${layoutPath}'`
+        : cause === "stale"
+          ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
+          : cause
     const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
     for (const mode of ["reverseVideo", "syncOutput"] as const) {
       expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))

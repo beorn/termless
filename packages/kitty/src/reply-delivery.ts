@@ -54,7 +54,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/native-mode-layout.receipt.json",
-      blobOid: "b4c699ca3b37c928ffde1e98ebbd3fa885f6bbe8",
+      blobOid: "02899a0c97f70eeba38f5030de1ba7ef4665b6f6",
     },
   ],
   delivery: {
