@@ -71,6 +71,117 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // Visible-cell and counter tests miss the absolute-buffer contract once retained rows precede the active screen.
+    test("reads retained rows across viewport changes, alternate screens, resize and page eviction", () => {
+      const backend = createGhosttyNativeBackend({ cols: 80, rows: 24, scrollbackLimit: 65536 })
+      const encode = (text: string) => new TextEncoder().encode(text)
+      const markers = Array.from(
+        { length: 36 },
+        (_, row) => `S${String(row).padStart(2, "0")}${row === 1 || row === 25 ? "界e\u0301" : ""}`,
+      )
+      const uri = "https://example.test:8443/retained:row"
+      const lineText = (row: number) =>
+        backend
+          .getLine(row)
+          .map((cell) => cell.char)
+          .join("")
+          .trimEnd()
+      try {
+        expect(backend.getLines()).toHaveLength(24)
+        expect(backend.getLine(23)).toHaveLength(80)
+        expect(lineText(23)).toBe("")
+        backend.feed(
+          encode(
+            markers
+              .map((marker, row) =>
+                row === 0 || row === 24
+                  ? `\x1b[1;38;2;17;34;51m\x1b]8;;${uri}\x1b\\${marker}\x1b]8;;\x1b\\\x1b[0m`
+                  : marker,
+              )
+              .join("\r\n"),
+          ),
+        )
+        expect(backend.getScrollback()).toMatchObject({ totalLines: 36, screenLines: 24 })
+        expect(lineText(0)).toBe("S00")
+        expect(
+          backend.getLines().map((line) =>
+            line
+              .map((cell) => cell.char)
+              .join("")
+              .trimEnd(),
+          ),
+        ).toEqual(markers)
+        for (const row of [0, 1, 11, 12, 24, 25, 35]) {
+          expect(lineText(row)).toBe(markers[row])
+          expect(backend.getTextRange(row, 0, row, 3)).toBe(markers[row]!.slice(0, 3))
+        }
+        expect(backend.getTextRange(11, 0, 12, 3)).toBe("S11".padEnd(80) + "\nS12")
+        expect(
+          backend
+            .getText()
+            .split("\n")
+            .map((line) => line.trimEnd()),
+        ).toEqual(markers)
+        for (const row of [0, 24]) {
+          const styled = { char: "S", bold: true, fg: { r: 17, g: 34, b: 51 }, hyperlink: uri }
+          expect(backend.getCell(row, 0)).toMatchObject(styled)
+          expect(backend.getLine(row)[0]).toMatchObject(styled)
+          expect(backend.getLines()[row]?.[0]).toMatchObject(styled)
+        }
+        for (const row of [1, 25]) {
+          expect(backend.getCell(row, 3)).toMatchObject({ char: "界", wide: true })
+          expect(backend.getCell(row, 5).char).toBe("e\u0301")
+        }
+        // A JavaScript absolute row must not truncate to native u16 and alias row zero.
+        expect(backend.getCell(65536, 0).char).toBe("")
+        backend.scrollViewport(-5)
+        expect(backend.getScrollback().viewportTop).toBe(7)
+        expect(lineText(0)).toBe("S00")
+        expect(lineText(12)).toBe("S12")
+        backend.scrollViewport(5)
+        backend.feed(encode("\x1b[?1049h\x1b[HALT"))
+        expect(backend.getMode("altScreen")).toBe(true)
+        expect(backend.getScrollback()).toMatchObject({ totalLines: 24, screenLines: 24, viewportTop: 0 })
+        expect(backend.getLines()).toHaveLength(24)
+        expect(lineText(0)).toBe("ALT")
+        expect(lineText(23)).toBe("")
+        expect(backend.getText()).not.toContain("S00")
+        backend.feed(encode("\x1b[?1049l"))
+        expect(backend.getMode("altScreen")).toBe(false)
+        expect(backend.getLines()).toHaveLength(36)
+        expect(lineText(0)).toBe("S00")
+        expect(lineText(12)).toBe("S12")
+        backend.resize(60, 24)
+        expect(backend.getLines()).toHaveLength(36)
+        expect(backend.getLines().every((line) => line.length === 60)).toBe(true)
+        expect(
+          backend
+            .getText()
+            .split("\n")
+            .map((line) => line.trimEnd()),
+        ).toEqual(markers)
+        // Ghostty caps history by page memory; compare actual retained rows rather than assuming a line cap.
+        const later = Array.from({ length: 2000 }, (_, row) => `R${String(row).padStart(4, "0")}`)
+        backend.feed(encode("\r\n" + later.join("\r\n")))
+        const total = backend.getScrollback().totalLines
+        expect(total).toBeLessThan(markers.length + later.length)
+        expect(total).toBeGreaterThanOrEqual(24)
+        const retained = [...markers, ...later].slice(-total)
+        expect(
+          backend.getLines().map((line) =>
+            line
+              .map((cell) => cell.char)
+              .join("")
+              .trimEnd(),
+          ),
+        ).toEqual(retained)
+        expect(lineText(0)).toBe(retained[0])
+        expect(lineText(total - 1)).toBe("R1999")
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // Existing URI scroll tests observe cells, not the absolute buffer coordinate or its legacy mirror.
     test("reports absolute viewport rows through scrolling", () => {
       const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
@@ -202,13 +313,16 @@ describe.skipIf(nativeBuildError !== null)(
         backend.reset()
         backend.resize(20, 3)
         feed(`\x1b]8;;${uri}\x1b\\HIST\x1b]8;;\x1b\\\r\nmiddle\r\nlast\r\nbottom`)
-        expect(backend.getCell(0, 0)).toMatchObject({ char: "m", hyperlink: null })
+        const firstScreenRow = backend.getScrollback().totalLines - backend.getScrollback().screenLines
+        expect(backend.getCell(firstScreenRow, 0)).toMatchObject({ char: "m", hyperlink: null })
+        expect(backend.getCell(0, 0)).toMatchObject({ char: "H", hyperlink: uri })
         backend.scrollViewport(-1)
         expect(backend.getCell(0, 0)).toMatchObject({ char: "H", hyperlink: uri })
         expect(backend.getHyperlinkAt(0, 0)).toBe(uri)
         expect(backend.getLine(0)[0]).toMatchObject({ char: "H", hyperlink: uri })
         backend.scrollViewport(1)
-        expect(backend.getHyperlinkAt(0, 0)).toBeNull()
+        expect(backend.getHyperlinkAt(firstScreenRow, 0)).toBeNull()
+        expect(backend.getHyperlinkAt(0, 0)).toBe(uri)
       } finally {
         backend.destroy()
       }

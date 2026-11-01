@@ -221,30 +221,33 @@ fn resetTerm(handle: *TerminalHandle) void {
 // ─── Text extraction ────────────────────────────────────
 
 fn getText(handle: *TerminalHandle) ![]const u8 {
-    const str = handle.terminal.plainString(allocator) catch return error.OutOfMemory;
+    const str = try handle.terminal.screens.active.dumpStringAlloc(allocator, .{ .screen = .{} });
     return str;
 }
 
-fn getTextRange(handle: *TerminalHandle, start_row: u16, start_col: u16, end_row: u16, end_col: u16) ![]const u8 {
+fn getTextRange(handle: *TerminalHandle, start_row: u32, start_col: u16, end_row: u32, end_col: u16) ![]const u8 {
     // Zig 0.15: ArrayList is unmanaged, allocator passed to each call
     var result_buf: std.ArrayList(u8) = .empty;
     defer result_buf.deinit(allocator);
 
     const screen = handle.terminal.screens.active;
     const pages = &screen.pages;
+    const total_rows = getScrollback(handle).total_lines;
+    if (start_row >= total_rows or start_row > end_row) return try allocator.alloc(u8, 0);
+    const last_row = @min(end_row, total_rows - 1);
 
-    var row: u16 = start_row;
-    while (row <= end_row) : (row += 1) {
+    var row: u32 = start_row;
+    while (row <= last_row) : (row += 1) {
         if (row > start_row) {
             try result_buf.append(allocator, '\n');
         }
 
         const col_start: u16 = if (row == start_row) start_col else 0;
-        const col_end: u16 = if (row == end_row) end_col else handle.cols;
+        const col_end: u16 = @min(if (row == end_row) end_col else handle.cols, handle.cols);
 
         var col: u16 = col_start;
         while (col < col_end) : (col += 1) {
-            const p = pages.pin(.{ .viewport = .{ .x = col, .y = row } }) orelse continue;
+            const p = pages.pin(.{ .screen = .{ .x = col, .y = row } }) orelse continue;
             const rac = p.rowAndCell();
             const cell = rac.cell;
 
@@ -309,12 +312,12 @@ const JsCell = struct {
     overline: bool,
 };
 
-fn readCellAt(handle: *TerminalHandle, row: u16, col: u16) JsCell {
+fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
     const screen = handle.terminal.screens.active;
     const pages = &screen.pages;
 
-    // Get the pin for this viewport position
-    const p = pages.pin(.{ .viewport = .{ .x = col, .y = row } }) orelse return defaultCell();
+    // Absolute rows start at the oldest retained page; pin checks columns and stops at the final active row.
+    const p = pages.pin(.{ .screen = .{ .x = col, .y = row } }) orelse return defaultCell();
     const rac = p.rowAndCell();
     const cell = rac.cell;
     const page = &p.node.data;
@@ -507,11 +510,11 @@ fn defaultCell() JsCell {
     };
 }
 
-fn getCell(handle: *TerminalHandle, row: u16, col: u16) JsCell {
+fn getCell(handle: *TerminalHandle, row: u32, col: u16) JsCell {
     return readCellAt(handle, row, col);
 }
 
-fn getLine(js: *napigen.JsContext, handle: *TerminalHandle, row: u16) !napigen.napi_value {
+fn getLine(js: *napigen.JsContext, handle: *TerminalHandle, row: u32) !napigen.napi_value {
     const arr = try js.createArrayWithLength(handle.cols);
     for (0..handle.cols) |col| {
         const cell = readCellAt(handle, row, @intCast(col));
@@ -521,8 +524,9 @@ fn getLine(js: *napigen.JsContext, handle: *TerminalHandle, row: u16) !napigen.n
 }
 
 fn getLines(js: *napigen.JsContext, handle: *TerminalHandle) !napigen.napi_value {
-    const arr = try js.createArrayWithLength(handle.rows);
-    for (0..handle.rows) |row| {
+    const total_rows = getScrollback(handle).total_lines;
+    const arr = try js.createArrayWithLength(total_rows);
+    for (0..total_rows) |row| {
         const line = try getLine(js, handle, @intCast(row));
         try js.setElement(arr, @intCast(row), line);
     }

@@ -1,4 +1,6 @@
 // Adapter identity only. This engine's reply-delivery capability is unchanged.
+// Re-audited for chronological retained native rows: the rebuilt engine receipt binds the changed Zig source tree.
+// Both TypeScript sources stay unchanged; cell conversion, feed/response draining and mode forwarding retain their paths.
 export const adapterDeclaration = {
   sources: [
     {
