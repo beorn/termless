@@ -119,7 +119,7 @@ describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
     try {
       const payload = btoa("termless-osc52")
       backend.feed(new TextEncoder().encode(`\x1b]52;c;${payload}\x07`))
-      expect(backend.getClipboardState()).toEqual({ writes: [{ selector: "c", payload, text: "termless-osc52" }] })
+      expect(backend.getClipboardState?.()).toEqual({ writes: [{ selector: "c", payload, text: "termless-osc52" }] })
       expect(backend.getWarnings()).toEqual([])
       // Default clipboard_control is read-clipboard-ask: kitty asks a human. That consent is host input, so the bridge
       // records the prompt by name (never as an unreproduced callback) and answers nothing.
