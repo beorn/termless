@@ -29,7 +29,14 @@ test("declares audited batch-replay reply delivery without starting kitty", () =
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
-  const sources = ["../src/index.ts", "../src/backend.ts", "../build/bridge.py"]
+  const sources = [
+    "../src/index.ts",
+    "../src/backend.ts",
+    "../build/bridge.py",
+    "../build/layout.c",
+    "../build/native-mode-layout.json",
+    "../build/native-mode-layout.receipt.json",
+  ]
   expect(backend.replyDelivery.adapterSources).toEqual(
     sources.map((path) => {
       const target = realpathSync(fileURLToPath(new URL(path, import.meta.url)))

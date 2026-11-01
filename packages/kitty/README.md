@@ -19,7 +19,8 @@ Each mutation (`feed`, `resize`, `reset`) is logged. When you query the terminal
 
 This package's source code (bridge script + TypeScript wrapper) is MIT licensed.
 
-**However**, at runtime it invokes the kitty binary, which is GPL-3.0 licensed. No derivative binaries are produced or distributed. Kitty must be installed separately on your machine.
+At runtime it invokes the separately installed kitty binary, which is GPL-3.0 licensed.
+A build-time C emitter measures pinned Kitty headers; its source and generated JSON metadata are shipped, but its executable is not.
 
 ## Prerequisites
 
@@ -30,12 +31,15 @@ brew install --cask kitty   # macOS
 # or visit https://sw.kovidgoyal.net/kitty
 ```
 
-Then verify:
+For a source checkout, install Nix, then verify the committed native layout metadata and Kitty installation:
 
 ```bash
 cd packages/kitty
 bash build/build.sh
 ```
+
+The script rebuilds `.#kitty-native-mode-layout` and compares its JSON layout and receipt before checking Kitty.
+Native `reverseVideo` and `syncOutput` reads require the attested runtime; see [backend limits](../../docs/guide/backends.md#termlesskitty).
 
 ## Usage
 

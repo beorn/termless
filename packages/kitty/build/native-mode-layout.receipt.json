@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "sha256": "4e248375728ff952617c82b65fa156f249857fbc26c2514d0386b7e419f785a8",
+  "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
+  "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz",
+  "sourceNarHash": "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=",
+  "generator": {
+    "path": "packages/kitty/build/layout.c",
+    "gitBlob": "49c0beef4424190e89d2884eac5efe4da50e3630",
+    "sha256": "36473c67c5ec580b46ead3c1ceeddb94e8ca3d096ab6a52ba07149173dc6e6f6"
+  },
+  "flakeSha256": "778ea0b1ccf49a1d5bf3bd66167987762acc399b67c3b7c897003a6f4f959372",
+  "headers": [
+    {
+      "path": "3rdparty/verstable.h",
+      "sha256": "94c081695a5ecc3eb671a9c1f868b5739ca0b8866161b228d036a6693b9bcee5"
+    },
+    {
+      "path": "kitty/banned.h",
+      "sha256": "7dbd18df7d0d8e91c77cc22a3253ba2bf3d0c91cb71c6d39cccba5afe05dca43"
+    },
+    {
+      "path": "kitty/data-types.h",
+      "sha256": "4009985e60726cf564be85938b4867aa0cbd8244bbdcf39237f6ffc300152f13"
+    },
+    {
+      "path": "kitty/glfw-wrapper.h",
+      "sha256": "394543f073da7726d0752cf48db126f50b77e50d3026282df0563a087b0d25dc"
+    },
+    {
+      "path": "kitty/graphics.h",
+      "sha256": "3e44043b1a6682608d49dffd94c99ccb2243d85850f10cc3fb28d10aa3721511"
+    },
+    {
+      "path": "kitty/history.h",
+      "sha256": "8949cc386d3b26e62bde8c262430ebcb3d785183a8c0ea9b59ea55cee4171c83"
+    },
+    {
+      "path": "kitty/kitty-verstable.h",
+      "sha256": "7c00ab6dd5daee96b90c0992a29aea737e66200bf47c7d187772aeb79c5db78a"
+    },
+    {
+      "path": "kitty/line-buf.h",
+      "sha256": "9bba1f0a9e85adc20b979121935c4f67647e4bf57f3cee08fabbf355f257aca1"
+    },
+    {
+      "path": "kitty/line.h",
+      "sha256": "06610034f2c3b2f72880f4dd2ad30b3a1f6da0f66bf1c9d17196ecf7c429e606"
+    },
+    {
+      "path": "kitty/monotonic.h",
+      "sha256": "a2a2abaead04ff43386265a253cfdd9f139a9602c23d23884f8d1c776519244c"
+    },
+    {
+      "path": "kitty/screen.h",
+      "sha256": "77515d774f932d03e0d6ab06221e6235059eb6aae9b1c23802a0b60630a50b3b"
+    },
+    {
+      "path": "kitty/text-cache.h",
+      "sha256": "d4d41370676719d6d0aea4e79687172a2a83a15c856e4dced451debad649cdde"
+    },
+    {
+      "path": "kitty/vt-parser.h",
+      "sha256": "d06715b1fd6a55719b23914e69c0b2587ddd8c4c12d0779266c9aee908bc20ba"
+    }
+  ],
+  "activeCompilerHeaders": [
+    "kitty/banned.h",
+    "kitty/data-types.h",
+    "kitty/glfw-wrapper.h",
+    "kitty/graphics.h",
+    "kitty/history.h",
+    "kitty/line-buf.h",
+    "kitty/line.h",
+    "kitty/monotonic.h",
+    "kitty/screen.h",
+    "kitty/text-cache.h",
+    "kitty/vt-parser.h"
+  ],
+  "compiler": "gcc (GCC) 15.2.0",
+  "compileFlags": "-std=gnu11 -O2 -Ikitty $(python3-config --includes)",
+  "python": {
+    "version": "3.14.3 (main, Feb  3 2026, 15:32:20) [GCC 15.2.0]",
+    "configuration": {
+      "SOABI": "cpython-314-x86_64-linux-gnu",
+      "CONFIG_ARGS": "'--prefix=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3' '--bindir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/bin' '--sbindir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/sbin' '--includedir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/include' '--mandir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/share/man' '--infodir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/share/info' '--docdir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/share/doc/python' '--libdir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/lib' '--libexecdir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/libexec' '--localedir=/nix/store/qr0wqh2damb6asnyz4jkx61id5yg3qh2-python3-3.14.3/share/locale' '--without-ensurepip' '--with-system-expat' '--with-system-libmpdec' '--with-openssl=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.1-dev' '--with-tzpath=/nix/store/h15ranlgwagilr6ajd7ich6d896kf9zd-tzdata-2026a/share/zoneinfo' '--with-lto' '--enable-shared' '--enable-gil' '--enable-loadable-sqlite-extensions' 'ac_cv_func_lchmod=no' 'PKG_CONFIG=pkg-config' 'PKG_CONFIG_PATH=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-file-5.45-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bash-5.3p9-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.41.3-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2-dev/share/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.1-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.51.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.7.4-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zstd-1.5.7-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3-dev/lib/pkgconfig' 'CC=gcc' 'LDFLAGS=-L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.41.3-lib/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.1/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.51.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.7.4/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zstd-1.5.7/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bluez-headers-5.84/lib -L/nix/store/h15ranlgwagilr6ajd7ich6d896kf9zd-tzdata-2026a/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-gdbm-1.26-lib/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3/lib' 'LIBS=' 'CPPFLAGS=-I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.41.3-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.1-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.51.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.7.4-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zstd-1.5.7-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bluez-headers-5.84/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-tzdata-2026a-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-gdbm-1.26-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3-dev/include'",
+      "CC": "gcc",
+      "CFLAGS": "-fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall",
+      "Py_DEBUG": 0,
+      "Py_TRACE_REFS": 0,
+      "Py_GIL_DISABLED": 0,
+      "SIZEOF_VOID_P": 8,
+      "SIZEOF_LONG": 8,
+      "SIZEOF_SIZE_T": 8
+    }
+  },
+  "runtimeAssumptions": {
+    "screenTypeModule": "fast_data_types",
+    "screenTypeName": "Screen",
+    "screenItemSize": 0,
+    "screenBasicSize": 3888
+  },
+  "measured": {
+    "schemaVersion": 1,
+    "kittyVersion": "0.49.2",
+    "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
+    "nativeModuleSha256": "6f28bbff8e8276d076957a718b9c1db21d1a42a7592890fab5171ee31db99619",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "byteOrder": "little",
+      "pointerSize": 8
+    },
+    "python": {
+      "implementation": "CPython",
+      "major": 3,
+      "minor": 14,
+      "pyDebug": 0,
+      "pyTraceRefs": 0,
+      "pyGilDisabled": 0
+    },
+    "screen": {
+      "size": 3888,
+      "reverseVideo": {
+        "offset": 667,
+        "width": 1,
+        "cType": "bool"
+      },
+      "syncOutput": {
+        "offset": 1112,
+        "width": 8,
+        "cType": "int64_t"
+      }
+    }
+  }
+}

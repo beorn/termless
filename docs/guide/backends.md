@@ -48,9 +48,9 @@ Fast unit tests and high-fidelity terminal tests are different tools. Use in-mem
 | **Reflow on resize**    | Yes                   | Yes               | No                 | Yes            | Yes                        | Yes                         | Yes            | No             | No                       | Yes                          | Yes                         |
 | **Viewport scrolling**  | Yes                   | No                | Yes                | Yes            | Yes                        | Yes                         | Yes            | Yes            | Yes                      | Yes                          | Yes                         |
 | **OS-level screenshot** | No                    | No                | No                 | No             | No                         | No                          | Yes            | No             | No                       | No                           | No                          |
-| **Native deps**         | None                  | WASM              | None               | None           | Rust (napi-rs)             | Rust (napi-rs)              | None           | Rust (napi-rs) | WASM (Emscripten)        | Zig (napigen)                | C (built from GPL source)   |
+| **Native deps**         | None                  | WASM              | None               | None           | Rust (napi-rs)             | Rust (napi-rs)              | None           | Rust (napi-rs) | WASM (Emscripten)        | Zig (napigen)                | Installed Kitty + Python bridge   |
 | **Upstream**            | `npm:@xterm/headless` | `npm:ghostty-web` | _(self-contained)_ | `npm:vterm.js` | `crate:alacritty_terminal` | `crate:tattoy-wezterm-term` | `npm:peekaboo` | `crate:vt100`  | `github:neovim/libvterm` | `github:ghostty-org/ghostty` | `github:kovidgoyal/kitty`   |
-| **Build requirement**   | None                  | None              | None               | None           | Rust toolchain             | Rust toolchain              | None           | Rust toolchain | Emscripten SDK           | Zig 0.15.2+                  | C compiler + Python 3 + git |
+| **Build requirement**   | None                  | None              | None               | None           | Rust toolchain             | Rust toolchain              | None           | Rust toolchain | Emscripten SDK           | Zig 0.15.2+                  | Kitty; Nix for metadata verification |
 
 ::: tip Full Feature Matrix
 For a comprehensive, interactive capability matrix across all backends, visit **[terminfo.dev](https://terminfo.dev)** — powered by termless census probes.
@@ -359,13 +359,30 @@ replay. Cached rereads add nothing; `init()` starts fresh and `destroy()` clears
 the history. Check the extension with `hasExtension()` before reading. Track A
 compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
 
-Kitty's VT parser built from GPL-3.0 source. Kitty is a modern, feature-rich terminal with its own keyboard protocol and graphics protocol.
+Uses the separately installed Kitty executable through a `kitty +runpy` Python subprocess bridge. Kitty is GPL-3.0 licensed.
 
-- **Engine**: kitty VT parser (C, built from source)
+- **Engine**: installed Kitty VT parser (C through its embedded Python)
 - **Upstream**: `github:kovidgoyal/kitty`
 - **Best for**: Testing Kitty keyboard protocol, Kitty graphics protocol, and cross-checking against kitty's parser behavior. The only backend that decodes and stores Kitty graphics pixel data (`vterm` accepts the protocol handshake but does not render pixels).
-- **Limitations**: Requires building from GPL-3.0 source (C compiler + Python 3 + git). The resulting `.node` binary is GPL-3.0 and must not be distributed. Build script is WIP.
-- **Install**: `bunx termless backends install kitty` (or `npm install -D @termless/kitty`; requires build from source)
+- **Limitations**: Requires a working Kitty Python environment. Native `reverseVideo` and `syncOutput` reads require the attested runtime described below.
+- **Install**: Install Kitty separately, then install `@termless/kitty` from npm. Source verification uses Nix; see the [Kitty package setup](../../packages/kitty/README.md#prerequisites).
+
+The runtime loads no Termless `.node` binding or helper executable.
+At build time, a C emitter measures the exact pinned Kitty headers through `.#kitty-native-mode-layout` in the declared Nix flake.
+Its committed outputs are `build/native-mode-layout.json` and `build/native-mode-layout.receipt.json`; the metadata executable is build-only.
+`build/build.sh` compares both files with the derivation output before checking the installed Kitty environment.
+
+The native mode reader uses `ctypes` to read Kitty's live `Screen`.
+`reverseVideo` reads `modes.mDECSCNM`; `syncOutput` reads whether `paused_rendering.expires_at` is nonzero.
+The committed layout attests Kitty 0.49.2 at source `b2cb871254fbdac19a085188813c8dfb258b95cd`.
+Its native-module SHA-256 is `6f28bbff8e8276d076957a718b9c1db21d1a42a7592890fab5171ee31db99619`.
+It covers Linux x86_64, little-endian, 64-bit pointers, and normal-GIL CPython 3.14 without debug or trace-ref builds.
+The 3,888-byte `Screen` has a one-byte reverse-video field at offset 667 and an eight-byte `int64_t` synchronization deadline at offset 1112.
+The receipt records Python 3.14.3 build headers; their layout was checked against the attested Python 3.14.7 runtime.
+
+Every snapshot validates the manifest digest, Kitty version/source/native-module digest, `Screen` type, platform, Python ABI flags, object size, and field types, widths, bounds and alignment.
+If metadata is missing or the runtime does not match, `getMode("reverseVideo")` and `getMode("syncOutput")` throw `KITTY_NATIVE_STATE_UNAVAILABLE`.
+Cells, cursor and other mode queries remain available through the generic bridge.
 
 ```typescript
 // Factory function (preferred — explicit, sync)

@@ -31,10 +31,14 @@ Color format:
 """
 
 import base64
+import hashlib
 import json
+import platform
 import sys
+import sysconfig
 import traceback
 from collections import deque
+from pathlib import Path
 
 from kitty.clipboard import Clipboard, ClipboardRequestManager, ClipboardType
 from kitty.fast_data_types import Screen, get_boss, get_options, set_boss, set_options
@@ -329,6 +333,77 @@ def _safe_width(line, col):
         return False
 
 
+class NativeModeStateUnavailable(RuntimeError):
+    pass
+
+
+def read_native_modes(native_screen):
+    """Read only the two header-derived fields of the independently attested Screen layout."""
+    layout_path = Path(__file__).with_name("native-mode-layout.json")
+    receipt_path = Path(__file__).with_name("native-mode-layout.receipt.json")
+
+    def match(field, observed, expected):
+        if type(observed) is not type(expected) or observed != expected:
+            raise ValueError(f"{field}: expected {expected!r}; observed {observed!r}")
+
+    try:
+        import ctypes
+        import kitty.fast_data_types as native
+        from kitty.constants import version
+
+        raw_layout = layout_path.read_bytes()
+        receipt = json.loads(receipt_path.read_bytes())
+        match("manifest sha256", hashlib.sha256(raw_layout).hexdigest(), receipt["sha256"])
+        layout = json.loads(raw_layout)
+        match("manifest schemaVersion", layout["schemaVersion"], 1)
+        match("Kitty version", ".".join(map(str, version)), layout["kittyVersion"])
+        match("Kitty source revision", native.KITTY_VCS_REV, layout["sourceCommit"])
+        module_path = Path(native.__file__)
+        match("native module sha256", hashlib.sha256(module_path.read_bytes()).hexdigest(), layout["nativeModuleSha256"])
+        if type(native_screen) is not native.Screen:
+            raise ValueError(f"Screen type identity: expected {native.Screen!r}; observed {type(native_screen)!r}")
+
+        target = layout["platform"]
+        for field, observed in (("system", platform.system()), ("machine", platform.machine()),
+                                ("byteOrder", sys.byteorder), ("pointerSize", ctypes.sizeof(ctypes.c_void_p))):
+            match(f"platform.{field}", observed, target[field])
+        python = layout["python"]
+        for field, observed in (("implementation", platform.python_implementation()),
+                                ("major", sys.version_info.major), ("minor", sys.version_info.minor)):
+            match(f"python.{field}", observed, python[field])
+        for field, key in (("pyDebug", "Py_DEBUG"), ("pyTraceRefs", "Py_TRACE_REFS"),
+                           ("pyGilDisabled", "Py_GIL_DISABLED")):
+            match(f"python.{field} manifest", python[field], 0)
+            match(f"python.{field}", sysconfig.get_config_var(key), python[field])
+
+        screen_layout = layout["screen"]
+        match("Screen basicsize", type(native_screen).__basicsize__, screen_layout["size"])
+        match("Screen itemsize", type(native_screen).__itemsize__, 0)
+        readers = (("reverseVideo", ctypes.c_bool, "bool"), ("syncOutput", ctypes.c_int64, "int64_t"))
+        for name, scalar, c_type in readers:
+            field = screen_layout[name]
+            match(f"{name}.cType", field["cType"], c_type)
+            match(f"{name}.width", field["width"], ctypes.sizeof(scalar))
+            offset = field["offset"]
+            if type(offset) is not int or offset < 0 or offset + field["width"] > screen_layout["size"]:
+                raise ValueError(f"{name}.offset: {offset!r} is outside Screen size {screen_layout['size']}")
+            if offset % ctypes.alignment(scalar):
+                raise ValueError(f"{name}.offset: {offset} is not aligned for {c_type}")
+
+        # L1: the build receipt proves header offsets/widths agree with the pinned native ELF,
+        # and header sizeof(Screen) agrees with the runtime. Revalidate L2 above on every snapshot.
+        # Keep native_screen strongly referenced under the normal GIL; ctypes scalar reads do not release it.
+        address = id(native_screen)
+        return {
+            "reverseVideo": ctypes.c_bool.from_address(address + screen_layout["reverseVideo"]["offset"]).value,
+            "syncOutput": ctypes.c_int64.from_address(address + screen_layout["syncOutput"]["offset"]).value != 0,
+        }
+    except (OSError, ValueError, KeyError, TypeError, ImportError, AttributeError) as error:
+        raise NativeModeStateUnavailable(
+            f"KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at {layout_path} (receipt {receipt_path}): {error}"
+        ) from error
+
+
 def make_snapshot():
     """Create a full terminal state snapshot."""
     global screen, callbacks, cols, rows
@@ -398,8 +473,7 @@ def make_snapshot():
     # Title
     title = callbacks.title if callbacks else ""
 
-    # Modes (only expose modes backed by Kitty Python Screen properties;
-    # modes without a Python Screen getter stay absent so getMode returns null)
+    # Existing exposed properties plus the two independently attested native fields.
     modes = {
         "altScreen": alternate,
         "bracketedPaste": screen.in_bracketed_paste_mode,
@@ -408,6 +482,12 @@ def make_snapshot():
         "focusTracking": screen.focus_tracking_enabled,
         "colorSchemeReporting": screen.color_preference_notification,
     }
+    native_mode_error = None
+    try:
+        modes.update(read_native_modes(screen))
+    except NativeModeStateUnavailable as error:
+        # Preserve generic snapshots; the two requesting getMode calls surface this exact diagnostic.
+        native_mode_error = str(error)
 
     # Scrollback
     scrollback = {
@@ -433,6 +513,8 @@ def make_snapshot():
         "scrollback": scrollback,
         "text": text,
     }
+    if native_mode_error is not None:
+        result["nativeModeError"] = native_mode_error
     if response_data:
         result["responses"] = base64.b64encode(response_data).decode("ascii")
     if unreproduced:

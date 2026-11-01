@@ -9,9 +9,10 @@
 import { describe, expect, test, vi } from "vitest"
 import * as childProcess from "node:child_process"
 import { execFileSync, spawnSync } from "node:child_process"
-import { mkdtempSync, rmSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
@@ -19,6 +20,109 @@ import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>()
   return { ...actual, execFileSync: vi.fn(actual.execFileSync) }
+})
+
+// Native journeys cover valid layouts. These resource faults must reject native mode reads before any pointer
+// access, while ordinary snapshot consumers keep working; use the real bridge/runtime, not a fabricated snapshot.
+test.skipIf(!isKittyAvailable()).each([
+  { fault: "missing manifest", cause: "missing" },
+  { fault: "malformed manifest", cause: "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)" },
+  {
+    fault: "Kitty version",
+    edit: (layout: Record<string, unknown>) => {
+      layout.kittyVersion = "0.0.0"
+    },
+    cause: "Kitty version: expected '0.0.0'; observed '0.49.2'",
+  },
+  {
+    fault: "source revision",
+    edit: (layout: Record<string, unknown>) => {
+      layout.sourceCommit = "unreviewed"
+    },
+    cause: "Kitty source revision: expected 'unreviewed'; observed 'b2cb871254fbdac19a085188813c8dfb258b95cd'",
+  },
+  {
+    fault: "native module identity",
+    edit: (layout: Record<string, unknown>) => {
+      layout.nativeModuleSha256 = "unreviewed"
+    },
+    cause:
+      "native module sha256: expected 'unreviewed'; observed '6f28bbff8e8276d076957a718b9c1db21d1a42a7592890fab5171ee31db99619'",
+  },
+  {
+    fault: "Python build flags",
+    edit: (layout: Record<string, unknown>) => {
+      ;(layout.python as Record<string, unknown>).pyGilDisabled = 1
+    },
+    cause: "python.pyGilDisabled manifest: expected 0; observed 1",
+  },
+  {
+    fault: "Screen size",
+    edit: (layout: Record<string, unknown>) => {
+      ;(layout.screen as Record<string, unknown>).size = 3889
+    },
+    cause: "Screen basicsize: expected 3889; observed 3888",
+  },
+  {
+    fault: "field bounds",
+    edit: (layout: Record<string, unknown>) => {
+      const screen = layout.screen as Record<string, Record<string, unknown>>
+      screen.syncOutput!.offset = 3888
+    },
+    cause: "syncOutput.offset: 3888 is outside Screen size 3888",
+  },
+])("keeps generic reads healthy and reports unavailable native modes: $fault", async ({ fault, edit, cause }) => {
+  const bridgeDir = dirname(fileURLToPath(new URL("../build/bridge.py", import.meta.url)))
+  const fixtureDir = mkdtempSync(join(tmpdir(), "termless-kitty-layout-fault-"))
+  const layoutPath = join(fixtureDir, "native-mode-layout.json")
+  const receiptPath = join(fixtureDir, "native-mode-layout.receipt.json")
+  copyFileSync(join(bridgeDir, "bridge.py"), join(fixtureDir, "bridge.py"))
+  const layout = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.json"), "utf8")) as Record<string, unknown>
+  edit?.(layout)
+  const rawLayout = fault === "malformed manifest" ? "{" : JSON.stringify(layout)
+  if (fault !== "missing manifest") writeFileSync(layoutPath, rawLayout)
+  const receipt = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.receipt.json"), "utf8")) as Record<
+    string,
+    unknown
+  >
+  receipt.sha256 = createHash("sha256").update(rawLayout).digest("hex")
+  writeFileSync(receiptPath, JSON.stringify(receipt))
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
+    expect(args?.[0]).toBe("+runpy")
+    const script = args![1]!.replace(JSON.stringify(bridgeDir), JSON.stringify(fixtureDir))
+    expect(script).not.toBe(args![1])
+    // Import ctypes first so the hook observes only target reads. Any invalid layout reaching from_address fails
+    // the whole real snapshot, which the generic-read assertions below would reject for an independent reason.
+    const hook =
+      "def reject_native_read(event, args):\n    if event == 'ctypes.cdata':\n        raise AssertionError('Fault fixture reached native pointer access')\nsys.addaudithook(reject_native_read)"
+    return actual.execFileSync(
+      file,
+      [
+        "+runpy",
+        script.replace("bridge.batch_main()", `import ctypes; exec(${JSON.stringify(hook)}); bridge.batch_main()`),
+      ],
+      options,
+    )
+  })
+  const backend = createKittyBackend({ cols: 10, rows: 3 })
+  try {
+    backend.feed(new TextEncoder().encode("A"))
+    expect(backend.getCell(0, 0).char).toBe("A")
+    expect(backend.getCursor()).toMatchObject({ x: 1, y: 0 })
+    expect(backend.getMode("colorSchemeReporting")).toBe(false)
+    const reason = cause === "missing" ? `[Errno 2] No such file or directory: '${layoutPath}'` : cause
+    const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
+    for (const mode of ["reverseVideo", "syncOutput"] as const) {
+      expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))
+    }
+    expect(backend.getCell(0, 0).char).toBe("A")
+    expect(replay).toHaveBeenCalledTimes(1)
+  } finally {
+    backend.destroy()
+    replay.mockClear()
+    rmSync(fixtureDir, { recursive: true, force: true })
+  }
 })
 
 // Exercise the full native callback protocol, including starts that the public command-end reader does not expose.

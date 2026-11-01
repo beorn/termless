@@ -129,6 +129,8 @@ interface BridgeSnapshot {
   cursor: BridgeCursor
   title: string
   modes: Record<string, boolean>
+  /** Private native-mode failure; generic snapshot readers remain usable. */
+  nativeModeError?: string
   scrollback: { viewportOffset: number; totalLines: number; screenLines: number }
   text: string
   error?: string
@@ -539,6 +541,9 @@ export function createKittyBackend(
 
   function getMode(mode: TerminalMode): ModeState {
     const s = ensureSnapshot()
+    if ((mode === "reverseVideo" || mode === "syncOutput") && s.nativeModeError) {
+      throw new Error(s.nativeModeError)
+    }
     return s.modes[mode] ?? null
   }
 
@@ -625,9 +630,15 @@ export function createKittyBackend(
     getTitle,
     getClipboardState,
     getSemanticMarks: () =>
-      (ensureSnapshot().cmdOutputMarkings ?? []).flatMap((mark) =>
-        mark[0] === null ? [{ type: "command-end" as const, rawStatus: mark[1] }] : [],
-      ),
+      (ensureSnapshot().cmdOutputMarkings ?? []).flatMap((mark) => {
+        if (mark[0] !== null) return []
+        if (typeof mark[1] !== "string") {
+          throw new Error(
+            `Kitty command-end status must be a string; received ${JSON.stringify(mark[1])}. Check cmd_output_marking in packages/kitty/build/bridge.py.`,
+          )
+        }
+        return [{ type: "command-end" as const, rawStatus: mark[1] }]
+      }),
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

@@ -203,7 +203,7 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
   // @level l2
   // @consumer Terminfo mode readback criteria
   // @testonly none
-  test("reads exposed modes, keeps other modes unknown and forwards DECRPM", () => {
+  test("reads native modes, keeps other modes unknown and forwards DECRPM", () => {
     const backend = createKittyBackend()
     backend.init({ cols: 80, rows: 24 })
     const responses: string[] = []
@@ -213,23 +213,44 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     expect(backend.getMode("cursorVisible")).toBe(true)
     expect(backend.getMode("autoWrap")).toBeNull()
     expect(backend.getMode("mouseTracking")).toBeNull()
-    expect(backend.getMode("reverseVideo")).toBeNull()
     expect(backend.getMode("applicationKeypad")).toBeNull()
     expect(backend.getMode("originMode")).toBeNull()
     expect(backend.getMode("insertMode")).toBeNull()
     expect(backend.getMode("sgrMouse" as never)).toBeNull()
     expect(responses.join("")).toBe("\x1b[?1000;1$y\x1b[?1003;1$y\x1b[?1006;1$y")
-    for (const [control, enabled, reported] of [
-      ["l", false, 2],
-      ["h", true, 1],
-      ["l", false, 2],
+    for (const [mode, number] of [
+      ["colorSchemeReporting", 2031],
+      ["syncOutput", 2026],
+      ["reverseVideo", 5],
     ] as const) {
-      responses.length = 0
-      backend.feed(new TextEncoder().encode(`\x1b[?2031${control}\x1b[?2031$p`))
-      backend.getCursor() // Replay the native parser and deliver its independent query reply.
-      expect(responses.join("")).toBe(`\x1b[?2031;${reported}$y`)
-      expect(backend.getMode("colorSchemeReporting")).toBe(enabled)
+      backend.feed(new TextEncoder().encode(`\x1b[?${number}h`)) // Make the first explicit reset an actual transition.
+      for (const [control, enabled, reported] of [
+        ["l", false, 2],
+        ["h", true, 1],
+        ["l", false, 2],
+      ] as const) {
+        responses.length = 0
+        backend.feed(new TextEncoder().encode(`\x1b[?${number}${control}\x1b[?${number}$p`))
+        backend.getCursor() // Replay the native parser and deliver its independent query reply.
+        expect(responses.join("")).toBe(`\x1b[?${number};${reported}$y`)
+        expect(backend.getMode(mode)).toBe(enabled)
+        expect(backend.getMode(mode)).toBe(enabled) // Cached reads cannot replay replies again.
+        expect(responses.join("")).toBe(`\x1b[?${number};${reported}$y`)
+      }
     }
+    // Live DECSCNM can change while paused rendering still retains its prior visual inversion.
+    responses.length = 0
+    backend.feed(new TextEncoder().encode("\x1b[?5l\x1b[?2026h\x1b[?5h\x1b[?5$p\x1b[?2026$p"))
+    backend.getCursor()
+    expect(responses.join("")).toBe("\x1b[?5;1$y\x1b[?2026;1$y")
+    expect(backend.getMode("reverseVideo")).toBe(true)
+    expect(backend.getMode("syncOutput")).toBe(true)
+    backend.feed(new TextEncoder().encode("\x1b[?5l\x1b[?5$p"))
+    expect(backend.getMode("reverseVideo")).toBe(false)
+    expect(backend.getMode("syncOutput")).toBe(true)
+    backend.feed(new TextEncoder().encode("\x1b[?2026l\x1b[?2026$p"))
+    expect(backend.getMode("syncOutput")).toBe(false)
+    expect(backend.getMode("reverseVideo")).toBe(false)
     backend.destroy()
   })
 
