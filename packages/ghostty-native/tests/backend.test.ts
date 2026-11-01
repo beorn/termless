@@ -19,6 +19,37 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    test("native unknown mode readback is null rather than a measured false", () => {
+      const native = loadGhosttyNative()
+      const handle = native.createTerminal(20, 3, 0)
+      try {
+        expect(native.getMode(handle, "cursorVisible")).toBe(true)
+        expect(native.getMode(handle, "untracked-mode")).toBeNull()
+      } finally {
+        native.destroyTerminal(handle)
+      }
+    })
+
+    test.each([
+      ["altScroll", 1007],
+      ["syncOutput", 2026],
+      ["colorSchemeReporting", 2031],
+      ["smoothScroll", 4],
+    ] as const)("%s follows the native private-mode set/reset state", (mode, number) => {
+      const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
+      try {
+        backend.feed(new TextEncoder().encode(`\x1b[?${number}l`))
+        expect(backend.getMode(mode)).toBe(false)
+        backend.feed(new TextEncoder().encode(`\x1b[?${number}h`))
+        expect(backend.getMode(mode)).toBe(true)
+        if (mode === "smoothScroll") expect(backend.getMode("insertMode")).toBe(false)
+        backend.feed(new TextEncoder().encode(`\x1b[?${number}l`))
+        expect(backend.getMode(mode)).toBe(false)
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // Existing URI/color cases never observe SGR 53/55 through the native cell projection.
     test("preserves overline enable and reset state through native cell and row readback", () => {
       const backend = createGhosttyNativeBackend({ cols: 6, rows: 1 })

@@ -28,6 +28,23 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Rust vt100 backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    test("mode readback distinguishes unexposed modes from measured set/reset state", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 3 })
+      try {
+        // The pinned crate has no DECAWM state; default wrapping is not a mode measurement.
+        expect.soft(backend.getMode("autoWrap")).toBeNull()
+        expect.soft(backend.getMode("reverseVideo")).toBeNull()
+        expect.soft(backend.getMode("smoothScroll")).toBeNull()
+        expect(backend.getMode("applicationCursor")).toBe(false)
+        backend.feed(Buffer.from("\x1b[?1h"))
+        expect(backend.getMode("applicationCursor")).toBe(true)
+        backend.feed(Buffer.from("\x1b[?1l"))
+        expect(backend.getMode("applicationCursor")).toBe(false)
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // The old attribute-only fixtures never overflowed a screen. Real native history, rather than
     // a second JS history buffer, must supply the existing absolute-buffer read contract.
     test("native retained history reports its count independently of the current viewport offset", () => {
