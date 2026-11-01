@@ -14,6 +14,7 @@ const receipt = (await Bun.file(join(home, "RECEIPT.json")).json()) as {
   patchSha256: string
   innerPatchSha256: string
   upstreamLockSha256: string
+  corePatch: { file: string; sha256: string }
   outputs: Record<string, string>
 }
 const parent = process.argv[2]
@@ -71,6 +72,12 @@ if (sha(new Uint8Array(await Bun.file(inner).arrayBuffer())) !== receipt.innerPa
 }
 await run(["git", "apply", "--check", "--verbose", inner], core)
 await run(["git", "apply", "--verbose", inner], core, 7)
+const corePatch = join(home, receipt.corePatch.file)
+if (sha(new Uint8Array(await Bun.file(corePatch).arrayBuffer())) !== receipt.corePatch.sha256) {
+  throw new Error("Core backport patch differs from RECEIPT.json")
+}
+await run(["git", "apply", "--check", "--verbose", corePatch], core)
+await run(["git", "apply", "--verbose", corePatch], core, 1)
 await run(["zig", "build", "lib-vt", "-Dtarget=wasm32-freestanding", "-Doptimize=ReleaseSmall", "-j2"], core)
 await Bun.write(join(web, "ghostty-vt.wasm"), Bun.file(join(core, "zig-out/bin/ghostty-vt.wasm")))
 if (sha(new Uint8Array(await Bun.file(join(web, "bun.lock")).arrayBuffer())) !== receipt.upstreamLockSha256) {

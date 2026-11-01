@@ -192,12 +192,14 @@ describe("ghostty backend", () => {
     const receipt = JSON.parse(readFileSync(join(directory, "RECEIPT.json"), "utf8")) as {
       patchSha256: string
       innerPatchSha256: string
+      corePatch: { file: string; sha256: string }
       outputs: Record<string, string>
     }
     for (const [path, expected] of Object.entries({
       ...receipt.outputs,
       "producer.patch": receipt.patchSha256,
       "ghostty-wasm-api.patch": receipt.innerPatchSha256,
+      [receipt.corePatch.file]: receipt.corePatch.sha256,
     })) {
       expect(
         createHash("sha256")
@@ -843,7 +845,7 @@ describe("ghostty backend", () => {
       for (const [from, to] of [
         [12, 20],
         [20, 12],
-      ]) {
+      ] as const) {
         backend.resize(from, 24)
         feedText(backend, `${clear}${"W".repeat(from)}Z`)
         backend.getLines()
