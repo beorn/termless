@@ -15,6 +15,75 @@ import { fileURLToPath } from "node:url"
 import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
+// The factory does not expose this private recording yet. Exercise the actual bridge protocol: the existing eight
+// callback cases miss dropped command marks, raw status coercion and losses/duplicates at feed/reset/replay boundaries.
+test.skipIf(!isKittyAvailable())(
+  "retains native command callback arguments exactly once across feed/reset/replay",
+  () => {
+    const bridgeDir = fileURLToPath(new URL("../build/", import.meta.url))
+    const configDir = mkdtempSync(join(tmpdir(), "termless-kitty-command-marks-"))
+    const feed = (text: string) => ({ op: "feed", data: Buffer.from(text).toString("base64") })
+    const negative = feed("plain\x1b]133;A;k=s\x07\x1b]633;A\x07")
+    const commands = [
+      { op: "init", cols: 30, rows: 3 },
+      negative,
+      feed("\x1b]133;A\x07\x1b]133;C;cmdline=printf é\x07\x1b]133;C\x07"),
+      feed("\x1b]133;D\x07\x1b]133;D;0\x07\x1b]133;D;not-a-code\x07\x1b]133;D;-2\x07"),
+      { op: "reset" },
+      feed("\x1b]133;D;0\x07"),
+      { op: "snapshot" },
+    ]
+    const first = [[false], [true, "cmdline=printf é"], [true, ""]]
+    const statuses = [
+      [null, ""],
+      [null, "0"],
+      [null, "not-a-code"],
+      [null, "-2"],
+    ]
+    const expected = [...first, ...statuses, [null, "0"]]
+    try {
+      for (const mode of ["stream", "batch", "batch", "fresh"] as const) {
+        const history = mode === "fresh" ? [commands[0], negative, { op: "snapshot" }] : commands
+        const result = execFileSync(
+          process.env.KITTY_BINARY ?? "kitty",
+          [
+            "+runpy",
+            `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); import bridge; bridge.${mode === "stream" ? "main" : "batch_main"}()`,
+          ],
+          {
+            input:
+              mode === "stream"
+                ? history.map((command) => JSON.stringify(command)).join("\n") + "\n"
+                : JSON.stringify({ commands: history }),
+            encoding: "utf-8",
+            timeout: 30_000,
+            env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir },
+          },
+        )
+        const outputs = result
+          .trim()
+          .split("\n")
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        for (const output of outputs) expect(output.error).toBeUndefined()
+        if (mode === "stream") {
+          expect(outputs.shift()).toEqual({ ready: true })
+          expect(outputs[1].cmdOutputMarkings).toBeUndefined()
+          expect(outputs[2].cmdOutputMarkings).toEqual(first)
+          expect(outputs[3].cmdOutputMarkings).toEqual(statuses)
+          expect(outputs[5].cmdOutputMarkings).toEqual([[null, "0"]])
+          expect(outputs[6].cmdOutputMarkings).toBeUndefined()
+        } else if (mode === "fresh") {
+          expect(outputs[0].cmdOutputMarkings).toBeUndefined()
+        } else {
+          expect(outputs[0].cmdOutputMarkings).toEqual(expected)
+        }
+      }
+    } finally {
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  },
+)
+
 // Existing snapshot tests never distinguish an absolute buffer row from distance to the bottom.
 test.skipIf(!isKittyAvailable())("reports absolute viewport rows through scrolling", () => {
   const backend = createKittyBackend({ cols: 20, rows: 3 })
