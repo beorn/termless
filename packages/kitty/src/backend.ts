@@ -135,6 +135,12 @@ interface BridgeSnapshot {
   responses?: string
   /** Window callbacks the replay reached that the bridge does not reproduce, in feed order */
   unreproduced?: string[]
+  /** Clipboard commits kitty's own OSC 52 request manager made under its default clipboard_control */
+  clipboard?: ClipboardState
+}
+
+interface ClipboardState {
+  writes: { selector: string; payload: string; text?: string }[]
 }
 
 // ===============================================================
@@ -496,6 +502,13 @@ export function createKittyBackend(
     return s.title
   }
 
+  /** kitty's committed clipboard writes; the bridge holds them in memory in place of the GLFW system clipboard. */
+  function getClipboardState(): ClipboardState {
+    const s = ensureSnapshot()
+    if (!s.clipboard || !Array.isArray(s.clipboard.writes)) throw new Error("Kitty bridge snapshot has no clipboard state")
+    return { writes: s.clipboard.writes.map((write) => ({ ...write })) }
+  }
+
   function getScrollback(): ScrollbackState {
     const s = ensureSnapshot()
     const viewportTop = s.scrollback.totalLines - s.scrollback.screenLines - s.scrollback.viewportOffset
@@ -543,7 +556,7 @@ export function createKittyBackend(
     WarningExtension &
     ReplyDeliveryExtension &
     HyperlinkExtension &
-    AdapterSourcesExtension = {
+    AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
     init,
@@ -562,6 +575,7 @@ export function createKittyBackend(
     getCursor,
     getMode,
     getTitle,
+    getClipboardState,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

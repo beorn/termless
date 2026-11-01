@@ -36,6 +36,7 @@ import sys
 import traceback
 from collections import deque
 
+from kitty.clipboard import Clipboard, ClipboardRequestManager, ClipboardType
 from kitty.fast_data_types import Screen, get_boss, set_boss, set_options
 from kitty.notifications import DesktopIntegration, NotificationManager, PayloadType
 from kitty.options.types import defaults
@@ -108,19 +109,75 @@ def decode_cursor_shape(shape):
     return {0: "block", 1: "block", 2: "beam", 3: "underline"}.get(shape, "block")
 
 
+class HeadlessClipboard(Clipboard):
+    """kitty's Clipboard with only the GLFW system clipboard replaced by this process's memory.
+
+    Clipboard.set_mime keeps the data, then hands its types to GLFW (set_clipboard_data_types) and get_mime reads back
+    through GLFW (get_clipboard_mime); neither exists headless. Everything above them, including clipboard_control
+    permission and the OSC 52 encoding, stays kitty's own. Each commit is retained for getClipboardState.
+    """
+
+    def __init__(self, clipboard_type, selector):
+        super().__init__(clipboard_type)
+        self.selector = selector
+        self.writes = []
+
+    def set_mime(self, data):
+        if self.enabled and isinstance(data, dict):
+            self.data = dict(data)
+            text = self._read("text/plain")
+            if text is not None:
+                self.writes.append({
+                    "selector": self.selector,
+                    "payload": base64.b64encode(text).decode("ascii"),
+                    "text": text.decode("utf-8", "replace"),
+                })
+
+    def get_mime(self, mime, output):
+        if self.enabled:
+            data = self._read(mime)
+            if data:
+                output(data)
+
+    def _read(self, mime):
+        value = self.data.get(mime)
+        if value is None or isinstance(value, bytes):
+            return value
+        chunker = value()  # kitty DataType: a creator returning a chunk reader that ends with b""
+        parts = []
+        while chunk := chunker():
+            parts.append(chunk)
+        return b"".join(parts)
+
+
 class HeadlessBoss:
     """Host context for reproduced Window callbacks, without desktop notification effects."""
 
     def __init__(self, window):
+        self.window = window
         self.window_id_map = {window.id: window}
         self.active_window = window
         # Kitty's protocol base supplies its own capability response without starting a desktop/GLFW integration.
         integration = DesktopIntegration(None)
         self.notification_manager = NotificationManager(desktop_integration=integration)
         integration.notification_manager = self.notification_manager
+        self.clipboard = HeadlessClipboard(ClipboardType.clipboard, "c")
+        self.primary_selection = HeadlessClipboard(ClipboardType.primary_selection, "p")
 
     def default_bg_changed_for(self, window_id, via_escape_code=False):
         pass
+
+    def confirm(self, *args, **kwargs):
+        """kitty asks a human before a program reads the clipboard (default read-clipboard-ask). Nobody answers headless:
+        record the prompt as unreproduced, never invent allow or deny."""
+        self.window.unreproduced.append("confirm")
+
+    def choose(self, *args, **kwargs):
+        """The OSC 5522 password permission prompt; recorded like confirm, never answered."""
+        self.window.unreproduced.append("choose")
+
+    def clipboard_writes(self):
+        return self.clipboard.writes + self.primary_selection.writes
 
 
 class Callbacks:
@@ -139,6 +196,8 @@ class Callbacks:
     color_control = Window.color_control
     report_color_scheme_preference = Window.report_color_scheme_preference
     is_dark = Window.is_dark
+    # OSC 52 and OSC 5522: kitty's own request manager under its default clipboard_control option.
+    clipboard_control = Window.clipboard_control
     destroyed = False
 
     def refresh(self, reload_all_gpu_data=False):
@@ -155,6 +214,7 @@ class Callbacks:
         self.title_stack = deque(maxlen=10)
         self.responses = b""  # Accumulated DA1/DA2/DSR response data
         self.unreproduced = []  # Callback names this feed reached that the bridge does not reproduce
+        self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
     def write(self, data):
         raw = bytes(data)
@@ -342,6 +402,8 @@ def make_snapshot():
         result["responses"] = base64.b64encode(response_data).decode("ascii")
     if unreproduced:
         result["unreproduced"] = unreproduced
+    boss = get_boss()
+    result["clipboard"] = {"writes": boss.clipboard_writes() if boss is not None else []}
     return result
 
 

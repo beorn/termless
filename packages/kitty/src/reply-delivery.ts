@@ -14,6 +14,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for OSC99 capability queries: Window.desktop_notify and NotificationManager use kitty own protocol
 // DesktopIntegration and Channel in the single headless window; replies reach Callbacks.write synchronously.
 // Non-query notification payloads remain UNREPRODUCED_CALLBACK; no desktop integration/display is initialized.
+// Re-audited for OSC 52 (#32091): Window.clipboard_control runs kitty's own ClipboardRequestManager under default
+// clipboard_control; an OSC 52 write commits to kitty's Clipboard held in process memory (no GLFW) and writes no child
+// bytes; a read reaches the read-clipboard-ask prompt, recorded as UNREPRODUCED_CALLBACK confirm and never answered.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -23,11 +26,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "048836c6cd7881d277e72119539cd0a1f9fd4193",
+      blobOid: "ccbb563ae46aac067835f0f0754374fe49e02531",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "c5af1cd5fd0e054a96a603c20ab8278f655b462d",
+      blobOid: "50aaff3aba391eb9e33a1af394c03c73bd86e0b2",
     },
   ],
   delivery: {
