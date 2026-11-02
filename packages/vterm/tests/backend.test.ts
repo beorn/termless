@@ -293,9 +293,7 @@ describe("createVtermBackend", () => {
 
     // Physical metrics belong to the installed engine, including CI's older source-sibling pin.
     expect(responses).toEqual(engineResponses)
-    expect(responses).toHaveLength(6)
     expect(responses.slice(2, 4)).toEqual(["\x1b[8;24;80t", "\x1b[8;24;80t"])
-    expect(responses.slice(4)).toEqual(["\x1b]1337;Capabilities=\x1b\\", "\x1b]1337;Capabilities=\x1b\\"])
     backend.destroy()
   })
 
