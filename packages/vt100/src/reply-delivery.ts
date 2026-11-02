@@ -18,7 +18,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "1eaac257cf9ff8d8ece752c8e6edc04b9ddaa6cf",
+      treeOid: "b941dae48b25ae8825c394750bda5245c9d93dfa",
     },
   },
 } as const
