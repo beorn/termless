@@ -1,7 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
-// Re-audited pixel-binding diagnostic edit: synchronous feed/getCursor and onResponse forwarding are unchanged.
+// Re-audited pixel event binding: synchronous feed/getCursor and onResponse forwarding are unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -11,7 +11,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/xtermjs/src/backend.ts",
-      blobOid: "fbbb344f113d5b57bbb5dd429ed97c46b6cfa6e9",
+      blobOid: "72dc827b2026af7736de722f7ff986a04f3fe883",
     },
   ],
   delivery: {

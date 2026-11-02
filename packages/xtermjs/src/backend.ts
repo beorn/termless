@@ -671,7 +671,25 @@ export function createXtermBackend(
     ensureTerm().scrollLines(delta)
   }
 
-  function toCoreMouseEvent(event: MouseEvent): XtermInternalCoreMouseEvent {
+  function toCoreMouseEvent(event: MouseEvent, pixelEncoding: boolean): XtermInternalCoreMouseEvent {
+    let x = 0
+    let y = 0
+    if (pixelEncoding) {
+      const pixel = event.pixel
+      if (pixel === undefined) throw new Error("mouse encoding unavailable: SGR-pixel needs pixel coordinates")
+      if (
+        !Number.isSafeInteger(pixel?.x) ||
+        !Number.isSafeInteger(pixel?.y) ||
+        pixel.x < 0 ||
+        pixel.y < 0 ||
+        pixel.x >= Number.MAX_SAFE_INTEGER ||
+        pixel.y >= Number.MAX_SAFE_INTEGER
+      ) {
+        throw new TypeError("pixel mouse coordinates must be nonnegative integers below Number.MAX_SAFE_INTEGER")
+      }
+      x = pixel.x + 1
+      y = pixel.y + 1
+    }
     let button: number
     switch (event.button) {
       case "left":
@@ -714,8 +732,8 @@ export function createXtermBackend(
     return {
       col: event.x,
       row: event.y,
-      x: 0,
-      y: 0,
+      x,
+      y,
       button,
       action,
       ctrl: Boolean(event.ctrl),
@@ -737,12 +755,6 @@ export function createXtermBackend(
     ) {
       throw new Error("xterm.js headless mouse encoding service is unavailable")
     }
-    if (coreMouseService.activeEncoding === "SGR_PIXELS") {
-      throw new Error(
-        "mouse encoding unavailable: xterm.js headless SGR-Pixels (DECSET 1016) pixel-coordinate binding is not implemented",
-      )
-    }
-
     const emissions: Uint8Array[] = []
     const textEncoder = new TextEncoder()
     let dataSub: XtermInternalDisposable | undefined
@@ -756,7 +768,9 @@ export function createXtermBackend(
       binarySub = coreService.onBinary((data: string) => {
         emissions.push(Uint8Array.from(data, (ch) => ch.charCodeAt(0) & 0xff))
       })
-      accepted = coreMouseService.triggerMouseEvent(toCoreMouseEvent(event))
+      accepted = coreMouseService.triggerMouseEvent(
+        toCoreMouseEvent(event, coreMouseService.activeEncoding === "SGR_PIXELS"),
+      )
     } finally {
       encodingMouseDepth--
       try {

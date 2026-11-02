@@ -837,6 +837,7 @@ describe("createXtermBackend", () => {
       // Re-using the same event object must not drift coordinates despite CoreMouseService's in-place e.col++/e.row++
       const secondPress = parseSgrReport(backend.encodeMouse(pressEvent))
       expect(secondPress).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "M" })
+      expect(parseSgrReport(backend.encodeMouse({ ...pressEvent, pixel: { x: NaN, y: -1 } }))).toEqual(firstPress)
 
       const releaseReport = parseSgrReport(backend.encodeMouse({ x: 4, y: 2, button: "left", action: "release" }))
       expect(releaseReport).toEqual({ buttonCode: 0, col1Based: 5, row1Based: 3, finalChar: "m" })
@@ -858,11 +859,34 @@ describe("createXtermBackend", () => {
       expect(moveTwo).toEqual({ buttonCode: 35, col1Based: 7, row1Based: 5, finalChar: "M" })
       expect(forwardedResponses).toEqual([])
 
-      // SGR-Pixels (?1016h) pixel-coordinate binding is not implemented: refuse loudly
+      // Supplied pixels use the native encoder, independently of the cell coordinates.
       backend.feed(encode("\x1b[?1016h"))
+      const pixelEvent: MouseEvent = { ...pressEvent, pixel: { x: 40, y: 24 } }
+      expect(parseSgrReport(backend.encodeMouse(pixelEvent))).toEqual({
+        buttonCode: 0,
+        col1Based: 41,
+        row1Based: 25,
+        finalChar: "M",
+      })
+      expect(parseSgrReport(backend.encodeMouse(pixelEvent))).toEqual({
+        buttonCode: 0,
+        col1Based: 41,
+        row1Based: 25,
+        finalChar: "M",
+      })
+      expect(pixelEvent).toEqual({ ...pressEvent, pixel: { x: 40, y: 24 } })
       expect(() => backend.encodeMouse(pressEvent)).toThrow(
-        "mouse encoding unavailable: xterm.js headless SGR-Pixels (DECSET 1016) pixel-coordinate binding is not implemented",
+        "mouse encoding unavailable: SGR-pixel needs pixel coordinates",
       )
+      for (const pixel of [
+        { x: NaN, y: 24 },
+        { x: 40, y: -1 },
+        { x: Number.MAX_SAFE_INTEGER, y: 24 },
+      ]) {
+        expect(() => backend.encodeMouse({ ...pressEvent, pixel })).toThrow(
+          new TypeError("pixel mouse coordinates must be nonnegative integers below Number.MAX_SAFE_INTEGER"),
+        )
+      }
       expect(forwardedResponses).toEqual([])
 
       // DEFAULT (X10/VT200 binary) encoding emits via coreService.onBinary and preserves high-bit coordinate bytes
