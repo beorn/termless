@@ -1,6 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
+// Re-audited mouse-unavailable error-prefix edit: feed/getCursor and onResponse forwarding are unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -10,7 +11,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/xtermjs/src/backend.ts",
-      blobOid: "79bc4dc6a1060d073f12d59ecd6b941cadfe91dd",
+      blobOid: "751d9fa074aa9c3519f2af1bb9d71222b3834e4e",
     },
   ],
   delivery: {

@@ -861,7 +861,7 @@ describe("createXtermBackend", () => {
       // SGR-Pixels (?1016h) requires pixel coordinates not present on cell-coordinate MouseEvent: refuse loudly
       backend.feed(encode("\x1b[?1016h"))
       expect(() => backend.encodeMouse(pressEvent)).toThrow(
-        "xterm.js headless SGR-Pixels (DECSET 1016) mouse encoding requires pixel geometry not present on cell-coordinate MouseEvent",
+        "mouse encoding unavailable: xterm.js headless SGR-Pixels (DECSET 1016) mouse encoding requires pixel geometry not present on cell-coordinate MouseEvent",
       )
       expect(forwardedResponses).toEqual([])
 
