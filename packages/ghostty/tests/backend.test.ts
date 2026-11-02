@@ -11,7 +11,12 @@ import { join } from "node:path"
 import { Ghostty, GhosttyTerminal } from "ghostty-web"
 import { resolveGhosttyWebWasm } from "../src/load-native.ts"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
-import type { TerminalBackend, HyperlinkExtension } from "../../../src/terminal/types.ts"
+import type {
+  TerminalBackend,
+  HyperlinkExtension,
+  MouseEncodingExtension,
+  MouseEvent,
+} from "../../../src/terminal/types.ts"
 
 let ghostty: Ghostty
 
@@ -966,6 +971,52 @@ describe("ghostty backend", () => {
       backend = createBackend()
       const encoded = backend.encodeKey({ key: "ArrowUp" })
       expect(new TextDecoder().decode(encoded)).toBe("\x1b[A")
+    })
+  })
+
+  // Accepted requirement (@cto 10:37 ghostty scope G1/G2): the existing shared encoder reads the WASM engine's own
+  // per-mode flags; one set flag is exact, several are ambiguous and reported unavailable, never resolved by guess.
+  // Existing tests covered key encoding only, so a missing, stale or inferred mouse binding went unseen.
+  // @failure The ghostty mouse extension encodes reset/ambiguous modes, or X10 tracking reads as off.
+  // @level l0
+  // @consumer terminfo library mouse arms (mouseEncodingLib) reading getMode("mouseTracking") then encodeMouse.
+  describe("mouse encoding", () => {
+    const reset = "\x1b[?9;1000;1002;1003;1005;1006;1015;1016l"
+    const event = { x: 4, y: 2, button: "left", action: "press" } as const
+    const encode = (b: TerminalBackend, e: MouseEvent) => (b as TerminalBackend & MouseEncodingExtension).encodeMouse(e)
+
+    test.each([
+      ["\x1b[?9h", event, "\x1b[M %#"],
+      ["\x1b[?1000h\x1b[?1006h", event, "\x1b[<0;5;3M"],
+      ["\x1b[?1000h\x1b[?1006h", { ...event, button: "wheelUp" }, "\x1b[<64;5;3M"],
+      ["\x1b[?1002h\x1b[?1006h", { ...event, action: "move" }, "\x1b[<32;5;3M"],
+      ["\x1b[?1000h\x1b[?1015h", event, "\x1b[32;5;3M"],
+      ["\x1b[?1000h\x1b[?1005h", { ...event, x: 200 }, "\x1b[M \u00e9#"],
+      ["\x1b[?1000h\x1b[?1016h", { ...event, pixel: { x: 40, y: 24 } }, "\x1b[<0;41;25M"],
+    ] as const)("encodes the engine's own mode flags %j", (setup, mouse, report) => {
+      backend = createBackend(300, 24)
+      expect(backend.capabilities.extensions.has("mouse-encoding")).toBe(true)
+      feedText(backend, reset)
+      expect(backend.getMode("mouseTracking")).toBe(false)
+      expect(encode(backend, mouse)).toBeNull()
+      feedText(backend, setup)
+      expect(backend.getMode("mouseTracking")).toBe(true)
+      expect(new TextDecoder().decode(encode(backend, mouse)!)).toBe(report)
+      feedText(backend, reset)
+      expect(encode(backend, mouse)).toBeNull()
+    })
+
+    test("reports ambiguous or incomplete engine state as unavailable, never a guessed report", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[?1000h\x1b[?1002h")
+      expect(() => encode(backend, event)).toThrow("mouse encoding unavailable: tracking modes 1000+1002 all set")
+      feedText(backend, `${reset}\x1b[?1000h\x1b[?1006h\x1b[?1015h`)
+      expect(() => encode(backend, event)).toThrow("mouse encoding unavailable: encoding modes 1006+1015 all set")
+      feedText(backend, `${reset}\x1b[?1000h\x1b[?1016h`)
+      expect(() => encode(backend, event)).toThrow("mouse encoding unavailable: SGR-pixel needs pixel coordinates")
+      // X10 reports presses only.
+      feedText(backend, `${reset}\x1b[?9h`)
+      expect(encode(backend, { ...event, action: "release" })).toBeNull()
     })
   })
 

@@ -41,6 +41,8 @@ import type {
   EmulatorWarning,
   WarningExtension,
   HyperlinkExtension,
+  MouseEncodingExtension,
+  MouseEvent,
   ScreenshotOptions,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
@@ -51,6 +53,7 @@ import type { Mode } from "@termless/core/io"
 // km vendor-CI seam 2026-07-02). Pure helpers may inline; state must not.
 import { pushWarning } from "@termless/core"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { encodeMouseReport, type MouseEncodingState } from "../../../src/terminal/mouse-encoding.ts"
 import { renderTerminalPng } from "./render.ts"
 import type { RenderOptions } from "./render.ts"
 
@@ -251,7 +254,7 @@ const DEFAULT_ROWS = 24
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
   ghostty?: Ghostty,
-): LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension {
+): LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension & MouseEncodingExtension {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
@@ -573,7 +576,8 @@ export function createGhosttyBackend(
       case "autoWrap":
         return t.getMode(7) // DECAWM
       case "mouseTracking":
-        return t.hasMouseTracking()
+        // hasMouseTracking() covers 1000/1002/1003 only; X10 (?9) is tracking too.
+        return t.hasMouseTracking() || t.getMode(9)
       case "focusTracking":
         return t.hasFocusEvents()
       case "originMode":
@@ -632,7 +636,7 @@ export function createGhosttyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "dirtyTracking", "warnings", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "dirtyTracking", "warnings", "hyperlinks", "mouse-encoding"]),
   }
 
   function getWarnings(): EmulatorWarning[] {
@@ -661,7 +665,37 @@ export function createGhosttyBackend(
     return renderTerminalPng(backend, opts as RenderOptions | undefined)
   }
 
-  const backend: LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension = {
+  /**
+   * The WASM engine stores each mouse mode as an independent DEC flag (ghostty-wasm-api.patch setMode:
+   * modes.set only) and keeps no effective protocol, so a single set flag is exact and several set at once
+   * are ambiguous: reported as unavailable, never resolved by an invented precedence.
+   */
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    const t = ensureTerm()
+    const trackings = ([9, 1000, 1002, 1003] as const).filter((mode) => t.getMode(mode))
+    const encodings = (
+      [
+        [1005, "utf8"],
+        [1006, "sgr"],
+        [1015, "urxvt"],
+        [1016, "sgr-pixel"],
+      ] as const
+    ).filter(([mode]) => t.getMode(mode))
+    if (trackings.length > 1) {
+      throw new Error(`mouse encoding unavailable: tracking modes ${trackings.join("+")} all set`)
+    }
+    if (encodings.length > 1) {
+      throw new Error(`mouse encoding unavailable: encoding modes ${encodings.map(([mode]) => mode).join("+")} all set`)
+    }
+    const state: MouseEncodingState = { tracking: trackings[0] ?? 0, encoding: encodings[0]?.[1] ?? "legacy" }
+    return encodeMouseReport(event, state)
+  }
+
+  const backend: LegacyBackend &
+    WarningExtension &
+    HyperlinkExtension &
+    AdapterSourcesExtension &
+    MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty",
     init,
@@ -685,6 +719,7 @@ export function createGhosttyBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodeMouse,
     capabilities,
     getWarnings,
     clearWarnings,
