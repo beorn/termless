@@ -30,6 +30,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Command replay, native reply collection and callback delivery are unchanged.
 // Re-audited for live native reverse/synchronized modes and the header-derived layout/receipt.
 // Per-mode metadata errors preserve generic snapshots; command-end status remains an uncoerced string.
+// Re-audited for headless TARGETS reads: Clipboard lists its existing memory store; Kitty's own request manager
+// encodes the reply without querying GLFW. The native engine and response delivery boundary are unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -42,7 +44,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "f9585e3ac10209eedd1bc8550bcb1a4a1b286f27",
+      blobOid: "ca46f3c261ccbdcfd9c3ada9949e2a0238cbcaac",
     },
     {
       path: "packages/kitty/build/layout.c",

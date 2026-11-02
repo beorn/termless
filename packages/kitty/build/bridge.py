@@ -149,6 +149,9 @@ class HeadlessClipboard(Clipboard):
             if data:
                 output(data)
 
+    def get_available_mime_types_for_paste(self):
+        return tuple(self.data) if self.enabled else ()
+
     def _read(self, mime):
         value = self.data.get(mime)
         if value is None or isinstance(value, bytes):

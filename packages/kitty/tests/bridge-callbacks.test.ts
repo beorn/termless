@@ -432,6 +432,49 @@ test.skipIf(!isKittyAvailable())("underline colors (requires installed Kitty or 
 })
 
 describe.skipIf(!isKittyAvailable())("kitty bridge callbacks", () => {
+  // TARGETS uses a different Clipboard method from OSC 52 data reads; the existing clipboard journey never lists types.
+  // Exercise Kitty's actual parser/request manager while any attempt to query the display clipboard fails loudly.
+  test("answers OSC 5522 TARGETS from the headless clipboard without GLFW", ({ onTestFinished }) => {
+    const bridgeDir = fileURLToPath(new URL("../build/", import.meta.url))
+    const configDir = mkdtempSync(join(tmpdir(), "termless-kitty-targets-"))
+    onTestFinished(() => rmSync(configDir, { recursive: true, force: true }))
+    const feed = (text: string) => ({ op: "feed", data: Buffer.from(text).toString("base64") })
+    const targets = feed("\x1b]5522;type=read;Lg==\x07")
+    const noDisplay = "def forbid_display_clipboard(*args):\n    raise AssertionError('TARGETS reached GLFW clipboard')"
+    const result = spawnSync(
+      process.env.KITTY_BINARY ?? "kitty",
+      [
+        "+runpy",
+        `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); import bridge; import kitty.clipboard as clipboard; exec(${JSON.stringify(noDisplay)}); clipboard.get_clipboard_mime = forbid_display_clipboard; bridge.batch_main()`,
+      ],
+      {
+        input: JSON.stringify({
+          commands: [
+            { op: "init", cols: 30, rows: 3 },
+            targets,
+            feed(`\x1b]52;c;${btoa("clipboard text")}\x07`),
+            targets,
+          ],
+        }),
+        encoding: "utf-8",
+        timeout: 30_000,
+        env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir, DISPLAY: "", WAYLAND_DISPLAY: "" },
+      },
+    )
+    expect(result.error).toBeUndefined()
+    expect(result.status).toBe(0)
+    expect(result.stderr).toBe("")
+    const snapshot = JSON.parse(result.stdout) as { error?: string; traceback?: string; responses?: string }
+    expect(snapshot.error, snapshot.traceback).toBeUndefined()
+    const response = Buffer.from(snapshot.responses ?? "", "base64").toString()
+    const prefix = "\x1b]5522;type=read:status="
+    const end = "\x1b\\"
+    expect(response).toBe(
+      `${prefix}OK${end}${prefix}DATA:mime=Lg==${end}${prefix}DONE${end}` +
+        `${prefix}OK${end}${prefix}DATA:mime=Lg==;${btoa("text/plain\n")}${end}${prefix}DONE${end}`,
+    )
+  })
+
   // Capability detection must reach kitty's real reply handler; the colour/viewport cases never send OSC99.
   test("answers OSC99 capability queries while retaining unreproduced display warnings", () => {
     const backend = createKittyBackend()
