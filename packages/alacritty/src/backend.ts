@@ -20,9 +20,12 @@ import type {
   Color,
   ReplyDeliveryExtension,
   HyperlinkExtension,
+  MouseEvent,
+  MouseEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { encodeMouseReport, type MouseEncodingState } from "../../../src/terminal/mouse-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
@@ -274,6 +277,38 @@ export function createAlacrittyBackend(
     ensureTerm().scrollViewport(delta)
   }
 
+  /** The five DEC modes the shared encoder state is built from, in query order. */
+  const MOUSE_MODES = [1000, 1002, 1003, 1005, 1006] as const
+
+  /**
+   * Ask the engine which mouse modes it holds. The query goes to the native terminal directly,
+   * never through `feed`, so the engine own replies cannot leak into `onResponse`. The five
+   * anchored replies are matched exactly, in query order; anything else is reported with the
+   * bytes that arrived, never resolved by an invented precedence.
+   */
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    const t = ensureTerm()
+    t.feed(Buffer.from(MOUSE_MODES.map((mode) => `\u001b[?${mode}$p`).join(""), "latin1"))
+    const response = t.readResponse()
+    const bytes = response ? response.toString("latin1") : ""
+    const answers = new RegExp(`^${MOUSE_MODES.map((mode) => `\\u001b\\[\\?${mode};([12])\\$y`).join("")}$`).exec(bytes)
+    if (!answers) throw new Error(`mouse encoding unavailable: ${JSON.stringify(bytes)}`)
+    const set = answers.slice(1).map((value) => value === "1")
+    const trackings = MOUSE_MODES.slice(0, 3).filter((_, index) => set[index])
+    const encodings = [1005, 1006].filter((_, index) => set[3 + index])
+    if (trackings.length > 1) {
+      throw new Error(`mouse encoding unavailable: tracking modes ${trackings.join("+")} all set`)
+    }
+    if (encodings.length > 1) {
+      throw new Error(`mouse encoding unavailable: encoding modes ${encodings.join("+")} all set`)
+    }
+    const state: MouseEncodingState = {
+      tracking: (trackings[0] ?? 0) as MouseEncodingState["tracking"],
+      encoding: encodings[0] === 1005 ? "utf8" : encodings[0] === 1006 ? "sgr" : "legacy",
+    }
+    return encodeMouseReport(event, state)
+  }
+
   const capabilities: TerminalCapabilities = {
     name: "alacritty",
     version: "0.26.0",
@@ -285,10 +320,14 @@ export function createAlacrittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "reply-delivery", "hyperlinks"]),
+    extensions: new Set(["adapter-sources", "reply-delivery", "hyperlinks", "mouse-encoding"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension = {
+  const backend: TerminalBackend &
+    ReplyDeliveryExtension &
+    HyperlinkExtension &
+    AdapterSourcesExtension &
+    MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "alacritty",
     init,
@@ -310,6 +349,7 @@ export function createAlacrittyBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodeMouse,
     capabilities,
     replyDelivery,
   }
