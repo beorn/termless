@@ -11,6 +11,7 @@ import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   AdapterSourcesExtension,
+  MouseEncodingExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   HyperlinkExtension,
@@ -27,7 +28,7 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
 } from "@termless/core"
-import { encodeKeyToAnsi } from "@termless/core"
+import { encodeKeyToAnsi, encodeMouseReport, type MouseEncodingState } from "@termless/core"
 import { vtermEngineIdentity } from "./engine-identity.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -74,7 +75,8 @@ export function createVtermBackend(
   SemanticMarkExtension &
   SixelStorageExtension &
   ReplyDeliveryExtension &
-  AdapterSourcesExtension {
+  AdapterSourcesExtension &
+  MouseEncodingExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -276,8 +278,8 @@ export function createVtermBackend(
     truecolor: true,
 
     // Protocol-level support: full push/pop/query state machine (CSI > u / < u / ? u).
-    // Flags are stored and queryable; actual key encoding uses them in the host layer
-    // (encodeKeyToAnsi reads the mode from the backend).
+    // Flags are stored and queryable. The shared legacy key encoder is mode-blind;
+    // mode-aware host key encoding is separate from this protocol readback.
     kittyKeyboard: true,
 
     // Parses APC G sequences but stores and renders no image data, so the default
@@ -306,6 +308,7 @@ export function createVtermBackend(
     extensions: new Set([
       "adapter-sources",
       "reply-delivery",
+      "mouse-encoding",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc-metadata", // Exact cwd URI and copied notification payloads
       "semantic-marks", // Copied start markers, without invented zone boundaries
@@ -337,7 +340,8 @@ export function createVtermBackend(
     SemanticMarkExtension &
     SixelStorageExtension &
     ReplyDeliveryExtension &
-    AdapterSourcesExtension = {
+    AdapterSourcesExtension &
+    MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vterm",
     init,
@@ -366,6 +370,23 @@ export function createVtermBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodeMouse(event) {
+      const modes = ensureScreen().signals.modes$.get()
+      const tracking = modes.mouseTrackingMode
+      if (tracking !== 0 && tracking !== 9 && tracking !== 1000 && tracking !== 1002 && tracking !== 1003) {
+        throw new Error(`mouse encoding unavailable: tracking mode ${tracking}`)
+      }
+      const encoding: MouseEncodingState["encoding"] = modes.pixelMouse
+        ? "sgr-pixel"
+        : modes.sgrMouse
+          ? "sgr"
+          : modes.urxvtMouse
+            ? "urxvt"
+            : modes.utf8Mouse
+              ? "utf8"
+              : "legacy"
+      return encodeMouseReport(event, { tracking, encoding })
+    },
     capabilities,
     replyDelivery,
   }

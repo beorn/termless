@@ -636,6 +636,61 @@ describe("createVtermBackend", () => {
 
   // ── Modes ──
 
+  // @failure A declared mouse extension encodes stale/collapsed modes or corrupts wire bytes.
+  // @level l0
+  // @consumer Library callers passing cell-based events through the existing MouseEncodingExtension.
+  test.each([
+    ["\x1b[?9h", "\x1b[M %#"],
+    ["\x1b[?1000h\x1b[?1005h", "\x1b[M %#"],
+    ["\x1b[?1000h\x1b[?1006h", "\x1b[<0;5;3M"],
+    ["\x1b[?1002h\x1b[?1015h", "\x1b[32;5;3M"],
+  ])("mouse extension encodes engine state %j", (setup, report) => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    try {
+      expect(hasExtension(backend, "mouse-encoding")).toBe(true)
+      const event = { x: 4, y: 2, button: "left", action: "press" } as const
+      expect(backend.encodeMouse(event)).toBeNull()
+      backend.feed(new TextEncoder().encode(setup))
+      expect(new TextDecoder().decode(backend.encodeMouse(event)!)).toBe(report)
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // @failure Protocol filters or unavailable pixel geometry become fabricated reports.
+  // @level l0
+  // @consumer MouseEncodingExtension callers distinguishing measured no-report from unavailable inputs.
+  test("mouse extension keeps filtering, binary coordinates and pixel unavailability distinct", () => {
+    const backend = createVtermBackend({ cols: 300, rows: 24 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    const event = { x: 4, y: 2, button: "left", action: "press" } as const
+    try {
+      feed("\x1b[?9h")
+      expect(backend.encodeMouse({ ...event, action: "release" })).toBeNull()
+      expect(backend.encodeMouse({ ...event, x: 200 })).toEqual(new Uint8Array([27, 91, 77, 32, 233, 35]))
+      feed("\x1b[?1005h")
+      expect(backend.encodeMouse({ ...event, x: 200 })).toEqual(new Uint8Array([27, 91, 77, 32, 195, 169, 35]))
+      feed("\x1b[?1002h\x1b[?1006h")
+      expect(backend.encodeMouse({ ...event, action: "move", button: "none" })).toBeNull()
+      expect(new TextDecoder().decode(backend.encodeMouse({ ...event, action: "move" })!)).toBe("\x1b[<32;5;3M")
+      expect(new TextDecoder().decode(backend.encodeMouse({ ...event, action: "release" })!)).toBe("\x1b[<0;5;3m")
+      feed("\x1b[?1003h")
+      expect(new TextDecoder().decode(backend.encodeMouse({ ...event, action: "move", button: "none" })!)).toBe(
+        "\x1b[<35;5;3M",
+      )
+      feed("\x1b[?1002h")
+      expect(new TextDecoder().decode(backend.encodeMouse({ ...event, shift: true, alt: true, ctrl: true })!)).toBe(
+        "\x1b[<28;5;3M",
+      )
+      feed("\x1b[?1016h")
+      expect(() => backend.encodeMouse(event)).toThrow("mouse encoding unavailable: SGR-pixel needs pixel coordinates")
+      feed("\x1b[?1002l")
+      expect(backend.encodeMouse(event)).toBeNull()
+    } finally {
+      backend.destroy()
+    }
+  })
+
   test("alt screen mode detection", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     expect(backend.getMode("altScreen")).toBe(false)

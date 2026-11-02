@@ -134,6 +134,7 @@ export { captureCrossRenderer, pngDimensions, dHash, hashDistance } from "./comp
 export type { CrossRendererOptions, CrossRendererResult, CrossRendererReport } from "./compare.ts"
 export { parseKey, keyToAnsi } from "./terminal/key-mapping.ts"
 export { encodeKeyToAnsi } from "./terminal/key-encoding.ts"
+export { encodeMouseReport, type MouseEncodingState } from "./terminal/mouse-encoding.ts"
 export { scanMouseDecset, scanMouseDecsetTracking, scanWindowOpQueries } from "./terminal/escape-scans.ts"
 export {
   createBufferView,
