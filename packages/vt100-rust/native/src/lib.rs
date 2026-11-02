@@ -347,6 +347,36 @@ impl Vt100RustTerminal {
         })
     }
 
+    /// Stored mouse tracking protocol as its DEC private mode number (0 = none). vt100 keeps one effective protocol.
+    #[napi]
+    pub fn get_mouse_protocol_mode(&self) -> Result<u32> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(match parser.screen().mouse_protocol_mode() {
+            vt100::MouseProtocolMode::None => 0,
+            vt100::MouseProtocolMode::Press => 9,
+            vt100::MouseProtocolMode::PressRelease => 1000,
+            vt100::MouseProtocolMode::ButtonMotion => 1002,
+            vt100::MouseProtocolMode::AnyMotion => 1003,
+        })
+    }
+
+    /// Stored mouse report encoding as its DEC private mode number (0 = default). vt100 keeps one effective encoding.
+    #[napi]
+    pub fn get_mouse_protocol_encoding(&self) -> Result<u32> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(match parser.screen().mouse_protocol_encoding() {
+            vt100::MouseProtocolEncoding::Default => 0,
+            vt100::MouseProtocolEncoding::Utf8 => 1005,
+            vt100::MouseProtocolEncoding::Sgr => 1006,
+        })
+    }
+
     #[napi]
     pub fn get_title(&self) -> Result<String> {
         let parser = self

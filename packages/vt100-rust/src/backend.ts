@@ -19,8 +19,11 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  MouseEncodingExtension,
+  MouseEvent,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { encodeMouseReport, type MouseEncodingState } from "../../../src/terminal/mouse-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ===============================================================
@@ -80,6 +83,22 @@ interface Vt100RustTerminal {
   /** Read pending response data (DA1/DA2/DSR). Returns null if no responses pending or method not available. */
   readResponse?(): Buffer | null
 }
+
+/**
+ * Adapter-private mouse state getters on the native class. Deliberately NOT members of the exported
+ * Vt100RustTerminal type: only encodeMouse reads them. Values are DEC private mode numbers, 0 = none/default.
+ */
+interface Vt100RustMouseState {
+  getMouseProtocolMode?(): number
+  getMouseProtocolEncoding?(): number
+}
+
+const MOUSE_TRACKINGS: readonly MouseEncodingState["tracking"][] = [0, 9, 1000, 1002, 1003]
+const MOUSE_ENCODINGS: ReadonlyMap<number, MouseEncodingState["encoding"]> = new Map([
+  [0, "legacy"],
+  [1005, "utf8"],
+  [1006, "sgr"],
+])
 
 interface NativeModule {
   Vt100RustTerminal: new (cols: number, rows: number, scrollbackLimit?: number) => Vt100RustTerminal
@@ -176,7 +195,7 @@ const DEFAULT_ROWS = 24
 export function createVt100RustBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
-): TerminalBackend & AdapterSourcesExtension {
+): TerminalBackend & AdapterSourcesExtension & MouseEncodingExtension {
   let term: Vt100RustTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -326,7 +345,7 @@ export function createVt100RustBackend(
     semanticPrompts: false,
     unicode: "13.0",
     reflow: false,
-    extensions: new Set(["adapter-sources"]),
+    extensions: new Set(["adapter-sources", "mouse-encoding"]),
   }
 
   // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
@@ -337,7 +356,26 @@ export function createVt100RustBackend(
   //   2. Add #[napi] pub fn read_response(&self) -> Option<Buffer> that drains it
   // The TS side is already wired — it calls readResponse() after each feed().
 
-  const backend: TerminalBackend & AdapterSourcesExtension = {
+  /**
+   * vt100 0.16.2 stores one effective protocol and one encoding (screen.rs:683-700), so the stored pair is exact.
+   * It cannot store 1015/1016; those leave the previous encoding, which is reported as stored, never relabelled.
+   */
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    const t = ensureTerm() as Vt100RustTerminal & Vt100RustMouseState
+    if (typeof t.getMouseProtocolMode !== "function" || typeof t.getMouseProtocolEncoding !== "function") {
+      throw new Error("mouse encoding unavailable: native addon has no mouse protocol getters")
+    }
+    const mode = t.getMouseProtocolMode()
+    const encodingMode = t.getMouseProtocolEncoding()
+    const tracking = MOUSE_TRACKINGS.find((known) => known === mode)
+    const encoding = MOUSE_ENCODINGS.get(encodingMode)
+    if (tracking === undefined || encoding === undefined) {
+      throw new Error(`mouse encoding unavailable: native mouse state protocol ${mode} encoding ${encodingMode}`)
+    }
+    return encodeMouseReport(event, { tracking, encoding })
+  }
+
+  const backend: TerminalBackend & AdapterSourcesExtension & MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100-rust",
     init,
@@ -360,6 +398,7 @@ export function createVt100RustBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodeMouse,
     capabilities,
   }
 

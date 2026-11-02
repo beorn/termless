@@ -6,9 +6,10 @@
  * @testonly none
  */
 
-import { describe, test, expect } from "vitest"
+import { describe, test, expect, expectTypeOf } from "vitest"
 import { createVt100RustBackend, loadVt100RustNative } from "../src/backend.ts"
 import { createTerminal } from "../../../src/terminal/terminal.ts"
+import type { MouseEncodingExtension, MouseEvent, TerminalBackend } from "../../../src/terminal/types.ts"
 
 const numberedLines = (count: number): string[] =>
   Array.from({ length: count }, (_, index) => `line-${String(index).padStart(2, "0")}`)
@@ -336,6 +337,92 @@ describe.skipIf(nativeBuildError !== null)(
       } finally {
         backend.destroy()
       }
+    })
+  },
+)
+
+// Accepted requirement (@cto 5139d15b + 964e7295, vt100-rust #31295): the existing shared encoder reads the native
+// engine's own stored mouse state through an adapter-private getter. vt100 0.16.2 stores ONE effective protocol and ONE
+// encoding (screen.rs:683-700: set replaces, `?Nl` clears only when equal), so the last set mode wins by the engine's own
+// rule and 1015/1016 leave the stored encoding unchanged. Existing tests read only the aggregate mouseTracking boolean,
+// so a missing, stale or inferred mouse binding went unseen.
+// @failure The vt100-rust mouse extension encodes reset state, invents an encoding the engine never stored, or the
+//   private getter leaks onto the public native type.
+// @level l0
+// @consumer terminfo library mouse arms (mouseEncodingLib) reading getMode("mouseTracking") then encodeMouse.
+describe.skipIf(nativeBuildError !== null)(
+  `vt100-rust mouse encoding${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
+  () => {
+    const reset = "\x1b[?9;1000;1002;1003;1005;1006l"
+    const event = { x: 4, y: 2, button: "left", action: "press" } as const
+    const encode = (b: TerminalBackend, e: MouseEvent) => (b as TerminalBackend & MouseEncodingExtension).encodeMouse(e)
+    const text = (bytes: Uint8Array | null) => (bytes === null ? null : new TextDecoder().decode(bytes))
+
+    test.each([
+      ["\x1b[?9h", event, "\x1b[M %#"],
+      ["\x1b[?1000h", { ...event, action: "release" }, "\x1b[M#%#"],
+      ["\x1b[?1000h\x1b[?1006h", event, "\x1b[<0;5;3M"],
+      ["\x1b[?1000h\x1b[?1006h", { ...event, button: "wheelUp" }, "\x1b[<64;5;3M"],
+      ["\x1b[?1002h\x1b[?1006h", { ...event, action: "move" }, "\x1b[<32;5;3M"],
+      ["\x1b[?1003h\x1b[?1006h", { ...event, button: "none", action: "move" }, "\x1b[<35;5;3M"],
+      ["\x1b[?1000h\x1b[?1005h", { ...event, x: 200 }, "\x1b[M é#"],
+    ] as const)("encodes the engine's own stored mouse state %j", (setup, mouse, report) => {
+      const backend = createVt100RustBackend({ cols: 300, rows: 24 })
+      try {
+        expect(backend.capabilities.extensions.has("mouse-encoding")).toBe(true)
+        expect(backend.getMode("mouseTracking")).toBe(false)
+        expect(encode(backend, mouse)).toBeNull()
+        backend.feed(Buffer.from(setup))
+        expect(backend.getMode("mouseTracking")).toBe(true)
+        expect(text(encode(backend, mouse))).toBe(report)
+        backend.feed(Buffer.from(reset))
+        expect(backend.getMode("mouseTracking")).toBe(false)
+        expect(encode(backend, mouse)).toBeNull()
+        backend.feed(Buffer.from(setup))
+        backend.reset()
+        expect(encode(backend, mouse)).toBeNull()
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test("follows the engine's single stored state, never an invented one", () => {
+      const backend = createVt100RustBackend({ cols: 80, rows: 24 })
+      try {
+        // Last set protocol wins (set_mouse_mode replaces); clearing a mode that is not current changes nothing.
+        backend.feed(Buffer.from("\x1b[?1000h\x1b[?1002h\x1b[?1006h"))
+        expect(text(encode(backend, { ...event, action: "move" }))).toBe("\x1b[<32;5;3M")
+        backend.feed(Buffer.from("\x1b[?1000l"))
+        expect(text(encode(backend, { ...event, action: "move" }))).toBe("\x1b[<32;5;3M")
+        // 1015/1016 are not stored by vt100 0.16.2: the stored SGR encoding stays.
+        backend.feed(Buffer.from("\x1b[?1015h\x1b[?1016h"))
+        expect(text(encode(backend, event))).toBe("\x1b[<0;5;3M")
+        // X10 reports presses only.
+        backend.feed(Buffer.from(`${reset}\x1b[?9h`))
+        expect(encode(backend, { ...event, action: "release" })).toBeNull()
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test("an addon without the private mouse getters reports unavailable, never a guessed report", () => {
+      const real = loadVt100RustNative().Vt100RustTerminal
+      const stale = class extends real {} as typeof real
+      for (const name of ["getMouseProtocolMode", "getMouseProtocolEncoding"]) {
+        Object.defineProperty(stale.prototype, name, { value: undefined })
+      }
+      const backend = createVt100RustBackend({ cols: 80, rows: 24 }, { Vt100RustTerminal: stale })
+      try {
+        backend.feed(Buffer.from("\x1b[?1000h"))
+        expect(() => encode(backend, event)).toThrow("mouse encoding unavailable:")
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test("the public native terminal type gains no mouse members", () => {
+      type PublicTerminal = InstanceType<ReturnType<typeof loadVt100RustNative>["Vt100RustTerminal"]>
+      expectTypeOf<Extract<keyof PublicTerminal, `${string}Mouse${string}`>>().toEqualTypeOf<never>()
     })
   },
 )
