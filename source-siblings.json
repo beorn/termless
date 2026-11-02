@@ -18,7 +18,7 @@
     {
       "name": "vterm.js",
       "repository": "beorn/vterm",
-      "commit": "bd3d32aea2f1994376a71adfc55b92705eedbd8c",
+      "commit": "67dd3960746766ed47e2bb4b2ced6503a78549cc",
       "directory": "packages/vterm",
       "pack": false
     },
