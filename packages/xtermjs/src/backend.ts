@@ -739,7 +739,7 @@ export function createXtermBackend(
     }
     if (coreMouseService.activeEncoding === "SGR_PIXELS") {
       throw new Error(
-        "mouse encoding unavailable: xterm.js headless SGR-Pixels (DECSET 1016) mouse encoding requires pixel geometry not present on cell-coordinate MouseEvent",
+        "mouse encoding unavailable: xterm.js headless SGR-Pixels (DECSET 1016) pixel-coordinate binding is not implemented",
       )
     }
 

@@ -1,4 +1,5 @@
 import type {
+  MouseEvent,
   OscMetadataExtension,
   ReplyDeliveryExtension,
   SemanticMarkExtension,
@@ -652,15 +653,20 @@ describe("createVtermBackend", () => {
       expect(backend.encodeMouse(event)).toBeNull()
       backend.feed(new TextEncoder().encode(setup))
       expect(new TextDecoder().decode(backend.encodeMouse(event)!)).toBe(report)
+      // Nonpixel encodings ignore even invalid optional pixel coordinates.
+      expect(new TextDecoder().decode(backend.encodeMouse({ ...event, pixel: { x: NaN, y: Infinity } })!)).toBe(report)
     } finally {
       backend.destroy()
     }
   })
 
-  // @failure Protocol filters or unavailable pixel geometry become fabricated reports.
+  // Accepted requirement: supplied pixels encode as pixel+1, with shared SGR semantics;
+  // invalid pixels fail only after tracking filters. Existing coverage only checked missing pixels.
+  // Real backend -> shared encoder is the owning seam; no test-only export or fixture.
+  // @failure Pixel reports use cells, lose SGR bits, or validate filtered/irrelevant inputs.
   // @level l0
   // @consumer MouseEncodingExtension callers distinguishing measured no-report from unavailable inputs.
-  test("mouse extension keeps filtering, binary coordinates and pixel unavailability distinct", () => {
+  test("mouse extension keeps filtering, binary and pixel coordinate contracts distinct", () => {
     const backend = createVtermBackend({ cols: 300, rows: 24 })
     const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
     const event = { x: 4, y: 2, button: "left", action: "press" } as const
@@ -682,10 +688,63 @@ describe("createVtermBackend", () => {
       expect(new TextDecoder().decode(backend.encodeMouse({ ...event, shift: true, alt: true, ctrl: true })!)).toBe(
         "\x1b[<28;5;3M",
       )
-      feed("\x1b[?1016h")
+      // 1000+1016 is sufficient: pixel encoding does not require 1006.
+      backend.reset()
+      feed("\x1b[?1000h\x1b[?1016h")
       expect(() => backend.encodeMouse(event)).toThrow("mouse encoding unavailable: SGR-pixel needs pixel coordinates")
-      feed("\x1b[?1002l")
-      expect(backend.encodeMouse(event)).toBeNull()
+      const pixelEvent = { ...event, pixel: { x: 40, y: 24 } }
+      for (const [change, report] of [
+        [{}, "\x1b[<0;41;25M"],
+        [{ action: "release" }, "\x1b[<0;41;25m"],
+        [{ button: "middle", action: "release" }, "\x1b[<1;41;25m"],
+        [{ button: "right", shift: true, alt: true, ctrl: true }, "\x1b[<30;41;25M"],
+        [{ button: "wheelUp" }, "\x1b[<64;41;25M"],
+        [{ button: "wheelDown" }, "\x1b[<65;41;25M"],
+        [{ pixel: { x: 0, y: 0 } }, "\x1b[<0;1;1M"],
+        [
+          { pixel: { x: Number.MAX_SAFE_INTEGER - 1, y: Number.MAX_SAFE_INTEGER - 1 } },
+          "\x1b[<0;9007199254740991;9007199254740991M",
+        ],
+      ] as const) {
+        expect(new TextDecoder().decode(backend.encodeMouse({ ...pixelEvent, ...change })!)).toBe(report)
+      }
+      feed("\x1b[?1003h")
+      for (const [button, report] of [
+        ["left", "\x1b[<32;41;25M"],
+        ["none", "\x1b[<35;41;25M"],
+      ] as const) {
+        expect(new TextDecoder().decode(backend.encodeMouse({ ...pixelEvent, button, action: "move" })!)).toBe(report)
+      }
+      const invalidPixels = [
+        null,
+        {},
+        { x: 0 },
+        { y: 0 },
+        { x: "0", y: 0 },
+        ...[-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER + 1].flatMap(
+          (value) => [
+            { x: value, y: 0 },
+            { x: 0, y: value },
+          ],
+        ),
+      ]
+      for (const pixel of invalidPixels) {
+        expect(() => backend.encodeMouse({ ...event, pixel: pixel as MouseEvent["pixel"] })).toThrow(
+          new TypeError("pixel mouse coordinates must be nonnegative integers below Number.MAX_SAFE_INTEGER"),
+        )
+      }
+      // Missing and malformed pixels are irrelevant to every filtered event.
+      for (const [setup, change] of [
+        ["", {}],
+        ["\x1b[?9h", { action: "release" }],
+        ["\x1b[?1000h", { action: "move" }],
+        ["\x1b[?1002h", { action: "move", button: "none" }],
+      ] as const) {
+        backend.reset()
+        feed(`\x1b[?1016h${setup}`)
+        expect(backend.encodeMouse({ ...event, ...change })).toBeNull()
+        expect(backend.encodeMouse({ ...event, ...change, pixel: { x: NaN, y: -1 } })).toBeNull()
+      }
     } finally {
       backend.destroy()
     }

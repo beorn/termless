@@ -604,6 +604,11 @@ export interface ReplyDeliveryExtension {
 export interface MouseEvent {
   x: number
   y: number
+  /**
+   * Zero-based integer pixel offsets from the terminal-content top-left, in caller-supplied pixel space.
+   * Both axes must be in 0..Number.MAX_SAFE_INTEGER-1; SGR-pixel wire coordinates add 1 to each axis.
+   */
+  pixel?: { x: number; y: number }
   button: "left" | "middle" | "right" | "wheelUp" | "wheelDown" | "none"
   action: "press" | "release" | "move"
   shift?: boolean
