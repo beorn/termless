@@ -405,6 +405,61 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // Quality review (@chief a70b7508): the positive cases above are valid under broader tracking modes, and the tracking
+    // reset masks encoding reset, so a 1000/1002->1003 mapping slip or a stuck encoding passed every earlier assertion.
+    test("each stored protocol reports only its own motion events", () => {
+      const backend = createVt100RustBackend({ cols: 80, rows: 24 })
+      const drag = { ...event, action: "move" } as const
+      const bareMove = { ...event, button: "none", action: "move" } as const
+      try {
+        backend.feed(Buffer.from("\x1b[?1000h\x1b[?1006h"))
+        expect(encode(backend, drag)).toBeNull()
+        backend.feed(Buffer.from("\x1b[?1002h"))
+        expect(text(encode(backend, drag))).toBe("\x1b[<32;5;3M")
+        expect(encode(backend, bareMove)).toBeNull()
+        backend.feed(Buffer.from("\x1b[?1003h"))
+        expect(text(encode(backend, bareMove))).toBe("\x1b[<35;5;3M")
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test("the stored encoding is replaced, kept on a noncurrent reset and returns to legacy on its own reset", () => {
+      const backend = createVt100RustBackend({ cols: 300, rows: 24 })
+      // x=95 reports column 96: SGR "96", UTF-8 U+0080 (two bytes), legacy one raw 0x80 byte.
+      const wide = { ...event, x: 95 } as const
+      const bytes = () => [...encode(backend, wide)!]
+      try {
+        backend.feed(Buffer.from("\x1b[?1000h\x1b[?1006h"))
+        expect(text(encode(backend, wide))).toBe("\x1b[<0;96;3M")
+        backend.feed(Buffer.from("\x1b[?1005h"))
+        expect(bytes()).toEqual([0x1b, 0x5b, 0x4d, 0x20, 0xc2, 0x80, 0x23])
+        backend.feed(Buffer.from("\x1b[?1006l"))
+        expect(bytes()).toEqual([0x1b, 0x5b, 0x4d, 0x20, 0xc2, 0x80, 0x23])
+        backend.feed(Buffer.from("\x1b[?1005l"))
+        expect(backend.getMode("mouseTracking")).toBe(true)
+        expect(bytes()).toEqual([0x1b, 0x5b, 0x4d, 0x20, 0x80, 0x23])
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    test.each([
+      ["getMouseProtocolMode", 1001, "protocol 1001 encoding 0"],
+      ["getMouseProtocolEncoding", 1015, "protocol 1000 encoding 1015"],
+    ] as const)("an unknown stored %s value %d reports unavailable, never a guessed report", (getter, value, named) => {
+      const real = loadVt100RustNative().Vt100RustTerminal
+      const unknown = class extends real {} as typeof real
+      Object.defineProperty(unknown.prototype, getter, { value: () => value })
+      const backend = createVt100RustBackend({ cols: 80, rows: 24 }, { Vt100RustTerminal: unknown })
+      try {
+        backend.feed(Buffer.from("\x1b[?1000h"))
+        expect(() => encode(backend, event)).toThrow(`mouse encoding unavailable: native mouse state ${named}`)
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("an addon without the private mouse getters reports unavailable, never a guessed report", () => {
       const real = loadVt100RustNative().Vt100RustTerminal
       const stale = class extends real {} as typeof real
