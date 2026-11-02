@@ -260,23 +260,42 @@ describe("createVtermBackend", () => {
     backend.destroy()
   })
 
-  test("forwards engine window-size replies exactly once across feed chunks", () => {
+  test("forwards engine replies at feed-and-getCursor exactly once across chunks", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     const responses: string[] = []
     backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
     const engineResponses: string[] = []
     const screen = createVtermScreen({ cols: 80, rows: 24, onResponse: (reply) => engineResponses.push(reply) })
 
-    for (const chunk of ["\x1b[14t", "\x1b[16t", "\x1b[18t", "\x1b[", "18", "t", "\x1b[", "?996", "n"]) {
+    // The official Capabilities query must reach the same boundary whole or split across its terminator.
+    for (const chunk of [
+      "\x1b[14t",
+      "\x1b[16t",
+      "\x1b[18t",
+      "\x1b[",
+      "18",
+      "t",
+      "\x1b[",
+      "?996",
+      "n",
+      "\x1b]1337;Capabilities\x1b\\",
+      "\x1b]1337;Cap",
+      "abilities",
+      "\x1b",
+      "\\",
+    ]) {
       const bytes = new TextEncoder().encode(chunk)
       screen.process(bytes)
       backend.feed(bytes)
+      backend.getCursor()
+      expect(responses).toEqual(engineResponses)
     }
 
     // Physical metrics belong to the installed engine, including CI's older source-sibling pin.
     expect(responses).toEqual(engineResponses)
-    expect(responses).toHaveLength(4)
-    expect(responses.slice(2)).toEqual(["\x1b[8;24;80t", "\x1b[8;24;80t"])
+    expect(responses).toHaveLength(6)
+    expect(responses.slice(2, 4)).toEqual(["\x1b[8;24;80t", "\x1b[8;24;80t"])
+    expect(responses.slice(4)).toEqual(["\x1b]1337;Capabilities=\x1b\\", "\x1b]1337;Capabilities=\x1b\\"])
     backend.destroy()
   })
 

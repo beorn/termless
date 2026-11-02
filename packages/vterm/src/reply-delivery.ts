@@ -1,7 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
-// Re-audited for copied mark/Sixel readers and declarations; feed/response delivery and selected-buffer history are unchanged.
+// Re-audited bd3d32ae -> 7e6c993c: Capabilities/DECRQM replies remain inline; byte feed and forwarding are unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -19,7 +19,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "f10a184811894462b9ca7b65d6aab8ffd2fdd0bd",
+      treeOid: "30e32d569a520758827007bb195d54dbc8bf3413",
     },
   },
 } as const

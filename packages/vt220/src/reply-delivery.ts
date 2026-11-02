@@ -1,6 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
+// Re-audited bd3d32ae -> 7e6c993c: removing DEC-private 4 leaves byte feed and reply forwarding unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -18,7 +19,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "d504616ae458b8b0fa9fa365034c30bd35f55ee8",
+      treeOid: "fc6ff58f2f3e602b8ede99641f73cde997411f14",
     },
   },
 } as const
