@@ -14,7 +14,7 @@
 import { describe, test, expect, afterEach, vi } from "vitest"
 import { createAlacrittyBackend, loadAlacrittyNative } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
-import { hasExtension, type HyperlinkExtension, type ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import { hasExtension, type HyperlinkExtension, type ReplyDeliveryExtension, type MouseEncodingExtension } from "../../../src/terminal/types.ts"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
 import { relative } from "node:path"
@@ -690,4 +690,96 @@ describeNative("alacritty backend", () => {
       expect(backend.capabilities.sixel).toBe(false)
     })
   })
+})
+
+describeNative("mouse encoding", () => {
+  let backend: TerminalBackend
+
+  afterEach(() => {
+    backend?.destroy()
+  })
+
+  function mouseTarget(): MouseEncodingExtension {
+    backend = createBackend()
+    if (!hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")) {
+      throw new Error("Alacritty declares no mouse encoding")
+    }
+    return backend as MouseEncodingExtension
+  }
+
+  const press = { button: "left", action: "press", x: 0, y: 0 } as const
+  // x/y 95 keep every wire encoding distinct: legacy clamps the coordinate to the single byte
+  // 0x80, while UTF-8 spells the same code point as 0xc2 0x80. At 0,0 both are 0x20 and the
+  // two encodings would be indistinguishable, so the exact-byte cases stay away from the origin.
+  const far = { button: "left", action: "press", x: 95, y: 95 } as const
+
+  test("declares the shared mouse encoding extension", () => {
+    mouseTarget()
+    expect(hasExtension(backend, "mouse-encoding")).toBe(true)
+  })
+
+  test.each([1000, 1002, 1003] as const)("encodes tracking %i through reset, set and reset", (mode) => {
+    const target = mouseTarget()
+    expect(target.encodeMouse(press)).toBeNull()
+    feedText(backend, `\u001b[?${mode}h`)
+    expect(target.encodeMouse(press)).not.toBeNull()
+    feedText(backend, `\u001b[?${mode}l`)
+    expect(target.encodeMouse(press)).toBeNull()
+  })
+
+  test("encodes SGR, UTF-8 and legacy to exact bytes where they cannot be confused", () => {
+    const target = mouseTarget()
+    feedText(backend, "\u001b[?1000h")
+    feedText(backend, "\u001b[?1006h")
+    expect(target.encodeMouse(far)).toEqual(new TextEncoder().encode("\u001b[<0;96;96M"))
+    feedText(backend, "\u001b[?1006l")
+    feedText(backend, "\u001b[?1005h")
+    expect(target.encodeMouse(far)).toEqual(new Uint8Array([0x1b, 0x5b, 0x4d, 0x20, 0xc2, 0x80, 0xc2, 0x80]))
+    feedText(backend, "\u001b[?1005l")
+    expect(target.encodeMouse(far)).toEqual(new Uint8Array([0x1b, 0x5b, 0x4d, 0x20, 0x80, 0x80]))
+  })
+
+  // One event that only one tracking protocol reports, per protocol: 1000 has no motion at all,
+  // 1002 reports motion only while a button is held, 1003 reports every motion.
+  test.each([
+    { mode: 1000, button: "none", reported: false },
+    { mode: 1002, button: "left", reported: true },
+    { mode: 1003, button: "none", reported: true },
+  ] as const)("distinguishes tracking %i by the motion it reports", ({ mode, button, reported }) => {
+    const target = mouseTarget()
+    expect(target.encodeMouse({ button, action: "move", x: 5, y: 5 })).toBeNull()
+    feedText(backend, `\u001b[?${mode}h`)
+    const encoded = target.encodeMouse({ button, action: "move", x: 5, y: 5 })
+    if (reported) expect(encoded).not.toBeNull()
+    else expect(encoded).toBeNull()
+  })
+
+  test("setting SGR then UTF-8 leaves UTF-8 alone (engine-exclusive encodings, crate mod.rs:1971-1979)", () => {
+    const target = mouseTarget()
+    feedText(backend, "\u001b[?1000h")
+    feedText(backend, "\u001b[?1006h")
+    feedText(backend, "\u001b[?1005h")
+    expect(target.encodeMouse(far)).toEqual(new Uint8Array([0x1b, 0x5b, 0x4d, 0x20, 0xc2, 0x80, 0xc2, 0x80]))
+  })
+
+  test("refuses contradictory tracking instead of inventing precedence", () => {
+    const target = mouseTarget()
+    feedText(backend, "\u001b[?1000h")
+    feedText(backend, "\u001b[?1002h")
+    // alacritty removes MOUSE_MODE before inserting one tracking bit, so two tracking modes cannot
+    // both be set: this proves the engine own exclusivity rather than our precedence.
+    expect(target.encodeMouse({ button: "none", action: "move", x: 0, y: 0 })).toBeNull()
+    expect(target.encodeMouse(press)).not.toBeNull()
+  })
+
+  test("never leaks the internal DECRQM replies to onResponse", () => {
+    const target = mouseTarget()
+    const seen = vi.fn()
+    backend.onResponse = seen
+    feedText(backend, "\u001b[?1000h")
+    seen.mockClear()
+    target.encodeMouse(press)
+    expect(seen).not.toHaveBeenCalled()
+  })
+
 })
