@@ -14,7 +14,12 @@
 import { describe, test, expect, afterEach, vi } from "vitest"
 import { createAlacrittyBackend, loadAlacrittyNative } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
-import { hasExtension, type HyperlinkExtension, type ReplyDeliveryExtension, type MouseEncodingExtension } from "../../../src/terminal/types.ts"
+import {
+  hasExtension,
+  type HyperlinkExtension,
+  type ReplyDeliveryExtension,
+  type MouseEncodingExtension,
+} from "../../../src/terminal/types.ts"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
 import { relative } from "node:path"
@@ -781,5 +786,4 @@ describeNative("mouse encoding", () => {
     target.encodeMouse(press)
     expect(seen).not.toHaveBeenCalled()
   })
-
 })
