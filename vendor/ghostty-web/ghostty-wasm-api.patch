@@ -27,9 +27,10 @@ diff --git a/include/ghostty/vt.h b/include/ghostty/vt.h
  #include <ghostty/vt/key.h>
 diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
+index 0000000..cae608a
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,290 @@
+@@ -0,0 +1,292 @@
 +/**
 + * @file terminal.h
 + *
@@ -81,7 +82,7 @@ new file mode 100644
 +    uint32_t palette[16];
 +} GhosttyTerminalConfig;
 +
-+/** Cell structure - 16 bytes, pre-resolved colors */
++/** Cell structure - 20 bytes, pre-resolved colors; existing fields retain offsets 0-15 */
 +typedef struct {
 +    uint32_t codepoint;
 +    uint8_t fg_r, fg_g, fg_b;
@@ -91,6 +92,8 @@ new file mode 100644
 +    uint16_t hyperlink_id;
 +    uint8_t grapheme_len;  /* Number of extra codepoints beyond first (0 = no grapheme) */
 +    uint8_t underline_style; /* 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed */
++    uint8_t underline_r, underline_g, underline_b; /* Resolved underline RGB at bytes 16-18 */
++    uint8_t underline_present; /* Byte 19: 0=absent, 1=explicit (including black) */
 +} GhosttyCell;
 +
 +/** Cell flags */
@@ -199,7 +202,7 @@ new file mode 100644
 + * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
 + * The caller must copy those bytes before another engine call.
 + * Returns -1 on error, 0 for no link, 1 for a link (including an empty URI).
-+ * GhosttyCell's 16-byte ABI and hyperlink presence bit are unchanged.
++ * GhosttyCell's hyperlink_id offset and hyperlink presence bit are unchanged.
 + */
 +int ghostty_render_state_get_hyperlink(
 +    GhosttyTerminal term,
@@ -437,9 +440,10 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
      _ = @import("../../lib/allocator.zig");
 diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
+index 0000000..8179c38
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1240 @@
+@@ -0,0 +1,1254 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -898,7 +902,7 @@ new file mode 100644
 +    last_screen_is_alternate: bool = false,
 +};
 +
-+/// C-compatible cell structure (16 bytes)
++/// C-compatible cell structure (20 bytes; existing fields retain offsets 0-15)
 +pub const GhosttyCell = extern struct {
 +    codepoint: u32,
 +    fg_r: u8,
@@ -912,6 +916,10 @@ new file mode 100644
 +    hyperlink_id: u16,
 +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
 +    underline_style: u8 = 0,
++    underline_r: u8 = 0,
++    underline_g: u8 = 0,
++    underline_b: u8 = 0,
++    underline_present: u8 = 0,
 +};
 +
 +/// Dirty state
@@ -1235,6 +1243,7 @@ new file mode 100644
 +                .rgb => |rgb| rgb,
 +            };
 +            const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
++            const underline_color = sty.underlineColor(&rs.colors.palette);
 +
 +            // Build flags
 +            var flags: u8 = 0;
@@ -1270,6 +1279,10 @@ new file mode 100644
 +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
 +                .grapheme_len = grapheme_len,
 +                .underline_style = @intFromEnum(sty.flags.underline),
++                .underline_r = if (underline_color) |rgb| rgb.r else 0,
++                .underline_g = if (underline_color) |rgb| rgb.g else 0,
++                .underline_b = if (underline_color) |rgb| rgb.b else 0,
++                .underline_present = @intFromBool(underline_color != null),
 +            };
 +            idx += 1;
 +        }
@@ -1508,6 +1521,7 @@ new file mode 100644
 +            .rgb => |rgb| rgb,
 +        };
 +        const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
++        const underline_color = sty.underlineColor(&rs.colors.palette);
 +        
 +        // Build flags
 +        var flags: u8 = 0;
@@ -1543,6 +1557,10 @@ new file mode 100644
 +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
 +            .grapheme_len = grapheme_len,
 +            .underline_style = @intFromEnum(sty.flags.underline),
++            .underline_r = if (underline_color) |rgb| rgb.r else 0,
++            .underline_g = if (underline_color) |rgb| rgb.g else 0,
++            .underline_b = if (underline_color) |rgb| rgb.b else 0,
++            .underline_present = @intFromBool(underline_color != null),
 +        };
 +    }
 +    return @intCast(cols);

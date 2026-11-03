@@ -1,4 +1,4 @@
-This is a patched, source-backed distribution of ghostty-web0.4.0, never an upstream release. See RECEIPT.json and the removal tracker @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
+This is a patched, source-backed distribution of ghostty-web0.4.0, never an upstream release. See RECEIPT.json and the removal tracker @si/terminfo/30211-terminfo-273/31257-remove-private-ghostty.
 
 The package manifest retains upstream consumer metadata; build scripts and development dependencies are omitted from this installable distribution. Rebuilds use the pinned upstream archive's own manifest and lockfile through rebuild.ts.
 

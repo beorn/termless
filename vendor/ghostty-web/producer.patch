@@ -1,26 +1,47 @@
 diff --git a/lib/buffer.ts b/lib/buffer.ts
+index 031a493..9014b9d 100644
 --- a/lib/buffer.ts
 +++ b/lib/buffer.ts
-@@ -115,6 +115,7 @@
+@@ -115,6 +115,11 @@ export class Buffer implements IBuffer {
        width: 1,
        hyperlink_id: 0,
        grapheme_len: 0,
 +      underline_style: 0,
++      underline_r: 0,
++      underline_g: 0,
++      underline_b: 0,
++      underline_present: 0,
      };
      this.nullCell = new BufferCell(nullCellData, 0);
    }
-@@ -255,6 +256,7 @@
+@@ -255,6 +260,11 @@ export class BufferLine implements IBufferLine {
            width: 1,
            hyperlink_id: 0,
            grapheme_len: 0,
 +          underline_style: 0,
++          underline_r: 0,
++          underline_g: 0,
++          underline_b: 0,
++          underline_present: 0,
          },
          x
        );
 diff --git a/lib/ghostty.ts b/lib/ghostty.ts
+index 7449185..1062c76 100644
 --- a/lib/ghostty.ts
 +++ b/lib/ghostty.ts
-@@ -362,6 +362,7 @@
+@@ -258,8 +258,8 @@ export class GhosttyTerminal {
+   private _cols: number;
+   private _rows: number;
+ 
+-  /** Size of GhosttyCell in WASM (16 bytes) */
+-  private static readonly CELL_SIZE = 16;
++  /** Size of GhosttyCell in WASM (20 bytes) */
++  private static readonly CELL_SIZE = 20;
+ 
+   /** Reusable buffer for viewport operations */
+   private viewportBufferPtr: number = 0;
+@@ -362,6 +362,7 @@ export class GhosttyTerminal {
        this.viewportBufferPtr = 0;
      }
      this.exports.ghostty_terminal_free(this.handle);
@@ -28,7 +49,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
    // ==========================================================================
-@@ -544,6 +545,50 @@
+@@ -544,6 +545,50 @@ export class GhosttyTerminal {
      return this.exports.ghostty_terminal_get_scrollback_length(this.handle);
    }
  
@@ -79,7 +100,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    /**
     * Get a line from the scrollback buffer.
     * Ensures render state is fresh by calling update().
-@@ -582,6 +627,11 @@
+@@ -582,6 +627,11 @@ export class GhosttyTerminal {
  
      for (let i = 0; i < count; i++) {
        const cellOffset = i * GhosttyTerminal.CELL_SIZE;
@@ -91,7 +112,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
        cells.push({
          codepoint: view.getUint32(cellOffset, true),
          fg_r: u8[cellOffset + 4],
-@@ -590,10 +640,11 @@
+@@ -590,10 +640,15 @@ export class GhosttyTerminal {
          bg_r: u8[cellOffset + 7],
          bg_g: u8[cellOffset + 8],
          bg_b: u8[cellOffset + 9],
@@ -101,10 +122,14 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
          hyperlink_id: view.getUint16(cellOffset + 12, true),
          grapheme_len: u8[cellOffset + 14],
 +        underline_style,
++        underline_r: u8[cellOffset + 16],
++        underline_g: u8[cellOffset + 17],
++        underline_b: u8[cellOffset + 18],
++        underline_present: u8[cellOffset + 19],
        });
      }
  
-@@ -605,9 +656,60 @@
+@@ -605,9 +660,60 @@ export class GhosttyTerminal {
      return this.exports.ghostty_terminal_is_row_wrapped(this.handle, row) !== 0;
    }
  
@@ -167,19 +192,27 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
    /**
-@@ -673,6 +775,7 @@
+@@ -673,6 +779,11 @@ export class GhosttyTerminal {
            width: 1,
            hyperlink_id: 0,
            grapheme_len: 0,
 +          underline_style: 0,
++          underline_r: 0,
++          underline_g: 0,
++          underline_b: 0,
++          underline_present: 0,
          });
        }
      }
-@@ -697,6 +800,10 @@
+@@ -697,6 +808,14 @@ export class GhosttyTerminal {
        cell.width = u8[offset + 11];
        cell.hyperlink_id = view.getUint16(offset + 12, true);
        cell.grapheme_len = u8[offset + 14]; // grapheme_len is at byte 14
 +      cell.underline_style = u8[offset + 15];
++      cell.underline_r = u8[offset + 16];
++      cell.underline_g = u8[offset + 17];
++      cell.underline_b = u8[offset + 18];
++      cell.underline_present = u8[offset + 19];
 +      if (((cell.flags & CellFlags.UNDERLINE) !== 0) !== (cell.underline_style !== 0)) {
 +        throw new Error(`Ghostty viewport cell ${i}: underline flag/style mismatch; old producer with new decoder or decoder bug`);
 +      }
@@ -187,9 +220,10 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
 diff --git a/lib/types.ts b/lib/types.ts
+index e9182f2..20ed1a0 100644
 --- a/lib/types.ts
 +++ b/lib/types.ts
-@@ -438,13 +438,24 @@
+@@ -438,13 +438,24 @@ export interface GhosttyWasmExports extends WebAssembly.Exports {
      bufLen: number
    ): number; // Returns count of codepoints or -1 on error
  
@@ -214,15 +248,29 @@ diff --git a/lib/types.ts b/lib/types.ts
    ghostty_terminal_get_scrollback_line(
      terminal: TerminalHandle,
      offset: number,
-@@ -550,6 +561,7 @@
+@@ -536,7 +547,7 @@ export const GHOSTTY_CONFIG_SIZE = 80;
+ export type TerminalHandle = number;
+ 
+ /**
+- * Cell structure matching ghostty_cell_t in C (16 bytes)
++ * Cell structure matching ghostty_cell_t in C (20 bytes)
+  */
+ export interface GhosttyCell {
+   codepoint: number; // u32 (Unicode codepoint - first codepoint of grapheme)
+@@ -550,6 +561,11 @@ export interface GhosttyCell {
    width: number; // u8 (character width: 1=normal, 2=wide, etc.)
    hyperlink_id: number; // u16 (0 = no link, >0 = hyperlink ID in set)
    grapheme_len: number; // u8 (number of extra codepoints beyond first)
 +  underline_style: number; // u8 at byte 15: none=0, single=1, double=2, curly=3, dotted=4, dashed=5
++  underline_r: number; // u8 at byte 16: resolved underline RGB
++  underline_g: number;
++  underline_b: number;
++  underline_present: number; // u8 at byte 19: 0=absent, 1=explicit (including black)
  }
  
  /**
 diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
+index 03cad70..17769d9 100644
 --- a/patches/ghostty-wasm-api.patch
 +++ b/patches/ghostty-wasm-api.patch
 @@ -1,14 +1,12 @@
@@ -241,7 +289,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- a/include/ghostty/vt.h
  +++ b/include/ghostty/vt.h
  @@ -28,6 +28,7 @@
-@@ -19,7 +17,7 @@
+@@ -19,7 +17,7 @@ index 4f8fef88e..ca9fb1d4d 100644
    * - @ref key "Key Encoding" - Encode key events into terminal sequences
    * - @ref osc "OSC Parser" - Parse OSC (Operating System Command) sequences
    * - @ref sgr "SGR Parser" - Parse SGR (Select Graphic Rendition) sequences
@@ -250,28 +298,40 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   
   #include <ghostty/vt/result.h>
   #include <ghostty/vt/allocator.h>
-@@ -29,10 +27,9 @@
+@@ -29,10 +27,10 @@ index 4f8fef88e..ca9fb1d4d 100644
   #include <ghostty/vt/key.h>
  diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
  new file mode 100644
 -index 000000000..298ad36c1
++index 0000000..cae608a
  --- /dev/null
  +++ b/include/ghostty/vt/terminal.h
 -@@ -0,0 +1,249 @@
-+@@ -0,0 +1,290 @@
++@@ -0,0 +1,292 @@
  +/**
  + * @file terminal.h
  + *
-@@ -93,7 +90,7 @@
+@@ -84,7 +82,7 @@ index 000000000..298ad36c1
+ +    uint32_t palette[16];
+ +} GhosttyTerminalConfig;
+ +
+-+/** Cell structure - 16 bytes, pre-resolved colors */
+++/** Cell structure - 20 bytes, pre-resolved colors; existing fields retain offsets 0-15 */
+ +typedef struct {
+ +    uint32_t codepoint;
+ +    uint8_t fg_r, fg_g, fg_b;
+@@ -93,7 +91,9 @@ index 000000000..298ad36c1
  +    uint8_t width;
  +    uint16_t hyperlink_id;
  +    uint8_t grapheme_len;  /* Number of extra codepoints beyond first (0 = no grapheme) */
 -+    uint8_t _pad;
 ++    uint8_t underline_style; /* 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed */
+++    uint8_t underline_r, underline_g, underline_b; /* Resolved underline RGB at bytes 16-18 */
+++    uint8_t underline_present; /* Byte 19: 0=absent, 1=explicit (including black) */
  +} GhosttyCell;
  +
  +/** Cell flags */
-@@ -197,6 +194,20 @@
+@@ -197,6 +197,20 @@ index 000000000..298ad36c1
  +    size_t buffer_size
  +);
  +
@@ -280,7 +340,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 ++ * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
 ++ * The caller must copy those bytes before another engine call.
 ++ * Returns -1 on error, 0 for no link, 1 for a link (including an empty URI).
-++ * GhosttyCell's 16-byte ABI and hyperlink presence bit are unchanged.
+++ * GhosttyCell's hyperlink_id offset and hyperlink presence bit are unchanged.
 ++ */
 ++int ghostty_render_state_get_hyperlink(
 ++    GhosttyTerminal term,
@@ -292,7 +352,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Terminal Modes
  + * ========================================================================= */
-@@ -215,6 +226,16 @@
+@@ -215,6 +229,16 @@ index 000000000..298ad36c1
  + */
  +bool ghostty_terminal_get_mode(GhosttyTerminal term, int mode, bool is_ansi);
  +
@@ -309,7 +369,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Scrollback API
  + * ========================================================================= */
-@@ -223,6 +244,23 @@
+@@ -223,6 +247,23 @@ index 000000000..298ad36c1
  +int ghostty_terminal_get_scrollback_length(GhosttyTerminal term);
  +
  +/**
@@ -333,7 +393,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  + * Get a line from the scrollback buffer.
  + * @param offset 0 = oldest line, (length-1) = most recent scrollback line
  + * @param out_buffer Buffer to write cells to
-@@ -283,10 +321,9 @@
+@@ -283,10 +324,9 @@ index 000000000..298ad36c1
  +
  +#endif /* GHOSTTY_VT_TERMINAL_H */
  diff --git a/src/lib_vt.zig b/src/lib_vt.zig
@@ -345,7 +405,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
           @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
           @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
           @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
-@@ -310,14 +347,18 @@
+@@ -310,14 +350,18 @@ index 03a883e20..f07bbd759 100644
  +        @export(&c.render_state_mark_clean, .{ .name = "ghostty_render_state_mark_clean" });
  +        @export(&c.render_state_get_viewport, .{ .name = "ghostty_render_state_get_viewport" });
  +        @export(&c.render_state_get_grapheme, .{ .name = "ghostty_render_state_get_grapheme" });
@@ -364,7 +424,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        @export(&c.terminal_get_scrollback_line, .{ .name = "ghostty_terminal_get_scrollback_line" });
  +        @export(&c.terminal_get_scrollback_grapheme, .{ .name = "ghostty_terminal_get_scrollback_grapheme" });
  +        @export(&c.terminal_is_row_wrapped, .{ .name = "ghostty_terminal_is_row_wrapped" });
-@@ -329,10 +370,9 @@
+@@ -329,10 +373,9 @@ index 03a883e20..f07bbd759 100644
           // On Wasm we need to export our allocator convenience functions.
           if (builtin.target.cpu.arch.isWasm()) {
  diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
@@ -376,7 +436,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   pub const key_encode = @import("key_encode.zig");
   pub const paste = @import("paste.zig");
   pub const sgr = @import("sgr.zig");
-@@ -340,7 +380,7 @@
+@@ -340,7 +383,7 @@ index bc92597f5..18503933f 100644
   
   // The full C API, unexported.
   pub const osc_new = osc.new;
@@ -385,7 +445,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   
   pub const paste_is_safe = paste.is_safe;
   
-@@ -364,14 +404,18 @@
+@@ -364,14 +407,18 @@ index bc92597f5..18503933f 100644
  +pub const render_state_mark_clean = terminal.renderStateMarkClean;
  +pub const render_state_get_viewport = terminal.renderStateGetViewport;
  +pub const render_state_get_grapheme = terminal.renderStateGetGrapheme;
@@ -404,7 +464,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +pub const terminal_get_scrollback_line = terminal.getScrollbackLine;
  +pub const terminal_get_scrollback_grapheme = terminal.getScrollbackGrapheme;
  +pub const terminal_is_row_wrapped = terminal.isRowWrapped;
-@@ -383,7 +427,7 @@
+@@ -383,7 +430,7 @@ index bc92597f5..18503933f 100644
   test {
       _ = color;
       _ = osc;
@@ -413,19 +473,20 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
       _ = key_encode;
       _ = paste;
       _ = sgr;
-@@ -393,10 +437,9 @@
+@@ -393,10 +440,10 @@ index bc92597f5..18503933f 100644
       _ = @import("../../lib/allocator.zig");
  diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
  new file mode 100644
 -index 000000000..d57b4e405
++index 0000000..8179c38
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1240 @@
++@@ -0,0 +1,1254 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
-@@ -426,6 +469,9 @@
+@@ -426,6 +473,9 @@ index 000000000..d57b4e405
  +const point = @import("../point.zig");
  +const Style = @import("../style.zig").Style;
  +const device_status = @import("../device_status.zig");
@@ -435,7 +496,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +const log = std.log.scoped(.terminal_c);
  +
-@@ -435,17 +481,25 @@
+@@ -435,17 +485,25 @@ index 000000000..d57b4e405
  +    alloc: Allocator,
  +    terminal: *Terminal,
  +    response_buffer: *std.ArrayList(u8),
@@ -464,7 +525,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    }
  +
  +    pub fn vt(
-@@ -561,7 +615,10 @@
+@@ -561,7 +619,10 @@ index 000000000..d57b4e405
  +            },
  +            .active_status_display => self.terminal.status_display = value,
  +            .decaln => try self.terminal.decaln(),
@@ -476,7 +537,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
  +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
  +            .prompt_start => {
-@@ -575,33 +632,168 @@
+@@ -575,33 +636,168 @@ index 000000000..d57b4e405
  +            .mouse_shape => self.terminal.mouse_shape = value,
  +            .color_operation => try self.colorOperation(value.op, &value.requests),
  +            .kitty_color_report => try self.kittyColorOperation(value),
@@ -655,7 +716,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    fn handleDeviceStatus(self: *ResponseHandler, req: device_status.Request) !void {
  +        switch (req) {
  +            .operating_status => {
-@@ -700,6 +892,8 @@
+@@ -700,11 +896,13 @@ index 000000000..d57b4e405
  +    render_state: RenderState,
  +    /// Response buffer for DSR and other query responses
  +    response_buffer: std.ArrayList(u8),
@@ -664,16 +725,26 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    /// Track alternate screen state to detect screen switches
  +    last_screen_is_alternate: bool = false,
  +};
-@@ -717,7 +911,7 @@
+ +
+-+/// C-compatible cell structure (16 bytes)
+++/// C-compatible cell structure (20 bytes; existing fields retain offsets 0-15)
+ +pub const GhosttyCell = extern struct {
+ +    codepoint: u32,
+ +    fg_r: u8,
+@@ -717,7 +915,11 @@ index 000000000..d57b4e405
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
 -+    _pad: u8 = 0,
 ++    underline_style: u8 = 0,
+++    underline_r: u8 = 0,
+++    underline_g: u8 = 0,
+++    underline_b: u8 = 0,
+++    underline_present: u8 = 0,
  +};
  +
  +/// Dirty state
-@@ -812,11 +1006,12 @@
+@@ -812,11 +1014,12 @@ index 000000000..d57b4e405
  +        return null;
  +    };
  +
@@ -689,7 +760,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +    // Initialize stream with the handler
  +    wrapper.stream = ResponseStream.init(wrapper.handler);
-@@ -828,6 +1023,7 @@
+@@ -828,6 +1031,7 @@ index 000000000..d57b4e405
  +        .stream = wrapper.stream,
  +        .render_state = RenderState.empty,
  +        .response_buffer = wrapper.response_buffer,
@@ -697,7 +768,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    };
  +
  +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
-@@ -847,6 +1043,7 @@
+@@ -847,6 +1051,7 @@ index 000000000..d57b4e405
  +    const alloc = wrapper.alloc;
  +    wrapper.stream.deinit();
  +    wrapper.response_buffer.deinit(alloc);
@@ -705,15 +776,27 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    wrapper.render_state.deinit(alloc);
  +    wrapper.terminal.deinit(alloc);
  +    alloc.destroy(wrapper);
-@@ -1072,6 +1269,7 @@
+@@ -1038,6 +1243,7 @@ index 000000000..d57b4e405
+ +                .rgb => |rgb| rgb,
+ +            };
+ +            const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
+++            const underline_color = sty.underlineColor(&rs.colors.palette);
+ +
+ +            // Build flags
+ +            var flags: u8 = 0;
+@@ -1072,6 +1278,11 @@ index 000000000..d57b4e405
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
 ++                .underline_style = @intFromEnum(sty.flags.underline),
+++                .underline_r = if (underline_color) |rgb| rgb.r else 0,
+++                .underline_g = if (underline_color) |rgb| rgb.g else 0,
+++                .underline_b = if (underline_color) |rgb| rgb.b else 0,
+++                .underline_present = @intFromBool(underline_color != null),
  +            };
  +            idx += 1;
  +        }
-@@ -1130,6 +1328,43 @@
+@@ -1130,6 +1341,43 @@ index 000000000..d57b4e405
  +    return @intCast(count);
  +}
  +
@@ -757,7 +840,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Terminal Modes (minimal set for compatibility)
  +// ============================================================================
-@@ -1154,6 +1389,22 @@
+@@ -1154,6 +1402,22 @@ index 000000000..d57b4e405
  +    return wrapper.terminal.modes.get(mode);
  +}
  +
@@ -780,7 +863,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Scrollback API
  +// ============================================================================
-@@ -1168,6 +1419,33 @@
+@@ -1168,6 +1432,33 @@ index 000000000..d57b4e405
  +    return @intCast(pages.total_rows - pages.rows);
  +}
  +
@@ -814,15 +897,27 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/// Get a line from the scrollback buffer
  +/// offset 0 = oldest line in scrollback, offset (length-1) = most recent scrollback line
  +/// Returns number of cells written, or -1 on error
-@@ -1264,6 +1542,7 @@
+@@ -1230,6 +1521,7 @@ index 000000000..d57b4e405
+ +            .rgb => |rgb| rgb,
+ +        };
+ +        const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
+++        const underline_color = sty.underlineColor(&rs.colors.palette);
+ +        
+ +        // Build flags
+ +        var flags: u8 = 0;
+@@ -1264,6 +1556,11 @@ index 000000000..d57b4e405
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
 ++            .underline_style = @intFromEnum(sty.flags.underline),
+++            .underline_r = if (underline_color) |rgb| rgb.r else 0,
+++            .underline_g = if (underline_color) |rgb| rgb.g else 0,
+++            .underline_b = if (underline_color) |rgb| rgb.b else 0,
+++            .underline_present = @intFromBool(underline_color != null),
  +        };
  +    }
  +    return @intCast(cols);
-@@ -1402,10 +1681,9 @@
+@@ -1402,10 +1699,9 @@ index 000000000..d57b4e405
  +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
  +}
  diff --git a/src/terminal/render.zig b/src/terminal/render.zig

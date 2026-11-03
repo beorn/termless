@@ -590,6 +590,32 @@ describe("ghostty backend", () => {
       check()
     })
 
+    // @failure The paired cell ABI omits colour, confuses explicit black with absence, or loses it in history.
+    // @level l0 @consumer Cell.underlineColor; the existing style tests never inspect underline colour.
+    test("preserves resolved underline colour and absence in viewport, reused cells and history", () => {
+      backend = createBackend(12, 2)
+      feedText(backend, "\x1b[1;3;4m\x1b[59mA\x1b[58;2;255;0;128mB\x1b[58;2;0;0;0mC\x1b[59mD\x1b[58;5;4mE\x1b[38;5;4mF")
+      const check = () => {
+        const cells = Array.from({ length: 6 }, (_, col) => backend.getCell(0, col))
+        expect(cells.map((cell) => cell.char).join("")).toBe("ABCDEF")
+        for (const cell of cells) expect(cell).toMatchObject({ bold: true, italic: true, underline: "single" })
+        expect(cells[0]!.underlineColor).toBeNull()
+        expect(cells[1]!.underlineColor).toEqual({ r: 255, g: 0, b: 128 })
+        expect(cells[2]!.underlineColor).toEqual({ r: 0, g: 0, b: 0 })
+        expect(cells[3]!.underlineColor).toBeNull()
+        expect(cells[5]!.fg).not.toBeNull()
+        expect(cells[4]!.underlineColor).toEqual(cells[5]!.fg)
+      }
+      check()
+      feedText(backend, "\x1b[1;7H\x1b[58;2;3;2;1mG")
+      expect(backend.getCell(0, 6).underlineColor).toEqual({ r: 3, g: 2, b: 1 })
+      feedText(backend, "\x1b[1;7H\x1b[59mH")
+      expect(backend.getCell(0, 6).underlineColor).toBeNull()
+      feedText(backend, "\r\nZ\r\nW")
+      expect(backend.getScrollback().totalRows).toBeGreaterThan(2)
+      check()
+    })
+
     test("detects strikethrough", () => {
       backend = createBackend()
       feedText(backend, "\x1b[9mStrike\x1b[0m")

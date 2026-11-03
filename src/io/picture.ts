@@ -32,6 +32,7 @@ export interface Cell {
   /** null = this producer does not report the attribute; never a terminal-support claim. */
   italic: boolean | null
   underline: UnderlineStyle
+  /** Resolved RGB, including palette selections; null when no explicit underline colour is exposed. */
   underlineColor: Color | null
   /** null = this producer does not report the attribute; never a terminal-support claim. */
   strikethrough: boolean | null
