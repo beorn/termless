@@ -81,6 +81,7 @@ interface WeztermTerminal {
   getCursor(): NapiCursor
   getMode(mode: string): boolean | null
   getTitle(): string
+  getIconLabel(): string
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
   /** Read pending response data (DA1/DA2/DSR/DECRPM/window-ops). Returns null if no responses pending. */
@@ -387,6 +388,7 @@ export function createWeztermBackend(
     getCursor,
     getMode,
     getTitle,
+    getIconLabel: () => ensureTerm().getIconLabel(),
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

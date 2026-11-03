@@ -22,7 +22,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "29b9bdea778abe558497217e811495c3c279451f",
+      blobOid: "3234af7045bad6fbd9bf44db65260e5965fbd80e",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
@@ -37,7 +37,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "b4155bfdef040ae8b3b723a4366fa8ec7f278463dbef577ec4730ad152b8bf07",
+      sha256: "fbb1ac47ff22bb7a526a8c8c861d5ad5c137bda770f25f31ad7c451f176c3c5f",
     },
   },
 } as const

@@ -565,20 +565,43 @@ describe.skipIf(nativeBuildError !== null)(
         expect(text.trim()).toBe("")
       })
 
-      test("clears title", () => {
-        backend.feed(encode("\x1b]2;My Title\x07"))
+      // Reset must clear engine state too: a cache-only clear resurrects titles on the next feed.
+      test("clears independent titles through the next feed", () => {
+        backend.feed(encode("\x1b]2;My Title\x07\x1b]1;My Icon\x07"))
         expect(backend.getTitle()).toBe("My Title")
+        expect(backend.getIconLabel?.()).toBe("My Icon")
         backend.reset()
+        backend.feed(encode("x"))
         expect(backend.getTitle()).toBe("")
+        expect(backend.getIconLabel?.()).toBe("")
       })
     })
 
     // ── Title ──
 
     describe("title", () => {
-      test("OSC 2 sets title", () => {
-        backend.feed(encode("\x1b]2;Hello World\x07"))
-        expect(backend.getTitle()).toBe("Hello World")
+      // OSC2-only tests miss the engine effective-title getter collapsing OSC1 and OSC2.
+      test("OSC 0/1/2 retain independent UTF-8, empty and instance-local titles", () => {
+        backend.feed(encode("\x1b]2;actual-window\x07\x1b]1;actual-icon\x07"))
+        expect(backend.getTitle()).toBe("actual-window")
+        expect(backend.getIconLabel?.()).toBe("actual-icon")
+        backend.feed(encode("\x1b]2;窓 é\x1b\\"))
+        expect(backend.getTitle()).toBe("窓 é")
+        expect(backend.getIconLabel?.()).toBe("actual-icon")
+        backend.feed(encode("\x1b]1;\x07"))
+        expect(backend.getIconLabel?.()).toBe("")
+        expect(backend.getTitle()).toBe("窓 é")
+        backend.feed(encode("\x1b]0;shared 窓\x07"))
+        expect(backend.getTitle()).toBe("shared 窓")
+        expect(backend.getIconLabel?.()).toBe("shared 窓")
+        const other = createWeztermBackend()
+        other.init({ cols: 30, rows: 4 })
+        try {
+          expect(other.getTitle()).toBe("")
+          expect(other.getIconLabel?.()).toBe("")
+        } finally {
+          other.destroy()
+        }
       })
     })
 
