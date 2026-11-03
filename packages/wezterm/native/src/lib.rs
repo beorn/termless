@@ -415,6 +415,7 @@ impl WeztermTerminal {
             "altScreen" => Some(self.term.is_alt_screen_active()),
             "cursorVisible" => Some(self.term.cursor_pos().visibility == CursorVisibility::Visible),
             "bracketedPaste" => Some(self.term.bracketed_paste_enabled()),
+            "applicationCursor" => Some(self.term.application_cursor_keys_enabled()),
             "mouseTracking" => Some(self.term.is_mouse_grabbed()),
             "reverseVideo" => Some(self.term.get_reverse_video()),
             _ => None,

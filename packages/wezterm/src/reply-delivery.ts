@@ -6,13 +6,14 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // the TypeScript feed then drains the whole buffer into onResponse (src/backend.ts feed). Re-audited when the pixel
 // geometry reached the native constructor and resize, and again when its check moved to src/terminal/types.ts
 // declaredPixelGeometry, neither of which touches that path; bound to the native artifact built
-// from these sources (Cargo.lock sha256 8eaeab73), whose build receipt names the source commit.
+// from these sources, whose build receipt names the source commit and Cargo.lock digest.
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // Re-audited for owned OSC 8 URI readback: the existing synchronous reply path is unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // Re-audited for absolute retained-row readback and enumeration: feed/response delivery is unchanged.
 // Re-audited for stored overline cell/empty-cell projection: feed/response delivery is unchanged.
+// Re-audited for the readonly DECCKM getter and maintained Cargo source: feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -26,7 +27,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "47dc0392036f34416fb6a38e9a834a7fccc8cfe3",
+      blobOid: "f020988ef5ecc4f124d6468f7ba66e1c3a4cc6d3",
     },
     {
       path: "src/load-native.ts",

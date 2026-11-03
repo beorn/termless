@@ -4,13 +4,19 @@ version = "0.1.0"
 edition = "2021"
 description = "napi-rs bindings for wezterm-term (tattoy fork)"
 
+[package.metadata.termless]
+sourceKind = "local-vendored-patch"
+baseCrate = "tattoy-wezterm-term"
+baseVersion = "0.1.0-fork.5"
+baseArchiveSha256 = "7f3678674adc87f210ec01e2134e1972d6b0bd194bf82242f7e7beee3ae9dbd8"
+
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
 napi = { version = "3", features = ["napi8"] }
 napi-derive = "3"
-tattoy-wezterm-term = "=0.1.0-fork.5"
+tattoy-wezterm-term = { version = "=0.1.0-fork.5", path = "vendor/tattoy-wezterm-term" }
 tattoy-wezterm-surface = { version = "=0.1.0-fork.2", features = ["std"] }
 
 [build-dependencies]
