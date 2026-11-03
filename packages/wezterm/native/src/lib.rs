@@ -4,7 +4,9 @@ use std::io::Write;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
-use tattoy_wezterm_term::{color::ColorPalette, Terminal, TerminalConfiguration, TerminalSize};
+use tattoy_wezterm_term::{
+    color::ColorPalette, Alert, AlertHandler, Terminal, TerminalConfiguration, TerminalSize,
+};
 
 struct ResponseBufferState {
     buf: Vec<u8>,
@@ -130,6 +132,35 @@ pub struct NapiScrollback {
 // Terminal wrapper
 // ═══════════════════════════════════════════════════════
 
+#[derive(Default)]
+struct TitleState {
+    window: String,
+    icon: String,
+}
+
+#[derive(Clone, Default)]
+struct TitleObserver(Arc<Mutex<TitleState>>);
+
+impl AlertHandler for TitleObserver {
+    fn alert(&mut self, alert: Alert) {
+        match alert {
+            Alert::WindowTitleChanged(title) => {
+                self.0
+                    .lock()
+                    .expect("wezterm title observer mutex poisoned")
+                    .window = title;
+            }
+            Alert::IconTitleChanged(title) => {
+                self.0
+                    .lock()
+                    .expect("wezterm title observer mutex poisoned")
+                    .icon = title.unwrap_or_default();
+            }
+            _ => {}
+        }
+    }
+}
+
 #[napi]
 pub struct WeztermTerminal {
     term: Terminal,
@@ -139,7 +170,7 @@ pub struct WeztermTerminal {
     rows: usize,
     cell_width: usize,
     cell_height: usize,
-    title: String,
+    titles: TitleObserver,
 }
 
 /// wezterm-term reads pixel_width/pixel_height as the text area: CSI 14 t and XTSMGRAPHICS report them as-is, CSI 16 t
@@ -172,13 +203,15 @@ impl WeztermTerminal {
 
         let config = Arc::new(HeadlessConfig { scrollback });
         let writer = SharedWriter::new();
-        let term = Terminal::new(
+        let mut term = Terminal::new(
             terminal_size(cols, rows, cell_width, cell_height),
             config,
             "termless-wezterm",
             "0.1.0",
             Box::new(writer.clone()),
         );
+        let titles = TitleObserver::default();
+        term.set_notification_handler(Box::new(titles.clone()));
 
         WeztermTerminal {
             term,
@@ -188,7 +221,7 @@ impl WeztermTerminal {
             rows,
             cell_width,
             cell_height,
-            title: String::new(),
+            titles,
         }
     }
 
@@ -239,8 +272,6 @@ impl WeztermTerminal {
         let bytes = data.as_ref();
         self.term.advance_bytes(bytes);
         self.sync_responses()?;
-        // Capture title from terminal state
-        self.title = self.term.get_title().to_string();
         Ok(())
     }
 
@@ -248,20 +279,25 @@ impl WeztermTerminal {
     pub fn resize(&mut self, cols: u32, rows: u32) {
         self.cols = cols as usize;
         self.rows = rows as usize;
-        self.term.resize(terminal_size(self.cols, self.rows, self.cell_width, self.cell_height));
+        self.term.resize(terminal_size(
+            self.cols,
+            self.rows,
+            self.cell_width,
+            self.cell_height,
+        ));
     }
 
     #[napi]
     pub fn reset(&mut self) -> Result<()> {
-        // Feed RIS escape sequence
-        self.term.advance_bytes(b"\x1bc");
+        // The backend reset contract clears titles. RIS alone preserves them in
+        // WezTerm, so clear both through the engine's real OSC0 notifications.
+        self.term.advance_bytes(b"\x1bc\x1b]0;\x07");
         self.sync_responses()?;
         let (lock, _) = &*self.writer.inner;
         let mut state = lock
             .lock()
             .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
         state.buf.clear();
-        self.title.clear();
         Ok(())
     }
 
@@ -435,8 +471,23 @@ impl WeztermTerminal {
     }
 
     #[napi]
-    pub fn get_title(&self) -> String {
-        self.title.clone()
+    pub fn get_title(&self) -> Result<String> {
+        let state = self
+            .titles
+            .0
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm title observer mutex poisoned"))?;
+        Ok(state.window.clone())
+    }
+
+    #[napi]
+    pub fn get_icon_label(&self) -> Result<String> {
+        let state = self
+            .titles
+            .0
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm title observer mutex poisoned"))?;
+        Ok(state.icon.clone())
     }
 
     #[napi]
