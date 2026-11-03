@@ -431,14 +431,20 @@ describe.skipIf(nativeBuildError !== null)(
       })
 
       // Existing mode tests require null, so they miss delivery of the real engine DECCKM getter.
-      test("reads application cursor state through set, reset, DECSTR, RIS and isolated instances", () => {
+      test("reads application cursor state through fragmented set, reset, DECSTR, RIS and isolated instances", () => {
         const other = createWeztermBackend()
         other.init({ cols: 80, rows: 24 })
         try {
           expect(backend.getMode("applicationCursor")).toBe(false)
           expect(other.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("\x1b[?"))
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("1"))
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("h"))
+          expect(backend.getMode("applicationCursor")).toBe(true)
+          expect(other.getMode("applicationCursor")).toBe(false)
           for (const [bytes, enabled] of [
-            ["\x1b[?1h", true],
             ["\x1b[?1l", false],
             ["\x1b[?1h", true],
             ["\x1b[!p", false],
