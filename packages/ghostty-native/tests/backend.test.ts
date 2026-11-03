@@ -1,5 +1,5 @@
 /**
- * @failure Ghostty native readback drops stored URI/style metadata or fabricates unset default colors.
+ * @failure Ghostty native readback drops title/URI/style metadata or fabricates unset default colors.
  * @level l0
  * @consumer Termless Ghostty native backend cell observations.
  * @testonly none
@@ -19,6 +19,30 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Cell and style readback cannot catch an engine title event dropped by the embedding.
+    test.each([
+      { name: "inert control", steps: [{ data: "X", title: "" }] },
+      { name: "OSC 2 title", steps: [{ data: "\x1b]2;terminfo-title-control\x07X", title: "terminfo-title-control" }] },
+      {
+        name: "replacement title",
+        steps: [
+          { data: "\x1b]2;first-title\x07", title: "first-title" },
+          { data: "\x1b]2;second-title\x07X", title: "second-title" },
+        ],
+      },
+    ])("reads the engine window title: $name", ({ steps }) => {
+      const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
+      try {
+        for (const step of steps) {
+          backend.feed(new TextEncoder().encode(step.data))
+          expect(backend.getTitle()).toBe(step.title)
+        }
+        expect(backend.getCell(0, 0).char).toBe("X")
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("native unknown mode readback is null rather than a measured false", () => {
       const native = loadGhosttyNative()
       const handle = native.createTerminal(20, 3, 0)

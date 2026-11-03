@@ -37,6 +37,7 @@ const allocator = gpa.allocator();
 /// the answers that need app state a headless terminal lacks (DA, XTVERSION, color scheme, clipboard).
 const ResponseHandler = struct {
     readonly: ReadonlyHandler,
+    title: *[]const u8,
     /// Reply bytes not yet read by `readResponse`, in stream order.
     pending: std.ArrayList(u8) = .empty,
     /// The bytes handed to JS by the last `readResponse`; valid until the next read.
@@ -55,6 +56,12 @@ const ResponseHandler = struct {
     ) !void {
         const terminal = self.readonly.terminal;
         switch (action) {
+            .window_title => {
+                // The engine validates and emits this title; never parse OSC bytes here.
+                const title = try allocator.dupe(u8, value.title);
+                allocator.free(self.title.*);
+                self.title.* = title;
+            },
             .request_mode => {
                 const tag: modes.ModeTag = @bitCast(@intFromEnum(value.mode));
                 const code: u8 = if (terminal.modes.get(value.mode)) 1 else 2;
@@ -138,10 +145,10 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     }) catch return error.TerminalCreationFailed;
     errdefer handle.terminal.deinit(allocator);
 
-    handle.stream = .initAlloc(allocator, .{ .readonly = handle.terminal.vtHandler() });
+    handle.title = "";
+    handle.stream = .initAlloc(allocator, .{ .readonly = handle.terminal.vtHandler(), .title = &handle.title });
     handle.cols = cols;
     handle.rows = rows;
-    handle.title = "";
 
     return handle;
 }
@@ -157,7 +164,7 @@ fn destroyTerminal(handle: *TerminalHandle) void {
 
 // ─── Feed / resize / reset ──────────────────────────────
 
-fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_value) void {
+fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_value) !void {
     // Accept both strings and Uint8Array/Buffer from JS.
     // Terminal data is raw bytes (escape sequences + UTF-8 text).
     const napi = napigen.napi;
@@ -168,7 +175,7 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     var data_len: usize = 0;
     if (napi.napi_get_buffer_info(env, data_val, @ptrCast(&data_ptr), &data_len) == napi.napi_ok) {
         if (data_ptr) |ptr| {
-            handle.stream.nextSlice(ptr[0..data_len]) catch {};
+            try handle.stream.nextSlice(ptr[0..data_len]);
             return;
         }
     }
@@ -182,14 +189,14 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     if (napi.napi_get_typedarray_info(env, data_val, &typed_type, &typed_len, &typed_data, &typed_buf, &typed_offset) == napi.napi_ok) {
         if (typed_data) |ptr| {
             const bytes: [*]u8 = @ptrCast(ptr);
-            handle.stream.nextSlice(bytes[0..typed_len]) catch {};
+            try handle.stream.nextSlice(bytes[0..typed_len]);
             return;
         }
     }
 
     // Fall back to string
-    const str = js.readString(data_val) catch return;
-    handle.stream.nextSlice(str) catch {};
+    const str = try js.readString(data_val);
+    try handle.stream.nextSlice(str);
 }
 
 // ─── Replies ────────────────────────────────────────────
