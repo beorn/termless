@@ -106,6 +106,7 @@ pub struct NapiCell {
     pub strikethrough: bool,
     pub inverse: bool,
     pub blink: bool,
+    pub overline: bool,
     pub wide: bool,
     pub hyperlink: Option<String>,
 }
@@ -497,6 +498,7 @@ fn empty_cell() -> NapiCell {
         strikethrough: false,
         inverse: false,
         blink: false,
+        overline: false,
         wide: false,
         hyperlink: None,
     }
@@ -579,6 +581,7 @@ fn convert_cell(cell: tattoy_wezterm_term::CellRef, palette: &ColorPalette) -> N
         strikethrough: attrs.strikethrough(),
         inverse: attrs.reverse(),
         blink: attrs.blink() != tattoy_wezterm_term::Blink::None,
+        overline: attrs.overline(),
         wide: cell.width() > 1,
         hyperlink: attrs.hyperlink().map(|link| link.uri().to_owned()),
     }

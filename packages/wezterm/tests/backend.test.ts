@@ -242,6 +242,25 @@ describe.skipIf(nativeBuildError !== null)(
         expect(backend.getCell(0, 0).inverse).toBe(true)
       })
 
+      // Existing attribute cases never observe SGR 53/55 overline enable and reset through cell, line and reset readback.
+      test("overline enable and reset across cell, line and terminal reset", () => {
+        backend.feed(encode("A\x1b[53mB\x1b[55mC\x1b[53mD\x1b[0mE"))
+        expect(backend.getCell(0, 0).overline).toBe(false)
+        expect(backend.getCell(0, 1).overline).toBe(true)
+        expect(backend.getCell(0, 2).overline).toBe(false)
+        expect(backend.getCell(0, 3).overline).toBe(true)
+        expect(backend.getCell(0, 4).overline).toBe(false)
+        expect(
+          backend
+            .getLine(0)
+            .slice(0, 5)
+            .map((cell) => cell.overline),
+        ).toEqual([false, true, false, true, false])
+        expect(backend.getCell(99, 99).overline).toBe(false)
+        backend.reset()
+        expect(backend.getCell(0, 1).overline).toBe(false)
+      })
+
       test("combined attributes", () => {
         backend.feed(encode("\x1b[1;3;4mX\x1b[0m"))
         const cell = backend.getCell(0, 0)
