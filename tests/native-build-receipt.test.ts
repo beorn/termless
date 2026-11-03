@@ -59,6 +59,7 @@ test("native receipts distinguish declared local source and preserve registry pr
   }
   expect(write(true, "").status).toBe(0)
   const registry = JSON.parse(readFileSync(`${binary}.receipt.json`, "utf8"))
+  if (typeof registry !== "object" || registry === null) throw new Error("Receipt fixture did not produce an object")
   expect(Object.keys(registry).sort()).toEqual(
     [
       "sha256",
@@ -72,7 +73,7 @@ test("native receipts distinguish declared local source and preserve registry pr
       "upstreamChecksum",
     ].sort(),
   )
-  expect(registry.upstreamChecksum).toBe(checksum)
+  expect(registry).toHaveProperty("upstreamChecksum", checksum)
   const localResult = write(false, localMetadata)
   expect(localResult.status, localResult.stderr).toBe(0)
   const local = JSON.parse(readFileSync(`${binary}.receipt.json`, "utf8"))
@@ -83,8 +84,8 @@ test("native receipts distinguish declared local source and preserve registry pr
     engineVersion: "0.1.0-fork.5",
   })
   expect(local).not.toHaveProperty("upstreamChecksum")
-  expect(local.sourceCommit).toBe(git("rev-parse", "HEAD"))
-  expect(local.nativeTreeOid).toBe(git("rev-parse", "HEAD:packages/wezterm/native"))
+  expect(local).toHaveProperty("sourceCommit", git("rev-parse", "HEAD"))
+  expect(local).toHaveProperty("nativeTreeOid", git("rev-parse", "HEAD:packages/wezterm/native"))
   const registryWithoutChecksum = write(true, localMetadata, false)
   expect(registryWithoutChecksum.status).not.toBe(0)
   expect(registryWithoutChecksum.stderr).toContain("registry checksum")
