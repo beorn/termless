@@ -344,27 +344,47 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
     expect(await probeBackend("\x1b[18t")).toEqual([])
   })
 
-  test("observes native VTERM_PROP_TITLE across OSC 0, OSC 2, fragmented writes, reset, and isolated instances (#31735)", () => {
+  // OSC1 acceptance requires the real icon callback and an independent window title;
+  // the prior title-only assertions could not detect a discarded ICONNAME property.
+  test("observes independent native icon and title properties across fragments, reset, and isolated instances", () => {
     const backend = createLibvtermBackend(undefined, wasmModule!)
     const isolated = createLibvtermBackend(undefined, wasmModule!)
     backend.init({ cols: 40, rows: 4 })
     isolated.init({ cols: 40, rows: 4 })
     try {
       expect(backend.getTitle()).toBe("")
+      expect(backend.getIconLabel?.()).toBe("")
       backend.feed(new TextEncoder().encode("\x1b]0;osc0-title\x07"))
       expect(backend.getTitle()).toBe("osc0-title")
+      expect(backend.getIconLabel?.()).toBe("osc0-title")
       expect(isolated.getTitle()).toBe("")
+      expect(isolated.getIconLabel?.()).toBe("")
 
       backend.feed(new TextEncoder().encode("\x1b]2;osc2-title\x1b\\"))
       expect(backend.getTitle()).toBe("osc2-title")
+      expect(backend.getIconLabel?.()).toBe("osc0-title")
+
+      backend.feed(new TextEncoder().encode("\x1b]1;split-"))
+      backend.feed(new TextEncoder().encode("icon-é世\x07"))
+      expect(backend.getIconLabel?.()).toBe("split-icon-é世")
+      expect(backend.getTitle()).toBe("osc2-title")
+      expect(isolated.getIconLabel?.()).toBe("")
 
       // Split write across two feed() calls exercises VTermStringFragment initial/final accumulation
       backend.feed(new TextEncoder().encode("\x1b]2;split-"))
       backend.feed(new TextEncoder().encode("title-é世\x07"))
       expect(backend.getTitle()).toBe("split-title-é世")
+      expect(backend.getIconLabel?.()).toBe("split-icon-é世")
+      backend.feed(new TextEncoder().encode("\x1b]1;\x07"))
+      expect(backend.getIconLabel?.()).toBe("")
+      expect(backend.getTitle()).toBe("split-title-é世")
 
       backend.reset()
       expect(backend.getTitle()).toBe("")
+      expect(backend.getIconLabel?.()).toBe("")
+      backend.feed(new TextEncoder().encode("\x1b]1;after-reset-icon\x07\x1b]2;after-reset-title\x07"))
+      expect(backend.getIconLabel?.()).toBe("after-reset-icon")
+      expect(backend.getTitle()).toBe("after-reset-title")
     } finally {
       backend.destroy()
       isolated.destroy()

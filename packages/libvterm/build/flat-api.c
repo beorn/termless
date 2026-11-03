@@ -1,6 +1,7 @@
 #include "vterm.h"
 #include "vterm_internal.h"
 #include <stdint.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -129,27 +130,63 @@ void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
 // VTermStringFragment initial/final contract. The callback runs before libvterm
 // stores the property, so read val.
 typedef struct {
-  int32_t visible;
-  int32_t shape;
-  int32_t blink;
-  char *title;
-  size_t title_len;
-  size_t title_cap;
+  char *value;
+  size_t len;
+  size_t cap;
   char *staging;
   size_t staging_len;
   size_t staging_cap;
+} TermlessStringProp;
+
+typedef struct {
+  int32_t visible;
+  int32_t shape;
+  int32_t blink;
+  TermlessStringProp title;
   int32_t reverse; // Appended after the existing title fields (WASM32 byte offset 36).
+  TermlessStringProp icon;
+  int32_t failed;
 } TermlessPropRecord;
 
-static void clear_prop_title(TermlessPropRecord *rec) {
-  free(rec->title);
+_Static_assert(offsetof(TermlessPropRecord, reverse) == 36, "property prefix ABI changed");
+_Static_assert(offsetof(TermlessPropRecord, failed) == 64, "property failure ABI changed");
+_Static_assert(sizeof(TermlessPropRecord) == 68, "property record ABI changed");
+
+static void clear_string_prop(TermlessStringProp *rec) {
+  free(rec->value);
   free(rec->staging);
-  rec->title = NULL;
-  rec->title_len = 0;
-  rec->title_cap = 0;
-  rec->staging = NULL;
-  rec->staging_len = 0;
-  rec->staging_cap = 0;
+  memset(rec, 0, sizeof(*rec));
+}
+
+static int observe_string_prop(TermlessStringProp *rec, VTermStringFragment frag) {
+  if (frag.initial) rec->staging_len = 0;
+  if (frag.len > SIZE_MAX - rec->staging_len - 1) return 0;
+  size_t needed = rec->staging_len + frag.len;
+  if (needed > rec->staging_cap) {
+    size_t cap = rec->staging_cap ? rec->staging_cap : 64;
+    while (cap < needed) {
+      if (cap > SIZE_MAX / 2) { cap = needed; break; }
+      cap *= 2;
+    }
+    char *grown = realloc(rec->staging, cap);
+    if (!grown) return 0;
+    rec->staging = grown;
+    rec->staging_cap = cap;
+  }
+  if (frag.len) memcpy(rec->staging + rec->staging_len, frag.str, frag.len);
+  rec->staging_len = needed;
+  if (frag.final) {
+    if (needed + 1 > rec->cap) {
+      char *grown = realloc(rec->value, needed + 1);
+      if (!grown) return 0;
+      rec->value = grown;
+      rec->cap = needed + 1;
+    }
+    if (needed) memcpy(rec->value, rec->staging, needed);
+    rec->value[needed] = '\0';
+    rec->len = needed;
+  }
+  return 1;
 }
 
 static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
@@ -159,36 +196,11 @@ static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
     case VTERM_PROP_CURSORSHAPE: rec->shape = val->number; break;
     case VTERM_PROP_CURSORBLINK: rec->blink = val->boolean; break;
     case VTERM_PROP_REVERSE: rec->reverse = val->boolean; break;
-    case VTERM_PROP_TITLE: {
-      VTermStringFragment frag = val->string;
-      if (frag.initial) rec->staging_len = 0;
-      if (frag.len > 0) {
-        size_t needed = rec->staging_len + frag.len;
-        if (needed > rec->staging_cap) {
-          size_t cap = rec->staging_cap ? rec->staging_cap : 64;
-          while (cap < needed) cap *= 2;
-          char *grown = realloc(rec->staging, cap);
-          if (!grown) return 1;
-          rec->staging = grown;
-          rec->staging_cap = cap;
-        }
-        memcpy(rec->staging + rec->staging_len, frag.str, frag.len);
-        rec->staging_len = needed;
-      }
-      if (frag.final) {
-        size_t needed = rec->staging_len + 1;
-        if (needed > rec->title_cap) {
-          char *grown = realloc(rec->title, needed);
-          if (!grown) return 1;
-          rec->title = grown;
-          rec->title_cap = needed;
-        }
-        if (rec->staging_len > 0) memcpy(rec->title, rec->staging, rec->staging_len);
-        rec->title[rec->staging_len] = '\0';
-        rec->title_len = rec->staging_len;
-      }
+    case VTERM_PROP_TITLE:
+    case VTERM_PROP_ICONNAME:
+      if (!rec->failed && !observe_string_prop(
+          prop == VTERM_PROP_TITLE ? &rec->title : &rec->icon, val->string)) rec->failed = 1;
       break;
-    }
     default: break;
   }
   // Returning zero would veto native property storage, including properties
@@ -209,20 +221,32 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
   } else if (screen) {
     vterm_screen_set_callbacks(screen, NULL, NULL);
   } else if (record) {
-    clear_prop_title((TermlessPropRecord *)record);
+    TermlessPropRecord *rec = (TermlessPropRecord *)record;
+    clear_string_prop(&rec->title);
+    clear_string_prop(&rec->icon);
+    rec->failed = 0;
   }
 }
 
 const char *termless_vterm_screen_get_title(const int32_t *record) {
   if (!record) return "";
   const TermlessPropRecord *rec = (const TermlessPropRecord *)record;
-  return rec->title ? rec->title : "";
+  return rec->title.value ? rec->title.value : "";
 }
 
 int termless_vterm_screen_get_title_len(const int32_t *record) {
   if (!record) return 0;
   const TermlessPropRecord *rec = (const TermlessPropRecord *)record;
-  return (int)rec->title_len;
+  return (int)rec->title.len;
+}
+
+const char *termless_vterm_screen_get_icon(const int32_t *record) {
+  const TermlessPropRecord *rec = (const TermlessPropRecord *)record;
+  return rec->icon.value ? rec->icon.value : "";
+}
+
+int termless_vterm_screen_get_icon_len(const int32_t *record) {
+  return (int)((const TermlessPropRecord *)record)->icon.len;
 }
 
 // Emscripten cwrap accepts scalar arguments; libvterm's cell/text APIs take

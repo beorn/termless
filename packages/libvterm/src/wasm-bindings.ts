@@ -34,6 +34,8 @@ export interface LibvtermModule {
   termless_vterm_screen_observe_props(screen: number, record: number): void
   termless_vterm_screen_get_title(record: number): number
   termless_vterm_screen_get_title_len(record: number): number
+  termless_vterm_screen_get_icon(record: number): number
+  termless_vterm_screen_get_icon_len(record: number): number
   vterm_screen_get_cell(screen: number, row: number, col: number, cellPtr: number): number
   vterm_screen_get_text(
     screen: number,
@@ -138,6 +140,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     ])
     module.termless_vterm_screen_get_title = cwrap("termless_vterm_screen_get_title", "number", ["number"])
     module.termless_vterm_screen_get_title_len = cwrap("termless_vterm_screen_get_title_len", "number", ["number"])
+    module.termless_vterm_screen_get_icon = cwrap("termless_vterm_screen_get_icon", "number", ["number"])
+    module.termless_vterm_screen_get_icon_len = cwrap("termless_vterm_screen_get_icon_len", "number", ["number"])
     module.vterm_screen_get_cell = cwrap("termless_vterm_screen_get_cell_flat", "number", [
       "number",
       "number",

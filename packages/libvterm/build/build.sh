@@ -89,6 +89,8 @@ emcc -O2 \
     "_termless_vterm_screen_observe_props",
     "_termless_vterm_screen_get_title",
     "_termless_vterm_screen_get_title_len",
+    "_termless_vterm_screen_get_icon",
+    "_termless_vterm_screen_get_icon_len",
     "_vterm_state_get_cursorpos",
     "_termless_vterm_state_get_application_cursor",
     "_vterm_obtain_state",

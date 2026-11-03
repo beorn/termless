@@ -219,7 +219,8 @@ export function createLibvtermBackend(
     screen = module.vterm_obtain_screen(vt)
     state = module.vterm_obtain_state(vt)
 
-    cursorPropsPtr = module._malloc(10 * 4)
+    // WASM32 TermlessPropRecord: existing 40-byte prefix, icon buffers, failure flag.
+    cursorPropsPtr = module._malloc(17 * 4)
     if (!cursorPropsPtr) {
       destroy()
       throw new Error("libvterm cursor observation allocation failed")
@@ -272,6 +273,10 @@ export function createLibvtermBackend(
 
     // Free the temporary buffer
     m._free(ptr)
+
+    if (m.getValue(cursorPropsPtr + 64, "i32")) {
+      throw new Error("libvterm property observation lost an icon or title after allocation failure")
+    }
 
     // Drain every reply this feed produced, in order, from the output sink (build/flat-api.c); replies nobody
     // listens for are discarded so the sink never grows across feeds.
@@ -423,10 +428,18 @@ export function createLibvtermBackend(
 
   function getTitle(): string {
     const m = ensureInit()
+    if (m.getValue(cursorPropsPtr + 64, "i32")) throw new Error("libvterm title observation failed")
     const len = m.termless_vterm_screen_get_title_len(cursorPropsPtr)
     if (len <= 0) return ""
     const ptr = m.termless_vterm_screen_get_title(cursorPropsPtr)
     return m.UTF8ToString(ptr, len)
+  }
+
+  function getIconLabel(): string {
+    const m = ensureInit()
+    if (m.getValue(cursorPropsPtr + 64, "i32")) throw new Error("libvterm icon observation failed")
+    const len = m.termless_vterm_screen_get_icon_len(cursorPropsPtr)
+    return len > 0 ? m.UTF8ToString(m.termless_vterm_screen_get_icon(cursorPropsPtr), len) : ""
   }
 
   function getScrollback(): ScrollbackState {
@@ -489,6 +502,7 @@ export function createLibvtermBackend(
     getCursor,
     getMode,
     getTitle,
+    getIconLabel,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

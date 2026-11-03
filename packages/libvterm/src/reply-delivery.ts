@@ -19,22 +19,22 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "f0431b2b3b1824d3028e7a039d55278d2cddc0e8",
+      blobOid: "7ec9158d768f85b2a096047509d23b1067bc944b",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "55ddc684464e525e63cd523d2d6a638c4c6dbcd9",
+      blobOid: "ff2e94b23c10d85ffb770e3e749e836b8b9227d4",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "d28bc97333d33129c7c9764a331a3d47f088f7b3",
+      blobOid: "5bf4785f2313c4b4825d6e2e45945431e94fac9d",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "712298aff45c7c53a22dc028b13cb58dae1e984199b520bbbc0475ae64d83159",
+      sha256: "361f44f0019504628460e0125615b6c2decc8496a039fe152c7832b4772befc9",
     },
   },
 } as const
