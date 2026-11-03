@@ -57,10 +57,16 @@ let _manifest: Manifest | null = null
 export function manifest(): Manifest {
   if (_manifest) return _manifest
   const root = findPackageRoot(dirname(fileURLToPath(import.meta.url)), "@termless/core")
-  const raw = JSON.parse(readFileSync(join(root, "backends.json"), "utf-8")) as any
+  const raw = JSON.parse(readFileSync(join(root, "backends.json"), "utf-8")) as {
+    version: string
+    backends: Record<
+      string,
+      Omit<BackendEntry, "upstream" | "version"> & { upstream?: string; upstreamVersion?: string }
+    >
+  }
   // Normalize: map upstreamVersion → version for cleaner access
   const backends: Record<string, BackendEntry> = {}
-  for (const [name, entry] of Object.entries(raw.backends) as [string, any][]) {
+  for (const [name, entry] of Object.entries(raw.backends)) {
     backends[name] = {
       package: entry.package,
       upstream: entry.upstream ?? null,
