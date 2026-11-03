@@ -365,7 +365,8 @@ export function createGhosttyNativeBackend(
     version: "1.3.1",
     truecolor: true,
     kittyKeyboard: true,
-    kittyGraphics: true,
+    // The imported ghostty-vt module disables Kitty graphics, unlike the full Ghostty application.
+    kittyGraphics: false,
     sixel: false,
     osc8Hyperlinks: true,
     semanticPrompts: true,

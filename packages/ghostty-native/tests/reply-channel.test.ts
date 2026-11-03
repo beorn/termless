@@ -71,14 +71,21 @@ describe.skipIf(nativeBuildError !== null)(
       ["OSC 19 highlight foreground query", "\x1b]19;?\x1b\\"],
       ["OSC 21 kitty color query", "\x1b]21;foreground=?\x1b\\"],
       ["OSC 52 clipboard read", "\x1b]52;c;?\x1b\\"],
-      ["kitty graphics query", "\x1b_Gi=1,a=q;\x1b\\"],
+      ["kitty graphics query", "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"],
     ])("delivers nothing for %s, which the engine does not answer", (_name, query) => {
       const backend = createGhosttyNativeBackend({ cols: 10, rows: 3 })
       const replies: string[] = []
       backend.onResponse = (data) => replies.push(decoder.decode(data))
       try {
+        if (_name === "kitty graphics query") {
+          // A live reply path rules out dead transport; the imported ghostty-vt build disables graphics.
+          backend.feed(encoder.encode("\x1b[5n"))
+          expect(replies).toEqual(["\x1b[0n"])
+          replies.length = 0
+        }
         backend.feed(encoder.encode(query))
         expect(replies).toEqual([])
+        if (_name === "kitty graphics query") expect(backend.capabilities.kittyGraphics).toBe(false)
       } finally {
         backend.destroy()
       }
