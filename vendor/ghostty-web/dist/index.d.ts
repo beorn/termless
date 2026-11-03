@@ -246,7 +246,7 @@ export declare class Ghostty {
 }
 
 /**
- * Cell structure matching ghostty_cell_t in C (16 bytes)
+ * Cell structure matching ghostty_cell_t in C (20 bytes)
  */
 export declare interface GhosttyCell {
     codepoint: number;
@@ -261,6 +261,10 @@ export declare interface GhosttyCell {
     hyperlink_id: number;
     grapheme_len: number;
     underline_style: number;
+    underline_r: number;
+    underline_g: number;
+    underline_b: number;
+    underline_present: number;
 }
 
 /**
@@ -277,7 +281,7 @@ export declare class GhosttyTerminal {
     private handle;
     private _cols;
     private _rows;
-    /** Size of GhosttyCell in WASM (16 bytes) */
+    /** Size of GhosttyCell in WASM (20 bytes) */
     private static readonly CELL_SIZE;
     /** Reusable buffer for viewport operations */
     private viewportBufferPtr;

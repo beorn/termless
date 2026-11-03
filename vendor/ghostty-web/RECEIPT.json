@@ -12,8 +12,8 @@
     "commit": "5714ed07a1012573261b7b7e3ed2add9c1504496",
     "archiveSha256": "55cee28558945de6e984bc183cd51f28eefdbf805544da2e70d4635476178790"
   },
-  "patchSha256": "a1a1b928b335b60e7f2cdb75a73a01c60308a7227ca581d6b1eb9bf61570a7cd",
-  "innerPatchSha256": "a4b6fc33fb980996b737d3c013dd69d859f8a673740b6f6667a6511e18618b8a",
+  "patchSha256": "75f15df8f8bd0b24cb270e805a88f7483b8b1aad38911b73064eb11bdb8e7a82",
+  "innerPatchSha256": "7ea4c75075b1d85fe975b4408218d0443f51402083323ff53d25ad6e27f4f264",
   "upstreamLockSha256": "f956fc4300424f4195e454084d3c749d3b9ca4ef68079e21c192772380b4168a",
   "toolchain": {
     "bun": "1.4.4",
@@ -24,14 +24,14 @@
     "flakeLockSha256": "282d1098337a5705a7c1d13188a74d2fe34565766619e8d6b21a48d5b67451be"
   },
   "outputs": {
-    "ghostty-vt.wasm": "3c2398d5c537d9c10e86b0af69311977927fcdbe4738618df194cedbdd22574d",
-    "dist/ghostty-vt.wasm": "3c2398d5c537d9c10e86b0af69311977927fcdbe4738618df194cedbdd22574d",
-    "dist/ghostty-web.js": "5a2cd830df41cefea943c108dcb6a1348389a97057bda18bdc1caf6597f46ab7",
-    "dist/ghostty-web.umd.cjs": "3472c7df4324c3547639936149a037ea5e71afa858ae03027ab0696eadb8a8e8",
-    "dist/index.d.ts": "0465e37b29059bda68387699f12d28a372c9cf351e74f2e3d834eeb7c95a4dad",
+    "ghostty-vt.wasm": "42e84af1b38be94571974a23fa4667c4735ee7a272dcff39afd5cba40dcf48de",
+    "dist/ghostty-vt.wasm": "42e84af1b38be94571974a23fa4667c4735ee7a272dcff39afd5cba40dcf48de",
+    "dist/ghostty-web.js": "ca1b840b059dd706dea8bbf3e16cd384c54b898cfbfccd027f2b5df2a94bb150",
+    "dist/ghostty-web.umd.cjs": "bafbc89f726fc284ee139670710e3694f56b4c6153de08e97464e905f7550d8f",
+    "dist/index.d.ts": "393a50a1e77b5ada55fcb2dfbe39220106226c79e0f0e4cc339eb54a36aa1479",
     "dist/__vite-browser-external-2447137e.js": "f8c456031e5001c0cda4837cd9ee3a33d79beeba120ec633ec9d990632fb2aa6"
   },
-  "removal": "@si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty",
+  "removal": "@si/terminfo/30211-terminfo-273/31257-remove-private-ghostty",
   "upstreamAccepted": false,
   "corePatch": {
     "file": "ghostty-page-zero.patch",

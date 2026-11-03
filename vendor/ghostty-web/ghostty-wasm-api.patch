@@ -437,9 +437,10 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
      _ = @import("../../lib/allocator.zig");
 diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
+index 0000000..8179c38
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1240 @@
+@@ -0,0 +1,1254 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -898,7 +899,7 @@ new file mode 100644
 +    last_screen_is_alternate: bool = false,
 +};
 +
-+/// C-compatible cell structure (16 bytes)
++/// C-compatible cell structure (20 bytes; existing fields retain offsets 0-15)
 +pub const GhosttyCell = extern struct {
 +    codepoint: u32,
 +    fg_r: u8,
@@ -912,6 +913,10 @@ new file mode 100644
 +    hyperlink_id: u16,
 +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
 +    underline_style: u8 = 0,
++    underline_r: u8 = 0,
++    underline_g: u8 = 0,
++    underline_b: u8 = 0,
++    underline_present: u8 = 0,
 +};
 +
 +/// Dirty state
@@ -1235,6 +1240,7 @@ new file mode 100644
 +                .rgb => |rgb| rgb,
 +            };
 +            const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
++            const underline_color = sty.underlineColor(&rs.colors.palette);
 +
 +            // Build flags
 +            var flags: u8 = 0;
@@ -1270,6 +1276,10 @@ new file mode 100644
 +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
 +                .grapheme_len = grapheme_len,
 +                .underline_style = @intFromEnum(sty.flags.underline),
++                .underline_r = if (underline_color) |rgb| rgb.r else 0,
++                .underline_g = if (underline_color) |rgb| rgb.g else 0,
++                .underline_b = if (underline_color) |rgb| rgb.b else 0,
++                .underline_present = @intFromBool(underline_color != null),
 +            };
 +            idx += 1;
 +        }
@@ -1508,6 +1518,7 @@ new file mode 100644
 +            .rgb => |rgb| rgb,
 +        };
 +        const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
++        const underline_color = sty.underlineColor(&rs.colors.palette);
 +        
 +        // Build flags
 +        var flags: u8 = 0;
@@ -1543,6 +1554,10 @@ new file mode 100644
 +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
 +            .grapheme_len = grapheme_len,
 +            .underline_style = @intFromEnum(sty.flags.underline),
++            .underline_r = if (underline_color) |rgb| rgb.r else 0,
++            .underline_g = if (underline_color) |rgb| rgb.g else 0,
++            .underline_b = if (underline_color) |rgb| rgb.b else 0,
++            .underline_present = @intFromBool(underline_color != null),
 +        };
 +    }
 +    return @intCast(cols);
