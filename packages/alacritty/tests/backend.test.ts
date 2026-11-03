@@ -35,7 +35,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "21d4b43c1d4c401c5b9f8114de85b3e837605242363c322c2dcb37e4a42fba61",
+    sha256: "9839e138d9e6f13e84adc3022f67964f0451e2e6416294952e22286412994f61",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -291,6 +291,16 @@ describeNative("alacritty backend", () => {
       backend = createBackend()
       feedText(backend, "\x1b[7mInverse\x1b[0m")
       expect(backend.getCell(0, 0).inverse).toBe(true)
+    })
+
+    test("detects hidden/conceal (SGR 8/28, #31901)", () => {
+      backend = createBackend()
+      feedText(backend, "\x1b[0mC\x1b[8mH\x1b[1;8mB\x1b[28mU\x1b[0mR")
+      expect(backend.getCell(0, 0)).toMatchObject({ char: "C", hidden: false, bold: false })
+      expect(backend.getCell(0, 1)).toMatchObject({ char: "H", hidden: true, bold: false })
+      expect(backend.getCell(0, 2)).toMatchObject({ char: "B", hidden: true, bold: true })
+      expect(backend.getCell(0, 3)).toMatchObject({ char: "U", hidden: false, bold: true })
+      expect(backend.getCell(0, 4)).toMatchObject({ char: "R", hidden: false, bold: false })
     })
 
     test("detects truecolor foreground", () => {

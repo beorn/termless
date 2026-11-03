@@ -49,6 +49,7 @@ interface NativeCell {
   underlineColor: [number, number, number] | null
   strikethrough: boolean
   inverse: boolean
+  hidden: boolean
   wide: boolean
   hyperlink: string | null
 }
@@ -129,7 +130,7 @@ function convertNativeCell(nc: NativeCell): Cell {
     inverse: nc.inverse,
     blink: null,
     overline: null,
-    hidden: false,
+    hidden: nc.hidden,
     wide: nc.wide,
     continuation: false,
     hyperlink: nc.hyperlink,

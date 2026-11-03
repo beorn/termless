@@ -138,6 +138,7 @@ pub struct JsCell {
     pub underline_color: Option<Vec<u8>>,
     pub strikethrough: bool,
     pub inverse: bool,
+    pub hidden: bool,
     pub wide: bool,
     pub hyperlink: Option<String>,
 }
@@ -522,6 +523,7 @@ impl AlacrittyTerminal {
                 .and_then(|c| color_to_rgb(c, colors)),
             strikethrough: flags.contains(CellFlags::STRIKEOUT),
             inverse: flags.contains(CellFlags::INVERSE),
+            hidden: flags.contains(CellFlags::HIDDEN),
             wide: flags.contains(CellFlags::WIDE_CHAR),
             hyperlink: cell.hyperlink().map(|hyperlink| hyperlink.uri().to_owned()),
         })

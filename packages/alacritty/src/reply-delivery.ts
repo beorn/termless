@@ -9,6 +9,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
 // Re-audited for absolute retained-row cell/line/range reads: feed, getCursor and readResponse are unchanged.
 // Re-audited for alternate-scroll readback: getMode reads the existing flag; the reply route is unchanged.
+// Re-audited for existing Cell.hidden readback: get_cell projects CellFlags::HIDDEN; feed, getCursor and readResponse are unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -18,11 +19,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "3f187a4b17ef7b86902008d05fb8d0d684328a06",
+      blobOid: "27b78b1264cd5d2ed72705ba36c9735b29e874c5",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
-      blobOid: "e4720590d652773f1e89caf2b5cb399ee9112e39",
+      blobOid: "1779ff4f042f7f285ab3d396da039408b492be10",
     },
     {
       path: "src/load-native.ts",
@@ -33,7 +34,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "21d4b43c1d4c401c5b9f8114de85b3e837605242363c322c2dcb37e4a42fba61",
+      sha256: "9839e138d9e6f13e84adc3022f67964f0451e2e6416294952e22286412994f61",
     },
   },
 } as const
