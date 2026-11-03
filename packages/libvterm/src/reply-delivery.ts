@@ -9,6 +9,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for per-instance OSC 52 clipboard callbacks and the upstream unsigned-byte selection fix;
 // feed/response delivery is unchanged, including replies behind the 5600-byte backlog.
 // Re-audited for native reverse-property observation; callback acceptance and the reply sink are unchanged.
+// Re-audited for the native application-cursor getter; it reads state without writing input or output.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -18,22 +19,22 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "eb513ccd443e30c7a869a8ba41f8126e1c0ddf00",
+      blobOid: "f0431b2b3b1824d3028e7a039d55278d2cddc0e8",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "2bbd4d5cf59b8d53db8f5c0329d2ed7853c43e45",
+      blobOid: "55ddc684464e525e63cd523d2d6a638c4c6dbcd9",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "1e784be87614ab924b96844009919b7c21ce150e",
+      blobOid: "d28bc97333d33129c7c9764a331a3d47f088f7b3",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "3d67045bb43c5e4081c70dc58088af8f735416c20df2d7843d765e5aad8ef62a",
+      sha256: "712298aff45c7c53a22dc028b13cb58dae1e984199b520bbbc0475ae64d83159",
     },
   },
 } as const

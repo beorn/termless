@@ -62,7 +62,7 @@ for src in "${SOURCES[@]}"; do
   obj="$BUILD_DIR/obj/$(basename "$src" .c).o"
   emcc -O2 -I include -c "$src" -o "$obj"
 done
-emcc -O2 -I include -c "$SCRIPT_DIR/flat-api.c" -o "$BUILD_DIR/obj/flat-api.o"
+emcc -O2 -I include -I src -c "$SCRIPT_DIR/flat-api.c" -o "$BUILD_DIR/obj/flat-api.o"
 
 # Link into WASM module with exported functions
 mkdir -p "$WASM_DIR"
@@ -90,6 +90,7 @@ emcc -O2 \
     "_termless_vterm_screen_get_title",
     "_termless_vterm_screen_get_title_len",
     "_vterm_state_get_cursorpos",
+    "_termless_vterm_state_get_application_cursor",
     "_vterm_obtain_state",
     "_vterm_screen_set_callbacks",
     "_malloc",

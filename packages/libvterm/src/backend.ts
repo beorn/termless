@@ -410,6 +410,9 @@ export function createLibvtermBackend(
   }
 
   function getMode(mode: Mode): boolean | null {
+    if (mode === "applicationCursor") {
+      return ensureInit().termless_vterm_state_get_application_cursor(state) !== 0
+    }
     if (mode === "reverseVideo") {
       // Native VTERM_PROP_REVERSE observations survive reset exactly as the engine's mode does.
       const reverse = ensureInit().getValue(cursorPropsPtr + 36, "i32")

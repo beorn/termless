@@ -1,7 +1,13 @@
 #include "vterm.h"
+#include "vterm_internal.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+// The private state layout is tied to the libvterm revision pinned by build.sh.
+int termless_vterm_state_get_application_cursor(const VTermState *state) {
+  return state->mode.cursor;
+}
 
 // TerminalBackend accepts UTF-8 bytes; libvterm itself defaults to legacy
 // single-byte input. Select the encoding before state/screen initialization.

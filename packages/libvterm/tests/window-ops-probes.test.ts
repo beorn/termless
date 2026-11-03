@@ -44,6 +44,39 @@ try {
 
 const describeWasm = wasmModule ? describe : describe.skip
 
+test("application cursor mode follows native state without producing replies", async () => {
+  const module = await initLibvterm()
+  const backend = createLibvtermBackend(undefined, module)
+  const isolated = createLibvtermBackend(undefined, module)
+  backend.init({ cols: 8, rows: 2 })
+  isolated.init({ cols: 8, rows: 2 })
+  try {
+    const responses: string[] = []
+    backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
+    const feed = (sequence: string) => backend.feed(new TextEncoder().encode(sequence))
+    expect(backend.getMode("applicationCursor")).toBe(false)
+    feed("\x1b[?1")
+    expect(backend.getMode("applicationCursor")).toBe(false)
+    feed("h")
+    expect(backend.getMode("applicationCursor")).toBe(true)
+    expect(backend.getMode("applicationCursor")).toBe(true)
+    expect(isolated.getMode("applicationCursor")).toBe(false)
+    expect(responses).toEqual([])
+    feed("\x1b[?1l")
+    expect(backend.getMode("applicationCursor")).toBe(false)
+    for (const reset of ["\x1b[!p", "\x1bc"]) {
+      feed("\x1b[?1h")
+      expect(backend.getMode("applicationCursor")).toBe(true)
+      feed(reset)
+      expect(backend.getMode("applicationCursor")).toBe(false)
+    }
+    expect(responses).toEqual([])
+  } finally {
+    backend.destroy()
+    isolated.destroy()
+  }
+})
+
 async function probeBackend(query: string): Promise<string[]> {
   const backend: TerminalBackend = createLibvtermBackend(undefined, wasmModule!)
   backend.init?.({ cols: 80, rows: 24 })
@@ -214,7 +247,6 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         "altScreen",
         "cursorVisible",
         "bracketedPaste",
-        "applicationCursor",
         "applicationKeypad",
         "autoWrap",
         "mouseTracking",

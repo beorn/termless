@@ -45,6 +45,7 @@ export interface LibvtermModule {
     endCol: number,
   ): number
   vterm_state_get_cursorpos(state: number, posPtr: number): void
+  termless_vterm_state_get_application_cursor(state: number): number
 
   // Emscripten runtime
   getValue(ptr: number, type: string): number
@@ -108,6 +109,12 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       cwrap(name: string, returnType: "number" | null, argumentTypes: string[]): (...args: number[]) => number
     }
     if (!located) throw new Error("libvterm did not request the pinned WASM file")
+    if (
+      !("_termless_vterm_state_get_application_cursor" in loaded) ||
+      typeof loaded._termless_vterm_state_get_application_cursor !== "function"
+    ) {
+      throw new Error("Generated libvterm module is missing _termless_vterm_state_get_application_cursor; rebuild WASM")
+    }
     if (createHash("sha256").update(readFileSync(path)).digest("hex") !== sha256) {
       throw new Error(`libvterm WASM changed while loading: ${path}`)
     }
@@ -147,6 +154,11 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "number",
     ])
     module.vterm_state_get_cursorpos = cwrap("vterm_state_get_cursorpos", null, ["number", "number"])
+    module.termless_vterm_state_get_application_cursor = cwrap(
+      "termless_vterm_state_get_application_cursor",
+      "number",
+      ["number"],
+    )
 
     loadedModule = module
     loadedWasm = { path, sha256 }
