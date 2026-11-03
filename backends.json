@@ -4,6 +4,8 @@
   "backends": {
     "xtermjs": {
       "package": "@termless/xtermjs",
+      "rendering": "render-capable",
+      "$comment": "Rendering: https://xtermjs.org/ (xterm.js library product; operator/CTO ruling includes its headless entry)",
       "upstream": "npm:@xterm/headless",
       "upstreamVersion": "6.0.0",
       "type": "js",
@@ -24,6 +26,8 @@
     },
     "ghostty": {
       "package": "@termless/ghostty",
+      "rendering": "render-capable",
+      "$comment": "Rendering: https://github.com/coder/ghostty-web/blob/v0.4.0/lib/index.ts#L80 (public CanvasRenderer)",
       "upstream": "npm:ghostty-web",
       "upstreamVersion": "0.4.0",
       "type": "wasm",
@@ -43,6 +47,8 @@
     },
     "vt100": {
       "package": "@termless/vt100",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://github.com/beorn/vterm/blob/9e99e4d23cdc606fca258b1863aa2be7ae79eed3/README.md#L60-L69 (consumer draws screen state)",
       "upstream": "npm:vt100.js",
       "upstreamVersion": "0.10.1",
       "type": "js",
@@ -60,6 +66,8 @@
     },
     "vt220": {
       "package": "@termless/vt220",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://github.com/beorn/vterm/blob/9e99e4d23cdc606fca258b1863aa2be7ae79eed3/README.md#L60-L69 (consumer draws screen state)",
       "upstream": "npm:vt220.js",
       "upstreamVersion": "0.10.1",
       "type": "js",
@@ -70,6 +78,8 @@
     },
     "vterm": {
       "package": "@termless/vterm",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://github.com/beorn/vterm/blob/9e99e4d23cdc606fca258b1863aa2be7ae79eed3/README.md#L60-L69 (consumer draws screen state)",
       "upstream": "npm:vterm.js",
       "upstreamVersion": "0.10.1",
       "type": "js",
@@ -87,6 +97,8 @@
     },
     "alacritty": {
       "package": "@termless/alacritty",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://docs.rs/alacritty_terminal/0.26.0/alacritty_terminal/all.html (RenderableContent is cell state for an embedder)",
       "upstream": "crate:alacritty_terminal",
       "upstreamVersion": "0.26.0",
       "type": "native",
@@ -107,6 +119,8 @@
     },
     "wezterm": {
       "package": "@termless/wezterm",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://docs.rs/crate/tattoy-wezterm-term/0.1.0-fork.5/source/src/lib.rs (screen-cell model, explicitly no GUI)",
       "upstream": "crate:tattoy-wezterm-term",
       "upstreamVersion": "0.1.0-fork.5",
       "type": "native",
@@ -136,6 +150,8 @@
     },
     "vt100-rust": {
       "package": "@termless/vt100-rust",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://docs.rs/vt100/0.16.2/vt100/ (extracted parser and in-memory screen)",
       "upstream": "crate:vt100",
       "upstreamVersion": "0.16.2",
       "type": "native",
@@ -157,6 +173,8 @@
     },
     "libvterm": {
       "package": "@termless/libvterm",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://www.leonerd.org.uk/code/libvterm/ (embedding-program callbacks draw)",
       "upstream": "github:neovim/libvterm",
       "upstreamVersion": "0.3.3",
       "type": "wasm",
@@ -177,6 +195,8 @@
     },
     "ghostty-native": {
       "package": "@termless/ghostty-native",
+      "rendering": "parser-only",
+      "$comment": "Rendering: https://github.com/ghostty-org/ghostty/blob/v1.3.1/src/terminal/render.zig#L17-L38 (RenderState feeds external renderers)",
       "upstream": "github:ghostty-org/ghostty",
       "upstreamVersion": "1.3.1",
       "type": "native",
@@ -197,6 +217,7 @@
     },
     "kitty": {
       "package": "@termless/kitty",
+      "$comment": "Rendering undeclared: internal Screen bridge has no separate public library API to classify; do not infer from the Kitty app renderer.",
       "upstream": "github:kovidgoyal/kitty",
       "upstreamVersion": "0.49.2",
       "type": "native",

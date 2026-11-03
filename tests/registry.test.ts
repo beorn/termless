@@ -27,6 +27,15 @@ import type { TerminalBackend } from "../src/terminal/types.ts"
 // ═══════════════════════════════════════════════════════
 
 describe("manifest", () => {
+  // Consumers need the audited product declaration even when an adapter exposes no screenshot.
+  // Existing registry tests cover package identity, but never this no-default public projection.
+  test("projects rendering declarations without classifying an undeclared backend", () => {
+    expect(entry("xtermjs")?.rendering).toBe("render-capable")
+    expect(entry("ghostty")?.rendering).toBe("render-capable")
+    expect(entry("vterm")?.rendering).toBe("parser-only")
+    expect(entry("kitty")?.rendering).toBeUndefined()
+  })
+
   test("manifest() returns valid manifest with version and backends", () => {
     const m = manifest()
     expect(m.version).toBeTypeOf("string")

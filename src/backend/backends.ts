@@ -28,6 +28,8 @@ export interface BackendEntry {
   upstream: string | null
   version: string | null
   type: "js" | "wasm" | "native" | "os"
+  /** Whether this library product owns a renderer; absence is an undeclared capability. */
+  rendering?: "render-capable" | "parser-only"
   default?: boolean
   platforms?: string[]
   label?: string
@@ -64,6 +66,7 @@ export function manifest(): Manifest {
       upstream: entry.upstream ?? null,
       version: entry.upstreamVersion ?? null,
       type: entry.type,
+      rendering: entry.rendering,
       default: entry.default,
       platforms: entry.platforms,
       label: entry.label,
