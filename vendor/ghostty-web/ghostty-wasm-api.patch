@@ -27,9 +27,10 @@ diff --git a/include/ghostty/vt.h b/include/ghostty/vt.h
  #include <ghostty/vt/key.h>
 diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
+index 0000000..cae608a
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,290 @@
+@@ -0,0 +1,292 @@
 +/**
 + * @file terminal.h
 + *
@@ -81,7 +82,7 @@ new file mode 100644
 +    uint32_t palette[16];
 +} GhosttyTerminalConfig;
 +
-+/** Cell structure - 16 bytes, pre-resolved colors */
++/** Cell structure - 20 bytes, pre-resolved colors; existing fields retain offsets 0-15 */
 +typedef struct {
 +    uint32_t codepoint;
 +    uint8_t fg_r, fg_g, fg_b;
@@ -91,6 +92,8 @@ new file mode 100644
 +    uint16_t hyperlink_id;
 +    uint8_t grapheme_len;  /* Number of extra codepoints beyond first (0 = no grapheme) */
 +    uint8_t underline_style; /* 0=none, 1=single, 2=double, 3=curly, 4=dotted, 5=dashed */
++    uint8_t underline_r, underline_g, underline_b; /* Resolved underline RGB at bytes 16-18 */
++    uint8_t underline_present; /* Byte 19: 0=absent, 1=explicit (including black) */
 +} GhosttyCell;
 +
 +/** Cell flags */
@@ -199,7 +202,7 @@ new file mode 100644
 + * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
 + * The caller must copy those bytes before another engine call.
 + * Returns -1 on error, 0 for no link, 1 for a link (including an empty URI).
-+ * GhosttyCell's 16-byte ABI and hyperlink presence bit are unchanged.
++ * GhosttyCell's hyperlink_id offset and hyperlink presence bit are unchanged.
 + */
 +int ghostty_render_state_get_hyperlink(
 +    GhosttyTerminal term,
