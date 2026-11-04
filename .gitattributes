@@ -11,6 +11,7 @@ packages/libvterm/build/flat-api.c text eol=lf
 packages/libvterm/src/index.ts text eol=lf
 packages/libvterm/src/backend.ts text eol=lf
 packages/libvterm/src/wasm-bindings.ts text eol=lf
+src/terminal/key-mapping.ts text eol=lf
 
 # Preserve the private Ghostty producer's outputs and patch inputs byte-for-byte.
 vendor/ghostty-web/dist/** -text
