@@ -29,6 +29,31 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Rust vt100 backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Conceal has no getter in the pinned crate; real readers must retain that omission, including blank cells.
+    test("cell and row readers retain unreported conceal separately from reported bold", () => {
+      const backend = createVt100RustBackend({ cols: 5, rows: 2 })
+      try {
+        backend.feed(Buffer.from("\x1b[1;8mX\x1b[0mY"))
+        for (const cell of [backend.getCell(0, 0), backend.getRow(0)[0], backend.getRows()[0]?.[0]]) {
+          expect(cell).toMatchObject({ char: "X", bold: true, hidden: null })
+        }
+        for (const cell of [backend.getCell(0, 1), backend.getRow(0)[1], backend.getRows()[0]?.[1]]) {
+          expect(cell).toMatchObject({ char: "Y", bold: false, hidden: null })
+        }
+        for (const cell of [
+          backend.getCell(1, 0),
+          backend.getRow(1)[0],
+          backend.getRows()[1]?.[0],
+          backend.getCell(2, 0),
+          backend.getRow(2)[0],
+        ]) {
+          expect(cell).toMatchObject({ bold: false, hidden: null })
+        }
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("mode readback distinguishes unexposed modes from measured set/reset state", () => {
       const backend = createVt100RustBackend({ cols: 20, rows: 3 })
       try {

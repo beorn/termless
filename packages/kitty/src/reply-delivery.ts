@@ -34,6 +34,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // encodes the reply without querying GLFW. The native engine and response delivery boundary are unchanged.
 // Re-audited for independent icon callback state: icon_changed only retains the native payload in the existing
 // snapshot/getter; replay, child-response accumulation and delivery remain unchanged.
+// Re-audited for nullable conceal readback; reply collection and delivery are unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -42,7 +43,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "b9e6aa805b9c932faa3ff87db84d8121ef0b5fd5",
+      blobOid: "7d5acbea29a6fd5a726605275c512c88bd75a417",
     },
     {
       path: "packages/kitty/build/bridge.py",

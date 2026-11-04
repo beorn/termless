@@ -4,6 +4,9 @@
 
 ### Changed
 
+- **Breaking type change:** `Cell.hidden` and `EngineSnapshotCell.hidden` are
+  `boolean | null`; null means the producer does not report conceal. Kitty and
+  vt100-rust now retain null, and boolean consumers must handle unknown readback.
 - Ghostty native cells add `hidden`; use the matching JavaScript and addon pair from the same build.
 - **Breaking type change (Track A compatibility reader):** `SemanticMark` is now
   a union of the unchanged exported `SemanticStartMark` and

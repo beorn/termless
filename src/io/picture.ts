@@ -41,7 +41,8 @@ export interface Cell {
   blink: boolean | null
   /** null = this producer does not report the attribute; never a terminal-support claim. */
   overline: boolean | null
-  hidden: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  hidden: boolean | null
   wide: boolean
   continuation: boolean
   hyperlink: string | null

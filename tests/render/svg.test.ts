@@ -616,10 +616,14 @@ describe("embedded @font-face rules carry each face's weight", () => {
 // Drawing may leave unavailable attributes unset; encoders retain null in readback elsewhere.
 test("unreported style attributes draw identically to measured unset attributes", () => {
   const unknown = createMockReadable(["X"], {
-    cellOverrides: { "0,0": { dim: null, italic: null, strikethrough: null } },
+    cellOverrides: { "0,0": { dim: null, italic: null, strikethrough: null, hidden: null } },
   })
   const unset = createMockReadable(["X"])
   expect(screenshotSvg(unknown)).toBe(screenshotSvg(unset))
   expect(rowToAnsi(unknown.getRow(0), 1)).toBe(rowToAnsi(unset.getRow(0), 1))
   expect(cellsToAnsi(unknown)).toBe(cellsToAnsi(unset))
+  const transition = createMockReadable(["AX"], { cellOverrides: { "0,0": { hidden: true }, "0,1": { hidden: null } } })
+  const cleared = createMockReadable(["AX"], { cellOverrides: { "0,0": { hidden: true }, "0,1": { hidden: false } } })
+  expect(rowToAnsi(transition.getRow(0), 2)).toBe(rowToAnsi(cleared.getRow(0), 2))
+  expect(cellsToAnsi(transition)).toBe(cellsToAnsi(cleared))
 })

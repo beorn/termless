@@ -40,7 +40,8 @@ export interface EngineSnapshotCell {
   inverse: boolean
   blink?: boolean | null
   overline?: boolean | null
-  hidden: boolean
+  /** null = this producer does not report the attribute; never a terminal-support claim. */
+  hidden: boolean | null
   wide: boolean
   url: string | null
 }

@@ -55,7 +55,7 @@ function sgrFor(cell: Cell): SgrState {
     underline: cell.underline,
     strikethrough: cell.strikethrough === true,
     inverse: cell.inverse,
-    hidden: cell.hidden,
+    hidden: cell.hidden === true,
   }
 }
 

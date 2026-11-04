@@ -734,6 +734,34 @@ test.skipIf(!isKittyAvailable())(
   },
 )
 
+// The actual Cursor reader has no conceal accessor; neither live nor synthetic blanks report measured false.
+test.skipIf(!isKittyAvailable())(
+  "cell and row readers retain unreported conceal (requires installed Kitty or KITTY_BINARY)",
+  () => {
+    const backend = createKittyBackend({ cols: 5, rows: 2 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[1;8mX\x1b[0mY"))
+      for (const cell of [backend.getCell(0, 0), backend.getRow(0)[0], backend.getRows()[0]?.[0]]) {
+        expect(cell).toMatchObject({ char: "X", bold: true, hidden: null })
+      }
+      for (const cell of [backend.getCell(0, 1), backend.getRow(0)[1], backend.getRows()[0]?.[1]]) {
+        expect(cell).toMatchObject({ char: "Y", bold: false, hidden: null })
+      }
+      for (const cell of [
+        backend.getCell(1, 0),
+        backend.getRow(1)[0],
+        backend.getRows()[1]?.[0],
+        backend.getCell(2, 0),
+        backend.getRow(2)[0],
+      ]) {
+        expect(cell).toMatchObject({ bold: false, hidden: null })
+      }
+    } finally {
+      backend.destroy()
+    }
+  },
+)
+
 // Invalid carriers cannot occur through OSC 8; inject only at the actual CPU-cell -> snapshot boundary, retaining the
 // real Screen and make_snapshot. This independently guards missing metadata and accidental id:URI exposure.
 test.skipIf(!isKittyAvailable())("snapshot carrier validation (requires installed Kitty or KITTY_BINARY)", () => {
