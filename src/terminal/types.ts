@@ -653,6 +653,11 @@ export interface OscMetadataExtension {
   getNotifications?(): readonly string[]
   /** A copy of every OSC 777 payload after "777;", verbatim and in order, notify or not; callers filter "notify;". */
   getOsc777Payloads?(): readonly string[]
+  /**
+   * The last OSC 9;4 report as the engine stores it: its raw state code and stored value. null means never reported;
+   * a state-0 report is never null. Values the engine discards are passed on as it stores them, never restored.
+   */
+  getProgress?(): { state: number; value: number | null } | null
 }
 
 /** A stored start marker with insertion coordinates, not a bounded command zone. */

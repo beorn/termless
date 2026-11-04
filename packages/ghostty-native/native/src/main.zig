@@ -35,9 +35,15 @@ const allocator = gpa.allocator();
 /// :620-632, deviceStatusReport :838-870, queryKittyKeyboard :961-973). Every other query stays
 /// silent, including the size reports Ghostty answers from its window (src/termio/Termio.zig) and
 /// the answers that need app state a headless terminal lacks (DA, XTVERSION, color scheme, clipboard).
+/// The engine-emitted OSC 9;4 report (Ghostty 332b2aef src/terminal/osc.zig:199-213): a State enum remove=0, set=1,
+/// error=2, indeterminate=3, pause=4 and an optional u8 progress, stored verbatim from stream.zig:2042-2043.
+const ProgressReport = StreamAction.Value(.progress_report);
+
 const ResponseHandler = struct {
     readonly: ReadonlyHandler,
     title: *[]const u8,
+    /// The last progress report the engine emitted; null until the first one.
+    progress: *?ProgressReport,
     /// Reply bytes not yet read by `readResponse`, in stream order.
     pending: std.ArrayList(u8) = .empty,
     /// The bytes handed to JS by the last `readResponse`; valid until the next read.
@@ -56,6 +62,11 @@ const ResponseHandler = struct {
     ) !void {
         const terminal = self.readonly.terminal;
         switch (action) {
+            .progress_report => {
+                // Record the engine's emitted report verbatim, then forward it unchanged (readonly ignores it).
+                self.progress.* = value;
+                try self.readonly.vt(action, value);
+            },
             .window_title => {
                 // The engine validates and emits this title; never parse OSC bytes here.
                 const title = try allocator.dupe(u8, value.title);
@@ -102,6 +113,7 @@ const TerminalHandle = struct {
     cols: size.CellCountInt,
     rows: size.CellCountInt,
     title: []const u8,
+    progress: ?ProgressReport,
 };
 
 // ─── Module init ────────────────────────────────────────
@@ -124,6 +136,7 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "getCursor", try js.createFunction(getCursor));
     try js.setNamedProperty(exports, "getMode", try js.createFunction(getMode));
     try js.setNamedProperty(exports, "getTitle", try js.createFunction(getTitle));
+    try js.setNamedProperty(exports, "getProgress", try js.createFunction(getProgress));
     try js.setNamedProperty(exports, "getScrollback", try js.createFunction(getScrollback));
     try js.setNamedProperty(exports, "scrollViewport", try js.createFunction(scrollViewport));
     try js.setNamedProperty(exports, "getDefaultColors", try js.createFunction(getDefaultColors));
@@ -146,7 +159,12 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     errdefer handle.terminal.deinit(allocator);
 
     handle.title = "";
-    handle.stream = .initAlloc(allocator, .{ .readonly = handle.terminal.vtHandler(), .title = &handle.title });
+    handle.progress = null;
+    handle.stream = .initAlloc(allocator, .{
+        .readonly = handle.terminal.vtHandler(),
+        .title = &handle.title,
+        .progress = &handle.progress,
+    });
     handle.cols = cols;
     handle.rows = rows;
 
@@ -601,6 +619,25 @@ fn getMode(handle: *TerminalHandle, mode_name: []const u8) ?bool {
 
 fn getTitle(handle: *TerminalHandle) []const u8 {
     return handle.title;
+}
+
+// ─── Progress ───────────────────────────────────────────
+
+/// The stored report for JS: `reported` false means never reported; `value` -1 means the engine stored no
+/// progress (its ?u8 is null), so the mapping back to number | null is one-to-one.
+const JsProgress = struct {
+    reported: bool,
+    state: i32,
+    value: i16,
+};
+
+fn getProgress(handle: *TerminalHandle) JsProgress {
+    const report = handle.progress orelse return .{ .reported = false, .state = -1, .value = -1 };
+    return .{
+        .reported = true,
+        .state = @intFromEnum(report.state),
+        .value = if (report.progress) |progress| progress else -1,
+    };
 }
 
 // ─── Scrollback ─────────────────────────────────────────

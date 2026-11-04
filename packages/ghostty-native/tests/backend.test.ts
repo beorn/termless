@@ -19,6 +19,38 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    /**
+     * @failure #32271: Ghostty emits every OSC 9;4 as a progress_report action (332b2aef stream.zig:2042-2043), but the
+     * embedding forwarded it to a readonly handler that ignores it, so no reader saw the report Ghostty parsed.
+     * @consumer Terminfo extensions.osc9-progress through osc-metadata getProgress
+     */
+    test("reads the engine-emitted OSC 9;4 report verbatim, null before the first", () => {
+      const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
+      const feed = (data: string) => backend.feed(new TextEncoder().encode(data))
+      try {
+        expect(backend.capabilities.extensions.has("osc-metadata")).toBe(true)
+        expect(backend.getProgress()).toBeNull()
+        // Ghostty's parser rejects an unknown state digit (osc9.zig:186), so no report is emitted.
+        feed("\x1b]9;4;x\x07")
+        expect(backend.getProgress()).toBeNull()
+        feed("\x1b]9;4;1;37\x07")
+        const first = backend.getProgress()
+        expect(first).toEqual({ state: 1, value: 37 })
+        first!.value = 99
+        expect(backend.getProgress()).toEqual({ state: 1, value: 37 })
+        feed("\x1b]9;4;2;64\x07")
+        expect(backend.getProgress()).toEqual({ state: 2, value: 64 })
+        // remove and indeterminate carry no progress in Ghostty's report (osc9.zig:188), so value is null.
+        feed("\x1b]9;4;3\x1b\\")
+        expect(backend.getProgress()).toEqual({ state: 3, value: null })
+        feed("\x1b]9;4;0\x07X")
+        expect(backend.getProgress()).toEqual({ state: 0, value: null })
+        expect(backend.getCell(0, 0).char).toBe("X")
+      } finally {
+        backend.destroy()
+      }
+    })
+
     // Cell and style readback cannot catch an engine title event dropped by the embedding.
     test.each([
       { name: "inert control", steps: [{ data: "X", title: "" }] },

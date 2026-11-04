@@ -150,6 +150,8 @@ interface BridgeSnapshot {
   notifications?: string[]
   /** Cumulative OSC 777 payloads after "777;", in feed order. Omitted only when empty. */
   osc777Payloads?: string[]
+  /** kitty's stored Window.progress after its first accepted OSC 9;4 update: state value and percent. Omitted before. */
+  progress?: { state: number; value: number }
 }
 
 interface BridgePrompt {
@@ -282,7 +284,7 @@ export function createKittyBackend(
   ReplyDeliveryExtension &
   HyperlinkExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads"> &
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
   SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
@@ -616,7 +618,7 @@ export function createKittyBackend(
       "reply-delivery",
       "hyperlinks",
       "semantic-command-end",
-      "osc-metadata", // OSC 9 and OSC 777 readers only: no OSC 7 reader, so cwd stays missing evidence
+      "osc-metadata", // OSC 9, OSC 777 and OSC 9;4 readers only: no OSC 7 reader, so cwd stays missing evidence
     ]),
   }
 
@@ -635,7 +637,7 @@ export function createKittyBackend(
     ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads"> &
+    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
     AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
@@ -669,6 +671,10 @@ export function createKittyBackend(
       }),
     getNotifications: () => [...(ensureSnapshot().notifications ?? [])],
     getOsc777Payloads: () => [...(ensureSnapshot().osc777Payloads ?? [])],
+    getProgress: () => {
+      const progress = ensureSnapshot().progress
+      return progress ? { state: progress.state, value: progress.value } : null
+    },
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

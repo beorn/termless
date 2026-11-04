@@ -44,6 +44,7 @@ from kitty.clipboard import Clipboard, ClipboardRequestManager, ClipboardType
 from kitty.fast_data_types import Screen, get_boss, get_options, set_boss, set_options
 from kitty.notifications import DesktopIntegration, NotificationManager, PayloadType
 from kitty.options.types import defaults
+from kitty.progress import Progress
 
 # The headless window's one non-default option: kitty's own clipboard_control values with the read permission a human
 # would grant at kitty's default read-clipboard-ask / read-primary-ask prompt supplied up front, so an OSC 52 read
@@ -201,6 +202,17 @@ class HeadlessBoss:
         return self.clipboard.writes + self.primary_selection.writes
 
 
+class ReportedProgress(Progress):
+    """kitty's own Progress store. `reported` turns True only after kitty's real update returns, so a 9;4 kitty
+    rejects as malformed (Window.desktop_notify:1389-1391 logs and returns before update) leaves it False."""
+
+    reported = False
+
+    def update(self, *args):
+        Progress.update(self, *args)
+        self.reported = True
+
+
 class Callbacks:
     """The headless Screen's window.
 
@@ -240,6 +252,7 @@ class Callbacks:
         self.cmd_output_markings = []  # Exact positional native callback arguments, in observation order
         self.notifications = []  # OSC 9 payloads kitty hands its notification manager, decoded as kitty does
         self.osc777_payloads = []  # Every OSC 777 payload kitty's parser dispatches, decoded as kitty does
+        self.progress = ReportedProgress()  # Window.progress: kitty's stored OSC 9;4 state, as kitty's Window.__init__ does
         self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
     def write(self, data):
@@ -251,6 +264,13 @@ class Callbacks:
         """A Window callback that changes host or title state only and never writes to the child."""
 
     osc_context = on_reset = on_bell = no_reply
+    # The OSC 9;4 path's only stubs, both host side effects that never touch the stored Progress: the headless window
+    # has no tab (Window.desktop_notify:1394-1395 updates the tab bar), and no timer loop for the finished-bar clear
+    # (:1396 clear_progress_if_needed arms add_timer). Progress.update and screen.set_progress run as kitty runs them.
+    clear_progress_if_needed = no_reply
+
+    def tabref(self):
+        return None
     color_profile_popped = on_activity_since_last_focus = send_signal_for_key = no_reply
 
     def cmd_output_marking(self, *args):
@@ -270,8 +290,8 @@ class Callbacks:
             self.osc777_payloads.append(str(raw_data, "utf-8", "replace"))
             return
         if osc_code == 9:
-            # Kitty routes OSC 9;4 to its progress state; that path is not reproduced yet, so say so.
-            self.unreproduced.append("desktop_notify")
+            # OSC 9;4: kitty's own Window.desktop_notify parses it into self.progress; never re-parsed here.
+            Window.desktop_notify(self, osc_code, raw_data)
             return
         if osc_code == 99:
             manager = get_boss().notification_manager
@@ -566,6 +586,9 @@ def make_snapshot():
         result["notifications"] = notifications
     if osc777_payloads:
         result["osc777Payloads"] = osc777_payloads
+    if callbacks and callbacks.progress.reported:
+        # kitty's stored state verbatim: ProgressState value (unset=0 .. paused=4) and its stored percent.
+        result["progress"] = {"state": callbacks.progress.state.value, "value": callbacks.progress.percent}
     boss = get_boss()
     if boss is None:
         raise RuntimeError("kitty bridge snapshot has no boss; clipboard state is unknown, never empty")

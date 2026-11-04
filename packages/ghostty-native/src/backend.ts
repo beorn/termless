@@ -22,6 +22,7 @@ import type {
   Color,
   DefaultColorsExtension,
   HyperlinkExtension,
+  OscMetadataExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
@@ -96,6 +97,8 @@ interface NativeModule {
   getCursor(handle: NativeTerminalHandle): NativeCursor
   getMode(handle: NativeTerminalHandle, mode: string): boolean | null
   getTitle(handle: NativeTerminalHandle): string
+  /** The engine-emitted OSC 9;4 report; reported false before the first, value -1 when the engine stored none. */
+  getProgress(handle: NativeTerminalHandle): { reported: boolean; state: number; value: number }
   getScrollback(handle: NativeTerminalHandle): NativeScrollback
   scrollViewport(handle: NativeTerminalHandle, delta: number): void
   getDefaultColors(handle: NativeTerminalHandle): NativeColors
@@ -219,7 +222,11 @@ const DEFAULT_ROWS = 24
  */
 export function createGhosttyNativeBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & HyperlinkExtension & DefaultColorsExtension & AdapterSourcesExtension {
+): TerminalBackend &
+  HyperlinkExtension &
+  DefaultColorsExtension &
+  AdapterSourcesExtension &
+  Pick<Required<OscMetadataExtension>, "getProgress"> {
   let handle: NativeTerminalHandle | null = null
 
   function ensureHandle(): NativeTerminalHandle {
@@ -372,10 +379,27 @@ export function createGhosttyNativeBackend(
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors"]),
+    // osc-metadata carries only the OSC 9;4 reader: Ghostty stores parsed toasts (no OSC 9/777 reader) and no raw OSC 7.
+    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors", "osc-metadata"]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension & DefaultColorsExtension & AdapterSourcesExtension = {
+  function getProgress(): { state: number; value: number | null } | null {
+    const native = loadGhosttyNative()
+    if (typeof native.getProgress !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getProgress; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    const report = native.getProgress(ensureHandle())
+    if (!report.reported) return null
+    return { state: report.state, value: report.value < 0 ? null : report.value }
+  }
+
+  const backend: TerminalBackend &
+    HyperlinkExtension &
+    DefaultColorsExtension &
+    AdapterSourcesExtension &
+    Pick<Required<OscMetadataExtension>, "getProgress"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty-native",
     init,
@@ -395,6 +419,7 @@ export function createGhosttyNativeBackend(
     getCursor,
     getMode,
     getTitle,
+    getProgress,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

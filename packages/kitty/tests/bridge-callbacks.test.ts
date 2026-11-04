@@ -279,10 +279,10 @@ test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata 
     ;(first as string[]).push("mutated")
     expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
     expect(desktopWarnings()).toEqual([])
-    // OSC 9;4 is kitty's progress path (not reproduced) and OSC 777 has its own reader: neither is an OSC 9 payload.
+    // OSC 9;4 is kitty's progress path and OSC 777 has its own reader: neither is an OSC 9 payload.
     feed("\x1b]9;4;1;50\x07\x1b]777;notify;title;body\x07")
     expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
-    expect(desktopWarnings()).toHaveLength(1)
+    expect(desktopWarnings()).toEqual([])
     backend.init({ cols: 30, rows: 3 })
     expect(backend.getNotifications()).toEqual([])
   } finally {
@@ -321,6 +321,48 @@ test.skipIf(!isKittyAvailable())("reads every OSC 777 payload verbatim through t
     backend.destroy()
   }
 })
+
+/**
+ * @failure #32271: kitty stores every OSC 9;4 report in Window.progress, but the bridge reported the path unreproduced,
+ * so the Terminfo progress criterion had no reader for what kitty stores.
+ * @consumer Terminfo extensions.osc9-progress through osc-metadata getProgress
+ */
+test.skipIf(!isKittyAvailable())(
+  "reads kitty's stored OSC 9;4 progress verbatim, null until kitty accepts a report",
+  () => {
+    const backend = createKittyBackend({ cols: 30, rows: 3 })
+    const feed = (value: string) => {
+      backend.feed(new TextEncoder().encode(value))
+      backend.getCursor()
+    }
+    const desktopWarnings = () => backend.getWarnings().filter((warning) => warning.message === "desktop_notify")
+    try {
+      expect(backend.getProgress()).toBeNull()
+      // kitty logs a malformed report and returns before Progress.update (window.py:1389-1391): still never reported.
+      feed("\x1b]9;4;x\x07")
+      expect(backend.getProgress()).toBeNull()
+      feed("\x1b]9;4;1;37\x07")
+      const first = backend.getProgress()
+      expect(first).toEqual({ state: 1, value: 37 })
+      // A returned report is a copy: mutating it cannot rewrite the engine's state.
+      first!.value = 99
+      expect(backend.getProgress()).toEqual({ state: 1, value: 37 })
+      // kitty stores percent 0 for error and indeterminate (progress.py:34-39); the reader never restores the input.
+      feed("\x1b]9;4;2;64\x07")
+      expect(backend.getProgress()).toEqual({ state: 2, value: 0 })
+      feed("\x1b]9;4;3\x1b\\")
+      expect(backend.getProgress()).toEqual({ state: 3, value: 0 })
+      // A state-0 report is a report, never null.
+      feed("\x1b]9;4;0\x07")
+      expect(backend.getProgress()).toEqual({ state: 0, value: 0 })
+      expect(desktopWarnings()).toEqual([])
+      backend.init({ cols: 30, rows: 3 })
+      expect(backend.getProgress()).toBeNull()
+    } finally {
+      backend.destroy()
+    }
+  },
+)
 
 // Native replay is consistent, so private subprocess tests miss the adapter accepting lost/rewritten history.
 test.each([
