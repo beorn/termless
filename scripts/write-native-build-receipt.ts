@@ -58,8 +58,26 @@ if (crates.length !== 1 || !record(crates[0]) || typeof crates[0].version !== "s
 }
 const engineVersion = crates[0].version
 const upstreamChecksum = crates[0].checksum
-if (typeof upstreamChecksum !== "string" || !/^[0-9a-f]{64}$/.test(upstreamChecksum)) {
-  throw new Error(`Missing ${crateName} registry checksum in ${lockPath}`)
+let sourceIdentity: { upstreamChecksum: string } | { sourceKind: "local-vendored-patch"; baseArchiveSha256: string }
+if (typeof upstreamChecksum === "string" && /^[0-9a-f]{64}$/.test(upstreamChecksum)) {
+  sourceIdentity = { upstreamChecksum }
+} else {
+  const manifest: unknown = Bun.TOML.parse(readFileSync(join(packageDir, "native", "Cargo.toml"), "utf8"))
+  const pkg = record(manifest) && record(manifest.package) ? manifest.package : undefined
+  const metadata = pkg && record(pkg.metadata) && record(pkg.metadata.termless) ? pkg.metadata.termless : undefined
+  if (
+    crates[0].source !== undefined ||
+    metadata?.sourceKind !== "local-vendored-patch" ||
+    metadata.baseCrate !== crateName ||
+    metadata.baseVersion !== engineVersion ||
+    typeof metadata.baseArchiveSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/.test(metadata.baseArchiveSha256)
+  ) {
+    throw new Error(
+      `Missing ${crateName} registry checksum in ${lockPath}; local source requires matching package.metadata.termless base provenance`,
+    )
+  }
+  sourceIdentity = { sourceKind: "local-vendored-patch", baseArchiveSha256: metadata.baseArchiveSha256 }
 }
 const sourceCommit = git(repo, "rev-parse", "HEAD")
 const nativeTreeOid = git(repo, "rev-parse", `HEAD:${packagePath}/native`)
@@ -81,7 +99,7 @@ const receipt = {
   lockSha256,
   nativeTreeOid,
   upstreamCrate: crateName,
-  upstreamChecksum,
+  ...sourceIdentity,
 }
 const destination = `${binaryPath}.receipt.json`
 const temporary = `${destination}.tmp-${process.pid}`

@@ -7,7 +7,7 @@
  * Build the native module:
  *   cd packages/wezterm/native && cargo build --release
  *   cp target/release/libtermless_wezterm_native.dylib ../termless-wezterm.node
- * @failure WezTerm loses stored OSC 8 URIs at its native cell boundary.
+ * @failure WezTerm loses stored OSC 8 URIs or cannot read real DECCKM state through its native boundary.
  * @level l0
  * @consumer Termless WezTerm backend capability declaration.
  * @testonly none
@@ -474,16 +474,44 @@ describe.skipIf(nativeBuildError !== null)(
         expect(backend.getMode("bracketedPaste")).toBe(true)
       })
 
+      // Existing mode tests require null, so they miss delivery of the real engine DECCKM getter.
+      test("reads application cursor state through fragmented set, reset, DECSTR, RIS and isolated instances", () => {
+        const other = createWeztermBackend()
+        other.init({ cols: 80, rows: 24 })
+        try {
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          expect(other.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("\x1b[?"))
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("1"))
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          backend.feed(encode("h"))
+          expect(backend.getMode("applicationCursor")).toBe(true)
+          expect(other.getMode("applicationCursor")).toBe(false)
+          for (const [bytes, enabled] of [
+            ["\x1b[?1l", false],
+            ["\x1b[?1h", true],
+            ["\x1b[!p", false],
+          ] as const) {
+            backend.feed(encode(bytes))
+            expect(backend.getMode("applicationCursor"), JSON.stringify(bytes)).toBe(enabled)
+            expect(other.getMode("applicationCursor")).toBe(false)
+          }
+          backend.feed(encode("\x1b[?1h"))
+          other.feed(encode("\x1b[?1h"))
+          expect(backend.getMode("applicationCursor")).toBe(true)
+          expect(other.getMode("applicationCursor")).toBe(true)
+          backend.feed(encode("\x1bc"))
+          expect(backend.getMode("applicationCursor")).toBe(false)
+          expect(other.getMode("applicationCursor")).toBe(true)
+        } finally {
+          other.destroy()
+        }
+      })
+
       test("returns null for modes without public wezterm-term getters instead of scanner shadow state", () => {
         backend.feed(encode("\x1b[?1h\x1b[?6h\x1b[?7l\x1b[?66h\x1b[?1004h\x1b[4h"))
-        for (const mode of [
-          "applicationCursor",
-          "applicationKeypad",
-          "autoWrap",
-          "focusTracking",
-          "originMode",
-          "insertMode",
-        ] as const) {
+        for (const mode of ["applicationKeypad", "autoWrap", "focusTracking", "originMode", "insertMode"] as const) {
           expect(backend.getMode(mode), `expected null for unobserved mode ${mode}`).toBeNull()
         }
         expect(backend.getMode("sgrMouse" as never)).toBeNull()

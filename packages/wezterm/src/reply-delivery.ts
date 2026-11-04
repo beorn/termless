@@ -6,7 +6,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // the TypeScript feed then drains the whole buffer into onResponse (src/backend.ts feed). Re-audited when the pixel
 // geometry reached the native constructor and resize, and again when its check moved to src/terminal/types.ts
 // declaredPixelGeometry, neither of which touches that path; bound to the native artifact built
-// from these sources (Cargo.lock sha256 8eaeab73), whose build receipt names the source commit.
+// from these sources, whose build receipt names the source commit and Cargo.lock digest.
 // Re-audited for nullable blink/native blink forwarding: only cell readback changed; the reply path above is unchanged.
 // Re-audited for owned OSC 8 URI readback: the existing synchronous reply path is unchanged.
 // Re-audited for existing underlineColor forwarding: cell extraction changes no response/callback route.
@@ -16,6 +16,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for the stored parsed-toast list: the notification handler only records toasts; feed/response delivery is
 // unchanged.
 // Re-audited for stored conceal cell/empty-cell projection: feed/response delivery is unchanged.
+// Re-audited for the readonly DECCKM getter and maintained Cargo source: feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -29,7 +30,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "74a771a53bed838ae98f9e6333d5079f14843040",
+      blobOid: "5d380725b95df7451eb9f743270c548dff91cb7b",
     },
     {
       path: "src/load-native.ts",
@@ -40,7 +41,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "4a15c6d9ceca951d5120f72b1473adc144eb7011abe877d8e65024946246b881",
+      sha256: "4e7355947c4ec0849f25adde1438ef40b684a16a42dca8ef7014a4f6a91b5a99",
     },
   },
 } as const

@@ -92,3 +92,12 @@ TypeScript (backend.ts)
 ```
 
 The native module exposes a `WeztermTerminal` class via napi-rs that wraps the Rust `Terminal` struct. The TypeScript layer converts between napi types and the Termless `Cell`/`Cursor`/`ScrollbackState` types.
+
+The native Cargo dependency uses the maintained source at
+`native/vendor/tattoy-wezterm-term`: the published 0.1.0-fork.5 archive plus a
+read-only `application_cursor_keys_enabled` getter and its lifecycle test.
+`native/Cargo.toml` records the base archive identity. Its original license and
+`.cargo_vcs_info.json` are retained; the latter says `dirty: true`, so its Git
+commit is not a claim of an identical clean source tree. Native receipts bind
+the maintained bytes through `nativeTreeOid`, with `sourceKind` and
+`baseArchiveSha256` instead of a registry checksum for the patched crate.
