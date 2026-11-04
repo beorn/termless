@@ -5,7 +5,7 @@
     "xtermjs": {
       "package": "@termless/xtermjs",
       "rendering": "render-capable",
-      "$comment": "Rendering: https://xtermjs.org/ (xterm.js library product; operator/CTO ruling includes its headless entry)",
+      "$comment": "Rendering: operator/CTO ruling 15171b5b-049e-4218-af35-5ab30ebf25e7 (xterm.js library product is render-capable, including its headless entry)",
       "upstream": "npm:@xterm/headless",
       "upstreamVersion": "6.0.0",
       "type": "js",
@@ -27,7 +27,7 @@
     "ghostty": {
       "package": "@termless/ghostty",
       "rendering": "render-capable",
-      "$comment": "Rendering: https://github.com/coder/ghostty-web/blob/v0.4.0/lib/index.ts#L80 (public CanvasRenderer)",
+      "$comment": "Rendering: https://github.com/coder/ghostty-web/blob/v0.4.0/lib/index.ts#L87 (public CanvasRenderer)",
       "upstream": "npm:ghostty-web",
       "upstreamVersion": "0.4.0",
       "type": "wasm",
@@ -174,7 +174,7 @@
     "libvterm": {
       "package": "@termless/libvterm",
       "rendering": "parser-only",
-      "$comment": "Rendering: https://www.leonerd.org.uk/code/libvterm/ (embedding-program callbacks draw)",
+      "$comment": "Rendering: https://github.com/neovim/libvterm/blob/v0.3.3/include/vterm.h#L423-L440 (libvterm 0.3.3 state callbacks supply glyphs/updates for embedding-program rendering)",
       "upstream": "github:neovim/libvterm",
       "upstreamVersion": "0.3.3",
       "type": "wasm",
