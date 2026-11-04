@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from "vitest"
-import { parseKey, keyToAnsi } from "../src/terminal/key-mapping.ts"
+import { isNamedKey, parseKey, keyToAnsi } from "../src/terminal/key-mapping.ts"
 import { encodeKeyToAnsi } from "../src/terminal/key-encoding.ts"
 import { createTerminal } from "../src/terminal/terminal.ts"
 import { createXtermBackend } from "../packages/xtermjs/src/backend.ts"
@@ -203,6 +203,15 @@ function createMockBackend(): TerminalBackend {
 // ═══════════════════════════════════════════════════════
 // parseKey tests
 // ═══════════════════════════════════════════════════════
+
+test("isNamedKey distinguishes canonical key names from text and inherited properties", () => {
+  for (const name of ["ArrowUp", "Space", "Control", "Meta", "F1", "F12"]) {
+    expect(isNamedKey(name), name).toBe(true)
+  }
+  for (const text of ["a", "hello", "UnknownKey", "F13", "toString", "constructor", "__proto__"]) {
+    expect(isNamedKey(text), text).toBe(false)
+  }
+})
 
 describe("parseKey", () => {
   test("single character", () => {

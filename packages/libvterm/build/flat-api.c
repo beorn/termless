@@ -109,6 +109,21 @@ TermlessOutputSink *termless_vterm_output_attach(VTerm *vt) {
   return &host->output;
 }
 
+// Capture synchronous native input without changing the selection owner.
+TermlessOutputSink *termless_vterm_output_capture_begin(VTerm *vt) {
+  TermlessOutputSink *capture = calloc(1, sizeof *capture);
+  if (!capture) return NULL;
+  vterm_output_set_callback(vt, sink_output, capture);
+  return capture;
+}
+
+void termless_vterm_output_capture_end(VTerm *vt, TermlessOutputSink *reply,
+    TermlessOutputSink *capture) {
+  vterm_output_set_callback(vt, sink_output, reply);
+  free(capture->bytes);
+  free(capture);
+}
+
 // Copies up to len pending reply bytes in order and removes them from the sink.
 // Returns -1 once an allocation failure has lost a reply; it never recovers.
 int termless_vterm_output_read(TermlessOutputSink *sink, char *buf, int len) {

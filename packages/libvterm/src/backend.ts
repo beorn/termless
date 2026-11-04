@@ -32,10 +32,13 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
+  KeyDescriptor,
+  MouseEvent,
+  MouseEncodingExtension,
   ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { isNamedKey } from "../../../src/terminal/key-mapping.ts"
 import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
 // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
@@ -146,6 +149,23 @@ function checkedScrollbackLimit(value: number): number {
 // TextEncoder for converting strings to bytes for WASM memory
 const encoder = new TextEncoder()
 
+// VTermKey values from the pinned libvterm 0.3.3 vterm_keycodes.h.
+const NATIVE_KEYS: Readonly<Record<string, number>> = {
+  Enter: 1,
+  Tab: 2,
+  Backspace: 3,
+  Escape: 4,
+  ArrowUp: 5,
+  ArrowDown: 6,
+  ArrowLeft: 7,
+  ArrowRight: 8,
+  Delete: 10,
+  Home: 11,
+  End: 12,
+  PageUp: 13,
+  PageDown: 14,
+}
+
 function writeBytes(mod: LibvtermModule, ptr: number, data: Uint8Array): void {
   for (let i = 0; i < data.length; i++) {
     const byte = data[i]
@@ -177,9 +197,10 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
 export function createLibvtermBackend(
   opts?: Partial<TerminalOptions>,
   mod?: LibvtermModule,
-): LegacyBackend & AdapterSourcesExtension {
+): LegacyBackend & AdapterSourcesExtension & MouseEncodingExtension {
   const configuredLimit = checkedScrollbackLimit(opts?.scrollbackLimit ?? DEFAULT_SCROLLBACK_LIMIT)
-  let vt: number = 0 // VTerm* pointer
+  // Private VTerm*: callers cannot send raw paste boundaries into this backend's reply sink.
+  let vt: number = 0
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer
   let output: number = 0 // TermlessOutputSink* holding replies until feed() drains them
@@ -307,6 +328,81 @@ export function createLibvtermBackend(
     } finally {
       m._free(outBuf)
     }
+  }
+
+  function captureInput(action: (m: LibvtermModule) => void): Uint8Array {
+    const m = ensureInit()
+    const capture = m.termless_vterm_output_capture_begin(vt)
+    if (!capture) throw new Error("libvterm input capture allocation failed")
+    let outBuf = 0
+    try {
+      const outBufLen = 1024
+      outBuf = m._malloc(outBufLen)
+      if (!outBuf) throw new Error("libvterm input capture read allocation failed")
+      action(m)
+      const chunks: Uint8Array[] = []
+      let length = 0
+      for (;;) {
+        const bytesRead = m.termless_vterm_output_read(capture, outBuf, outBufLen)
+        if (bytesRead < 0) throw new Error("libvterm input capture buffer could not grow; input data was lost")
+        if (bytesRead === 0) break
+        chunks.push(readBytes(m, outBuf, bytesRead))
+        length += bytesRead
+      }
+      const bytes = new Uint8Array(length)
+      let offset = 0
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset)
+        offset += chunk.length
+      }
+      return bytes
+    } finally {
+      // Restore only the output callback: attach/detach also owns OSC 52 selection state.
+      try {
+        m.termless_vterm_output_capture_end(vt, output, capture)
+      } finally {
+        if (outBuf) m._free(outBuf)
+      }
+    }
+  }
+
+  function encodeKey(key: KeyDescriptor): Uint8Array {
+    const unsupported = () => new Error(`libvterm keyboard API has no native encoding for ${JSON.stringify(key)}`)
+    if (key.super) throw unsupported()
+    const modifiers = (key.shift ? 1 : 0) | (key.alt ? 2 : 0) | (key.ctrl ? 4 : 0)
+    if (isNamedKey(key.key)) {
+      if (key.key === "Space") {
+        return captureInput((m) => m.vterm_keyboard_unichar(vt, 32, modifiers))
+      }
+      const nativeKey = /^F(?:[1-9]|1[0-2])$/.test(key.key) ? 256 + Number(key.key.slice(1)) : NATIVE_KEYS[key.key]
+      if (nativeKey === undefined) throw unsupported()
+      return captureInput((m) => m.vterm_keyboard_key(vt, nativeKey, modifiers))
+    }
+    if (/^F\d+$/.test(key.key)) throw unsupported()
+    const scalars = Array.from(key.key)
+    if (scalars.length !== 1 && modifiers) throw unsupported()
+    return captureInput((m) => {
+      for (const scalar of scalars) {
+        const codepoint = scalar.codePointAt(0)
+        if (codepoint === undefined) throw unsupported()
+        m.vterm_keyboard_unichar(vt, codepoint, modifiers)
+      }
+    })
+  }
+
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    if (event.pixel !== undefined) {
+      throw new Error("libvterm mouse API has no native encoding for pixel coordinates")
+    }
+    const modifiers = (event.shift ? 1 : 0) | (event.alt ? 2 : 0) | (event.ctrl ? 4 : 0)
+    const buttons = { left: 1, middle: 2, right: 3, wheelUp: 4, wheelDown: 5, none: 0 }
+    const bytes = captureInput((m) => {
+      m.vterm_mouse_move(vt, event.y, event.x, modifiers)
+      if (event.action !== "move" && event.button !== "none") {
+        m.vterm_mouse_button(vt, buttons[event.button], event.action === "press" ? 1 : 0, modifiers)
+      }
+    })
+    return bytes.length ? bytes : null
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -517,10 +613,10 @@ export function createLibvtermBackend(
       reason:
         "libvterm supplies history callbacks; this adapter retains rows for readback without an application viewport.",
     },
-    extensions: new Set<string>(["adapter-sources", "reply-delivery"]),
+    extensions: new Set<string>(["adapter-sources", "reply-delivery", "mouse-encoding"]),
   }
 
-  const backend: LegacyBackend & ReplyDeliveryExtension & AdapterSourcesExtension = {
+  const backend: LegacyBackend & ReplyDeliveryExtension & AdapterSourcesExtension & MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "libvterm",
     init,
@@ -544,7 +640,8 @@ export function createLibvtermBackend(
     getScrollback,
     getReflowState: () => ({ enabled: ensureInit().termless_vterm_observer_get_reflow(cursorPropsPtr) !== 0 }),
     scrollViewport,
-    encodeKey: encodeKeyToAnsi,
+    encodeKey,
+    encodeMouse,
     capabilities,
     replyDelivery,
   }

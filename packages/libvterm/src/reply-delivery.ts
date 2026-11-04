@@ -12,6 +12,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for the native application-cursor getter; it reads state without writing input or output.
 // Re-audited with one property/history observer, native keypad read and recorded reflow enablement.
 // Reply/selection sinks and feed draining retain the existing path; exact artifact tests verify this pair.
+// Re-audited for native keyboard/mouse input capture: synchronous callback swaps restore the original reply sink
+// in finally without changing selection callbacks; tests retain a queued reply prefix and OSC52 state after failures.
+// Paste is exposed only on LibvtermModule handles created by their callers; backend handles stay private.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -21,22 +24,26 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "2fb638750f968bf7c2787e097eebc6b2512542c9",
+      blobOid: "c4dc54d3def60001ae8a200c2d2cb3fda3e46ec7",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "93283c5d0ee71d63a36e124f0264d32515234785",
+      blobOid: "07d73897f201bea0b234148f5fb6ed55d3779f90",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "4b17ecd37448e2938f4e474dd95b6ba73d994f45",
+      blobOid: "98c3d4f3875dc2499d2118ade86270be8dfc1ee0",
+    },
+    {
+      path: "src/terminal/key-mapping.ts",
+      blobOid: "a687ff18768ae42b315f689122bcef07244b036e",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "5ba1b9c894b1ddc608392c33f02b7910fd8da56c9448218c12a00bbe83020b87",
+      sha256: "156dcc22456fd7e9527ba178c795759d7e5668a99d3b56fa1dd93b3abf27f5f0",
     },
   },
 } as const
