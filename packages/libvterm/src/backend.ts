@@ -100,8 +100,7 @@ function underlineStyle(raw: number, row: number, col: number): Cell["underline"
 }
 
 /** Convert a libvterm cell from the shim's fixed-width values. */
-function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, col: number, cellPtr: number): Cell {
-  mod.vterm_screen_get_cell(screen, row, col, cellPtr)
+function convertLibvtermCell(mod: LibvtermModule, row: number, col: number, cellPtr: number): Cell {
   const raw = readCell(mod, cellPtr)
 
   // vterm.h: bit 0 selects indexed color; bits 1/2 mark default fg/bg.
@@ -134,6 +133,15 @@ function convertLibvtermCell(mod: LibvtermModule, screen: number, row: number, c
 
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
+const DEFAULT_SCROLLBACK_LIMIT = 1000
+
+function checkedScrollbackLimit(value: number): number {
+  // The native callback limit is a signed WASM32 integer, so reject wrapping.
+  if (!Number.isSafeInteger(value) || value < 0 || value > 0x7fffffff) {
+    throw new Error("libvterm scrollbackLimit must be an integer between 0 and 2147483647")
+  }
+  return value
+}
 
 // TextEncoder for converting strings to bytes for WASM memory
 const encoder = new TextEncoder()
@@ -170,6 +178,7 @@ export function createLibvtermBackend(
   opts?: Partial<TerminalOptions>,
   mod?: LibvtermModule,
 ): LegacyBackend & AdapterSourcesExtension {
+  const configuredLimit = checkedScrollbackLimit(opts?.scrollbackLimit ?? DEFAULT_SCROLLBACK_LIMIT)
   let vt: number = 0 // VTerm* pointer
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer
@@ -187,10 +196,14 @@ export function createLibvtermBackend(
     if (!module || !vt) {
       throw new Error("libvterm backend not initialized -- call init() first")
     }
+    if (cursorPropsPtr && module.getValue(cursorPropsPtr + 64, "i32")) {
+      throw new Error("libvterm native observation failed after an allocation failure; history or properties were lost")
+    }
     return module
   }
 
   function init(options: TerminalOptions): void {
+    const historyLimit = checkedScrollbackLimit(options.scrollbackLimit ?? configuredLimit)
     // Clean up previous instance if re-initializing
     destroy()
 
@@ -219,13 +232,14 @@ export function createLibvtermBackend(
     screen = module.vterm_obtain_screen(vt)
     state = module.vterm_obtain_state(vt)
 
-    // WASM32 TermlessPropRecord: existing 40-byte prefix, icon buffers, failure flag.
-    cursorPropsPtr = module._malloc(17 * 4)
+    // C owns the full context; JS reads only its existing property prefix.
+    cursorPropsPtr = module.termless_vterm_observer_new(state, historyLimit)
     if (!cursorPropsPtr) {
       destroy()
       throw new Error("libvterm cursor observation allocation failed")
     }
     module.termless_vterm_screen_observe_props(screen, cursorPropsPtr)
+    module.termless_vterm_observer_enable_reflow(screen, cursorPropsPtr)
 
     // Enable the screen (required for get_cell to work)
     module.vterm_screen_reset(screen, 1)
@@ -242,8 +256,7 @@ export function createLibvtermBackend(
       // A failed init can destroy before the screen handle exists; libvterm dereferences the screen it is given.
       if (screen) module.termless_vterm_screen_observe_props(screen, 0)
       if (cursorPropsPtr) {
-        module.termless_vterm_screen_observe_props(0, cursorPropsPtr)
-        module._free(cursorPropsPtr)
+        module.termless_vterm_observer_free(cursorPropsPtr)
         cursorPropsPtr = 0
       }
       if (cellPtr) {
@@ -275,7 +288,7 @@ export function createLibvtermBackend(
     m._free(ptr)
 
     if (m.getValue(cursorPropsPtr + 64, "i32")) {
-      throw new Error("libvterm property observation lost an icon or title after allocation failure")
+      throw new Error("libvterm native observation failed after an allocation failure; history or properties were lost")
     }
 
     // Drain every reply this feed produced, in order, from the output sink (build/flat-api.c); replies nobody
@@ -305,7 +318,8 @@ export function createLibvtermBackend(
 
   function reset(): void {
     const m = ensureInit()
-    if (cursorPropsPtr) m.termless_vterm_screen_observe_props(0, cursorPropsPtr)
+    // Keep title/icon reset behavior without inventing an sb_clear callback.
+    m.termless_vterm_screen_observe_props(0, cursorPropsPtr)
     // Feed RIS (Reset to Initial State) escape sequence
     const ris = encoder.encode("\x1bc")
     const ptr = m._malloc(ris.length)
@@ -315,74 +329,96 @@ export function createLibvtermBackend(
   }
 
   function getText(): string {
-    const m = ensureInit()
     const lines: string[] = []
-
-    // Read each screen row using vterm_screen_get_text
-    const bufLen = cols * 4 + 1 // UTF-8 worst case + null terminator
-    const buf = m._malloc(bufLen)
-
-    for (let row = 0; row < rows; row++) {
-      const len = m.vterm_screen_get_text(screen, buf, bufLen, row, 0, row + 1, cols)
-      if (len > 0) {
-        const line = m.UTF8ToString(buf, len)
-        lines.push(line.replace(/\s+$/, ""))
-      } else {
-        lines.push("")
-      }
+    const total = getScrollback().totalRows
+    for (let row = 0; row < total; row++) {
+      lines.push(readRowText(row, 0, rowColumns(row)).replace(/\s+$/, ""))
     }
-
-    m._free(buf)
     return lines.join("\n")
   }
 
   function getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string {
-    const m = ensureInit()
     const parts: string[] = []
-    const bufLen = cols * 4 + 1
-    const buf = m._malloc(bufLen)
-
     for (let row = startRow; row <= endRow; row++) {
       const colStart = row === startRow ? startCol : 0
-      const colEnd = row === endRow ? endCol : cols
-
-      const len = m.vterm_screen_get_text(screen, buf, bufLen, row, colStart, row + 1, colEnd)
-      if (len > 0) {
-        const line = m.UTF8ToString(buf, len)
-        parts.push(line.replace(/\s+$/, ""))
-      } else {
-        parts.push("")
-      }
+      const colEnd = row === endRow ? endCol : rowColumns(row)
+      parts.push(readRowText(row, colStart, colEnd).replace(/\s+$/, ""))
     }
-
-    m._free(buf)
     return parts.join("\n")
+  }
+
+  function rowColumns(row: number): number {
+    const m = ensureInit()
+    const history = m.termless_vterm_history_count(cursorPropsPtr)
+    if (row < 0 || row >= history + rows) return 0
+    return row < history ? m.termless_vterm_history_cols(cursorPropsPtr, row) : cols
+  }
+
+  function readRowText(row: number, startCol: number, endCol: number): string {
+    const m = ensureInit()
+    const width = rowColumns(row)
+    const start = Math.max(0, Math.min(startCol, width))
+    const end = Math.max(start, Math.min(endCol, width))
+    if (start === end) return ""
+    const history = m.termless_vterm_history_count(cursorPropsPtr)
+    const readText = (buf: number, length: number) =>
+      row < history
+        ? m.termless_vterm_history_get_text(cursorPropsPtr, row, start, end, buf, length)
+        : m.vterm_screen_get_text(screen, buf, length, row - history, start, row - history + 1, end)
+    // Both native readers support a sizing query. No combining text is hidden
+    // behind a guessed UTF-8 buffer size, including old wider history rows.
+    const byteLength = readText(0, 0)
+    if (byteLength < 0) throw new Error(`libvterm could not size retained row ${row}`)
+    if (byteLength === 0) return ""
+    const buf = m._malloc(byteLength + 1)
+    if (!buf) throw new Error("libvterm text read allocation failed")
+    try {
+      const len = readText(buf, byteLength)
+      if (len !== byteLength) throw new Error(`libvterm retained row ${row} changed during read`)
+      return m.UTF8ToString(buf, len)
+    } finally {
+      m._free(buf)
+    }
   }
 
   function getCell(row: number, col: number): Cell {
     const m = ensureInit()
-    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+    if (col < 0 || col >= rowColumns(row)) {
       return emptyCell()
     }
-    return convertLibvtermCell(m, screen, row, col, cellPtr)
+    const history = m.termless_vterm_history_count(cursorPropsPtr)
+    if (row >= history) {
+      m.vterm_screen_get_cell(screen, row - history, col, cellPtr)
+      return convertLibvtermCell(m, row, col, cellPtr)
+    }
+    if (!m.termless_vterm_history_get_cell_flat(cursorPropsPtr, row, col, cellPtr)) {
+      throw new Error(`libvterm retained cell (${row}, ${col}) is unavailable`)
+    }
+    // Reuse the same normalized-cell conversion without re-reading a screen
+    // coordinate. The native store retains all combining scalars for text.
+    return {
+      ...convertLibvtermCell(m, row, col, cellPtr),
+      char: readRowText(row, col, col + 1),
+    }
   }
 
   function getLine(row: number): Cell[] {
-    const m = ensureInit()
-    if (row < 0 || row >= rows) {
+    const width = rowColumns(row)
+    if (width === 0) {
       return Array.from({ length: cols }, () => emptyCell())
     }
 
     const cells: Cell[] = []
-    for (let col = 0; col < cols; col++) {
-      cells.push(convertLibvtermCell(m, screen, row, col, cellPtr))
+    for (let col = 0; col < width; col++) {
+      cells.push(getCell(row, col))
     }
     return cells
   }
 
   function getLines(): Cell[][] {
     const result: Cell[][] = []
-    for (let row = 0; row < rows; row++) {
+    const total = getScrollback().totalRows
+    for (let row = 0; row < total; row++) {
       result.push(getLine(row))
     }
     return result
@@ -415,6 +451,9 @@ export function createLibvtermBackend(
   }
 
   function getMode(mode: Mode): boolean | null {
+    if (mode === "applicationKeypad") {
+      return ensureInit().termless_vterm_state_get_application_keypad(state) !== 0
+    }
     if (mode === "applicationCursor") {
       return ensureInit().termless_vterm_state_get_application_cursor(state) !== 0
     }
@@ -443,17 +482,16 @@ export function createLibvtermBackend(
   }
 
   function getScrollback(): ScrollbackState {
-    // libvterm doesn't maintain its own scrollback buffer --
-    // scrollback is the responsibility of the embedding application.
+    const history = ensureInit().termless_vterm_history_count(cursorPropsPtr)
     return {
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
-      viewportOffset: 0,
+      viewportOffset: history,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
-      totalLines: rows,
+      totalLines: history + rows,
       // oxlint-disable-next-line typescript/no-deprecated -- Legacy scrollback alias required by TerminalBackend.
       screenLines: rows,
-      viewportTop: 0,
-      totalRows: rows,
+      viewportTop: history,
+      totalRows: history + rows,
       screenRows: rows,
     }
   }
@@ -473,11 +511,11 @@ export function createLibvtermBackend(
     osc8Hyperlinks: false,
     semanticPrompts: false,
     unicode: "15.1",
-    reflow: false,
+    reflow: true,
     productViewport: {
       available: false,
       reason:
-        "libvterm v0.3.3 library subject hands rows through sb_pushline/sb_popline and retains neither history nor a viewport: include/vterm.h:541-543; src/screen.c:208-226,676-681,830-837 (raw source at 9d6d2112335080312ef8c36667fa717ded4f7daf). An embedding application's viewport is a different subject.",
+        "libvterm supplies history callbacks; this adapter retains rows for readback without an application viewport.",
     },
     extensions: new Set<string>(["adapter-sources", "reply-delivery"]),
   }
@@ -504,6 +542,7 @@ export function createLibvtermBackend(
     getTitle,
     getIconLabel,
     getScrollback,
+    getReflowState: () => ({ enabled: ensureInit().termless_vterm_observer_get_reflow(cursorPropsPtr) !== 0 }),
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
     capabilities,

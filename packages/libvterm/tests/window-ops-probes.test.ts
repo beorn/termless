@@ -13,6 +13,7 @@
  */
 
 import { describe, test, expect } from "vitest"
+import { spawnSync } from "node:child_process"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, loadedLibvtermWasm, type LibvtermModule } from "../src/wasm-bindings.ts"
 import { hasExtension, type ReplyDeliveryExtension, type TerminalBackend } from "../../../src/terminal/types.ts"
@@ -44,6 +45,55 @@ try {
 
 const describeWasm = wasmModule ? describe : describe.skip
 
+// The old suite observes application-cursor state and window properties, but
+// cannot catch missing keypad state or a declared-only reflow capability.
+test("reports native keypad transitions and the instance's actual reflow setting", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 8, rows: 2 })
+  try {
+    const responses: Uint8Array[] = []
+    backend.onResponse = (bytes) => responses.push(bytes)
+    expect(backend.getMode("applicationKeypad")).toBe(false)
+    backend.feed(new TextEncoder().encode("\x1b="))
+    expect(backend.getMode("applicationKeypad")).toBe(true)
+    backend.feed(new TextEncoder().encode("\x1b>"))
+    expect(backend.getMode("applicationKeypad")).toBe(false)
+    expect(backend.getReflowState?.()).toEqual({ enabled: true })
+    expect(responses).toEqual([])
+  } finally {
+    backend.destroy()
+  }
+})
+
+// Real retained rows distinguish a callback-backed reader from the previous
+// screen-only count/read methods. This also pins the public absolute-row seam.
+test("retains real history cells, evicts oldest at the limit and handles engine ED3", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 8, rows: 2, scrollbackLimit: 1 })
+  const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+  try {
+    feed("zero\r\none\r\ntwo")
+    expect(backend.getScrollback().totalRows).toBe(3)
+    expect(backend.getText().split("\n")).toEqual(["zero", "one", "two"])
+    expect(backend.getCell(0, 0).char).toBe("z")
+    expect(
+      backend
+        .getRow(1)
+        .slice(0, 3)
+        .map((cell) => cell.char)
+        .join(""),
+    ).toBe("one")
+    expect(backend.getRows()).toHaveLength(3)
+    feed("\r\nthree")
+    expect(backend.getText().split("\n")).toEqual(["one", "two", "three"])
+    feed("\x1b[3J")
+    expect(backend.getScrollback().totalRows).toBe(2)
+    expect(backend.getText().split("\n")).toEqual(["two", "three"])
+  } finally {
+    backend.destroy()
+  }
+})
+
 test("application cursor mode follows native state without producing replies", async () => {
   const module = await initLibvterm()
   const backend = createLibvtermBackend(undefined, module)
@@ -74,6 +124,191 @@ test("application cursor mode follows native state without producing replies", a
   } finally {
     backend.destroy()
     isolated.destroy()
+  }
+})
+
+// Native reset does not invoke sb_clear. The previous reset implementation
+// cleared property strings explicitly; sharing its owner must preserve both
+// contracts rather than silently clearing history with those strings.
+test("reset clears title and icon while retained history survives and alternate output adds none", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 8, rows: 2 })
+  const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+  try {
+    feed("zero\r\none\r\ntwo\x1b]0;label\x07")
+    expect(backend.getScrollback().totalRows).toBe(3)
+    backend.reset()
+    expect(backend.getTitle()).toBe("")
+    expect(backend.getIconLabel?.()).toBe("")
+    expect(backend.getScrollback().totalRows).toBe(3)
+    expect(backend.getText().split("\n")[0]).toBe("zero")
+    feed("\x1b[?1049hA\r\nB\r\nC\r\nD\x1b[?1049l")
+    expect(backend.getScrollback().totalRows).toBe(3)
+    expect(backend.getText().split("\n")[0]).toBe("zero")
+  } finally {
+    backend.destroy()
+  }
+})
+
+test.each([-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, 0x80000000])(
+  "rejects an invalid history limit %s before native integer conversion",
+  async (scrollbackLimit) => {
+    const mod = await initLibvterm()
+    expect(() => createLibvtermBackend({ scrollbackLimit }, mod)).toThrow(/scrollbackLimit.*integer/i)
+    const backend = createLibvtermBackend(undefined, mod)
+    expect(() => backend.init({ cols: 8, rows: 2, scrollbackLimit })).toThrow(/scrollbackLimit.*integer/i)
+  },
+)
+
+test("a zero history limit retains no rows", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 8, rows: 2, scrollbackLimit: 0 })
+  try {
+    backend.feed(new TextEncoder().encode("zero\r\none\r\ntwo"))
+    expect(backend.getScrollback().totalRows).toBe(2)
+    expect(backend.getText().split("\n")).toEqual(["one", "two"])
+  } finally {
+    backend.destroy()
+  }
+})
+
+// A width-0 pad wedges a synchronous WASM resize indefinitely. A child owns
+// that failure so its 10s deadline can kill it; a promise timeout cannot.
+test("native history pop completes when padding and truncating wide rows", () => {
+  const backendUrl = new URL("../src/backend.ts", import.meta.url).href
+  const moduleUrl = new URL("../src/wasm-bindings.ts", import.meta.url).href
+  const script = `
+    import { createLibvtermBackend } from ${JSON.stringify(backendUrl)};
+    import { initLibvterm } from ${JSON.stringify(moduleUrl)};
+    const mod = await initLibvterm();
+    const results = [];
+    for (const [initialCols, finalCols, text] of [[4,8,"ABC"],[8,4,"ABCDE"],[8,4,"ABC世"]]) {
+      const term = createLibvtermBackend(undefined, mod);
+      term.init({cols:initialCols,rows:2});
+      term.feed(new TextEncoder().encode(text + "\\r\\nx\\r\\ny"));
+      const retained = term.getScrollback().totalRows - 2;
+      // libvterm asks sb_popline for OLD columns. Change width first,
+      // retaining the original stored width, then grow height separately.
+      term.resize(finalCols, 2);
+      const afterWidth = {
+        retained:term.getScrollback().totalRows - 2,
+        storedCols:term.getRow(0).length,
+      };
+      term.resize(finalCols, 4);
+      results.push({retained, afterWidth, cells:term.getRow(0), rows:term.getScrollback().totalRows});
+      term.destroy();
+    }
+    process.stdout.write(JSON.stringify(results));
+  `
+  const child = spawnSync(process.execPath, ["--input-type=module", "--eval", script], {
+    timeout: 10_000,
+    encoding: "utf8",
+  })
+  expect(child.error, child.stderr).toBeUndefined()
+  expect(child.status, child.stderr).toBe(0)
+  const results = JSON.parse(child.stdout) as {
+    retained: number
+    afterWidth: { retained: number; storedCols: number }
+    cells: ReturnType<TerminalBackend["getRow"]>
+    rows: number
+  }[]
+  expect(results).toHaveLength(3)
+  const initialWidths = [4, 8, 8]
+  const finalWidths = [8, 4, 4]
+  for (const [index, result] of results.entries()) {
+    expect(result.retained).toBe(1)
+    expect(result.afterWidth).toEqual({ retained: 1, storedCols: initialWidths[index] })
+    expect(result.rows).toBe(4)
+    expect(result.cells).toHaveLength(finalWidths[index]!)
+    expect(
+      result.cells
+        .slice(0, 3)
+        .map((cell) => cell.char)
+        .join(""),
+    ).toBe("ABC")
+  }
+  expect(results[1]!.cells[3]!.char).toBe("D")
+  for (const blank of [...results[0]!.cells.slice(3), results[2]!.cells[3]!]) {
+    expect(blank).toMatchObject({
+      char: "",
+      fg: null,
+      bg: null,
+      bold: false,
+      italic: false,
+      underline: false,
+      wide: false,
+      continuation: false,
+    })
+  }
+}, 15_000)
+
+// The WASM32 row-array size overflows for this otherwise representable limit.
+// It exercises the real failed-storage callback without exhausting host RAM
+// or adding an allocator-injection API solely for the test.
+test("history storage failure remains loud on the next read", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 8, rows: 2, scrollbackLimit: 0x7fffffff })
+  try {
+    expect(() => backend.feed(new TextEncoder().encode("zero\r\none\r\ntwo"))).toThrow(
+      /allocation failure; history or properties were lost/i,
+    )
+    expect(() => backend.getScrollback()).toThrow(/allocation failure.*history/i)
+    expect(() => backend.getText()).toThrow(/allocation failure.*history/i)
+  } finally {
+    backend.destroy()
+  }
+})
+
+// Observe the real WASM memory through Emscripten's existing instantiation
+// option. No production allocator hook/export is introduced for this test.
+test("re-observing frees retained native rows before reusing the context", async () => {
+  const bytes = await import("node:fs/promises").then((fs) =>
+    fs.readFile(new URL("../wasm/libvterm.wasm", import.meta.url)),
+  )
+  const wasm = new WebAssembly.Module(bytes)
+  let memory: WebAssembly.Memory | undefined
+  const factory = (await import("../wasm/libvterm.js")).default as unknown as (options: {
+    instantiateWasm: (
+      imports: WebAssembly.Imports,
+      receive: (instance: WebAssembly.Instance, module: WebAssembly.Module) => void,
+    ) => WebAssembly.Exports
+  }) => Promise<Record<string, (...args: number[]) => number>>
+  const raw = await factory({
+    instantiateWasm(imports, receive) {
+      const instance = new WebAssembly.Instance(wasm, imports)
+      memory = instance.exports.memory as WebAssembly.Memory
+      receive(instance, wasm)
+      return instance.exports
+    },
+  })
+  if (!memory) throw new Error("libvterm instance exposes no WASM memory")
+  const vt = raw._termless_vterm_new_utf8!(2, 80)
+  const screen = raw._vterm_obtain_screen!(vt)
+  const record = raw._termless_vterm_observer_new!(raw._vterm_obtain_state!(vt), 1000)
+  const input = new TextEncoder().encode("line\r\n".repeat(1001))
+  const ptr = raw._malloc!(input.length)
+  try {
+    raw._termless_vterm_screen_observe_props!(screen, record)
+    raw._vterm_screen_reset!(screen, 1)
+    const exercise = () => {
+      new Uint8Array(memory!.buffer, ptr, input.length).set(input)
+      raw._vterm_input_write!(vt, ptr, input.length)
+      expect(raw._termless_vterm_history_count!(record)).toBe(1000)
+      raw._termless_vterm_screen_observe_props!(screen, record)
+      expect(raw._termless_vterm_history_count!(record)).toBe(0)
+    }
+    exercise()
+    exercise()
+    const baselineBytes = memory.buffer.byteLength
+    for (let round = 0; round < 40; round++) exercise()
+    // A no-free regression retains >100MB here. Allowing 2x warmed memory
+    // absorbs allocator growth while still discriminating that native leak.
+    expect(memory.buffer.byteLength).toBeLessThanOrEqual(baselineBytes * 2)
+  } finally {
+    raw._termless_vterm_screen_observe_props!(screen, 0)
+    raw._termless_vterm_observer_free!(record)
+    raw._free!(ptr)
+    raw._vterm_free!(vt)
   }
 })
 
@@ -247,7 +482,6 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         "altScreen",
         "cursorVisible",
         "bracketedPaste",
-        "applicationKeypad",
         "autoWrap",
         "mouseTracking",
         "focusTracking",
@@ -303,12 +537,14 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
   test("rejects an invalid raw underline code with cell and ABI context", () => {
     const realModule = wasmModule!
     const mod = Object.create(realModule) as LibvtermModule
-    const realGetValue = realModule.getValue.bind(realModule)
-    let wordReads = 0
+    const realGetCell = realModule.vterm_screen_get_cell.bind(realModule)
     let underlineCode = 0
-    mod.getValue = (ptr, type) => {
-      if (wordReads++ === 3) return underlineCode
-      return realGetValue(ptr, type)
+    mod.vterm_screen_get_cell = (screen, row, col, ptr) => {
+      const found = realGetCell(screen, row, col, ptr)
+      // Inject malformed metadata at the actual flat ABI boundary, independent
+      // of unrelated context reads performed before cell conversion.
+      realModule.setValue(ptr + 3 * 4, underlineCode, "i32")
+      return found
     }
 
     const backend = createLibvtermBackend(undefined, mod)
@@ -321,11 +557,9 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         [3, "curly"],
       ] as const) {
         underlineCode = code
-        wordReads = 0
         expect(backend.getCell(1, 2).underline, `raw underline code ${code}`).toBe(expected)
       }
       underlineCode = 99
-      wordReads = 0
       expect(() => backend.getCell(1, 2)).toThrow(/underline code 99.*cell \(1, 2\).*word 3/i)
     } finally {
       backend.destroy()
