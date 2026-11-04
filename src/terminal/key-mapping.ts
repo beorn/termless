@@ -48,6 +48,11 @@ const FKEY_MAP: Record<string, string> = {
   F12: "\x1b[24~",
 }
 
+/** Whether a key name belongs to the canonical named-key set rather than text. */
+export function isNamedKey(name: string): boolean {
+  return Object.hasOwn(KEY_MAP, name) || Object.hasOwn(FKEY_MAP, name)
+}
+
 // ── Modifier aliases ──
 
 const MODIFIER_ALIASES: Record<string, string> = {

@@ -21,11 +21,21 @@ export interface LibvtermModule {
   vterm_free(vt: number): void
   vterm_set_size(vt: number, rows: number, cols: number): void
   vterm_input_write(vt: number, bytes: number, len: number): number
+  vterm_keyboard_unichar(vt: number, codepoint: number, modifiers: number): void
+  vterm_keyboard_key(vt: number, key: number, modifiers: number): void
+  vterm_keyboard_start_paste(vt: number): void
+  vterm_keyboard_end_paste(vt: number): void
+  vterm_mouse_move(vt: number, row: number, col: number, modifiers: number): void
+  vterm_mouse_button(vt: number, button: number, pressed: number, modifiers: number): void
   /** Routes every engine reply into the flat API's growable sink instead of libvterm's fixed buffer; 0 on failure. */
   termless_vterm_output_attach(vt: number): number
   /** Moves up to len pending reply bytes, in order, into buf; -1 once the sink has lost a reply. */
   termless_vterm_output_read(sink: number, buf: number, len: number): number
   termless_vterm_output_detach(vt: number, sink: number): void
+  /** Temporarily captures native input output without changing the selection owner; 0 on allocation failure. */
+  termless_vterm_output_capture_begin(vt: number): number
+  /** Restores the original reply callback before freeing the temporary input sink. */
+  termless_vterm_output_capture_end(vt: number, reply: number, capture: number): void
   vterm_obtain_screen(vt: number): number
   vterm_obtain_state(vt: number): number
   vterm_screen_reset(screen: number, hard: number): void
@@ -135,6 +145,14 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       throw new Error("Generated libvterm module is missing _termless_vterm_state_get_application_cursor; rebuild WASM")
     }
     for (const name of [
+      "_vterm_keyboard_unichar",
+      "_vterm_keyboard_key",
+      "_vterm_keyboard_start_paste",
+      "_vterm_keyboard_end_paste",
+      "_vterm_mouse_move",
+      "_vterm_mouse_button",
+      "_termless_vterm_output_capture_begin",
+      "_termless_vterm_output_capture_end",
       "_termless_vterm_observer_new",
       "_termless_vterm_observer_free",
       "_termless_vterm_observer_enable_reflow",
@@ -159,9 +177,21 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.vterm_free = cwrap("vterm_free", null, ["number"])
     module.vterm_set_size = cwrap("vterm_set_size", null, ["number", "number", "number"])
     module.vterm_input_write = cwrap("vterm_input_write", "number", ["number", "number", "number"])
+    module.vterm_keyboard_unichar = cwrap("vterm_keyboard_unichar", null, ["number", "number", "number"])
+    module.vterm_keyboard_key = cwrap("vterm_keyboard_key", null, ["number", "number", "number"])
+    module.vterm_keyboard_start_paste = cwrap("vterm_keyboard_start_paste", null, ["number"])
+    module.vterm_keyboard_end_paste = cwrap("vterm_keyboard_end_paste", null, ["number"])
+    module.vterm_mouse_move = cwrap("vterm_mouse_move", null, ["number", "number", "number", "number"])
+    module.vterm_mouse_button = cwrap("vterm_mouse_button", null, ["number", "number", "number", "number"])
     module.termless_vterm_output_attach = cwrap("termless_vterm_output_attach", "number", ["number"])
     module.termless_vterm_output_read = cwrap("termless_vterm_output_read", "number", ["number", "number", "number"])
     module.termless_vterm_output_detach = cwrap("termless_vterm_output_detach", null, ["number", "number"])
+    module.termless_vterm_output_capture_begin = cwrap("termless_vterm_output_capture_begin", "number", ["number"])
+    module.termless_vterm_output_capture_end = cwrap("termless_vterm_output_capture_end", null, [
+      "number",
+      "number",
+      "number",
+    ])
     module.vterm_obtain_screen = cwrap("vterm_obtain_screen", "number", ["number"])
     module.vterm_obtain_state = cwrap("vterm_obtain_state", "number", ["number"])
     module.vterm_screen_reset = cwrap("vterm_screen_reset", null, ["number", "number"])

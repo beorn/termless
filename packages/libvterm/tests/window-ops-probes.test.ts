@@ -94,7 +94,9 @@ test("retains real history cells, evicts oldest at the limit and handles engine 
   }
 })
 
-test("application cursor mode follows native state without producing replies", async () => {
+// AC1: the existing mode-only assertions cannot detect a stateless input encoder.
+// The real backend must return native application-cursor input, without replies.
+test("application cursor input follows native state without producing replies", async () => {
   const module = await initLibvterm()
   const backend = createLibvtermBackend(undefined, module)
   const isolated = createLibvtermBackend(undefined, module)
@@ -104,21 +106,27 @@ test("application cursor mode follows native state without producing replies", a
     const responses: string[] = []
     backend.onResponse = (bytes) => responses.push(new TextDecoder().decode(bytes))
     const feed = (sequence: string) => backend.feed(new TextEncoder().encode(sequence))
+    const up = (target = backend) => new TextDecoder().decode(target.encodeKey({ key: "ArrowUp" }))
     expect(backend.getMode("applicationCursor")).toBe(false)
+    expect(up()).toBe("\x1b[A")
     feed("\x1b[?1")
     expect(backend.getMode("applicationCursor")).toBe(false)
+    expect(up()).toBe("\x1b[A")
     feed("h")
     expect(backend.getMode("applicationCursor")).toBe(true)
-    expect(backend.getMode("applicationCursor")).toBe(true)
+    expect(up()).toBe("\x1bOA")
     expect(isolated.getMode("applicationCursor")).toBe(false)
+    expect(up(isolated)).toBe("\x1b[A")
     expect(responses).toEqual([])
     feed("\x1b[?1l")
     expect(backend.getMode("applicationCursor")).toBe(false)
+    expect(up()).toBe("\x1b[A")
     for (const reset of ["\x1b[!p", "\x1bc"]) {
       feed("\x1b[?1h")
       expect(backend.getMode("applicationCursor")).toBe(true)
       feed(reset)
       expect(backend.getMode("applicationCursor")).toBe(false)
+      expect(up()).toBe("\x1b[A")
     }
     expect(responses).toEqual([])
   } finally {

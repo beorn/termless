@@ -26,7 +26,13 @@ test("declares audited WASM reply delivery without initializing the engine", () 
   expect(backend.replyDelivery.engine).toEqual({ kind: "wasm", sha256: receipt.sha256 })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
-  const sources = ["../src/index.ts", "../src/backend.ts", "../src/wasm-bindings.ts", "../wasm/libvterm.js"]
+  const sources = [
+    "../src/index.ts",
+    "../src/backend.ts",
+    "../src/wasm-bindings.ts",
+    "../wasm/libvterm.js",
+    "../../../src/terminal/key-mapping.ts",
+  ]
   expect(backend.replyDelivery.adapterSources).toEqual(
     sources.map((path) => {
       const target = realpathSync(fileURLToPath(new URL(path, import.meta.url)))
