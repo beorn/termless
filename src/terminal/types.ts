@@ -641,12 +641,16 @@ export interface HyperlinkExtension {
   getHyperlinkAt(row: number, col: number): string | null
 }
 
-/** Parser metadata exposed through "osc-metadata"; notification payloads do not attest OS delivery. */
+/**
+ * Parser metadata exposed through "osc-metadata"; notification payloads do not attest OS delivery.
+ * An engine declares "osc-metadata" when it implements at least one member. A missing member means the adapter has
+ * no reader for it, which is missing evidence, never an engine negative.
+ */
 export interface OscMetadataExtension {
-  /** Exact OSC 7 URI; null means the engine reports no working directory. */
-  getCwd(): string | null
-  /** A copy of the engine's ordered OSC 9 payloads, without invented title/body fields. */
-  getNotifications(): readonly string[]
+  /** Exact OSC 7 URI; only a present reader returning null means the engine reports no working directory. */
+  getCwd?(): string | null
+  /** A copy of the OSC 9 payloads the engine stores, in order, without filtering or invented title/body fields. */
+  getNotifications?(): readonly string[]
 }
 
 /** A stored start marker with insertion coordinates, not a bounded command zone. */

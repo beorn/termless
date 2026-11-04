@@ -86,24 +86,27 @@ describe("createVtermBackend", () => {
     try {
       expect(hasExtension(backend, "osc-metadata")).toBe(true)
       if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata")) throw new Error("missing OSC metadata")
+      // Both members are optional on the extension; vterm implements both readers.
+      const { getCwd, getNotifications } = backend
+      if (!getCwd || !getNotifications) throw new Error("vterm osc-metadata lacks a cwd or notification reader")
       const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
-      expect(backend.getCwd()).toBeNull()
-      expect(backend.getNotifications()).toEqual([])
+      expect(getCwd()).toBeNull()
+      expect(getNotifications()).toEqual([])
       feed("\x1b]7;file://localhost/a%20b\x07")
-      expect(backend.getCwd()).toBe("file://localhost/a%20b")
+      expect(getCwd()).toBe("file://localhost/a%20b")
       feed("\x1b]7;file://localhost/second\x1b\\")
-      expect(backend.getCwd()).toBe("file://localhost/second")
+      expect(getCwd()).toBe("file://localhost/second")
       feed("\x1b]7;\x07")
-      expect(backend.getCwd()).toBeNull()
+      expect(getCwd()).toBeNull()
       feed("\x1b]9;first;payload\x07")
-      const first = backend.getNotifications()
+      const first = getNotifications()
       expect(first).toEqual(["first;payload"])
       feed("\x1b]9;second payload\x1b\\")
       expect(first).toEqual(["first;payload"])
-      expect(backend.getNotifications()).toEqual(["first;payload", "second payload"])
+      expect(getNotifications()).toEqual(["first;payload", "second payload"])
       // The public type is readonly, but JS callers must not be able to mutate engine state either.
       ;(first as string[]).push("external mutation")
-      expect(backend.getNotifications()).toEqual(["first;payload", "second payload"])
+      expect(getNotifications()).toEqual(["first;payload", "second payload"])
     } finally {
       backend.destroy()
     }

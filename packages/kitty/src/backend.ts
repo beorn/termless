@@ -36,6 +36,7 @@ import type {
   WarningExtension,
   HyperlinkExtension,
   SemanticMarkExtension,
+  OscMetadataExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -145,6 +146,8 @@ interface BridgeSnapshot {
   prompts?: BridgePrompt[]
   /** Cumulative native tuples, including duplicates and entries before reset. Omitted only for empty history. */
   cmdOutputMarkings?: ([false] | [true, string] | [null, string])[]
+  /** Cumulative OSC 9 payloads Window.desktop_notify routes to notifications, in feed order. Omitted only when empty. */
+  notifications?: string[]
 }
 
 interface BridgePrompt {
@@ -277,6 +280,7 @@ export function createKittyBackend(
   ReplyDeliveryExtension &
   HyperlinkExtension &
   AdapterSourcesExtension &
+  Pick<Required<OscMetadataExtension>, "getNotifications"> &
   SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
@@ -375,6 +379,10 @@ export function createKittyBackend(
       snapshot?.cmdOutputMarkings?.some((mark, index) => JSON.stringify(commandMarks[index]) !== JSON.stringify(mark))
     ) {
       throw new Error("Kitty bridge changed an earlier command callback during batch replay")
+    }
+    const notifications = nextSnapshot.notifications ?? []
+    if (snapshot?.notifications?.some((payload, index) => notifications[index] !== payload)) {
+      throw new Error("Kitty bridge changed an earlier OSC 9 notification during batch replay")
     }
 
     const responseBytes = nextSnapshot.responses ? Buffer.from(nextSnapshot.responses, "base64") : Buffer.alloc(0)
@@ -596,7 +604,14 @@ export function createKittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "warnings", "reply-delivery", "hyperlinks", "semantic-command-end"]),
+    extensions: new Set([
+      "adapter-sources",
+      "warnings",
+      "reply-delivery",
+      "hyperlinks",
+      "semantic-command-end",
+      "osc-metadata", // getNotifications only: no OSC 7 reader, so cwd stays missing evidence
+    ]),
   }
 
   // onResponse is wired: bridge.py captures DA1/DA2/DSR responses via the
@@ -614,6 +629,7 @@ export function createKittyBackend(
     ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
+    Pick<Required<OscMetadataExtension>, "getNotifications"> &
     AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
@@ -645,6 +661,7 @@ export function createKittyBackend(
         }
         return [{ type: "command-end" as const, rawStatus: mark[1] }]
       }),
+    getNotifications: () => [...(ensureSnapshot().notifications ?? [])],
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

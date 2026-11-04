@@ -14,7 +14,7 @@ import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { hasExtension, type HyperlinkExtension } from "../../../src/terminal/types.ts"
+import { hasExtension, type HyperlinkExtension, type OscMetadataExtension } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -248,6 +248,47 @@ test.skipIf(!isKittyAvailable())(
     }
   },
 )
+
+/**
+ * @failure #32053: kitty dispatches OSC 9 to Window.desktop_notify, but the bridge recorded every OSC 9 as an
+ * unreproduced callback and the backend declared no osc-metadata reader, so the Terminfo OSC 9 library criterion
+ * could not observe the payloads kitty's own parser hands its notification path.
+ * @consumer Terminfo extensions.notifications through osc-metadata (no cwd reader: OSC 7 stays missing evidence)
+ */
+test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata reader, with no cwd reader", () => {
+  const backend = createKittyBackend({ cols: 30, rows: 3 })
+  const feed = (value: string) => {
+    backend.feed(new TextEncoder().encode(value))
+    backend.getCursor()
+  }
+  const desktopWarnings = () =>
+    backend
+      .getWarnings()
+      .filter((warning) => warning.code === "UNREPRODUCED_CALLBACK" && warning.message === "desktop_notify")
+  try {
+    expect(hasExtension<OscMetadataExtension>(backend, "osc-metadata")).toBe(true)
+    // A declared extension with no getCwd is missing evidence for OSC 7, never "no working directory".
+    expect("getCwd" in backend).toBe(false)
+    expect(backend.getNotifications()).toEqual([])
+    feed("\x1b]9;terminfo-notification-A\x07")
+    const first = backend.getNotifications()
+    expect(first).toEqual(["terminfo-notification-A"])
+    feed("\x1b]9;terminfo-notification-B\x1b\\")
+    expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
+    // A returned list is a copy: mutating it cannot rewrite the engine's history.
+    ;(first as string[]).push("mutated")
+    expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
+    expect(desktopWarnings()).toEqual([])
+    // OSC 9;4 is kitty's progress path and OSC 777 is not reproduced here: neither becomes a notification payload.
+    feed("\x1b]9;4;1;50\x07\x1b]777;notify;title;body\x07")
+    expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
+    expect(desktopWarnings()).toHaveLength(1)
+    backend.init({ cols: 30, rows: 3 })
+    expect(backend.getNotifications()).toEqual([])
+  } finally {
+    backend.destroy()
+  }
+})
 
 // Native replay is consistent, so private subprocess tests miss the adapter accepting lost/rewritten history.
 test.each([

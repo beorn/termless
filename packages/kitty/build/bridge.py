@@ -238,6 +238,7 @@ class Callbacks:
         self.unreproduced = []  # Callback names this feed reached that the bridge does not reproduce
         self.prompts = []  # Permission prompts kitty raised for a human; host input, never answered
         self.cmd_output_markings = []  # Exact positional native callback arguments, in observation order
+        self.notifications = []  # OSC 9 payloads kitty hands its notification manager, decoded as kitty does
         self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
     def write(self, data):
@@ -257,6 +258,17 @@ class Callbacks:
     def desktop_notify(self, osc_code, raw_data):
         # OSC 1337 only sets user variables (Window.osc_1337), and OSC 9 and 777 only show a notification;
         # OSC 99 can answer through the boss's notification manager, which is host state.
+        if osc_code == 9:
+            payload = str(raw_data, "utf-8", "replace")
+            if not payload.startswith("4;"):
+                # Window.desktop_notify passes this exact text to handle_notification_cmd; record it, show nothing.
+                self.notifications.append(payload)
+                return
+        if osc_code in (9, 777):
+            # Kitty routes OSC 9;4 to its progress state and OSC 777 to its notification manager; neither is
+            # reproduced yet, so say so rather than drop them silently.
+            self.unreproduced.append("desktop_notify")
+            return
         if osc_code == 99:
             manager = get_boss().notification_manager
             command = manager.create_notification_cmd()
@@ -310,6 +322,11 @@ class Callbacks:
         markings = self.cmd_output_markings
         self.cmd_output_markings = []
         return markings
+
+    def drain_notifications(self):
+        notifications = self.notifications
+        self.notifications = []
+        return notifications
 
     def __getattr__(self, name):
         """Record any other callback kitty invokes (clipboard, file transfer, resize report, remote control)."""
@@ -514,6 +531,7 @@ def make_snapshot():
     unreproduced = callbacks.drain_unreproduced() if callbacks else []
     prompts = callbacks.drain_prompts() if callbacks else []
     cmd_output_markings = callbacks.drain_cmd_output_markings() if callbacks else []
+    notifications = callbacks.drain_notifications() if callbacks else []
 
     result = {
         "cells": cell_rows,
@@ -534,6 +552,8 @@ def make_snapshot():
         result["prompts"] = prompts
     if cmd_output_markings:
         result["cmdOutputMarkings"] = cmd_output_markings
+    if notifications:
+        result["notifications"] = notifications
     boss = get_boss()
     if boss is None:
         raise RuntimeError("kitty bridge snapshot has no boss; clipboard state is unknown, never empty")
@@ -575,6 +595,7 @@ def handle_command(cmd):
             callbacks.drain_unreproduced()
             callbacks.drain_prompts()
             callbacks.drain_cmd_output_markings()
+            callbacks.drain_notifications()
         parse_bytes(screen, data)
         if callback_errors:
             raised = "".join(callback_errors)
@@ -595,6 +616,9 @@ def handle_command(cmd):
             cmd_output_markings = callbacks.drain_cmd_output_markings()
             if cmd_output_markings:
                 result["cmdOutputMarkings"] = cmd_output_markings
+            notifications = callbacks.drain_notifications()
+            if notifications:
+                result["notifications"] = notifications
         return result
 
     elif op == "resize":
@@ -668,6 +692,7 @@ def batch_main():
         all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         all_prompts = []  # Likewise prefix-compared
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
+        all_notifications = []  # Likewise: every OSC 9 payload in feed order, duplicates included
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -679,12 +704,16 @@ def batch_main():
             all_unreproduced.extend(result.get("unreproduced", ()))
             all_prompts.extend(result.get("prompts", ()))
             all_cmd_output_markings.extend(result.get("cmdOutputMarkings", ()))
+            all_notifications.extend(result.get("notifications", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
         all_cmd_output_markings.extend(snapshot.get("cmdOutputMarkings", ()))
         if all_cmd_output_markings:
             snapshot["cmdOutputMarkings"] = all_cmd_output_markings
+        all_notifications.extend(snapshot.get("notifications", ()))
+        if all_notifications:
+            snapshot["notifications"] = all_notifications
         if all_responses:
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
         if all_unreproduced:
