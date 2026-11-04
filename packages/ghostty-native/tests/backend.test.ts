@@ -51,6 +51,47 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    /**
+     * @failure #32272: Ghostty emits every OSC 9 and OSC 777 notify as a show_desktop_notification action
+     * (332b2aef stream.zig:2022-2027), but the embedding forwarded it to a readonly handler that ignores it
+     * (stream_readonly.zig:187), so no reader saw the toasts Ghostty parsed.
+     * @consumer Terminfo extensions.notifications and extensions.osc777-notify through osc-metadata getToasts
+     */
+    test("stores every engine-emitted toast verbatim and in order; init empties it", () => {
+      const backend = createGhosttyNativeBackend({ cols: 20, rows: 3 })
+      const feed = (data: string) => backend.feed(new TextEncoder().encode(data))
+      try {
+        expect(backend.getToasts()).toEqual([])
+        // Non-toast sequences of both families store nothing: ConEmu progress, and an rxvt extension other than notify.
+        feed("\x1b]9;4;0\x07\x1b]777;preexec\x07")
+        expect(backend.getToasts()).toEqual([])
+        // Ghostty requires the title separator for 777 notify (rxvt_extension.zig:30-34), so this stores nothing.
+        feed("\x1b]777;notify;lonely\x07")
+        expect(backend.getToasts()).toEqual([])
+        feed("\x1b]9;nine body\x07")
+        feed("\x1b]777;notify;T777;B777\x1b\\")
+        feed("\x1b]777;notify;;empty title\x07X")
+        // OSC 9 builds title "" (osc9.zig:279-281); 777 keeps its title, an empty one stays "".
+        const toasts = backend.getToasts()
+        expect(toasts).toEqual([
+          { title: "", body: "nine body" },
+          { title: "T777", body: "B777" },
+          { title: "", body: "empty title" },
+        ])
+        toasts[0]!.body = "mutated"
+        // The type is readonly; the runtime array is a copy the caller may change without touching the store.
+        ;(toasts as { title: string | null; body: string }[]).pop()
+        expect(backend.getToasts()).toHaveLength(3)
+        expect(backend.getToasts()[0]).toEqual({ title: "", body: "nine body" })
+        expect(backend.getCell(0, 0).char).toBe("X")
+        backend.init({ cols: 20, rows: 3 })
+        expect(backend.getToasts()).toEqual([])
+      } finally {
+        backend.destroy()
+      }
+      expect(() => backend.getToasts()).toThrow("not initialized")
+    })
+
     // Cell and style readback cannot catch an engine title event dropped by the embedding.
     test.each([
       { name: "inert control", steps: [{ data: "X", title: "" }] },

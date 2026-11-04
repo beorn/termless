@@ -99,6 +99,8 @@ interface NativeModule {
   getTitle(handle: NativeTerminalHandle): string
   /** The engine-emitted OSC 9;4 report; reported false before the first, value -1 when the engine stored none. */
   getProgress(handle: NativeTerminalHandle): { reported: boolean; state: number; value: number }
+  /** Every engine-emitted OSC 9/777 toast since createTerminal, in order; OSC 9's title is "". */
+  getToasts(handle: NativeTerminalHandle): { title: string; body: string }[]
   getScrollback(handle: NativeTerminalHandle): NativeScrollback
   scrollViewport(handle: NativeTerminalHandle, delta: number): void
   getDefaultColors(handle: NativeTerminalHandle): NativeColors
@@ -226,7 +228,7 @@ export function createGhosttyNativeBackend(
   HyperlinkExtension &
   DefaultColorsExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getProgress"> {
+  Pick<Required<OscMetadataExtension>, "getProgress" | "getToasts"> {
   let handle: NativeTerminalHandle | null = null
 
   function ensureHandle(): NativeTerminalHandle {
@@ -379,7 +381,7 @@ export function createGhosttyNativeBackend(
     semanticPrompts: true,
     unicode: "15.1",
     reflow: true,
-    // osc-metadata carries only the OSC 9;4 reader: Ghostty stores parsed toasts (no OSC 9/777 reader) and no raw OSC 7.
+    // osc-metadata carries the OSC 9;4 and parsed-toast readers: Ghostty keeps no raw OSC 9/777 payload and no raw OSC 7.
     extensions: new Set(["adapter-sources", "hyperlinks", "default-colors", "osc-metadata"]),
   }
 
@@ -395,11 +397,21 @@ export function createGhosttyNativeBackend(
     return { state: report.state, value: report.value < 0 ? null : report.value }
   }
 
+  function getToasts(): { title: string | null; body: string }[] {
+    const native = loadGhosttyNative()
+    if (typeof native.getToasts !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getToasts; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    return native.getToasts(ensureHandle()).map((toast) => ({ title: toast.title, body: toast.body }))
+  }
+
   const backend: TerminalBackend &
     HyperlinkExtension &
     DefaultColorsExtension &
     AdapterSourcesExtension &
-    Pick<Required<OscMetadataExtension>, "getProgress"> = {
+    Pick<Required<OscMetadataExtension>, "getProgress" | "getToasts"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty-native",
     init,
@@ -420,6 +432,7 @@ export function createGhosttyNativeBackend(
     getMode,
     getTitle,
     getProgress,
+    getToasts,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

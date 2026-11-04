@@ -605,6 +605,45 @@ describe.skipIf(nativeBuildError !== null)(
       })
     })
 
+    // ── Toasts ──
+
+    describe("toasts", () => {
+      /**
+       * @failure #32272: WezTerm emits every OSC 9 and OSC 777 notify as Alert::ToastNotification (fork.5
+       * terminal.rs:49-57), but the embedding's notification handler dropped it (lib.rs `_ => {}`), so no reader saw
+       * the toasts WezTerm parsed.
+       * @consumer Terminfo extensions.notifications and extensions.osc777-notify through osc-metadata getToasts
+       */
+      test("stores every engine-emitted toast verbatim and in order; init empties it", () => {
+        expect(backend.capabilities.extensions.has("osc-metadata")).toBe(true)
+        expect(backend.getToasts()).toEqual([])
+        // Non-toast sequences of both families store nothing: ConEmu progress, and an rxvt extension other than notify.
+        backend.feed(encode("\x1b]9;4;0\x07\x1b]777;preexec\x07"))
+        expect(backend.getToasts()).toEqual([])
+        backend.feed(encode("\x1b]9;nine body\x07"))
+        backend.feed(encode("\x1b]777;notify;T777;B777\x1b\\"))
+        // A 777 notify without a body reports its only field as the body and no title (performer.rs:918-933).
+        backend.feed(encode("\x1b]777;notify;lonely\x07X"))
+        // OSC 9 reports no title (performer.rs:904-911): null, never an invented "".
+        const toasts = backend.getToasts()
+        expect(toasts).toEqual([
+          { title: null, body: "nine body" },
+          { title: "T777", body: "B777" },
+          { title: null, body: "lonely" },
+        ])
+        toasts[0]!.body = "mutated"
+        // The type is readonly; the runtime array is a copy the caller may change without touching the store.
+        ;(toasts as { title: string | null; body: string }[]).pop()
+        expect(backend.getToasts()).toHaveLength(3)
+        expect(backend.getToasts()[0]).toEqual({ title: null, body: "nine body" })
+        expect(backend.getCell(0, 0).char).toBe("X")
+        backend.init({ cols: 30, rows: 4 })
+        expect(backend.getToasts()).toEqual([])
+        backend.destroy()
+        expect(() => backend.getToasts()).toThrow("not initialized")
+      })
+    })
+
     // ── Capabilities ──
 
     describe("capabilities", () => {

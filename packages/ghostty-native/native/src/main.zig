@@ -39,11 +39,21 @@ const allocator = gpa.allocator();
 /// error=2, indeterminate=3, pause=4 and an optional u8 progress, stored verbatim from stream.zig:2042-2043.
 const ProgressReport = StreamAction.Value(.progress_report);
 
+/// One engine-emitted OSC 9/777 toast (Ghostty 332b2aef src/terminal/osc.zig:94-98, emitted at stream.zig:2022-2027):
+/// OSC 9 builds title "" (osc/parsers/osc9.zig:279-281), OSC 777 notify builds {title, body}
+/// (osc/parsers/rxvt_extension.zig:24-43). Both strings are owned copies.
+const Toast = struct {
+    title: []const u8,
+    body: []const u8,
+};
+
 const ResponseHandler = struct {
     readonly: ReadonlyHandler,
     title: *[]const u8,
     /// The last progress report the engine emitted; null until the first one.
     progress: *?ProgressReport,
+    /// Every toast the engine emitted since the handle was created, in order.
+    toasts: *std.ArrayList(Toast),
     /// Reply bytes not yet read by `readResponse`, in stream order.
     pending: std.ArrayList(u8) = .empty,
     /// The bytes handed to JS by the last `readResponse`; valid until the next read.
@@ -65,6 +75,15 @@ const ResponseHandler = struct {
             .progress_report => {
                 // Record the engine's emitted report verbatim, then forward it unchanged (readonly ignores it).
                 self.progress.* = value;
+                try self.readonly.vt(action, value);
+            },
+            .show_desktop_notification => {
+                // Record the engine's emitted toast verbatim, then forward it unchanged (readonly ignores it).
+                const title = try allocator.dupe(u8, value.title);
+                errdefer allocator.free(title);
+                const body = try allocator.dupe(u8, value.body);
+                errdefer allocator.free(body);
+                try self.toasts.append(allocator, .{ .title = title, .body = body });
                 try self.readonly.vt(action, value);
             },
             .window_title => {
@@ -114,6 +133,7 @@ const TerminalHandle = struct {
     rows: size.CellCountInt,
     title: []const u8,
     progress: ?ProgressReport,
+    toasts: std.ArrayList(Toast),
 };
 
 // ─── Module init ────────────────────────────────────────
@@ -137,6 +157,7 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "getMode", try js.createFunction(getMode));
     try js.setNamedProperty(exports, "getTitle", try js.createFunction(getTitle));
     try js.setNamedProperty(exports, "getProgress", try js.createFunction(getProgress));
+    try js.setNamedProperty(exports, "getToasts", try js.createFunction(getToasts));
     try js.setNamedProperty(exports, "getScrollback", try js.createFunction(getScrollback));
     try js.setNamedProperty(exports, "scrollViewport", try js.createFunction(scrollViewport));
     try js.setNamedProperty(exports, "getDefaultColors", try js.createFunction(getDefaultColors));
@@ -160,10 +181,12 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
 
     handle.title = "";
     handle.progress = null;
+    handle.toasts = .empty;
     handle.stream = .initAlloc(allocator, .{
         .readonly = handle.terminal.vtHandler(),
         .title = &handle.title,
         .progress = &handle.progress,
+        .toasts = &handle.toasts,
     });
     handle.cols = cols;
     handle.rows = rows;
@@ -177,6 +200,11 @@ fn destroyTerminal(handle: *TerminalHandle) void {
     if (handle.title.len > 0) {
         allocator.free(handle.title);
     }
+    for (handle.toasts.items) |toast| {
+        allocator.free(toast.title);
+        allocator.free(toast.body);
+    }
+    handle.toasts.deinit(allocator);
     allocator.destroy(handle);
 }
 
@@ -638,6 +666,17 @@ fn getProgress(handle: *TerminalHandle) JsProgress {
         .state = @intFromEnum(report.state),
         .value = if (report.progress) |progress| progress else -1,
     };
+}
+
+// ─── Toasts ─────────────────────────────────────────────
+
+/// Every stored toast, in order, as fresh JS objects; the engine's strings are copied, never shared.
+fn getToasts(js: *napigen.JsContext, handle: *TerminalHandle) !napigen.napi_value {
+    const arr = try js.createArrayWithLength(@intCast(handle.toasts.items.len));
+    for (handle.toasts.items, 0..) |toast, index| {
+        try js.setElement(arr, @intCast(index), try js.write(toast));
+    }
+    return arr;
 }
 
 // ─── Scrollback ─────────────────────────────────────────

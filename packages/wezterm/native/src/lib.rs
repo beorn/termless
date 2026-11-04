@@ -132,10 +132,22 @@ pub struct NapiScrollback {
 // Terminal wrapper
 // ═══════════════════════════════════════════════════════
 
+/// One engine-emitted toast (tattoy-wezterm-term 0.1.0-fork.5 Alert::ToastNotification, terminal.rs:49-57), fields
+/// verbatim: OSC 9 reports no title (performer.rs:904-911), OSC 777 notify a title only when it carries a body
+/// (performer.rs:918-933).
+#[napi(object, use_nullable = true)]
+#[derive(Clone)]
+pub struct NapiToast {
+    pub title: Option<String>,
+    pub body: String,
+}
+
 #[derive(Default)]
 struct TitleState {
     window: String,
     icon: String,
+    /// Every toast the engine emitted since the terminal was created, in order.
+    toasts: Vec<NapiToast>,
 }
 
 #[derive(Clone, Default)]
@@ -155,6 +167,13 @@ impl AlertHandler for TitleObserver {
                     .lock()
                     .expect("wezterm title observer mutex poisoned")
                     .icon = title.unwrap_or_default();
+            }
+            Alert::ToastNotification { title, body, .. } => {
+                self.0
+                    .lock()
+                    .expect("wezterm title observer mutex poisoned")
+                    .toasts
+                    .push(NapiToast { title, body });
             }
             _ => {}
         }
@@ -478,6 +497,17 @@ impl WeztermTerminal {
             .lock()
             .map_err(|_| Error::from_reason("wezterm title observer mutex poisoned"))?;
         Ok(state.window.clone())
+    }
+
+    /// A copy of every stored toast, in order.
+    #[napi]
+    pub fn get_toasts(&self) -> Result<Vec<NapiToast>> {
+        let state = self
+            .titles
+            .0
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm title observer mutex poisoned"))?;
+        Ok(state.toasts.clone())
     }
 
     #[napi]

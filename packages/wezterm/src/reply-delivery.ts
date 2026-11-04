@@ -13,6 +13,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for productViewport absence metadata only; feed/response delivery is unchanged.
 // Re-audited for absolute retained-row readback and enumeration: feed/response delivery is unchanged.
 // Re-audited for stored overline cell/empty-cell projection: feed/response delivery is unchanged.
+// Re-audited for the stored parsed-toast list: the notification handler only records toasts; feed/response delivery is
+// unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -22,11 +24,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "3234af7045bad6fbd9bf44db65260e5965fbd80e",
+      blobOid: "4927c703afffd493858f85a7bc34f8e60d3ac30e",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "9951640349cca2f07fe6bbf3f9f8f2323663d107",
+      blobOid: "d71174a89deb19e8c649a5edfe7da2d30d3bad7a",
     },
     {
       path: "src/load-native.ts",
@@ -37,7 +39,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "fbb1ac47ff22bb7a526a8c8c861d5ad5c137bda770f25f31ad7c451f176c3c5f",
+      sha256: "3d5c4057292966fa11a2ca274b41ac15ae0831d0e22a0c639c1fd2163e7b5661",
     },
   },
 } as const

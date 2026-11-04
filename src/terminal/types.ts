@@ -660,6 +660,12 @@ export interface OscMetadataExtension {
    * a state-0 report is never null. Values the engine discards are passed on as it stores them, never restored.
    */
   getProgress?(): { state: number; value: number | null } | null
+  /**
+   * A copy of every OSC 9/777 toast the engine stored since init, in order, with the engine's own fields verbatim:
+   * a title the engine leaves empty stays "", one it leaves absent stays null. The store does not say which OSC made a
+   * toast, so a caller attributes one only by reading between single-sequence feeds.
+   */
+  getToasts?(): readonly { title: string | null; body: string }[]
 }
 
 /** A stored start marker with insertion coordinates, not a bounded command zone. */

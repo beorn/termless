@@ -21,6 +21,7 @@ import type {
   Color,
   ReplyDeliveryExtension,
   HyperlinkExtension,
+  OscMetadataExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -82,6 +83,8 @@ interface WeztermTerminal {
   getMode(mode: string): boolean | null
   getTitle(): string
   getIconLabel(): string
+  /** Every engine-emitted OSC 9/777 toast since construction, in order; title null where the engine sets none. */
+  getToasts(): { title: string | null; body: string }[]
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
   /** Read pending response data (DA1/DA2/DSR/DECRPM/window-ops). Returns null if no responses pending. */
@@ -201,7 +204,11 @@ const DEFAULT_ROWS = 24
 export function createWeztermBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & AdapterSourcesExtension {
+): TerminalBackend &
+  HyperlinkExtension &
+  ReplyDeliveryExtension &
+  AdapterSourcesExtension &
+  Pick<Required<OscMetadataExtension>, "getToasts"> {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -322,6 +329,16 @@ export function createWeztermBackend(
     return ensureTerm().getMode(mode)
   }
 
+  function getToasts(): { title: string | null; body: string }[] {
+    const t = ensureTerm()
+    if (typeof t.getToasts !== "function") {
+      throw new Error(
+        "The loaded WezTerm native addon predates getToasts; rebuild it:\n  cd packages/wezterm/native && cargo build --release",
+      )
+    }
+    return t.getToasts().map((toast) => ({ title: toast.title, body: toast.body }))
+  }
+
   function getTitle(): string {
     return ensureTerm().getTitle()
   }
@@ -364,10 +381,16 @@ export function createWeztermBackend(
       reason:
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
-    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery"]),
+    // osc-metadata carries only the parsed-toast reader: WezTerm keeps no raw OSC 9/777 payload, and OSC 9;4 and OSC 7
+    // have no reader here.
+    extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery"]),
   }
 
-  const backend: TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & AdapterSourcesExtension = {
+  const backend: TerminalBackend &
+    HyperlinkExtension &
+    ReplyDeliveryExtension &
+    AdapterSourcesExtension &
+    Pick<Required<OscMetadataExtension>, "getToasts"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "wezterm",
     init,
@@ -389,6 +412,7 @@ export function createWeztermBackend(
     getMode,
     getTitle,
     getIconLabel: () => ensureTerm().getIconLabel(),
+    getToasts,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
