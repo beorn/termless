@@ -336,6 +336,7 @@ test.skipIf(!isKittyAvailable())(
       backend.getCursor()
     }
     const desktopWarnings = () => backend.getWarnings().filter((warning) => warning.message === "desktop_notify")
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
     try {
       expect(backend.getProgress()).toBeNull()
       // kitty logs a malformed report and returns before Progress.update (window.py:1389-1391): still never reported.
@@ -358,8 +359,13 @@ test.skipIf(!isKittyAvailable())(
       expect(desktopWarnings()).toEqual([])
       backend.init({ cols: 30, rows: 3 })
       expect(backend.getProgress()).toBeNull()
+      expect(stderr.mock.calls.length).toBeGreaterThan(0)
+      for (const [chunk] of stderr.mock.calls) {
+        expect(String(chunk)).toMatch(/^\[\d+\.\d+\] Ignoring malformed OSC 9;4 progress report: '4;x'\n$/)
+      }
     } finally {
       backend.destroy()
+      stderr.mockRestore()
     }
   },
 )
