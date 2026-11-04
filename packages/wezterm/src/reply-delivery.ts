@@ -15,6 +15,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for stored overline cell/empty-cell projection: feed/response delivery is unchanged.
 // Re-audited for the stored parsed-toast list: the notification handler only records toasts; feed/response delivery is
 // unchanged.
+// Re-audited for stored conceal cell/empty-cell projection: feed/response delivery is unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -24,11 +25,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "4927c703afffd493858f85a7bc34f8e60d3ac30e",
+      blobOid: "e78a7cedb068806bd9cbe883a2f2c9a8ad78b6fa",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "d71174a89deb19e8c649a5edfe7da2d30d3bad7a",
+      blobOid: "74a771a53bed838ae98f9e6333d5079f14843040",
     },
     {
       path: "src/load-native.ts",
@@ -39,7 +40,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "3d5c4057292966fa11a2ca274b41ac15ae0831d0e22a0c639c1fd2163e7b5661",
+      sha256: "4a15c6d9ceca951d5120f72b1473adc144eb7011abe877d8e65024946246b881",
     },
   },
 } as const

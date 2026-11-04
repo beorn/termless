@@ -54,6 +54,7 @@ interface NapiCell {
   inverse: boolean
   blink: boolean
   overline: boolean
+  hidden: boolean
   wide: boolean
   hyperlink: string | null
 }
@@ -144,6 +145,9 @@ function convertNapiCell(cell: NapiCell): Cell {
     throw new Error("wezterm native underline color must report default or RGB; rebuild the native addon")
   }
   const underlineColor: Color | null = cell.ulIsDefault ? null : { r: cell.ulR, g: cell.ulG, b: cell.ulB }
+  if (typeof cell.hidden !== "boolean") {
+    throw new Error("wezterm native cell.hidden must be a boolean; rebuild the native addon")
+  }
 
   return {
     char: cell.text,
@@ -158,7 +162,7 @@ function convertNapiCell(cell: NapiCell): Cell {
     inverse: cell.inverse,
     blink: cell.blink,
     overline: cell.overline,
-    hidden: false,
+    hidden: cell.hidden,
     wide: cell.wide,
     continuation: false,
     hyperlink: cell.hyperlink,
