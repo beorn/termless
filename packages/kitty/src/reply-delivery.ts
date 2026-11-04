@@ -32,6 +32,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Per-mode metadata errors preserve generic snapshots; command-end status remains an uncoerced string.
 // Re-audited for headless TARGETS reads: Clipboard lists its existing memory store; Kitty's own request manager
 // encodes the reply without querying GLFW. The native engine and response delivery boundary are unchanged.
+// Re-audited for independent icon callback state: icon_changed only retains the native payload in the existing
+// snapshot/getter; replay, child-response accumulation and delivery remain unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -40,11 +42,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "1b7367a9737d1292618ea34a1c451bf3273c3b35",
+      blobOid: "ce491dc02e1f454fc602bfe36f4131fcac116e8a",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "ca46f3c261ccbdcfd9c3ada9949e2a0238cbcaac",
+      blobOid: "bebe04879ede9857a43e53a68e9c4c79bd4579cd",
     },
     {
       path: "packages/kitty/build/layout.c",

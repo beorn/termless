@@ -128,6 +128,7 @@ interface BridgeSnapshot {
   cells: BridgeCell[][]
   cursor: BridgeCursor
   title: string
+  iconLabel: string
   modes: Record<string, boolean>
   /** Private native-mode failure; generic snapshot readers remain usable. */
   nativeModeError?: string
@@ -552,6 +553,10 @@ export function createKittyBackend(
     return s.title
   }
 
+  function getIconLabel(): string {
+    return ensureSnapshot().iconLabel
+  }
+
   /** kitty's committed clipboard writes; the bridge holds them in memory in place of the GLFW system clipboard. */
   function getClipboardState(): ClipboardState {
     const s = ensureSnapshot()
@@ -628,6 +633,7 @@ export function createKittyBackend(
     getCursor,
     getMode,
     getTitle,
+    getIconLabel,
     getClipboardState,
     getSemanticMarks: () =>
       (ensureSnapshot().cmdOutputMarkings ?? []).flatMap((mark) => {

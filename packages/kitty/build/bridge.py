@@ -232,6 +232,7 @@ class Callbacks:
         self.os_window_id = 0
         self.wtcbuf = b""
         self.title = ""
+        self.icon_label = ""
         self.title_stack = deque(maxlen=10)
         self.responses = b""  # Accumulated DA1/DA2/DSR response data
         self.unreproduced = []  # Callback names this feed reached that the bridge does not reproduce
@@ -247,7 +248,7 @@ class Callbacks:
     def no_reply(self, *args, **kwargs):
         """A Window callback that changes host or title state only and never writes to the child."""
 
-    icon_changed = osc_context = on_reset = on_bell = no_reply
+    osc_context = on_reset = on_bell = no_reply
     color_profile_popped = on_activity_since_last_focus = send_signal_for_key = no_reply
 
     def cmd_output_marking(self, *args):
@@ -272,6 +273,12 @@ class Callbacks:
             self.title = bytes(title).decode("utf-8", errors="replace")
         else:
             self.title = str(title)
+
+    def icon_changed(self, icon):
+        if hasattr(icon, "tobytes"):
+            self.icon_label = bytes(icon).decode("utf-8", errors="replace")
+        else:
+            self.icon_label = str(icon)
 
     def manipulate_title_stack(self, pop, title, icon):
         # Kitty's Window owns the title stack; its icon stack is not implemented.
@@ -512,6 +519,7 @@ def make_snapshot():
         "cells": cell_rows,
         "cursor": cursor,
         "title": title,
+        "iconLabel": callbacks.icon_label if callbacks else "",
         "modes": modes,
         "scrollback": scrollback,
         "text": text,
