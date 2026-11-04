@@ -88,6 +88,15 @@ mock.module("node:child_process", () => ({
   )
   expect(registry).toHaveProperty("upstreamChecksum", checksum)
   expect(registry).toHaveProperty("toolchain", "rustc receipt-fixture; cargo receipt-fixture")
+  // Native-separator containment must still reject a real addon outside the selected package.
+  const outsideBinary = join(root, "outside.node")
+  writeFileSync(outsideBinary, "outside receipt fixture bytes")
+  const outside = spawnSync(process.execPath, ["--preload", versions, writer, packageDir, outsideBinary], {
+    encoding: "utf8",
+    env: fixtureEnv,
+  })
+  expect(outside.status).not.toBe(0)
+  expect(outside.stderr).toContain("Addon is outside package")
   const localResult = write(false, localMetadata)
   expect(localResult.status, localResult.stderr).toBe(0)
   const local = JSON.parse(readFileSync(`${binary}.receipt.json`, "utf8"))

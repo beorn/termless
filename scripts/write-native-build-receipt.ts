@@ -4,7 +4,7 @@
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
-import { basename, join, relative, resolve } from "node:path"
+import { basename, join, relative, resolve, sep } from "node:path"
 
 const upstream = {
   alacritty: "alacritty_terminal",
@@ -33,9 +33,9 @@ const packageName = basename(packageDir)
 if (!(packageName in upstream)) throw new Error(`Unsupported Rust addon package ${packageName}`)
 const crateName = upstream[packageName as keyof typeof upstream]
 const repo = realpathSync(resolve(packageDir, "../.."))
-const packagePath = relative(repo, packageDir)
+const packagePath = relative(repo, packageDir).split(sep).join("/")
 const binaryPath = realpathSync(resolve(packageDir, binaryArg))
-if (!binaryPath.startsWith(`${packageDir}/`)) throw new Error(`Addon is outside package: ${binaryPath}`)
+if (!binaryPath.startsWith(`${packageDir}${sep}`)) throw new Error(`Addon is outside package: ${binaryPath}`)
 const lockPath = join(packageDir, "native", "Cargo.lock")
 git(repo, "ls-files", "--error-unmatch", `${packagePath}/native/Cargo.lock`)
 const dirty = git(
