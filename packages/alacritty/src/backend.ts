@@ -258,7 +258,7 @@ export function createAlacrittyBackend(
     return ensureTerm().getMode(mode)
   }
 
-  function getClipboardState(): ReturnType<NonNullable<TerminalBackend["getClipboardState"]>> {
+  function getClipboardState() {
     return {
       writes: ensureTerm()
         .getClipboardWrites()
