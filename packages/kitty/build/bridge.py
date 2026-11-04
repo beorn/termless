@@ -239,6 +239,7 @@ class Callbacks:
         self.prompts = []  # Permission prompts kitty raised for a human; host input, never answered
         self.cmd_output_markings = []  # Exact positional native callback arguments, in observation order
         self.notifications = []  # OSC 9 payloads kitty hands its notification manager, decoded as kitty does
+        self.osc777_payloads = []  # Every OSC 777 payload kitty's parser dispatches, decoded as kitty does
         self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
     def write(self, data):
@@ -264,9 +265,12 @@ class Callbacks:
                 # Window.desktop_notify passes this exact text to handle_notification_cmd; record it, show nothing.
                 self.notifications.append(payload)
                 return
-        if osc_code in (9, 777):
-            # Kitty routes OSC 9;4 to its progress state and OSC 777 to its notification manager; neither is
-            # reproduced yet, so say so rather than drop them silently.
+        if osc_code == 777:
+            # Window.desktop_notify receives every OSC 777 payload; record it verbatim, notify or not, show nothing.
+            self.osc777_payloads.append(str(raw_data, "utf-8", "replace"))
+            return
+        if osc_code == 9:
+            # Kitty routes OSC 9;4 to its progress state; that path is not reproduced yet, so say so.
             self.unreproduced.append("desktop_notify")
             return
         if osc_code == 99:
@@ -327,6 +331,11 @@ class Callbacks:
         notifications = self.notifications
         self.notifications = []
         return notifications
+
+    def drain_osc777_payloads(self):
+        payloads = self.osc777_payloads
+        self.osc777_payloads = []
+        return payloads
 
     def __getattr__(self, name):
         """Record any other callback kitty invokes (clipboard, file transfer, resize report, remote control)."""
@@ -532,6 +541,7 @@ def make_snapshot():
     prompts = callbacks.drain_prompts() if callbacks else []
     cmd_output_markings = callbacks.drain_cmd_output_markings() if callbacks else []
     notifications = callbacks.drain_notifications() if callbacks else []
+    osc777_payloads = callbacks.drain_osc777_payloads() if callbacks else []
 
     result = {
         "cells": cell_rows,
@@ -554,6 +564,8 @@ def make_snapshot():
         result["cmdOutputMarkings"] = cmd_output_markings
     if notifications:
         result["notifications"] = notifications
+    if osc777_payloads:
+        result["osc777Payloads"] = osc777_payloads
     boss = get_boss()
     if boss is None:
         raise RuntimeError("kitty bridge snapshot has no boss; clipboard state is unknown, never empty")
@@ -596,6 +608,7 @@ def handle_command(cmd):
             callbacks.drain_prompts()
             callbacks.drain_cmd_output_markings()
             callbacks.drain_notifications()
+            callbacks.drain_osc777_payloads()
         parse_bytes(screen, data)
         if callback_errors:
             raised = "".join(callback_errors)
@@ -619,6 +632,9 @@ def handle_command(cmd):
             notifications = callbacks.drain_notifications()
             if notifications:
                 result["notifications"] = notifications
+            osc777_payloads = callbacks.drain_osc777_payloads()
+            if osc777_payloads:
+                result["osc777Payloads"] = osc777_payloads
         return result
 
     elif op == "resize":
@@ -693,6 +709,7 @@ def batch_main():
         all_prompts = []  # Likewise prefix-compared
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
         all_notifications = []  # Likewise: every OSC 9 payload in feed order, duplicates included
+        all_osc777_payloads = []  # Likewise for OSC 777
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -705,6 +722,7 @@ def batch_main():
             all_prompts.extend(result.get("prompts", ()))
             all_cmd_output_markings.extend(result.get("cmdOutputMarkings", ()))
             all_notifications.extend(result.get("notifications", ()))
+            all_osc777_payloads.extend(result.get("osc777Payloads", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
@@ -714,6 +732,9 @@ def batch_main():
         all_notifications.extend(snapshot.get("notifications", ()))
         if all_notifications:
             snapshot["notifications"] = all_notifications
+        all_osc777_payloads.extend(snapshot.get("osc777Payloads", ()))
+        if all_osc777_payloads:
+            snapshot["osc777Payloads"] = all_osc777_payloads
         if all_responses:
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
         if all_unreproduced:

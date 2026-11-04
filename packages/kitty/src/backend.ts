@@ -148,6 +148,8 @@ interface BridgeSnapshot {
   cmdOutputMarkings?: ([false] | [true, string] | [null, string])[]
   /** Cumulative OSC 9 payloads Window.desktop_notify routes to notifications, in feed order. Omitted only when empty. */
   notifications?: string[]
+  /** Cumulative OSC 777 payloads after "777;", in feed order. Omitted only when empty. */
+  osc777Payloads?: string[]
 }
 
 interface BridgePrompt {
@@ -280,7 +282,7 @@ export function createKittyBackend(
   ReplyDeliveryExtension &
   HyperlinkExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications"> &
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads"> &
   SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
@@ -383,6 +385,10 @@ export function createKittyBackend(
     const notifications = nextSnapshot.notifications ?? []
     if (snapshot?.notifications?.some((payload, index) => notifications[index] !== payload)) {
       throw new Error("Kitty bridge changed an earlier OSC 9 notification during batch replay")
+    }
+    const osc777Payloads = nextSnapshot.osc777Payloads ?? []
+    if (snapshot?.osc777Payloads?.some((payload, index) => osc777Payloads[index] !== payload)) {
+      throw new Error("Kitty bridge changed an earlier OSC 777 payload during batch replay")
     }
 
     const responseBytes = nextSnapshot.responses ? Buffer.from(nextSnapshot.responses, "base64") : Buffer.alloc(0)
@@ -610,7 +616,7 @@ export function createKittyBackend(
       "reply-delivery",
       "hyperlinks",
       "semantic-command-end",
-      "osc-metadata", // getNotifications only: no OSC 7 reader, so cwd stays missing evidence
+      "osc-metadata", // OSC 9 and OSC 777 readers only: no OSC 7 reader, so cwd stays missing evidence
     ]),
   }
 
@@ -629,7 +635,7 @@ export function createKittyBackend(
     ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications"> &
+    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads"> &
     AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
@@ -662,6 +668,7 @@ export function createKittyBackend(
         return [{ type: "command-end" as const, rawStatus: mark[1] }]
       }),
     getNotifications: () => [...(ensureSnapshot().notifications ?? [])],
+    getOsc777Payloads: () => [...(ensureSnapshot().osc777Payloads ?? [])],
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

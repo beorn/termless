@@ -279,12 +279,44 @@ test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata 
     ;(first as string[]).push("mutated")
     expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
     expect(desktopWarnings()).toEqual([])
-    // OSC 9;4 is kitty's progress path and OSC 777 is not reproduced here: neither becomes a notification payload.
+    // OSC 9;4 is kitty's progress path (not reproduced) and OSC 777 has its own reader: neither is an OSC 9 payload.
     feed("\x1b]9;4;1;50\x07\x1b]777;notify;title;body\x07")
     expect(backend.getNotifications()).toEqual(["terminfo-notification-A", "terminfo-notification-B"])
     expect(desktopWarnings()).toHaveLength(1)
     backend.init({ cols: 30, rows: 3 })
     expect(backend.getNotifications()).toEqual([])
+  } finally {
+    backend.destroy()
+  }
+})
+
+/**
+ * @failure #32053: kitty's parser dispatches every OSC 777 to Window.desktop_notify, but the bridge dropped them, so
+ * the Terminfo OSC 777 library criterion had no reader for the payloads kitty receives.
+ * @consumer Terminfo extensions.osc777-notify through osc-metadata getOsc777Payloads
+ */
+test.skipIf(!isKittyAvailable())("reads every OSC 777 payload verbatim through the osc-metadata reader", () => {
+  const backend = createKittyBackend({ cols: 30, rows: 3 })
+  const feed = (value: string) => {
+    backend.feed(new TextEncoder().encode(value))
+    backend.getCursor()
+  }
+  try {
+    expect(hasExtension<OscMetadataExtension>(backend, "osc-metadata")).toBe(true)
+    feed("\x1b]777;notify;terminfo-title;terminfo-body\x07")
+    // The payload reaches a reader rather than an unreproduced-callback warning.
+    expect(backend.getWarnings().filter((warning) => warning.message === "desktop_notify")).toEqual([])
+    const first = backend.getOsc777Payloads()
+    expect(first).toEqual(["notify;terminfo-title;terminfo-body"])
+    // Not a notify form: the reader passes it on verbatim; callers filter "notify;" themselves.
+    feed("\x1b]777;preexec\x1b\\")
+    expect(backend.getOsc777Payloads()).toEqual(["notify;terminfo-title;terminfo-body", "preexec"])
+    ;(first as string[]).push("mutated")
+    expect(backend.getOsc777Payloads()).toEqual(["notify;terminfo-title;terminfo-body", "preexec"])
+    expect(backend.getNotifications()).toEqual([])
+    expect(backend.getWarnings().filter((warning) => warning.message === "desktop_notify")).toEqual([])
+    backend.init({ cols: 30, rows: 3 })
+    expect(backend.getOsc777Payloads()).toEqual([])
   } finally {
     backend.destroy()
   }

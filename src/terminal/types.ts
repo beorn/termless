@@ -651,6 +651,8 @@ export interface OscMetadataExtension {
   getCwd?(): string | null
   /** A copy of the OSC 9 payloads the engine stores, in order, without filtering or invented title/body fields. */
   getNotifications?(): readonly string[]
+  /** A copy of every OSC 777 payload after "777;", verbatim and in order, notify or not; callers filter "notify;". */
+  getOsc777Payloads?(): readonly string[]
 }
 
 /** A stored start marker with insertion coordinates, not a bounded command zone. */
