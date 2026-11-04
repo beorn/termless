@@ -206,6 +206,50 @@ describe.skipIf(nativeBuildError !== null)(
     // ── Attributes ──
 
     describe("attributes", () => {
+      // Existing style cases never observe stored conceal or its independent SGR 28 reset.
+      test("preserves conceal set, clear and reset through cell, row and rows readback", () => {
+        backend.feed(encode("P\x1b[1;3;4;8;38;2;17;34;51mH\x1b[28mV\x1b[8mI\x1b[0mR"))
+        const expectedHidden = [false, true, false, true, false]
+        const cells = Array.from({ length: 5 }, (_, col) => backend.getCell(0, col))
+        const row = backend.getRow(0).slice(0, 5)
+        const rows = backend.getRows()[0]!.slice(0, 5)
+        for (const readback of [cells, row, rows]) {
+          expect(readback.map((cell) => cell.char).join("")).toBe("PHVIR")
+          expect(readback.map((cell) => cell.hidden)).toEqual(expectedHidden)
+          for (const cell of readback.slice(1, 4)) {
+            expect(cell).toMatchObject({
+              bold: true,
+              italic: true,
+              underline: "single",
+              fg: { r: 17, g: 34, b: 51 },
+            })
+          }
+          expect(readback[4]).toMatchObject({ bold: false, italic: false, underline: false, fg: null })
+        }
+        expect(backend.getCell(99, 99).hidden).toBe(false)
+      })
+
+      // An old addon must report its missing field, rather than silently publishing visible cells.
+      test("rejects a native row missing conceal metadata with a rebuild instruction", () => {
+        const native = loadWeztermNative()
+        class StaleCellTerminal extends native.WeztermTerminal {
+          override getLine(row: number) {
+            return super.getLine(row).map((cell) => {
+              Reflect.deleteProperty(cell, "hidden")
+              return cell
+            })
+          }
+        }
+        const stale = createWeztermBackend({ cols: 12, rows: 3 }, { WeztermTerminal: StaleCellTerminal })
+        try {
+          expect(() => stale.getRow(0)).toThrow(
+            "wezterm native cell.hidden must be a boolean; rebuild the native addon",
+          )
+        } finally {
+          stale.destroy()
+        }
+      })
+
       test("reports blink set and reset on distinct cells", () => {
         backend.feed(encode("\x1b[5mA\x1b[25mB"))
         expect(backend.getCell(0, 0).blink).toBe(true)
