@@ -17,13 +17,25 @@ test("native receipts distinguish declared local source and preserve registry pr
   // A commit hook supplies GIT_DIR/GIT_INDEX_FILE for its caller. The fixture owns a separate repository.
   const fixtureEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")))
   const packageDir = join(root, "packages/wezterm"),
-    nativeDir = join(packageDir, "native"),
-    bin = join(root, "bin")
+    nativeDir = join(packageDir, "native")
   mkdirSync(nativeDir, { recursive: true })
-  mkdirSync(bin)
-  for (const name of ["rustc", "cargo"]) {
-    writeFileSync(join(bin, name), `#!/bin/sh\necho '${name} receipt-fixture'\n`, { mode: 0o755 })
-  }
+  // Version strings are fixture facts on every OS; Git and receipt writes remain real.
+  // A Bun preload avoids platform-specific shell executables and PATH separators.
+  const versions = join(root, "versions.ts")
+  writeFileSync(
+    versions,
+    `
+import { mock } from "bun:test"
+import { execFileSync } from "node:child_process"
+const realExecFileSync = execFileSync
+mock.module("node:child_process", () => ({
+  execFileSync: (file, args, options) =>
+    (file === "rustc" || file === "cargo") && args.length === 1 && args[0] === "--version"
+      ? file + " receipt-fixture\\n"
+      : realExecFileSync(file, args, options),
+}))
+`,
+  )
   const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", env: fixtureEnv }).trim()
   git("init", "--quiet")
   const checksum = "7f3678674adc87f210ec01e2134e1972d6b0bd194bf82242f7e7beee3ae9dbd8"
@@ -52,12 +64,13 @@ test("native receipts distinguish declared local source and preserve registry pr
       "-m",
       "fixture inputs",
     )
-    return spawnSync(process.execPath, [writer, packageDir, "termless-wezterm.node"], {
+    return spawnSync(process.execPath, ["--preload", versions, writer, packageDir, "termless-wezterm.node"], {
       encoding: "utf8",
-      env: { ...fixtureEnv, PATH: `${bin}:${process.env.PATH}` },
+      env: fixtureEnv,
     })
   }
-  expect(write(true, "").status).toBe(0)
+  const registryResult = write(true, "")
+  expect(registryResult.status, registryResult.stderr).toBe(0)
   const registry = JSON.parse(readFileSync(`${binary}.receipt.json`, "utf8"))
   if (typeof registry !== "object" || registry === null) throw new Error("Receipt fixture did not produce an object")
   expect(Object.keys(registry).sort()).toEqual(
@@ -74,6 +87,7 @@ test("native receipts distinguish declared local source and preserve registry pr
     ].sort(),
   )
   expect(registry).toHaveProperty("upstreamChecksum", checksum)
+  expect(registry).toHaveProperty("toolchain", "rustc receipt-fixture; cargo receipt-fixture")
   const localResult = write(false, localMetadata)
   expect(localResult.status, localResult.stderr).toBe(0)
   const local = JSON.parse(readFileSync(`${binary}.receipt.json`, "utf8"))

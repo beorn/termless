@@ -12,6 +12,7 @@
     "out/",
     "node_modules/",
     "docs/.vitepress/dist/",
+    "packages/wezterm/native/vendor/tattoy-wezterm-term/",
     "packages/libvterm/wasm/libvterm.js",
     "packages/libvterm/wasm/libvterm.wasm.receipt.json"
   ]
