@@ -222,6 +222,8 @@ export interface Terminal {
     control?: readonly string[]
   }
   getScrollback(): ScrollbackState
+  /** Actual per-instance reflow enablement; absent: backend does not report. */
+  getReflowState?(): { enabled: boolean }
 }
 
 // ═══════════════════════════════════════════════════════

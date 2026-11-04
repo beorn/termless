@@ -10,6 +10,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // feed/response delivery is unchanged, including replies behind the 5600-byte backlog.
 // Re-audited for native reverse-property observation; callback acceptance and the reply sink are unchanged.
 // Re-audited for the native application-cursor getter; it reads state without writing input or output.
+// Re-audited with one property/history observer, native keypad read and recorded reflow enablement.
+// Reply/selection sinks and feed draining retain the existing path; exact artifact tests verify this pair.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -19,22 +21,22 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "7ec9158d768f85b2a096047509d23b1067bc944b",
+      blobOid: "2fb638750f968bf7c2787e097eebc6b2512542c9",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "ff2e94b23c10d85ffb770e3e749e836b8b9227d4",
+      blobOid: "93283c5d0ee71d63a36e124f0264d32515234785",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "5bf4785f2313c4b4825d6e2e45945431e94fac9d",
+      blobOid: "4b17ecd37448e2938f4e474dd95b6ba73d994f45",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "361f44f0019504628460e0125615b6c2decc8496a039fe152c7832b4772befc9",
+      sha256: "5ba1b9c894b1ddc608392c33f02b7910fd8da56c9448218c12a00bbe83020b87",
     },
   },
 } as const

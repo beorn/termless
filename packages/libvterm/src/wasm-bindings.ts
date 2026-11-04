@@ -49,6 +49,23 @@ export interface LibvtermModule {
   vterm_state_get_cursorpos(state: number, posPtr: number): void
   termless_vterm_state_get_application_cursor(state: number): number
 
+  termless_vterm_observer_new(state: number, limit: number): number
+  termless_vterm_observer_free(record: number): void
+  termless_vterm_observer_enable_reflow(screen: number, record: number): void
+  termless_vterm_observer_get_reflow(record: number): number
+  termless_vterm_history_count(record: number): number
+  termless_vterm_history_cols(record: number, row: number): number
+  termless_vterm_history_get_cell_flat(record: number, row: number, col: number, out: number): number
+  termless_vterm_history_get_text(
+    record: number,
+    row: number,
+    startCol: number,
+    endCol: number,
+    buf: number,
+    bufLen: number,
+  ): number
+  termless_vterm_state_get_application_keypad(state: number): number
+
   // Emscripten runtime
   getValue(ptr: number, type: string): number
   setValue(ptr: number, value: number, type: string): void
@@ -117,6 +134,21 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     ) {
       throw new Error("Generated libvterm module is missing _termless_vterm_state_get_application_cursor; rebuild WASM")
     }
+    for (const name of [
+      "_termless_vterm_observer_new",
+      "_termless_vterm_observer_free",
+      "_termless_vterm_observer_enable_reflow",
+      "_termless_vterm_observer_get_reflow",
+      "_termless_vterm_history_count",
+      "_termless_vterm_history_cols",
+      "_termless_vterm_history_get_cell_flat",
+      "_termless_vterm_history_get_text",
+      "_termless_vterm_state_get_application_keypad",
+    ]) {
+      if (!(name in loaded) || typeof (loaded as Record<string, unknown>)[name] !== "function") {
+        throw new Error(`Generated libvterm module is missing ${name}; rebuild WASM`)
+      }
+    }
     if (createHash("sha256").update(readFileSync(path)).digest("hex") !== sha256) {
       throw new Error(`libvterm WASM changed while loading: ${path}`)
     }
@@ -160,6 +192,35 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.vterm_state_get_cursorpos = cwrap("vterm_state_get_cursorpos", null, ["number", "number"])
     module.termless_vterm_state_get_application_cursor = cwrap(
       "termless_vterm_state_get_application_cursor",
+      "number",
+      ["number"],
+    )
+
+    module.termless_vterm_observer_new = cwrap("termless_vterm_observer_new", "number", ["number", "number"])
+    module.termless_vterm_observer_free = cwrap("termless_vterm_observer_free", null, ["number"])
+    module.termless_vterm_observer_enable_reflow = cwrap("termless_vterm_observer_enable_reflow", null, [
+      "number",
+      "number",
+    ])
+    module.termless_vterm_observer_get_reflow = cwrap("termless_vterm_observer_get_reflow", "number", ["number"])
+    module.termless_vterm_history_count = cwrap("termless_vterm_history_count", "number", ["number"])
+    module.termless_vterm_history_cols = cwrap("termless_vterm_history_cols", "number", ["number", "number"])
+    module.termless_vterm_history_get_cell_flat = cwrap("termless_vterm_history_get_cell_flat", "number", [
+      "number",
+      "number",
+      "number",
+      "number",
+    ])
+    module.termless_vterm_history_get_text = cwrap("termless_vterm_history_get_text", "number", [
+      "number",
+      "number",
+      "number",
+      "number",
+      "number",
+      "number",
+    ])
+    module.termless_vterm_state_get_application_keypad = cwrap(
+      "termless_vterm_state_get_application_keypad",
       "number",
       ["number"],
     )
