@@ -43,6 +43,7 @@ import type {
   HyperlinkExtension,
   MouseEncodingExtension,
   MouseEvent,
+  OscMetadataExtension,
   ScreenshotOptions,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
@@ -254,7 +255,12 @@ const DEFAULT_ROWS = 24
 export function createGhosttyBackend(
   opts?: Partial<TerminalOptions>,
   ghostty?: Ghostty,
-): LegacyBackend & WarningExtension & HyperlinkExtension & AdapterSourcesExtension & MouseEncodingExtension {
+): LegacyBackend &
+  WarningExtension &
+  HyperlinkExtension &
+  AdapterSourcesExtension &
+  MouseEncodingExtension &
+  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
   let term: GhosttyTerminal | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
@@ -599,6 +605,28 @@ export function createGhosttyBackend(
     }
   }
 
+  /** A stale vendored ghostty-web lacks the stored-action readers; fail loudly rather than report none. */
+  function storedActions(): GhosttyTerminal {
+    const t = ensureTerm()
+    if (typeof t.getToasts !== "function" || typeof t.getProgress !== "function") {
+      throw new Error(
+        "The loaded ghostty-web predates getToasts/getProgress; rebuild it: nix develop <code-checkout> --command bun vendor/ghostty-web/rebuild.ts <scratch-parent>",
+      )
+    }
+    return t
+  }
+
+  function getToasts(): { title: string | null; body: string }[] {
+    return storedActions()
+      .getToasts()
+      .map((toast) => ({ title: toast.title, body: toast.body }))
+  }
+
+  function getProgress(): { state: number; value: number | null } | null {
+    const report = storedActions().getProgress()
+    return report && { state: report.state, value: report.value }
+  }
+
   function getTitle(): string {
     return ensureTerm().getTitle()
   }
@@ -636,7 +664,15 @@ export function createGhosttyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "dirtyTracking", "warnings", "hyperlinks", "mouse-encoding"]),
+    // osc-metadata carries the parsed-toast and OSC 9;4 readers: ghostty-web keeps no raw OSC 9/777 payload or OSC 7.
+    extensions: new Set([
+      "adapter-sources",
+      "dirtyTracking",
+      "warnings",
+      "hyperlinks",
+      "mouse-encoding",
+      "osc-metadata",
+    ]),
   }
 
   function getWarnings(): EmulatorWarning[] {
@@ -695,7 +731,8 @@ export function createGhosttyBackend(
     WarningExtension &
     HyperlinkExtension &
     AdapterSourcesExtension &
-    MouseEncodingExtension = {
+    MouseEncodingExtension &
+    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty",
     init,
@@ -716,6 +753,8 @@ export function createGhosttyBackend(
     getCursor,
     getMode,
     getTitle,
+    getToasts,
+    getProgress,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

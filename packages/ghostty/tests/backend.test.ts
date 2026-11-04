@@ -968,6 +968,86 @@ describe("ghostty backend", () => {
     })
   })
 
+  /**
+   * @failure #32272: Ghostty emits every OSC 9/777 toast and OSC 9;4 report as actions (5714ed07 stream.zig:2081-2086,
+   * 2101-2102), but our WASM API patch dropped both in its no-effect arm, so no reader saw what Ghostty parsed.
+   * @consumer Terminfo extensions.notifications, extensions.osc777-notify and extensions.osc9-progress through
+   * osc-metadata getToasts and getProgress
+   */
+  describe("stored OSC actions", () => {
+    test("stores every engine-emitted toast verbatim and in order; init empties it, reset keeps it", () => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      own.init({ cols: 20, rows: 3 })
+      try {
+        expect(own.capabilities.extensions.has("osc-metadata")).toBe(true)
+        expect(own.getToasts()).toEqual([])
+        // Non-toast sequences of both families store nothing: ConEmu progress, and an rxvt extension other than notify.
+        feedText(own, "\x1b]9;4;0\x07\x1b]777;preexec\x07")
+        expect(own.getToasts()).toEqual([])
+        // Ghostty requires the title separator for 777 notify (osc.zig:1065-1074, 1709-1715), so this stores nothing.
+        feedText(own, "\x1b]777;notify;lonely\x07")
+        expect(own.getToasts()).toEqual([])
+        feedText(own, "\x1b]9;nine body\x07")
+        feedText(own, "\x1b]777;notify;T777;B777\x1b\\")
+        feedText(own, "\x1b]777;notify;;empty title 窓\x07X")
+        // OSC 9 builds title "" (osc.zig:1398-1409); 777 keeps its title, an empty one stays "".
+        const toasts = own.getToasts()
+        expect(toasts).toEqual([
+          { title: "", body: "nine body" },
+          { title: "T777", body: "B777" },
+          { title: "", body: "empty title 窓" },
+        ])
+        toasts[0]!.body = "mutated"
+        // The type is readonly; the runtime array is a copy the caller may change without touching the store.
+        ;(toasts as { title: string | null; body: string }[]).pop()
+        expect(own.getToasts()).toHaveLength(3)
+        expect(own.getToasts()[0]).toEqual({ title: "", body: "nine body" })
+        expect(own.getCell(0, 0).char).toBe("X")
+        // A terminal reset does not unsend a notification (@cto b8d28548).
+        own.reset()
+        feedText(own, "\x1bc")
+        expect(own.getToasts()).toHaveLength(3)
+        own.init({ cols: 20, rows: 3 })
+        expect(own.getToasts()).toEqual([])
+      } finally {
+        own.destroy()
+      }
+      expect(() => own.getToasts()).toThrow("not initialized")
+    })
+
+    test("reads the engine-emitted OSC 9;4 report verbatim, null before the first; init empties it, reset keeps it", () => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      own.init({ cols: 20, rows: 3 })
+      try {
+        expect(own.getProgress()).toBeNull()
+        feedText(own, "\x1b]9;4;1;37\x07")
+        const first = own.getProgress()
+        expect(first).toEqual({ state: 1, value: 37 })
+        first!.value = 99
+        expect(own.getProgress()).toEqual({ state: 1, value: 37 })
+        feedText(own, "\x1b]9;4;2;64\x07")
+        expect(own.getProgress()).toEqual({ state: 2, value: 64 })
+        // Indeterminate and remove drop any value (osc.zig:1186-1282): stored as none, read as null.
+        feedText(own, "\x1b]9;4;3\x1b\\")
+        expect(own.getProgress()).toEqual({ state: 3, value: null })
+        feedText(own, "\x1b]9;4;4;150\x07")
+        // Ghostty clamps a value to 100 before storing it.
+        expect(own.getProgress()).toEqual({ state: 4, value: 100 })
+        feedText(own, "\x1b]9;4;0\x07X")
+        expect(own.getProgress()).toEqual({ state: 0, value: null })
+        expect(own.getCell(0, 0).char).toBe("X")
+        expect(own.getToasts()).toEqual([])
+        own.reset()
+        expect(own.getProgress()).toEqual({ state: 0, value: null })
+        own.init({ cols: 20, rows: 3 })
+        expect(own.getProgress()).toBeNull()
+      } finally {
+        own.destroy()
+      }
+      expect(() => own.getProgress()).toThrow("not initialized")
+    })
+  })
+
   describe("key encoding", () => {
     test("encodes Enter", () => {
       backend = createBackend()

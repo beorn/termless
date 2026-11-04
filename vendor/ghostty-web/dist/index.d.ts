@@ -384,6 +384,22 @@ export declare class GhosttyTerminal {
     /** Read the current window title set by OSC 0 / OSC 2, cleared on full reset. */
     getTitle(): string;
     /**
+     * Every OSC 9/777 toast the engine stored since creation, in order, fields verbatim (OSC 9 stores title '');
+     * kept across full reset. The count is read once and every index is copied out in one synchronous loop.
+     */
+    getToasts(): {
+        title: string;
+        body: string;
+    }[];
+    /**
+     * The last OSC 9;4 report as the engine stores it: the raw state (0 remove, 1 set, 2 error, 3 indeterminate,
+     * 4 pause) and its value, null where the engine stores none. null means never reported; kept across full reset.
+     */
+    getProgress(): {
+        state: number;
+        value: number | null;
+    } | null;
+    /**
      * Legacy ID-only stub: hyperlink_id is only a presence bit; use getHyperlinkAt(row,col) for a URI.
      * Browser-provider cleanup waits on @si/terminfo/30211-terminfo-273/30695-headless-result-gaps/31254-ghostty-private-underline/31257-remove-private-ghostty.
      */
@@ -507,6 +523,9 @@ declare interface GhosttyWasmExports extends WebAssembly.Exports {
     ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
     ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
     ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
+    ghostty_terminal_get_toast_count(terminal: TerminalHandle): number;
+    ghostty_terminal_get_toast(terminal: TerminalHandle, index: number, outPtrLen4: number): number;
+    ghostty_terminal_get_progress(terminal: TerminalHandle, outStateValue: number): number;
     ghostty_terminal_get_scrollback_length(terminal: TerminalHandle): number;
     ghostty_terminal_get_viewport_state(terminal: TerminalHandle, outPtr: number): number;
     ghostty_terminal_scroll_viewport(terminal: TerminalHandle, delta: number): number;

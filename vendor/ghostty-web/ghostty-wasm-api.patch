@@ -27,10 +27,10 @@ diff --git a/include/ghostty/vt.h b/include/ghostty/vt.h
  #include <ghostty/vt/key.h>
 diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
 new file mode 100644
-index 0000000..cae608a
+index 0000000..c86ab03
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,292 @@
+@@ -0,0 +1,316 @@
 +/**
 + * @file terminal.h
 + *
@@ -239,6 +239,30 @@ index 0000000..cae608a
 +    size_t* out_ptr_len
 +);
 +
++/**
++ * Number of OSC 9/777 toasts the engine emitted since creation, kept across full reset.
++ * Returns -1 on error.
++ */
++int ghostty_terminal_get_toast_count(GhosttyTerminal term);
++
++/**
++ * Borrow stored toast `index` (UTF-8, verbatim; OSC 9 stores title "").
++ * out_4 receives four size_t words: title pointer, title length, body pointer, body length.
++ * Returns 0, or -1 on error or an index out of range.
++ */
++int ghostty_terminal_get_toast(
++    GhosttyTerminal term,
++    size_t index,
++    size_t* out_4
++);
++
++/**
++ * The last OSC 9;4 progress report, kept across full reset.
++ * Returns 0 if none was reported, 1 with out_2[0] = the raw state (0 remove, 1 set, 2 error,
++ * 3 indeterminate, 4 pause) and out_2[1] = the stored value or -1 for none, and -1 on error.
++ */
++int ghostty_terminal_get_progress(GhosttyTerminal term, int* out_2);
++
 +/* ============================================================================
 + * Scrollback API
 + * ========================================================================= */
@@ -326,7 +350,7 @@ index 0000000..cae608a
 diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 --- a/src/lib_vt.zig
 +++ b/src/lib_vt.zig
-@@ -140,6 +140,45 @@
+@@ -140,6 +140,48 @@
          @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
          @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
          @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
@@ -357,6 +381,9 @@ diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 +        @export(&c.terminal_has_mouse_tracking, .{ .name = "ghostty_terminal_has_mouse_tracking" });
 +        @export(&c.terminal_get_mode, .{ .name = "ghostty_terminal_get_mode" });
 +        @export(&c.terminal_get_title, .{ .name = "ghostty_terminal_get_title" });
++        @export(&c.terminal_get_toast_count, .{ .name = "ghostty_terminal_get_toast_count" });
++        @export(&c.terminal_get_toast, .{ .name = "ghostty_terminal_get_toast" });
++        @export(&c.terminal_get_progress, .{ .name = "ghostty_terminal_get_progress" });
 +
 +        // Scrollback API
 +        @export(&c.terminal_get_scrollback_length, .{ .name = "ghostty_terminal_get_scrollback_length" });
@@ -383,7 +410,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  
  // The full C API, unexported.
  pub const osc_new = osc.new;
-@@ -52,6 +53,46 @@
+@@ -52,6 +53,49 @@
  
  pub const paste_is_safe = paste.is_safe;
  
@@ -414,6 +441,9 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
 +pub const terminal_has_mouse_tracking = terminal.hasMouseTracking;
 +pub const terminal_get_mode = terminal.getMode;
 +pub const terminal_get_title = terminal.getTitle;
++pub const terminal_get_toast_count = terminal.getToastCount;
++pub const terminal_get_toast = terminal.getToast;
++pub const terminal_get_progress = terminal.getProgress;
 +
 +// Scrollback API
 +pub const terminal_get_scrollback_length = terminal.getScrollbackLength;
@@ -430,7 +460,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  test {
      _ = color;
      _ = osc;
-@@ -59,6 +100,7 @@
+@@ -59,6 +103,7 @@
      _ = key_encode;
      _ = paste;
      _ = sgr;
@@ -440,10 +470,10 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
      _ = @import("../../lib/allocator.zig");
 diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
 new file mode 100644
-index 0000000..8179c38
+index 0000000..e417c47
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1254 @@
+@@ -0,0 +1,1339 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -479,6 +509,14 @@ index 0000000..8179c38
 +
 +const log = std.log.scoped(.terminal_c);
 +
++/// One engine-emitted OSC 9/777 toast (stream.zig:343-358): OSC 9 builds title "" (osc.zig:1398-1409), OSC 777
++/// notify builds {title, body}. Both strings are owned copies.
++const Toast = struct {
++    title: []const u8,
++    body: []const u8,
++};
++const ProgressReport = Action.Value(.progress_report);
++
 +/// Response handler that processes VT sequences and queues responses.
 +/// This extends the readonly stream handler to also handle queries.
 +const ResponseHandler = struct {
@@ -486,6 +524,10 @@ index 0000000..8179c38
 +    terminal: *Terminal,
 +    response_buffer: *std.ArrayList(u8),
 +    title: *std.ArrayList(u8),
++    /// Every toast the engine emitted since creation, in order; kept across full reset.
++    toasts: *std.ArrayList(Toast),
++    /// The last progress report the engine emitted; null until the first one; kept across full reset.
++    progress: *?ProgressReport,
 +    dcs: dcspkg.Handler = .{},
 +
 +    pub fn init(
@@ -493,12 +535,16 @@ index 0000000..8179c38
 +        terminal: *Terminal,
 +        response_buffer: *std.ArrayList(u8),
 +        title: *std.ArrayList(u8),
++        toasts: *std.ArrayList(Toast),
++        progress: *?ProgressReport,
 +    ) ResponseHandler {
 +        return .{
 +            .alloc = alloc,
 +            .terminal = terminal,
 +            .response_buffer = response_buffer,
 +            .title = title,
++            .toasts = toasts,
++            .progress = progress,
 +        };
 +    }
 +
@@ -703,6 +749,16 @@ index 0000000..8179c38
 +            .dcs_put => try self.dcsPut(value),
 +            .dcs_unhook => try self.dcsUnhook(),
 +
++            // Recorded for readback; neither has a terminal effect.
++            .show_desktop_notification => {
++                const title = try self.alloc.dupe(u8, value.title);
++                errdefer self.alloc.free(title);
++                const body = try self.alloc.dupe(u8, value.body);
++                errdefer self.alloc.free(body);
++                try self.toasts.append(self.alloc, .{ .title = title, .body = body });
++            },
++            .progress_report => self.progress.* = value,
++
 +            // Actions that require no response and have no terminal effect
 +            .apc_start,
 +            .apc_end,
@@ -710,8 +766,6 @@ index 0000000..8179c38
 +            .bell,
 +            .enquiry,
 +            .report_pwd,
-+            .show_desktop_notification,
-+            .progress_report,
 +            .clipboard_contents,
 +            // Unimplemented in Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496 src/termio/stream_handler.zig:343-346
 +            .title_push,
@@ -898,6 +952,10 @@ index 0000000..8179c38
 +    response_buffer: std.ArrayList(u8),
 +    /// Recorded window title from OSC 0 / OSC 2
 +    title: std.ArrayList(u8) = .{},
++    /// Recorded OSC 9/777 toasts, in order
++    toasts: std.ArrayList(Toast) = .{},
++    /// Recorded last OSC 9;4 progress report
++    progress: ?ProgressReport = null,
 +    /// Track alternate screen state to detect screen switches
 +    last_screen_is_alternate: bool = false,
 +};
@@ -1017,9 +1075,18 @@ index 0000000..8179c38
 +    // Initialize response and title buffers
 +    wrapper.response_buffer = .{};
 +    wrapper.title = .{};
++    wrapper.toasts = .{};
++    wrapper.progress = null;
 +
-+    // Initialize handler with references to terminal, response buffer, and title buffer
-+    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer, &wrapper.title);
++    // Initialize handler with references to terminal, response buffer, title buffer, toasts and progress
++    wrapper.handler = ResponseHandler.init(
++        alloc,
++        &wrapper.terminal,
++        &wrapper.response_buffer,
++        &wrapper.title,
++        &wrapper.toasts,
++        &wrapper.progress,
++    );
 +
 +    // Initialize stream with the handler
 +    wrapper.stream = ResponseStream.init(wrapper.handler);
@@ -1032,6 +1099,8 @@ index 0000000..8179c38
 +        .render_state = RenderState.empty,
 +        .response_buffer = wrapper.response_buffer,
 +        .title = wrapper.title,
++        .toasts = wrapper.toasts,
++        .progress = wrapper.progress,
 +    };
 +
 +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
@@ -1052,6 +1121,11 @@ index 0000000..8179c38
 +    wrapper.stream.deinit();
 +    wrapper.response_buffer.deinit(alloc);
 +    wrapper.title.deinit(alloc);
++    for (wrapper.toasts.items) |toast| {
++        alloc.free(toast.title);
++        alloc.free(toast.body);
++    }
++    wrapper.toasts.deinit(alloc);
 +    wrapper.render_state.deinit(alloc);
 +    wrapper.terminal.deinit(alloc);
 +    alloc.destroy(wrapper);
@@ -1415,6 +1489,47 @@ index 0000000..8179c38
 +    if (slice.len == 0) return 0;
 +    out[0] = @intFromPtr(slice.ptr);
 +    out[1] = slice.len;
++    return 1;
++}
++
++/// Number of engine-emitted OSC 9/777 toasts stored since creation; -1 on error.
++pub fn getToastCount(ptr: ?*anyopaque) callconv(.c) c_int {
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    return std.math.cast(c_int, wrapper.toasts.items.len) orelse -1;
++}
++
++/// Borrow stored toast `index`: out_4 receives title pointer, title length, body pointer and body length.
++/// Returns 0, or -1 on error or an index out of range.
++pub fn getToast(
++    ptr: ?*anyopaque,
++    index: usize,
++    out_4: ?[*]usize,
++) callconv(.c) c_int {
++    const out = out_4 orelse return -1;
++    out[0] = 0;
++    out[1] = 0;
++    out[2] = 0;
++    out[3] = 0;
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    if (index >= wrapper.toasts.items.len) return -1;
++    const toast = wrapper.toasts.items[index];
++    out[0] = @intFromPtr(toast.title.ptr);
++    out[1] = toast.title.len;
++    out[2] = @intFromPtr(toast.body.ptr);
++    out[3] = toast.body.len;
++    return 0;
++}
++
++/// The last OSC 9;4 report: returns 0 if none was reported, 1 with out_2[0] = the raw state code (0 remove .. 4 pause)
++/// and out_2[1] = the stored value or -1 for none, and -1 on error.
++pub fn getProgress(ptr: ?*anyopaque, out_2: ?[*]c_int) callconv(.c) c_int {
++    const out = out_2 orelse return -1;
++    out[0] = 0;
++    out[1] = -1;
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    const report = wrapper.progress orelse return 0;
++    out[0] = @intFromEnum(report.state);
++    out[1] = if (report.progress) |value| value else -1;
 +    return 1;
 +}
 +
