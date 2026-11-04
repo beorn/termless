@@ -19,11 +19,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/alacritty/src/backend.ts",
-      blobOid: "27b78b1264cd5d2ed72705ba36c9735b29e874c5",
+      blobOid: "f71319fec71c6d983ce9938f38aa91a5b10b818a",
     },
     {
       path: "packages/alacritty/native/src/lib.rs",
-      blobOid: "1779ff4f042f7f285ab3d396da039408b492be10",
+      blobOid: "23b6874c921b03ab2ae99bfec61cd9f00b8cb5a8",
     },
     {
       path: "src/load-native.ts",
@@ -34,7 +34,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "9839e138d9e6f13e84adc3022f67964f0451e2e6416294952e22286412994f61",
+      sha256: "5f5e89db7fae602482e561f0b8625965f56ae2a91337b0de28f05147412941cd",
     },
   },
 } as const

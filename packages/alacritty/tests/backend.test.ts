@@ -6,7 +6,7 @@
  *
  * TODO: Tests require the native Rust module to be built first.
  * Run: cd packages/alacritty/native && cargo build --release
- * @failure Audited native reply delivery is omitted or binds different adapter/glue/loader bytes.
+ * @failure Accepted clipboard callbacks disappear or leak across instances; native reply delivery binds stale bytes.
  * @level l0
  * @consumer Headless collector native reply eligibility.
  * @testonly none
@@ -35,7 +35,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "9839e138d9e6f13e84adc3022f67964f0451e2e6416294952e22286412994f61",
+    sha256: "5f5e89db7fae602482e561f0b8625965f56ae2a91337b0de28f05147412941cd",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
@@ -74,6 +74,63 @@ function createBackend(cols = 80, rows = 24): TerminalBackend {
 function feedText(backend: TerminalBackend, text: string): void {
   backend.feed(new TextEncoder().encode(text))
 }
+
+describeNative("alacritty accepted clipboard callbacks", () => {
+  test("records accepted selections and text without inventing clipboard replies", () => {
+    const backend = createBackend()
+    const control = { selector: "c", text: "clipboard-control", payload: "Y2xpcGJvYXJkLWNvbnRyb2w=" }
+    const expected = [control]
+    try {
+      feedText(backend, `\x1b]52;c;${control.payload}\x07`)
+      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      for (const [selector, text] of [
+        ["p", "primary"],
+        ["s", "secondary"],
+        ["c", "snowman ☃"],
+      ] as const) {
+        const payload = Buffer.from(text, "utf8").toString("base64")
+        feedText(backend, `\x1b]52;${selector};${payload}\x07`)
+        expected.push({ selector: selector === "c" ? "c" : "p", text, payload })
+      }
+      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      for (const rejected of ["\x1b]52;x;YQ==\x07", "\x1b]52;c;%%%\x07", "\x1b]52;c;/w==\x07"]) {
+        feedText(backend, rejected)
+        expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      }
+      const replies: Uint8Array[] = []
+      backend.onResponse = (data) => replies.push(data)
+      feedText(backend, "\x1b]52;c;?\x07")
+      expect(replies).toEqual([])
+      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      backend.reset()
+      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("isolates callback snapshots and clears history only when the instance is replaced", () => {
+    const backend = createBackend()
+    const independent = createBackend()
+    try {
+      feedText(backend, "\x1b]52;c;YQ==\x07")
+      const snapshot = backend.getClipboardState?.()
+      expect(snapshot).toEqual({ writes: [{ selector: "c", payload: "YQ==", text: "a" }] })
+      if (!snapshot) throw new Error("Engine clipboard callback snapshot missing")
+      snapshot.writes[0]!.text = "changed snapshot"
+      snapshot.writes.length = 0
+      expect(backend.getClipboardState?.()).toEqual({ writes: [{ selector: "c", payload: "YQ==", text: "a" }] })
+      expect(independent.getClipboardState?.()).toEqual({ writes: [] })
+      backend.destroy()
+      expect(() => backend.getClipboardState?.()).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      expect(backend.getClipboardState?.()).toEqual({ writes: [] })
+    } finally {
+      backend.destroy()
+      independent.destroy()
+    }
+  })
+})
 
 // Existing style tests cannot detect dropped OSC 8 metadata or concealed native read failures.
 describeNative(

@@ -72,6 +72,7 @@ interface NativeAlacrittyTerminal {
   getCursor(): NativeCursor
   getMode(mode: string): boolean | null
   getTitle(): string
+  getClipboardWrites(): { selector: string; text: string }[]
   getScrollback(): [number, number, number] // [viewportOffset, totalLines, screenLines]
   scrollViewport(delta: number): void
   destroy(): void
@@ -257,6 +258,18 @@ export function createAlacrittyBackend(
     return ensureTerm().getMode(mode)
   }
 
+  function getClipboardState(): ReturnType<NonNullable<TerminalBackend["getClipboardState"]>> {
+    return {
+      writes: ensureTerm()
+        .getClipboardWrites()
+        .map(({ selector, text }) => ({
+          selector,
+          text,
+          payload: Buffer.from(text, "utf8").toString("base64"),
+        })),
+    }
+  }
+
   function getTitle(): string {
     return ensureTerm().getTitle()
   }
@@ -347,6 +360,7 @@ export function createAlacrittyBackend(
     getCursor,
     getMode,
     getTitle,
+    getClipboardState,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

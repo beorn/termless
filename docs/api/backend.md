@@ -45,6 +45,29 @@ Screen and libvterm retain the required `scrollViewport` compatibility no-op;
 probes never read it when this declaration is present. The reason cites the pinned
 library interface, not the enclosing application's viewport.
 
+## Clipboard callback state
+
+The optional `getClipboardState()` reader returns a copied snapshot of writes
+accepted by the engine's clipboard callback. It does not prove that the OS
+clipboard changed, and the input-scanned `Terminal.clipboardWrites` is not a
+substitute for this reader.
+
+Alacritty records its `ClipboardStore` requests per backend instance, in order.
+Its `selector` is the engine's selection class: `c` for clipboard, `p` for primary
+selection, including the engine's `s` alias. Its `text` is the decoded UTF-8 text
+accepted by the engine; `payload` is a canonical base64 re-encode of that text,
+not the original wire bytes. In contrast, the vt100-rust callback retains the
+wire payload. Malformed base64 or non-UTF-8 writes produce no Alacritty entry,
+not a `decodeError` entry.
+
+Reading does not drain the history, and RIS does not clear it. Reinitializing
+the backend creates a new instance with empty history; changing the returned
+snapshot cannot change that history. Alacritty supplies neither `control` nor
+`pasteSelector`. Its existing `OnlyCopy` default and clipboard-read behavior are
+unchanged: this reader neither handles `ClipboardLoad` nor synthesizes replies.
+A poisoned callback-state lock is reported as an error by the reader, never as
+an empty successful snapshot.
+
 ## TerminalOptions
 
 ```typescript

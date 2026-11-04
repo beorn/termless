@@ -6,11 +6,13 @@
 
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::PoisonError;
 
 use alacritty_terminal::event::{Event, EventListener, WindowSize};
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::term::cell::Flags as CellFlags;
+use alacritty_terminal::term::ClipboardType;
 use alacritty_terminal::term::Config;
 use alacritty_terminal::term::Term;
 use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor, Rgb};
@@ -30,6 +32,7 @@ struct EventProxy {
     bell_count: Arc<Mutex<u32>>,
     response_buf: Arc<Mutex<Vec<u8>>>,
     color_requests: Arc<Mutex<Vec<ColorRequest>>>,
+    clipboard_writes: Arc<Mutex<Vec<(ClipboardType, String)>>>,
     /// The text area at the declared cell size, or None when the caller declared none.
     window: Arc<Mutex<Option<WindowSize>>>,
 }
@@ -41,6 +44,7 @@ impl EventProxy {
             bell_count: Arc::new(Mutex::new(0)),
             response_buf: Arc::new(Mutex::new(Vec::new())),
             color_requests: Arc::new(Mutex::new(Vec::new())),
+            clipboard_writes: Arc::new(Mutex::new(Vec::new())),
             window: Arc::new(Mutex::new(None)),
         }
     }
@@ -63,6 +67,12 @@ impl EventListener for EventProxy {
                 if let Ok(mut count) = self.bell_count.lock() {
                     *count += 1;
                 }
+            }
+            Event::ClipboardStore(selection, text) => {
+                self.clipboard_writes
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push((selection, text));
             }
             Event::PtyWrite(text) => {
                 if let Ok(mut buf) = self.response_buf.lock() {
@@ -141,6 +151,12 @@ pub struct JsCell {
     pub hidden: bool,
     pub wide: bool,
     pub hyperlink: Option<String>,
+}
+
+#[napi(object)]
+pub struct JsClipboardWrite {
+    pub selector: String,
+    pub text: String,
 }
 
 #[napi(object)]
@@ -646,6 +662,26 @@ impl AlacrittyTerminal {
             let bytes = std::mem::take(&mut *buf);
             Some(Buffer::from(bytes))
         }
+    }
+
+    #[napi]
+    pub fn get_clipboard_writes(&self) -> Result<Vec<JsClipboardWrite>> {
+        let writes = self.proxy.clipboard_writes.lock().map_err(|error| {
+            Error::from_reason(format!(
+                "Failed to lock Alacritty clipboard writes: {error}"
+            ))
+        })?;
+        Ok(writes
+            .iter()
+            .map(|(selection, text)| JsClipboardWrite {
+                selector: match selection {
+                    ClipboardType::Clipboard => "c",
+                    ClipboardType::Selection => "p",
+                }
+                .to_owned(),
+                text: text.clone(),
+            })
+            .collect())
     }
 
     /// Get the terminal title (set via OSC 0/2).
