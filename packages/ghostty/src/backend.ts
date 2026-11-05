@@ -729,7 +729,9 @@ export function createGhosttyBackend(
   function getCwd(): string | null {
     const t = ensureTerm()
     if (typeof t.getCwd !== "function") {
-      throw new Error("The loaded ghostty-web predates getCwd; rebuild it: nix develop <code-checkout> --command bun vendor/ghostty-web/rebuild.ts <scratch-parent>")
+      throw new Error(
+        "The loaded ghostty-web predates getCwd; rebuild it: nix develop <code-checkout> --command bun vendor/ghostty-web/rebuild.ts <scratch-parent>",
+      )
     }
     return t.getCwd()
   }

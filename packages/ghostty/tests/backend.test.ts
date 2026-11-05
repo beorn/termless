@@ -187,64 +187,67 @@ describe("ghostty backend", () => {
 
   // @failure A borrowed-string wrapper keeps a detached view, frees bytes before copying, or conflates status 0/1.
   // @level l0 @consumer GhosttyTerminal URI/CWD ABI. Real engine tests cannot force memory growth or ABI failures.
-  test.each(["hyperlink", "cwd"] as const)("copies %s bytes before another WASM call and releases scratch on every ABI outcome", (reader) => {
-    const memory = new WebAssembly.Memory({ initial: 1, maximum: 32 })
-    const uri = "https://example.com/é:a"
-    let status = 1
-    let length = new TextEncoder().encode(uri).length
-    let outOfMemory = false
-    const release = vi.fn(() => new Uint8Array(memory.buffer, 64, 64).fill(0))
-    const allocate = vi.fn(() => {
-      if (outOfMemory) return 0
-      memory.grow(1)
-      return 8
-    })
-    // Only the FFI is controlled here; the wrapper and WebAssembly.Memory are production/real.
-    const exports: Record<string, unknown> = {
-      memory,
-      ghostty_terminal_new: () => 1,
-      ghostty_terminal_free: () => {},
-      ghostty_wasm_alloc_u8_array: allocate,
-      ghostty_wasm_free_u8_array: release,
-      [reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"]: (...args: number[]) => {
-        const out = args.at(-1)!
+  test.each(["hyperlink", "cwd"] as const)(
+    "copies %s bytes before another WASM call and releases scratch on every ABI outcome",
+    (reader) => {
+      const memory = new WebAssembly.Memory({ initial: 1, maximum: 32 })
+      const uri = "https://example.com/é:a"
+      let status = 1
+      let length = new TextEncoder().encode(uri).length
+      let outOfMemory = false
+      const release = vi.fn(() => new Uint8Array(memory.buffer, 64, 64).fill(0))
+      const allocate = vi.fn(() => {
+        if (outOfMemory) return 0
         memory.grow(1)
-        new Uint8Array(memory.buffer).set(new TextEncoder().encode(uri), 64)
-        const words = new DataView(memory.buffer, out, 8)
-        words.setUint32(0, 64, true)
-        words.setUint32(4, length, true)
-        return status
-      },
-    }
-    const terminal = new GhosttyTerminal(
-      exports as unknown as ConstructorParameters<typeof GhosttyTerminal>[0],
-      memory,
-      2,
-      1,
-    )
-    const get = () => reader === "cwd" ? terminal.getCwd() : terminal.getHyperlinkAt(0, 1)
-    expect(get()).toBe(uri)
-    expect(release).toHaveBeenLastCalledWith(8, 8)
-    length = 0
-    expect(get()).toBe("")
-    status = 0
-    expect(get()).toBeNull()
-    for (const invalid of [-1, 2]) {
-      status = invalid
+        return 8
+      })
+      // Only the FFI is controlled here; the wrapper and WebAssembly.Memory are production/real.
+      const exports: Record<string, unknown> = {
+        memory,
+        ghostty_terminal_new: () => 1,
+        ghostty_terminal_free: () => {},
+        ghostty_wasm_alloc_u8_array: allocate,
+        ghostty_wasm_free_u8_array: release,
+        [reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"]: (...args: number[]) => {
+          const out = args.at(-1)!
+          memory.grow(1)
+          new Uint8Array(memory.buffer).set(new TextEncoder().encode(uri), 64)
+          const words = new DataView(memory.buffer, out, 8)
+          words.setUint32(0, 64, true)
+          words.setUint32(4, length, true)
+          return status
+        },
+      }
+      const terminal = new GhosttyTerminal(
+        exports as unknown as ConstructorParameters<typeof GhosttyTerminal>[0],
+        memory,
+        2,
+        1,
+      )
+      const get = () => (reader === "cwd" ? terminal.getCwd() : terminal.getHyperlinkAt(0, 1))
+      expect(get()).toBe(uri)
+      expect(release).toHaveBeenLastCalledWith(8, 8)
+      length = 0
+      expect(get()).toBe("")
+      status = 0
+      expect(get()).toBeNull()
+      for (const invalid of [-1, 2]) {
+        status = invalid
+        const frees = release.mock.calls.length
+        expect(get).toThrow(`status ${invalid}`)
+        expect(release.mock.calls.length).toBe(frees + 1)
+      }
       const frees = release.mock.calls.length
-      expect(get).toThrow(`status ${invalid}`)
-      expect(release.mock.calls.length).toBe(frees + 1)
-    }
-    const frees = release.mock.calls.length
-    outOfMemory = true
-    expect(get).toThrow(/allocate/)
-    expect(release.mock.calls.length).toBe(frees)
-    const lookup = reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"
-    exports[lookup] = undefined
-    expect(get).toThrow(`missing ${lookup}`)
-    terminal.free()
-    expect(get).toThrow(/freed/)
-  })
+      outOfMemory = true
+      expect(get).toThrow(/allocate/)
+      expect(release.mock.calls.length).toBe(frees)
+      const lookup = reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"
+      exports[lookup] = undefined
+      expect(get).toThrow(`missing ${lookup}`)
+      terminal.free()
+      expect(get).toThrow(/freed/)
+    },
+  )
 
   // @failure The viewport wrapper reads a detached view after memory growth, leaks scratch on a failed read, coerces a
   // bad delta, or reports a default instead of failing (#31392).
@@ -1102,7 +1105,9 @@ describe("ghostty backend", () => {
       try {
         own.init({ cols: 20, rows: 3 })
         const failure = new Error("directory lookup failed")
-        const lookup = vi.spyOn(raw, "getCwd").mockImplementationOnce(() => { throw failure })
+        const lookup = vi.spyOn(raw, "getCwd").mockImplementationOnce(() => {
+          throw failure
+        })
         expect(() => own.getCwd()).toThrow(failure)
         lookup.mockRestore()
         Object.defineProperty(raw, "getCwd", { value: undefined })
