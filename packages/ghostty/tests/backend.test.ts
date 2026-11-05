@@ -1259,10 +1259,13 @@ describe("ghostty backend", () => {
       expect(encoded).toEqual(new Uint8Array([3])) // ETX
     })
 
-    test("encodes regular characters", () => {
+    // Printable digits have named native keys too; retaining only their key code drops their text.
+    // @failure Native field translation loses printable digit input; existing letter cases miss this branch.
+    // @level l0 @consumer KeyEncodingExtension callers sending printable text.
+    test.each([..."a0123456789"])("encodes regular characters (%s)", (key) => {
       backend = createBackend()
-      const encoded = backend.encodeKey({ key: "a" })
-      expect(new TextDecoder().decode(encoded)).toBe("a")
+      const encoded = backend.encodeKey({ key })
+      expect(new TextDecoder().decode(encoded)).toBe(key)
     })
 
     test("encodes arrow keys", () => {

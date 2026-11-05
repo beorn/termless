@@ -465,7 +465,8 @@ export function createGhosttyBackend(
       action: KeyAction.PRESS,
       key,
       mods,
-      utf8: event.key === "Space" ? " " : named ? undefined : event.key,
+      // Printable keys retain their text even when they also have a named enum (digits).
+      utf8: event.key === "Space" ? " " : !named || event.key.length === 1 ? event.key : undefined,
     })
   }
 
