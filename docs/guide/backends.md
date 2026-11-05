@@ -124,7 +124,7 @@ const term = createTerminal({ backend: b })
 
 Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-accelerated terminal with strong standards compliance.
 
-**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a separate feature page for this WASM backend. Ghostty's application results describe the full terminal.
+**Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates the WASM backend.
 
 - **Engine**: ghostty-web 0.4 (WebAssembly)
 - **Upstream**: `npm:ghostty-web`
@@ -223,7 +223,7 @@ const term = createTerminal({ backend: b })
 
 Uses Alacritty's `alacritty_terminal` crate via napi-rs native bindings. Alacritty is a GPU-accelerated terminal focused on simplicity and performance.
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Alacritty's application page covers the full terminal.
+**Feature support:** [Alacritty results on terminfo.dev](https://terminfo.dev/terminals/alacritty) combine application and parser-backend results; no separate page isolates this library.
 
 - **Engine**: alacritty_terminal 0.26 (Rust via napi-rs)
 - **Upstream**: `crate:alacritty_terminal`
@@ -248,7 +248,7 @@ const term = createTerminal({ backend: b })
 
 Uses WezTerm's `wezterm-term` VT parser via napi-rs native bindings. WezTerm has the broadest feature set of any terminal emulator.
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). WezTerm's application page covers the full terminal.
+**Feature support:** [WezTerm results on terminfo.dev](https://terminfo.dev/terminals/wezterm) combine application and parser-backend results; no separate page isolates this library.
 
 - **Engine**: tattoy-wezterm-term (Rust via napi-rs)
 - **Upstream**: `crate:tattoy-wezterm-term`
@@ -347,7 +347,7 @@ const term = createTerminal({ backend: b })
 
 Native Ghostty backend using Ghostty's VT Zig module via napigen N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Ghostty's application page covers the full terminal.
+**Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates this library.
 
 - **Engine**: ghostty-vt Zig module pinned to Ghostty 1.3.1 (napigen N-API)
 - **Upstream**: `github:ghostty-org/ghostty`
@@ -370,7 +370,7 @@ const term = createTerminal({ backend: b })
 
 ### @termless/kitty
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Kitty's application page covers the full terminal.
+**Feature support:** [Kitty results on terminfo.dev](https://terminfo.dev/terminals/kitty) combine application and parser-backend results; no separate page isolates this library.
 
 The `semantic-command-end` extension exposes the same
 `SemanticMarkExtension.getSemanticMarks()` getter, returning copied, ordered

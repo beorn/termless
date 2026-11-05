@@ -2,7 +2,7 @@
 
 WezTerm backend for [Termless](../../README.md) — headless terminal emulation using the [wezterm-term](https://crates.io/crates/tattoy-wezterm-term) Rust crate via [napi-rs](https://napi.rs) native bindings.
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). WezTerm's application page covers the full terminal.
+**Feature support:** [WezTerm results on terminfo.dev](https://terminfo.dev/terminals/wezterm) combine application and parser-backend results; no separate page isolates this library.
 
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 

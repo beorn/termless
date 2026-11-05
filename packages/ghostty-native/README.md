@@ -4,7 +4,7 @@ Native [Ghostty](https://ghostty.org/) backend for [termless](https://termless.d
 
 Same VT processing as the Ghostty terminal emulator, running natively (no WASM overhead). Compare with `@termless/ghostty` which uses the WASM build.
 
-**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Ghostty's application page covers the full terminal.
+**Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates this library.
 
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 
