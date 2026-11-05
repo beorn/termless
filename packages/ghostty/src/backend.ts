@@ -267,6 +267,7 @@ const nativeKeyNames: Record<string, Key> = {
   Delete: Key.DELETE,
   PageUp: Key.PAGE_UP,
   PageDown: Key.PAGE_DOWN,
+  NumLock: Key.NUM_LOCK,
   Space: Key.SPACE,
   Control: Key.CONTROL_LEFT,
   Shift: Key.SHIFT_LEFT,
