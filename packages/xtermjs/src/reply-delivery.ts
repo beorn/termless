@@ -11,7 +11,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/xtermjs/src/backend.ts",
-      blobOid: "72dc827b2026af7736de722f7ff986a04f3fe883",
+      blobOid: "c548f49a689a7f3f7acc499c789c1b0d9308d8b6",
     },
   ],
   delivery: {
