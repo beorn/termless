@@ -4,7 +4,8 @@
  * @consumer TerminalBackend input encoding and raw LibvtermModule keyboard/mouse/paste callers.
  * @testonly none
  */
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
+import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
 import {
@@ -12,6 +13,7 @@ import {
   type MouseEncodingExtension,
   type PasteEncodingExtension,
   type KeyDescriptor,
+  type KeyEncodingExtension,
 } from "../../../src/terminal/types.ts"
 
 const module = await initLibvterm()
@@ -194,33 +196,73 @@ test("capture failures restore replies and selection callbacks before subsequent
   }
 })
 
+// Legacy presence and matching bytes miss host encoding; each accepted path must call native input inside capture.
 test("key descriptors follow native modifier semantics and classify text once", () => {
-  const backend = createLibvtermBackend(undefined, module)
+  const calls: ["key" | "text", number, number][] = []
+  let capturing = false
+  const injected: LibvtermModule = {
+    ...module,
+    termless_vterm_output_capture_begin(vt) {
+      const capture = module.termless_vterm_output_capture_begin(vt)
+      capturing = capture !== 0
+      return capture
+    },
+    termless_vterm_output_capture_end(vt, reply, capture) {
+      module.termless_vterm_output_capture_end(vt, reply, capture)
+      capturing = false
+    },
+    vterm_keyboard_key(vt, key, mods) {
+      expect(capturing).toBe(true)
+      calls.push(["key", key, mods])
+      module.vterm_keyboard_key(vt, key, mods)
+    },
+    vterm_keyboard_unichar(vt, codepoint, mods) {
+      expect(capturing).toBe(true)
+      calls.push(["text", codepoint, mods])
+      module.vterm_keyboard_unichar(vt, codepoint, mods)
+    },
+  }
+  const hostEncoder = vi.spyOn(hostKeyEncoding, "encodeKeyToAnsi")
+  const backend = createLibvtermBackend(undefined, injected)
   backend.init({ cols: 8, rows: 3 })
   try {
-    const cases: [KeyDescriptor, string][] = [
-      [{ key: "Enter" }, "\r"],
-      [{ key: "Enter", ctrl: true }, "\x1b[13;5u"],
-      [{ key: "Enter", shift: true }, "\x1b[13;2u"],
-      [{ key: "Backspace", ctrl: true }, "\x1b[127;5u"],
-      [{ key: "Tab", shift: true }, "\x1b[Z"],
-      [{ key: "F1", ctrl: true }, "\x1b[1;5P"],
-      [{ key: "Space", shift: true }, "\x1b[32;2u"],
-      [{ key: "a", ctrl: true }, "\x01"],
-      [{ key: "x", alt: true }, "\x1bx"],
-      [{ key: "🦊" }, "🦊"],
-      [{ key: "hello" }, "hello"],
-      [{ key: "UnknownKey" }, "UnknownKey"],
-      [{ key: "café🦊" }, "café🦊"],
+    expect(hasExtension<KeyEncodingExtension>(backend, "key-encoding")).toBe(true)
+    const cases: [KeyDescriptor, string, "key" | "text", number, number][] = [
+      [{ key: "Enter" }, "\r", "key", 1, 0],
+      [{ key: "Enter", ctrl: true }, "\x1b[13;5u", "key", 1, 4],
+      [{ key: "Enter", shift: true }, "\x1b[13;2u", "key", 1, 1],
+      [{ key: "Backspace", ctrl: true }, "\x1b[127;5u", "key", 3, 4],
+      [{ key: "Tab", shift: true }, "\x1b[Z", "key", 2, 1],
+      [{ key: "F1", ctrl: true }, "\x1b[1;5P", "key", 257, 4],
+      [{ key: "Space", shift: true }, "\x1b[32;2u", "text", 32, 1],
+      [{ key: "a", ctrl: true }, "\x01", "text", 97, 4],
+      [{ key: "x", alt: true }, "\x1bx", "text", 120, 2],
+      [{ key: "🦊" }, "🦊", "text", 0x1f98a, 0],
+      [{ key: "hello" }, "hello", "text", 104, 0],
+      [{ key: "UnknownKey" }, "UnknownKey", "text", 85, 0],
+      [{ key: "café🦊" }, "café🦊", "text", 99, 0],
     ]
-    for (const [key, expected] of cases) expect(decode(backend.encodeKey(key)), JSON.stringify(key)).toBe(expected)
+    for (const [key, expected, kind, firstCode, mods] of cases) {
+      calls.length = 0
+      expect(decode(backend.encodeKey(key)), JSON.stringify(key)).toBe(expected)
+      const codes =
+        kind === "text" && key.key !== "Space" ? Array.from(key.key, (scalar) => scalar.codePointAt(0)!) : [firstCode]
+      expect(calls, JSON.stringify(key)).toEqual(codes.map((code) => [kind, code, mods]))
+      expect(capturing).toBe(false)
+    }
     for (const key of [{ key: "ab", ctrl: true }, { key: "F13" }, { key: "x", super: true }, { key: "Meta" }]) {
+      calls.length = 0
       expect(() => backend.encodeKey(key)).toThrow(/libvterm.*no native encoding/i)
+      expect(calls).toEqual([])
     }
     backend.feed(encoder.encode("\x1b[20h"))
+    calls.length = 0
     expect(decode(backend.encodeKey({ key: "Enter" }))).toBe("\r\n")
+    expect(calls).toEqual([["key", 1, 0]])
+    expect(hostEncoder).not.toHaveBeenCalled()
   } finally {
     backend.destroy()
+    hostEncoder.mockRestore()
   }
   expect(() => backend.encodeKey({ key: "a" })).toThrow(/not initialized/i)
 })

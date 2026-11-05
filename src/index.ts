@@ -25,6 +25,7 @@ export type {
   CursorStyle,
   EmulatorWarning,
   KeyDescriptor,
+  KeyEncodingExtension,
   HyperlinkExtension,
   MouseEncodingExtension,
   PasteEncodingExtension,
