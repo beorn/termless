@@ -9,6 +9,45 @@ import { describe, test, expect } from "vitest"
 import { createVt100Backend } from "../src/backend.ts"
 
 describe("createVt100Backend", () => {
+  // R2: unknown SGR operands must not swallow adjacent genuine DEC operands.
+  test("applies documented SGR operands independently and ignores colon operands whole", () => {
+    const backend = createVt100Backend({ cols: 12, rows: 3 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[38;2;1;4;5mA\x1b[0m\x1b[38:2:1:4:5mB"))
+      expect(backend.getCell(0, 0)).toMatchObject({
+        bold: true,
+        underline: "single",
+        blink: true,
+        fg: null,
+        bg: null,
+      })
+      expect(backend.getCell(0, 1)).toMatchObject({
+        bold: false,
+        underline: false,
+        blink: false,
+        fg: null,
+        bg: null,
+      })
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // R1: unsupported XTWINOPS must be silent while genuine DEC reports still recover.
+  test("ignores CSI 18t and preserves following DSR and CPR replies", () => {
+    const backend = createVt100Backend({ cols: 12, rows: 3 })
+    const replies: string[] = []
+    backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[18t"))
+      expect(replies).toEqual([])
+      backend.feed(new TextEncoder().encode("\x1b[2;3H\x1b[5n\x1b[6n"))
+      expect(replies.join("")).toBe("\x1b[0n\x1b[2;3R")
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // @failure Native paste must use this adapter instance without leaking bytes to responses.
   // @level l0
   // @consumer Library-native paste probes through PasteEncodingExtension.
@@ -249,7 +288,7 @@ describe("createVt100Backend", () => {
 
   test("bright foreground colors (90-97) are silently ignored", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
-    // SGR 91 — vt100.js only supports standard 30-37
+    // SGR 91 is outside the VT100 monochrome operand set
     backend.feed(new TextEncoder().encode("\x1b[91mR\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.fg).toBeNull()
@@ -365,13 +404,13 @@ describe("createVt100Backend", () => {
     backend.destroy()
   })
 
-  test("cursor visibility via DECTCEM", () => {
+  test("VT100 ignores later DECTCEM cursor visibility", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.getCursor().visible).toBe(true)
-    // Hide cursor
+    // Later DECTCEM is outside the VT100 repertoire
     backend.feed(new TextEncoder().encode("\x1b[?25l"))
-    expect(backend.getCursor().visible).toBe(false)
-    // Show cursor
+    expect(backend.getCursor().visible).toBe(true)
+    // Both operands preserve the visible cursor
     backend.feed(new TextEncoder().encode("\x1b[?25h"))
     expect(backend.getCursor().visible).toBe(true)
     backend.destroy()
@@ -426,26 +465,26 @@ describe("createVt100Backend", () => {
 
   // ── Title ──
 
-  test("title changes via OSC 2", () => {
+  test("title stays empty after OSC 2", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     expect(backend.getTitle()).toBe("")
     // OSC 2 ; title ST (using BEL as terminator)
     backend.feed(new TextEncoder().encode("\x1b]2;my terminal title\x07"))
-    expect(backend.getTitle()).toBe("my terminal title")
+    expect(backend.getTitle()).toBe("")
     backend.destroy()
   })
 
-  test("title changes via OSC 0", () => {
+  test("title stays empty after OSC 0", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b]0;window title\x07"))
-    expect(backend.getTitle()).toBe("window title")
+    expect(backend.getTitle()).toBe("")
     backend.destroy()
   })
 
-  test("title changes via OSC with ST terminator", () => {
+  test("title stays empty after OSC with ST terminator", () => {
     const backend = createVt100Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b]2;st title\x1b\\"))
-    expect(backend.getTitle()).toBe("st title")
+    expect(backend.getTitle()).toBe("")
     backend.destroy()
   })
 
@@ -757,7 +796,7 @@ describe("createVt100Backend", () => {
       backend.destroy()
     })
 
-    test("scroll up (SU) within region", () => {
+    test("unsupported SU preserves all rows within the scroll region", () => {
       const backend = createVt100Backend({ cols: 20, rows: 5 })
       const enc = (s: string) => new TextEncoder().encode(s)
 
@@ -771,12 +810,16 @@ describe("createVt100Backend", () => {
       backend.feed(enc("\x1b[2;4r"))
       // Position cursor inside region
       backend.feed(enc("\x1b[2;1H"))
-      // Scroll up once (CSI S)
+      // Unsupported CSI S must leave the display unchanged.
       backend.feed(enc("\x1b[1S"))
 
       const text = backend.getText()
       // Row 0 (above region) should be preserved
       expect(text).toContain("LINE-0")
+      // Unsupported SU preserves the region contents too.
+      expect(text).toContain("LINE-1")
+      expect(text).toContain("LINE-2")
+      expect(text).toContain("LINE-3")
       // Row 4 (below region) should be preserved
       expect(text).toContain("LINE-4")
       backend.destroy()
@@ -932,20 +975,20 @@ describe("createVt100Backend", () => {
       backend.destroy()
     })
 
-    test("CHA (cursor horizontal absolute) sets column", () => {
+    test("CHA is ignored and preserves cursor column", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
       backend.feed(new TextEncoder().encode("\x1b[3;10H")) // row 2, col 9
       backend.feed(new TextEncoder().encode("\x1b[5G")) // col 5 (1-based) = col 4 (0-based)
-      expect(backend.getCursor().x).toBe(4)
+      expect(backend.getCursor().x).toBe(9)
       expect(backend.getCursor().y).toBe(2) // y unchanged
       backend.destroy()
     })
 
-    test("VPA (line position absolute) sets row", () => {
+    test("VPA is ignored and preserves cursor row", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
       backend.feed(new TextEncoder().encode("\x1b[1;10H")) // row 0, col 9
       backend.feed(new TextEncoder().encode("\x1b[3d")) // row 3 (1-based) = row 2 (0-based)
-      expect(backend.getCursor().y).toBe(2)
+      expect(backend.getCursor().y).toBe(0)
       expect(backend.getCursor().x).toBe(9) // x unchanged
       backend.destroy()
     })
@@ -1022,13 +1065,13 @@ describe("createVt100Backend", () => {
       backend.destroy()
     })
 
-    test("CSI s / CSI u saves and restores cursor position", () => {
+    test("CSI s / CSI u are ignored and preserve current cursor", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
       backend.feed(new TextEncoder().encode("\x1b[5;15H")) // row 4, col 14
       expect(backend.getCursor().x).toBe(14)
       expect(backend.getCursor().y).toBe(4)
 
-      // Save cursor (CSI s)
+      // Unsupported CSI s does not save the position.
       backend.feed(new TextEncoder().encode("\x1b[s"))
 
       // Move cursor elsewhere
@@ -1036,10 +1079,10 @@ describe("createVt100Backend", () => {
       expect(backend.getCursor().x).toBe(59)
       expect(backend.getCursor().y).toBe(19)
 
-      // Restore cursor (CSI u)
+      // Unsupported CSI u does not restore the position.
       backend.feed(new TextEncoder().encode("\x1b[u"))
-      expect(backend.getCursor().x).toBe(14)
-      expect(backend.getCursor().y).toBe(4)
+      expect(backend.getCursor().x).toBe(59)
+      expect(backend.getCursor().y).toBe(19)
       backend.destroy()
     })
 
@@ -1272,12 +1315,12 @@ describe("createVt100Backend", () => {
       backend.destroy()
     })
 
-    test("CHA with 0 parameter treated as column 1", () => {
+    test("CHA with zero parameter is ignored", () => {
       const backend = createVt100Backend({ cols: 80, rows: 24 })
       backend.feed(new TextEncoder().encode("\x1b[5;20H")) // move to col 19
-      backend.feed(new TextEncoder().encode("\x1b[0G")) // CHA 0 -> treated as 1
-      // 0 is parsed as 0, (0-1) = -1, clamped to 0
-      expect(backend.getCursor().x).toBe(0)
+      backend.feed(new TextEncoder().encode("\x1b[0G")) // Unsupported CHA with a zero operand
+      // Unsupported CHA leaves the CUP position intact.
+      expect(backend.getCursor().x).toBe(19)
       backend.destroy()
     })
 
