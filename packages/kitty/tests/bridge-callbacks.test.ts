@@ -844,7 +844,7 @@ print(json.dumps({"raw": [cell["hyperlink"] for cell in raw], "actual": [cell.ge
 })
 
 // Native paste must stay outside persistent parser history and the ordinary reply-delivery stream.
-describe("native Kitty paste encoding", () => {
+describe.skipIf(!isKittyAvailable())("native Kitty paste encoding", () => {
   test("uses Screen framing and verbatim bytes with native lifecycle", () => {
     const backend = createKittyBackend()
     const encode = (text: string) => (backend as typeof backend & PasteEncodingExtension).encodePaste(text)
@@ -1002,7 +1002,7 @@ print(json.dumps(results))
     let output: string
     try {
       output = execFileSync(
-        process.env.KITTY_BINARY!,
+        process.env.KITTY_BINARY ?? "kitty",
         ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); exec(${JSON.stringify(script)}, {})`],
         { encoding: "utf8", timeout: 30_000, env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir } },
       )
