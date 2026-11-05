@@ -882,7 +882,7 @@ describe("native Kitty paste encoding", () => {
       const received: string[] = []
       backend.onResponse = (bytes) => received.push(Buffer.from(bytes).toString())
       backend.feed(Buffer.from("\x1b[6nX\x1b[6n"))
-      if (fail)
+      if (fail) {
         replay.mockImplementationOnce((file, args, options) => {
           const hook =
             "original = bridge.handle_command\ndef fail_paste(cmd):\n    if cmd.get('op') == 'encode-paste':\n        raise RuntimeError('forced native paste failure')\n    return original(cmd)\nbridge.handle_command = fail_paste"
@@ -898,6 +898,7 @@ describe("native Kitty paste encoding", () => {
             options,
           )
         })
+      }
       try {
         const encode = () => (backend as typeof backend & PasteEncodingExtension).encodePaste("payload")
         if (fail) expect(encode).toThrow(/forced native paste failure/)
@@ -932,10 +933,11 @@ describe("native Kitty paste encoding", () => {
     try {
       const cursor = backend.getCursor()
       const warnings = backend.getWarnings()
-      if (fail)
+      if (fail) {
         replay.mockImplementationOnce(() => {
           throw new Error("forced cached encode failure")
         })
+      }
       const encode = () => backend.encodePaste("cache")
       if (fail) expect(encode).toThrow(/forced cached encode failure/)
       else expect(Buffer.from(encode()).toString()).toBe("cache")
@@ -996,11 +998,17 @@ for fault in ['none', 'callback', 'both']:
         results.append({'fault':fault,'error':''.join(traceback.format_exception(error)),'responses':bridge.callbacks.responses.decode(),'wtc':bridge.callbacks.wtcbuf.decode()})
 print(json.dumps(results))
 `
-    const output = execFileSync(
-      process.env.KITTY_BINARY!,
-      ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); exec(${JSON.stringify(script)}, {})`],
-      { encoding: "utf8", timeout: 30_000 },
-    )
+    const configDir = mkdtempSync(join(tmpdir(), "termless-kitty-paste-config-"))
+    let output: string
+    try {
+      output = execFileSync(
+        process.env.KITTY_BINARY!,
+        ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); exec(${JSON.stringify(script)}, {})`],
+        { encoding: "utf8", timeout: 30_000, env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir } },
+      )
+    } finally {
+      rmSync(configDir, { recursive: true, force: true })
+    }
     const results = JSON.parse(output) as Array<{
       fault: string
       encoding?: string
