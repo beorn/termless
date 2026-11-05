@@ -4,21 +4,21 @@
     {
       "name": "vt100.js",
       "repository": "beorn/vterm",
-      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
+      "commit": "34c3918b0fcc778116eaf8db4e90441e4b727963",
       "directory": "packages/vt100",
       "pack": true
     },
     {
       "name": "vt220.js",
       "repository": "beorn/vterm",
-      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
+      "commit": "34c3918b0fcc778116eaf8db4e90441e4b727963",
       "directory": "packages/vt220",
       "pack": true
     },
     {
       "name": "vterm.js",
       "repository": "beorn/vterm",
-      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
+      "commit": "34c3918b0fcc778116eaf8db4e90441e4b727963",
       "directory": "packages/vterm",
       "pack": true
     },

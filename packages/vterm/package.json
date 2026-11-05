@@ -44,7 +44,7 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "vterm.js": "^0.11.0"
+    "vterm.js": "^0.12.0"
   },
   "devDependencies": {
     "@termless/xtermjs": "workspace:*"
