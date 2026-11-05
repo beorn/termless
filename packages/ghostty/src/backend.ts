@@ -312,7 +312,7 @@ export function createGhosttyBackend(
   AdapterSourcesExtension &
   MouseEncodingExtension &
   KeyEncodingExtension &
-  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
+  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd" | "getUnhandledSequences"> {
   let term: GhosttyTerminal | null = null
   let keyEncoder: KeyEncoder | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
