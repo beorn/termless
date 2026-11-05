@@ -86,6 +86,7 @@ interface WeztermTerminal {
   getIconLabel(): string
   /** Every engine-emitted OSC 9/777 toast since construction, in order; title null where the engine sets none. */
   getToasts(): { title: string | null; body: string }[]
+  getProgress(): { state: number; value: number | null }
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
   /** Read pending response data (DA1/DA2/DSR/DECRPM/window-ops). Returns null if no responses pending. */
@@ -212,7 +213,7 @@ export function createWeztermBackend(
   HyperlinkExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getToasts"> {
+  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -343,6 +344,16 @@ export function createWeztermBackend(
     return t.getToasts().map((toast) => ({ title: toast.title, body: toast.body }))
   }
 
+  function getProgress(): { state: number; value: number | null } {
+    const t = ensureTerm()
+    if (typeof t.getProgress !== "function") {
+      throw new Error(
+        "The loaded WezTerm native addon predates getProgress; rebuild it:\n  cd packages/wezterm/native && cargo build --release",
+      )
+    }
+    return t.getProgress()
+  }
+
   function getTitle(): string {
     return ensureTerm().getTitle()
   }
@@ -385,8 +396,7 @@ export function createWeztermBackend(
       reason:
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
-    // osc-metadata carries only the parsed-toast reader: WezTerm keeps no raw OSC 9/777 payload, and OSC 9;4 and OSC 7
-    // have no reader here.
+    // Parsed toasts and current progress state only; no raw OSC 9/777 payload or OSC 7 reader.
     extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery"]),
   }
 
@@ -394,7 +404,7 @@ export function createWeztermBackend(
     HyperlinkExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
-    Pick<Required<OscMetadataExtension>, "getToasts"> = {
+    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "wezterm",
     init,
@@ -417,6 +427,7 @@ export function createWeztermBackend(
     getTitle,
     getIconLabel: () => ensureTerm().getIconLabel(),
     getToasts,
+    getProgress,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
