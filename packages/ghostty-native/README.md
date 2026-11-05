@@ -45,6 +45,22 @@ console.log(backend.getText())
 backend.destroy()
 ```
 
+## Paste input
+
+The `paste-encoding` extension provides `backend.encodePaste(text): Uint8Array`
+using the current native Terminal handle. It returns Ghostty's own input bytes
+without feeding the parser, changing modes or screen state, draining pending
+replies, or calling `onResponse`.
+
+Ghostty 1.3.1 replaces its listed control bytes, including ESC, with spaces in
+both modes. With mode 2004 off, LF becomes CR (CRLF becomes CRCR). With mode
+2004 enabled, the native encoder frames the payload and preserves newlines.
+This is Ghostty's native policy, not a shared Termless normalizer. Empty text
+returns empty bytes when unbracketed and the native empty frame when bracketed.
+
+Calls before init or after destroy fail. Reset and re-init use native default
+modes. An older addon without this method reports the existing rebuild command.
+
 ## Pinned version
 
 Built against ghostty v1.3.1 (`332b2aef`). The stable C API migration is tracked in km as `@km/termless/libghostty-stable-api`.

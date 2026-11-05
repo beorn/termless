@@ -14,7 +14,12 @@ import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { hasExtension, type HyperlinkExtension, type OscMetadataExtension } from "../../../src/terminal/types.ts"
+import {
+  hasExtension,
+  type HyperlinkExtension,
+  type OscMetadataExtension,
+  type PasteEncodingExtension,
+} from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -835,5 +840,183 @@ print(json.dumps({"raw": [cell["hyperlink"] for cell in raw], "actual": [cell.ge
       { error: "ValueError" },
       { missing: "rejected" },
     ],
+  })
+})
+
+// Native paste must stay outside persistent parser history and the ordinary reply-delivery stream.
+describe("native Kitty paste encoding", () => {
+  test("uses Screen framing and verbatim bytes with native lifecycle", () => {
+    const backend = createKittyBackend()
+    const encode = (text: string) => (backend as typeof backend & PasteEncodingExtension).encodePaste(text)
+    expect(() => encode("before-init")).toThrow(/not initialized/i)
+    backend.init({ cols: 12, rows: 3 })
+    try {
+      expect(backend.capabilities.extensions.has("paste-encoding")).toBe(true)
+      const received: string[] = []
+      backend.onResponse = (bytes) => received.push(Buffer.from(bytes).toString())
+      for (const enabled of [false, true]) {
+        backend.feed(Buffer.from(enabled ? "\x1b[?2004h" : "\x1b[?2004l"))
+        for (const text of ["", "hé😀", "a\r\nb\nc", "\x00\x01\x1b[201~tail"]) {
+          expect(Buffer.from(encode(text)).toString()).toBe(enabled ? `\x1b[200~${text}\x1b[201~` : text)
+        }
+        expect(received).toEqual([])
+        expect(backend.getMode("bracketedPaste")).toBe(enabled)
+      }
+      backend.reset()
+      expect(Buffer.from(encode("reset")).toString()).toBe("reset")
+      backend.init({ cols: 12, rows: 3 })
+      expect(Buffer.from(encode("reinit")).toString()).toBe("reinit")
+    } finally {
+      backend.destroy()
+    }
+    expect(() => encode("after-destroy")).toThrow(/not initialized/i)
+  })
+
+  test.each([false, true])(
+    "later ordinary replay omits temporary paste and delivers each queued reply once after failure=%s",
+    async (fail) => {
+      const actual = await vi.importActual<typeof childProcess>("node:child_process")
+      const replay = vi.mocked(childProcess.execFileSync)
+      replay.mockClear()
+      const backend = createKittyBackend({ cols: 12, rows: 3 })
+      const received: string[] = []
+      backend.onResponse = (bytes) => received.push(Buffer.from(bytes).toString())
+      backend.feed(Buffer.from("\x1b[6nX\x1b[6n"))
+      if (fail)
+        replay.mockImplementationOnce((file, args, options) => {
+          const hook =
+            "original = bridge.handle_command\ndef fail_paste(cmd):\n    if cmd.get('op') == 'encode-paste':\n        raise RuntimeError('forced native paste failure')\n    return original(cmd)\nbridge.handle_command = fail_paste"
+          return actual.execFileSync(
+            file,
+            [
+              args![0]!,
+              args![1]!.replace(
+                "bridge.batch_main()",
+                `exec(${JSON.stringify(hook)}, {"bridge": bridge}); bridge.batch_main()`,
+              ),
+            ],
+            options,
+          )
+        })
+      try {
+        const encode = () => (backend as typeof backend & PasteEncodingExtension).encodePaste("payload")
+        if (fail) expect(encode).toThrow(/forced native paste failure/)
+        else expect(Buffer.from(encode()).toString()).toBe("payload")
+        expect(received).toEqual([])
+        const encodedHistory = JSON.parse(String(replay.mock.calls[0]![2]!.input)) as {
+          commands: Array<{ op: string }>
+        }
+        expect(encodedHistory.commands.at(-1)?.op).toBe("encode-paste")
+        backend.getCursor()
+        const ordinaryHistory = JSON.parse(String(replay.mock.calls[1]![2]!.input)) as {
+          commands: Array<{ op: string }>
+        }
+        expect(ordinaryHistory.commands.some((command) => command.op === "encode-paste")).toBe(false)
+        expect(received.join("")).toBe("\x1b[1;1R\x1b[1;2R")
+        backend.getCursor()
+        expect(replay).toHaveBeenCalledTimes(2)
+        backend.feed(Buffer.from("\x1b[6n"))
+        backend.getCursor()
+        expect(received.join("")).toBe("\x1b[1;1R\x1b[1;2R\x1b[1;2R")
+      } finally {
+        backend.destroy()
+        replay.mockClear()
+      }
+    },
+  )
+
+  test.each([false, true])("preserves the warm snapshot after encoding failure=%s", (fail) => {
+    const replay = vi.mocked(childProcess.execFileSync)
+    replay.mockClear()
+    const backend = createKittyBackend({ cols: 12, rows: 3 })
+    try {
+      const cursor = backend.getCursor()
+      const warnings = backend.getWarnings()
+      if (fail)
+        replay.mockImplementationOnce(() => {
+          throw new Error("forced cached encode failure")
+        })
+      const encode = () => backend.encodePaste("cache")
+      if (fail) expect(encode).toThrow(/forced cached encode failure/)
+      else expect(Buffer.from(encode()).toString()).toBe("cache")
+      expect(backend.getCursor()).toEqual(cursor)
+      expect(backend.getWarnings()).toEqual(warnings)
+      expect(replay).toHaveBeenCalledTimes(2)
+    } finally {
+      backend.destroy()
+      replay.mockClear()
+    }
+  })
+
+  test.each([undefined, null, 3, "!", "YQ"])("rejects missing or malformed pasteEncoding=%s", async (pasteEncoding) => {
+    const actual = await vi.importActual<typeof childProcess>("node:child_process")
+    const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
+      const parsed = JSON.parse(String(actual.execFileSync(file, args, options))) as Record<string, unknown>
+      delete parsed.pasteEncoding
+      if (pasteEncoding !== undefined) parsed.pasteEncoding = pasteEncoding
+      return JSON.stringify(parsed)
+    })
+    const backend = createKittyBackend({ cols: 12, rows: 3 })
+    try {
+      expect(() => (backend as typeof backend & PasteEncodingExtension).encodePaste("x")).toThrow(/pasteEncoding/)
+    } finally {
+      backend.destroy()
+      replay.mockClear()
+    }
+  })
+
+  test("bridge restores both output buffers on success, callback failure and cleanup failure", () => {
+    const bridgeDir = fileURLToPath(new URL("../build/", import.meta.url))
+    const script = `
+import bridge, json, base64
+results = []
+for fault in ['none', 'callback', 'both']:
+    bridge.handle_command({'op':'init','cols':12,'rows':3})
+    bridge.parse_bytes(bridge.screen, b'\x1b[6n')
+    before_response = bridge.callbacks.responses
+    before_wtc = bridge.callbacks.wtcbuf
+    if fault != 'none':
+        original_write = bridge.callbacks.write
+        def broken_write(data):
+            original_write(data)
+            raise RuntimeError('primary callback failure')
+        bridge.callbacks.write = broken_write
+    if fault == 'both':
+        class BrokenCleanup(bridge.Callbacks):
+            def __setattr__(self, name, value):
+                if name == 'responses' and value == before_response:
+                    raise RuntimeError('cleanup buffer failure')
+                super().__setattr__(name, value)
+        bridge.callbacks.__class__ = BrokenCleanup
+    try:
+        result = bridge.handle_command({'op':'encode-paste','data':base64.b64encode(b'native').decode()})
+        results.append({'fault':fault,'encoding':base64.b64decode(result['pasteEncoding']).decode(),'responses':bridge.callbacks.responses.decode(),'wtc':bridge.callbacks.wtcbuf.decode()})
+    except Exception as error:
+        import traceback
+        results.append({'fault':fault,'error':''.join(traceback.format_exception(error)),'responses':bridge.callbacks.responses.decode(),'wtc':bridge.callbacks.wtcbuf.decode()})
+print(json.dumps(results))
+`
+    const output = execFileSync(
+      process.env.KITTY_BINARY!,
+      ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); exec(${JSON.stringify(script)}, {})`],
+      { encoding: "utf8", timeout: 30_000 },
+    )
+    const results = JSON.parse(output) as Array<{
+      fault: string
+      encoding?: string
+      error?: string
+      responses: string
+      wtc: string
+    }>
+    expect(results[0]).toEqual({ fault: "none", encoding: "native", responses: "\x1b[1;1R", wtc: "\x1b[1;1R" })
+    expect(results[1]).toMatchObject({
+      fault: "callback",
+      error: expect.stringContaining("primary callback failure"),
+      responses: "\x1b[1;1R",
+      wtc: "\x1b[1;1R",
+    })
+    expect(results[2]?.error).toContain("primary callback failure")
+    expect(results[2]?.error).toContain("cleanup buffer failure")
+    expect(results[2]?.wtc).toBe("\x1b[1;1R")
   })
 })

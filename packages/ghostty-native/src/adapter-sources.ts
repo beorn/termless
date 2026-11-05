@@ -1,5 +1,6 @@
 // Adapter identity only. This engine's reply-delivery capability is unchanged.
 // Re-audited for chronological retained native rows: the rebuilt engine receipt binds the changed Zig source tree.
+// Native paste uses the existing handle's encoder and copied bytes; it never feeds or drains the reply stream.
 export const adapterDeclaration = {
   sources: [
     {
@@ -8,7 +9,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty-native/src/backend.ts",
-      blobOid: "9c1076fdee7256ecf469f7a42d6158f8d7f3da61",
+      blobOid: "ccac00adab6c03c2bc6c60ee71f355a5499d79c7",
     },
   ],
 } as const

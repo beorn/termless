@@ -15,6 +15,8 @@ The architecture:
 
 Each mutation (`feed`, `resize`, `reset`) is logged. When you query the terminal state (`getCell`, `getCursor`, etc.), the entire command log is replayed in a fresh subprocess and the resulting snapshot is cached until the next mutation.
 
+The `paste-encoding` extension observes Kitty's terminal-state `Screen.paste` bytes, including native bracketed framing, rather than the application's sanitizing `Window.paste` action.
+
 ## License
 
 This package's source code (bridge script + TypeScript wrapper) is MIT licensed.

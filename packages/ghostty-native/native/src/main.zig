@@ -26,6 +26,19 @@ const size = ghostty.size;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
 
+/// Copy native bytes into JS-owned storage; shared by native input encoders.
+fn jsBytes(js: *napigen.JsContext, bytes: []const u8) !napigen.napi_value {
+    var result: napigen.napi_value = undefined;
+    try napigen.check(napigen.napi.napi_create_buffer_copy(
+        js.env,
+        bytes.len,
+        if (bytes.len == 0) null else @ptrCast(bytes.ptr),
+        null,
+        &result,
+    ));
+    return result;
+}
+
 // ─── Reply handler ──────────────────────────────────────
 
 /// Ghostty's readonly handler (`Terminal.vtStream()`) applies every state change but has no
@@ -231,6 +244,7 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "createTerminal", try js.createFunction(createTerminal));
     try js.setNamedProperty(exports, "destroyTerminal", try js.createFunction(destroyTerminal));
     try js.setNamedProperty(exports, "feed", try js.createFunction(feed));
+    try js.setNamedProperty(exports, "encodePaste", try js.createFunction(encodePaste));
     try js.setNamedProperty(exports, "resize", try js.createFunction(resizeTerm));
     try js.setNamedProperty(exports, "reset", try js.createFunction(resetTerm));
     try js.setNamedProperty(exports, "getText", try js.createFunction(getText));
@@ -328,6 +342,30 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     // Fall back to string
     const str = try js.readString(data_val);
     try handle.stream.nextSlice(str);
+}
+
+/// Encode input for the existing Terminal without parsing it or touching replies.
+fn encodePaste(js: *napigen.JsContext, handle: *TerminalHandle, value: napigen.napi_value) !napigen.napi_value {
+    const napi = napigen.napi;
+    var kind: napi.napi_typedarray_type = undefined;
+    var length: usize = 0;
+    var data: ?*anyopaque = null;
+    var buffer: napi.napi_value = undefined;
+    var offset: usize = 0;
+    try napigen.check(napi.napi_get_typedarray_info(js.env, value, &kind, &length, &data, &buffer, &offset));
+    if (kind != napi.napi_uint8_array) return error.InvalidPasteBytes;
+    const input: []const u8 = if (length == 0) &.{} else blk: {
+        const ptr = data orelse return error.InvalidPasteBytes;
+        break :blk @as([*]const u8, @ptrCast(ptr))[0..length];
+    };
+    const mutable = try allocator.dupe(u8, input);
+    defer allocator.free(mutable);
+
+    const parts = ghostty.input.encodePaste(mutable, ghostty.input.PasteOptions.fromTerminal(&handle.terminal));
+    var output = std.Io.Writer.Allocating.init(allocator);
+    defer output.deinit();
+    for (parts) |part| try output.writer.writeAll(part);
+    return jsBytes(js, output.written());
 }
 
 // ─── Replies ────────────────────────────────────────────

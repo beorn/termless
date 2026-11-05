@@ -622,6 +622,33 @@ def handle_command(cmd):
         callbacks.screen = screen
         return {"ok": True}
 
+    elif op == "encode-paste":
+        data = base64.b64decode(cmd["data"], validate=True)
+        response_prefix = callbacks.responses
+        wtc_prefix = callbacks.wtcbuf
+        failures = []
+        try:
+            screen.paste(data)
+            encoded = callbacks.responses[len(response_prefix):]
+        except Exception as error:
+            failures.append(error)
+        finally:
+            # Kitty prints C-to-Python callback exceptions and continues. Never mistake that for empty output.
+            if callback_errors:
+                failures.append(RuntimeError("kitty Window callback raised during paste: " + "".join(callback_errors)))
+                callback_errors.clear()
+            # Attempt both restorations, preserving the original queued prefixes even on an encode failure.
+            for name, prefix in (("responses", response_prefix), ("wtcbuf", wtc_prefix)):
+                try:
+                    setattr(callbacks, name, prefix)
+                except Exception as error:
+                    failures.append(error)
+        if len(failures) == 1:
+            raise failures[0]
+        if failures:
+            raise ExceptionGroup("Kitty paste encoding and cleanup failed", failures)
+        return {"ok": True, "pasteEncoding": base64.b64encode(encoded).decode("ascii")}
+
     elif op == "feed":
         data = base64.b64decode(cmd["data"])
         # Clear response buffer before feeding so we capture only this feed's responses
@@ -728,6 +755,7 @@ def batch_main():
 
         # Accumulate response data from all feed commands
         all_responses = b""
+        paste_encoding = None
         all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         all_prompts = []  # Likewise prefix-compared
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
@@ -738,6 +766,8 @@ def batch_main():
             if result.get("error"):
                 sys.stdout.write(json.dumps(result) + "\n")
                 return
+            if "pasteEncoding" in result:
+                paste_encoding = result["pasteEncoding"]
             # Collect per-feed response data
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
@@ -749,6 +779,8 @@ def batch_main():
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
+        if paste_encoding is not None:
+            snapshot["pasteEncoding"] = paste_encoding
         all_cmd_output_markings.extend(snapshot.get("cmdOutputMarkings", ()))
         if all_cmd_output_markings:
             snapshot["cmdOutputMarkings"] = all_cmd_output_markings

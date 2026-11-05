@@ -23,6 +23,7 @@ import type {
   DefaultColorsExtension,
   HyperlinkExtension,
   OscMetadataExtension,
+  PasteEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
@@ -87,6 +88,7 @@ interface NativeModule {
   createTerminal(cols: number, rows: number, maxScrollback: number): NativeTerminalHandle
   destroyTerminal(handle: NativeTerminalHandle): void
   feed(handle: NativeTerminalHandle, data: Uint8Array): void
+  encodePaste(handle: NativeTerminalHandle, data: Uint8Array): Uint8Array
   resize(handle: NativeTerminalHandle, cols: number, rows: number): void
   reset(handle: NativeTerminalHandle): void
   getText(handle: NativeTerminalHandle): string
@@ -225,6 +227,7 @@ const DEFAULT_ROWS = 24
 export function createGhosttyNativeBackend(
   opts?: Partial<TerminalOptions>,
 ): TerminalBackend &
+  PasteEncodingExtension &
   HyperlinkExtension &
   DefaultColorsExtension &
   AdapterSourcesExtension &
@@ -277,6 +280,17 @@ export function createGhosttyNativeBackend(
         }
       }
     }
+  }
+
+  function encodePaste(text: string): Uint8Array {
+    const h = ensureHandle()
+    const native = loadGhosttyNative()
+    if (typeof native.encodePaste !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates encodePaste; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    return native.encodePaste(h, new TextEncoder().encode(text))
   }
 
   function resize(newCols: number, newRows: number): void {
@@ -382,7 +396,7 @@ export function createGhosttyNativeBackend(
     unicode: "15.1",
     reflow: true,
     // osc-metadata carries the OSC 9;4 and parsed-toast readers: Ghostty keeps no raw OSC 9/777 payload and no raw OSC 7.
-    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors", "osc-metadata"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors", "osc-metadata", "paste-encoding"]),
   }
 
   function getProgress(): { state: number; value: number | null } | null {
@@ -408,6 +422,7 @@ export function createGhosttyNativeBackend(
   }
 
   const backend: TerminalBackend &
+    PasteEncodingExtension &
     HyperlinkExtension &
     DefaultColorsExtension &
     AdapterSourcesExtension &
@@ -417,6 +432,7 @@ export function createGhosttyNativeBackend(
     init,
     destroy,
     feed,
+    encodePaste,
     resize,
     reset,
     getText,

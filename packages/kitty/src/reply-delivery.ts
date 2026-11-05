@@ -35,6 +35,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for independent icon callback state: icon_changed only retains the native payload in the existing
 // snapshot/getter; replay, child-response accumulation and delivery remain unchanged.
 // Re-audited for nullable conceal readback; reply collection and delivery are unchanged.
+// Re-audited for native Screen.paste: a temporary final batch command captures test-child bytes in pasteEncoding,
+// restores both callback buffer prefixes in finally, and never enters persistent history or ordinary reply-prefix
+// bookkeeping. Queued parser replies retain their existing feed-and-getCursor delivery boundary.
 export const adapterDeclaration = {
   sources: [
     {
@@ -43,11 +46,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "7d5acbea29a6fd5a726605275c512c88bd75a417",
+      blobOid: "c9e4eb8541231830b51a541f10282ecf24988087",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "1f41e90d4dcbd83f7b79b32100865e0155bec2fc",
+      blobOid: "57c9da47bdcd052b99741c307fe1c22485a82288",
     },
     {
       path: "packages/kitty/build/layout.c",

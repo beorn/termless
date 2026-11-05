@@ -22,6 +22,7 @@
 
 import type {
   AdapterSourcesExtension,
+  PasteEncodingExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -98,7 +99,7 @@ function findKitty(): string {
 // ===============================================================
 
 interface BridgeCommand {
-  op: "init" | "feed" | "resize" | "reset" | "scroll" | "snapshot" | "quit"
+  op: "init" | "feed" | "resize" | "reset" | "scroll" | "snapshot" | "quit" | "encode-paste"
   [key: string]: unknown
 }
 
@@ -138,6 +139,8 @@ interface BridgeSnapshot {
   error?: string
   /** Base64-encoded DA1/DA2/DSR response data accumulated during replay */
   responses?: string
+  /** Native paste bytes, separate from parser replies and present even for an empty encoding. */
+  pasteEncoding?: string
   /** Window callbacks the replay reached that the bridge does not reproduce, in feed order */
   unreproduced?: string[]
   /** Clipboard commits kitty's own OSC 52 request manager made under its default clipboard_control */
@@ -283,6 +286,7 @@ export function createKittyBackend(
   WarningExtension &
   ReplyDeliveryExtension &
   HyperlinkExtension &
+  PasteEncodingExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
   SemanticMarkExtension {
@@ -329,10 +333,10 @@ export function createKittyBackend(
    * Replay all accumulated commands in a single execFileSync call.
    * Returns the snapshot of terminal state after all commands are applied.
    */
-  function replayAndSnapshot(): BridgeSnapshot {
+  function replayAndSnapshot(finalCommand?: BridgeCommand): BridgeSnapshot {
     const kitty = findKitty()
     const bridgeDir = dirname(BRIDGE_SCRIPT)
-    const input = JSON.stringify({ commands: commandLog })
+    const input = JSON.stringify({ commands: finalCommand ? [...commandLog, finalCommand] : commandLog })
 
     const result = execFileSync(
       kitty,
@@ -370,6 +374,16 @@ export function createKittyBackend(
     }
 
     return parsed
+  }
+
+  function encodePaste(text: string): Uint8Array {
+    ensureInit()
+    const result = replayAndSnapshot({ op: "encode-paste", data: Buffer.from(text, "utf8").toString("base64") })
+    const encoded = result.pasteEncoding
+    if (typeof encoded !== "string") throw new Error("Kitty bridge returned missing or malformed pasteEncoding")
+    const bytes = Buffer.from(encoded, "base64")
+    if (bytes.toString("base64") !== encoded) throw new Error("Kitty bridge returned malformed pasteEncoding base64")
+    return new Uint8Array(bytes)
   }
 
   function ensureSnapshot(): BridgeSnapshot {
@@ -614,6 +628,7 @@ export function createKittyBackend(
     reflow: true,
     extensions: new Set([
       "adapter-sources",
+      "paste-encoding",
       "warnings",
       "reply-delivery",
       "hyperlinks",
@@ -638,7 +653,8 @@ export function createKittyBackend(
     HyperlinkExtension &
     SemanticMarkExtension &
     Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
-    AdapterSourcesExtension & { getClipboardState(): ClipboardState } = {
+    AdapterSourcesExtension &
+    PasteEncodingExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "kitty",
     init,
@@ -678,6 +694,7 @@ export function createKittyBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodePaste,
     capabilities,
     getWarnings: () => [...warnings],
     clearWarnings: () => {
