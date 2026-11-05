@@ -157,6 +157,116 @@ describe("createXtermBackend", () => {
     }
   })
 
+  // Accepted shared-reader requirement: OSC7 and OSC633 P update one exact, literal directory
+  // observation. Existing notification and title tests cannot detect an unforwarded Cwd callback.
+  test("public OSC7 and OSC633 Cwd callbacks share literal state in feed order", () => {
+    const backend = createXtermBackend({ cols: 80, rows: 24 })
+    try {
+      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata")) {
+        throw new Error("xterm lacks its existing metadata extension")
+      }
+      expect(backend.getCwd).toBeTypeOf("function")
+      const read = backend.getCwd
+      if (!read) throw new Error("xterm metadata lacks its Cwd callback reader")
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      expect(read()).toBeNull()
+      feed("\x1b]7;file://localhost/first%20")
+      expect(read()).toBeNull()
+      feed("directory\x07")
+      expect(read()).toBe("file://localhost/first%20directory")
+      feed("\x1b]633;P;Cwd=/second directory\x1b\\")
+      expect(read()).toBe("/second directory")
+      feed("\x1b]7;file://localhost/third\x07")
+      expect(read()).toBe("file://localhost/third")
+      feed("\x1b]633;P;OtherKey=unchanged\x07\x1b]633;A\x07")
+      expect(read()).toBe("file://localhost/third")
+      const literal = "/literal\\x3b\\\\path"
+      feed(`\x1b]633;P;Cwd=${literal}\x07`)
+      expect(read()).toBe(literal)
+      feed("\x1b]633;P;Cwd=\x07")
+      expect(read()).toBeNull()
+      feed("\x1b]7;file://localhost/clear-me\x07\x1b]7;\x07")
+      expect(read()).toBeNull()
+      feed("\x1b]9;4;1;50\x07\x1b]2;window title\x07plain")
+      expect(read()).toBeNull()
+      expect(backend.getNotifications()).toEqual(["4;1;50"])
+      expect(backend.getTitle()).toBe("window title")
+      expect(backend.getText()).toContain("plain")
+      backend.destroy()
+      expect(read).toThrow("not initialized")
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // Accepted lifecycle requirement: both public observers are synchronous, non-consuming and
+  // disposed before re-init/destroy; an old callback must never update the new instance's reader.
+  test("Cwd public callbacks are synchronous, disposed and isolated across terminal instances", () => {
+    const parserGetter = Object.getOwnPropertyDescriptor(xterm.Terminal.prototype, "parser")?.get
+    if (!parserGetter) throw new Error("xterm public parser getter unavailable")
+    const wrapped = new WeakSet<object>()
+    const registrations: {
+      id: number
+      callback: (payload: string) => boolean | Promise<boolean>
+      disposed: () => number
+    }[] = []
+    const parserSpy = vi
+      .spyOn(xterm.Terminal.prototype, "parser", "get")
+      .mockImplementation(function (this: InstanceType<typeof xterm.Terminal>) {
+        const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
+        if (!wrapped.has(parser)) {
+          wrapped.add(parser)
+          const register = parser.registerOscHandler.bind(parser)
+          vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
+            const handle = register(ident, callback)
+            if (ident === 7 || ident === 633) {
+              const dispose = vi.spyOn(handle, "dispose")
+              registrations.push({ id: ident, callback, disposed: () => dispose.mock.calls.length })
+            }
+            return handle
+          })
+        }
+        return parser
+      })
+    const backend = createXtermBackend()
+    try {
+      backend.init({ cols: 80, rows: 24 })
+      expect(registrations.map(({ id }) => id).sort((a, b) => a - b)).toEqual([7, 633])
+      const oldUri = registrations.find(({ id }) => id === 7)!
+      const oldProperty = registrations.find(({ id }) => id === 633)!
+      expect(oldUri.callback("file://localhost/old")).toBe(false)
+      expect(oldProperty.callback("P;Cwd=/old")).toBe(false)
+      backend.init({ cols: 80, rows: 24 })
+      expect(registrations).toHaveLength(4)
+      const current = registrations.slice(2)
+      expect(current.map(({ id }) => id).sort((a, b) => a - b)).toEqual([7, 633])
+      expect(registrations.slice(0, 2).map(({ disposed }) => disposed())).toEqual([1, 1])
+      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getCwd) {
+        throw new Error("xterm metadata lacks its Cwd callback reader")
+      }
+      expect(oldUri.callback("file://localhost/late-old")).toBe(false)
+      expect(oldProperty.callback("P;Cwd=/late-old")).toBe(false)
+      expect(backend.getCwd()).toBeNull()
+      const replies: string[] = []
+      backend.onResponse = (data) => replies.push(new TextDecoder().decode(data))
+      backend.feed(new TextEncoder().encode("\x1b]7;file://localhost/new\x07"))
+      expect(backend.getCwd()).toBe("file://localhost/new")
+      expect(replies).toEqual([])
+      expect(current.find(({ id }) => id === 7)!.callback("file://localhost/synchronous")).toBe(false)
+      expect(current.find(({ id }) => id === 633)!.callback("P;Cwd=/synchronous")).toBe(false)
+      expect(backend.getCwd()).toBe("/synchronous")
+      backend.feed(new TextEncoder().encode("\x1b[5n"))
+      expect(replies).toEqual(["\x1b[0n"])
+      backend.destroy()
+      expect(registrations.slice(2).map(({ disposed }) => disposed())).toEqual([1, 1])
+      backend.destroy()
+      expect(registrations.slice(2).map(({ disposed }) => disposed())).toEqual([1, 1])
+    } finally {
+      backend.destroy()
+      parserSpy.mockRestore()
+    }
+  })
+
   // ── Text I/O ──
 
   test("feed plain text, getText() returns it", () => {

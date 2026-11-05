@@ -178,10 +178,13 @@ export function createXtermBackend(
   ReplyDeliveryExtension &
   MouseEncodingExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications"> {
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> {
   let term: XTerminal | null = null
   let notificationHandler: { dispose(): void } | null = null
   let notifications: string[] = []
+  let cwdHandler: { dispose(): void } | null = null
+  let cwdPropertyHandler: { dispose(): void } | null = null
+  let cwd: { value: string | null } = { value: null }
   let title = ""
   let decoder = new TextDecoder()
   let encodingMouseDepth = 0
@@ -230,12 +233,18 @@ export function createXtermBackend(
   }
 
   function init(options: TerminalOptions): void {
+    cwdHandler?.dispose()
+    cwdHandler = null
+    cwdPropertyHandler?.dispose()
+    cwdPropertyHandler = null
     notificationHandler?.dispose()
     notificationHandler = null
     if (term) term.dispose()
     decoder = new TextDecoder()
     notifications = []
     const instanceNotifications = notifications
+    cwd = { value: null }
+    const instanceCwd = cwd
 
     term = new Terminal({
       cols: options.cols,
@@ -261,8 +270,20 @@ export function createXtermBackend(
     term.loadAddon(new Unicode11Addon())
     term.unicode.activeVersion = "11"
 
-    notificationHandler = term.parser.registerOscHandler(9, (payload) => {
+    const parser = term.parser
+    notificationHandler = parser.registerOscHandler(9, (payload) => {
       instanceNotifications.push(payload)
+      return false
+    })
+    cwdHandler = parser.registerOscHandler(7, (payload) => {
+      instanceCwd.value = payload === "" ? null : payload
+      return false
+    })
+    cwdPropertyHandler = parser.registerOscHandler(633, (payload) => {
+      if (payload.startsWith("P;Cwd=")) {
+        const value = payload.slice(6)
+        instanceCwd.value = value === "" ? null : value
+      }
       return false
     })
 
@@ -324,6 +345,10 @@ export function createXtermBackend(
   }
 
   function destroy(): void {
+    cwdHandler?.dispose()
+    cwdHandler = null
+    cwdPropertyHandler?.dispose()
+    cwdPropertyHandler = null
     notificationHandler?.dispose()
     notificationHandler = null
     if (term) {
@@ -331,6 +356,7 @@ export function createXtermBackend(
       term = null
     }
     notifications = []
+    cwd = { value: null }
   }
 
   function feed(data: Uint8Array): void {
@@ -839,7 +865,7 @@ export function createXtermBackend(
     ReplyDeliveryExtension &
     MouseEncodingExtension &
     AdapterSourcesExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications"> = {
+    Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "xterm",
     init,
@@ -847,6 +873,10 @@ export function createXtermBackend(
     getNotifications() {
       ensureTerm()
       return [...notifications]
+    },
+    getCwd() {
+      ensureTerm()
+      return cwd.value
     },
     feed,
     resize,
