@@ -243,6 +243,8 @@ Every backend implements the same `TerminalBackend` interface — write tests on
 
 See the [Backend Capability Matrix](https://termless.dev/guide/backends) for detailed per-backend features, limitations, and usage examples (factory function + string name).
 
+Ghostty's `getUnhandledSequences()` reports OSC command numbers from its engine warnings, without payloads, and shares their `clearWarnings()` lifetime.
+
 ### Backend Management
 
 Termless includes a Playwright-inspired CLI for managing backends. `backends.json` pins all versions — upgrade termless, upgrade all backends:

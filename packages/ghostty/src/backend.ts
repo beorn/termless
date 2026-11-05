@@ -790,6 +790,21 @@ export function createGhosttyBackend(
     return [...warnings]
   }
 
+  function getUnhandledSequences(): { readonly kind: "osc"; readonly code: string }[] {
+    const report: { readonly kind: "osc"; readonly code: string }[] = []
+    for (const warning of warnings) {
+      // Keep one entry per engine diagnostic, including allocator failures. Their paired rejection
+      // is two entries, so the consumer's exact-one rule cannot mistake a host limitation for a negative.
+      const match =
+        /^warning\(osc\): (?:invalid OSC command: ([0-9]+)(?:;[\s\S]*)?|OSC ([0-9]+) requires an allocator, but none was provided)$/.exec(
+          warning.message,
+        )
+      const code = match?.[1] ?? match?.[2]
+      if (code !== undefined) report.push({ kind: "osc", code })
+    }
+    return report
+  }
+
   function clearWarnings(): void {
     warnings.length = 0
   }
@@ -845,7 +860,7 @@ export function createGhosttyBackend(
     ReplyDeliveryExtension &
     MouseEncodingExtension &
     KeyEncodingExtension &
-    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
+    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd" | "getUnhandledSequences"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     replyDelivery,
     name: "ghostty",
@@ -870,6 +885,7 @@ export function createGhosttyBackend(
     getToasts,
     getProgress,
     getCwd,
+    getUnhandledSequences,
     getScrollback,
     scrollViewport,
     encodeKey,

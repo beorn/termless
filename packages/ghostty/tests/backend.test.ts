@@ -1096,6 +1096,42 @@ describe("ghostty backend", () => {
    * osc-metadata getToasts and getProgress
    */
   describe("stored OSC actions", () => {
+    // @failure Raw OSC diagnostics are collapsed, payloads escape the report, or CSI warnings invent parameters.
+    // @consumer OscMetadataExtension.getUnhandledSequences; hosted by the real ghostty-web WASM engine.
+    test("copies each OSC warning into a payload-free report with the warnings lifetime", () => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      own.init({ cols: 80, rows: 24 })
+      try {
+        expect(typeof own.getUnhandledSequences).toBe("function")
+        feedText(own, "\x1b]2;handled-title\x07")
+        expect(own.getTitle()).toBe("handled-title")
+        expect(own.getUnhandledSequences()).toEqual([])
+        feedText(own, "\x1b]633;E;private-command;nonce\x07")
+        const first = own.getUnhandledSequences()
+        expect(first).toEqual([{ kind: "osc", code: "633" }])
+        feedText(own, "\x1b]133;P\x07")
+        expect(first).toEqual([{ kind: "osc", code: "633" }])
+        expect(own.getUnhandledSequences()).toEqual([
+          { kind: "osc", code: "633" },
+          { kind: "osc", code: "133" },
+        ])
+        own.clearWarnings()
+        feedText(own, "\x1b]113\x07")
+        expect(own.getUnhandledSequences()).toEqual([
+          { kind: "osc", code: "113" },
+          { kind: "osc", code: "113" },
+        ])
+        feedText(own, "\x1b[9 p")
+        expect(own.getUnhandledSequences()).toHaveLength(2)
+        own.reset()
+        expect(own.getUnhandledSequences()).toHaveLength(2)
+        own.clearWarnings()
+        expect(own.getUnhandledSequences()).toEqual([])
+      } finally {
+        own.destroy()
+      }
+    })
+
     // @failure A stale distribution pretends an expected reader is absent, or an engine error becomes null.
     // @consumer OscMetadataExtension.getCwd; successful engine feeds cannot force these failure paths.
     test("rejects a stale directory reader and propagates lookup errors", () => {
