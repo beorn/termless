@@ -7,7 +7,12 @@
 import { expect, test } from "vitest"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import { hasExtension, type MouseEncodingExtension, type PasteEncodingExtension, type KeyDescriptor } from "../../../src/terminal/types.ts"
+import {
+  hasExtension,
+  type MouseEncodingExtension,
+  type PasteEncodingExtension,
+  type KeyDescriptor,
+} from "../../../src/terminal/types.ts"
 
 const module = await initLibvterm()
 const encoder = new TextEncoder()
@@ -142,7 +147,9 @@ test("capture failures restore replies and selection callbacks before subsequent
           return armed && failure === "allocation" ? 0 : module._malloc(size)
         },
         termless_vterm_output_read(sink, ptr, size) {
-          return armed && failure === "read" && sink === capture ? -1 : module.termless_vterm_output_read(sink, ptr, size)
+          return armed && failure === "read" && sink === capture
+            ? -1
+            : module.termless_vterm_output_read(sink, ptr, size)
         },
         vterm_keyboard_unichar(vt, codepoint, mods) {
           module.vterm_keyboard_unichar(vt, codepoint, mods)
@@ -164,9 +171,10 @@ test("capture failures restore replies and selection callbacks before subsequent
         expect(replies).toBe("\x1b]52;c;aGVsbG8=\x1b\\")
         replies = ""
         armed = true
-        expect(() => input === "key" ? backend.encodeKey({ key: "ArrowUp" }) : backend.encodePaste("hello"), failure).toThrow(
-          failure === "native" ? /injected native input failure/ : /libvterm input capture/,
-        )
+        expect(
+          () => (input === "key" ? backend.encodeKey({ key: "ArrowUp" }) : backend.encodePaste("hello")),
+          failure,
+        ).toThrow(failure === "native" ? /injected native input failure/ : /libvterm input capture/)
         armed = false
         expect(ended, failure).toBe(failure === "begin" ? 0 : 1)
         backend.feed(encoder.encode("\x1b[5n" + query))
