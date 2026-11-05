@@ -39,6 +39,7 @@ import type {
   WarningExtension,
   HyperlinkExtension,
   SemanticMarkExtension,
+  SemanticMark,
   OscMetadataExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
@@ -151,8 +152,8 @@ interface BridgeSnapshot {
   clipboard?: ClipboardState
   /** Permission prompts kitty raised for a human (default read-clipboard-ask), in feed order; host input, never answered */
   prompts?: BridgePrompt[]
-  /** Cumulative native tuples, including duplicates and entries before reset. Omitted only for empty history. */
-  cmdOutputMarkings?: ([false] | [true, string] | [null, string])[]
+  /** Native arguments with screen row/col appended to starts; ordered across reset, omitted only when empty. */
+  cmdOutputMarkings?: ([false, number, number] | [true, string, number, number] | [null, string])[]
   /** Cumulative OSC 9 payloads Window.desktop_notify routes to notifications, in feed order. Omitted only when empty. */
   notifications?: string[]
   /** Cumulative OSC 777 payloads after "777;", in feed order. Omitted only when empty. */
@@ -662,6 +663,7 @@ export function createKittyBackend(
       "reply-delivery",
       "hyperlinks",
       "semantic-command-end",
+      "semantic-marks",
       "osc-metadata", // Native OSC 7 cwd, OSC 9, OSC 777 and OSC 9;4 readers
     ]),
   }
@@ -706,8 +708,9 @@ export function createKittyBackend(
     getIconLabel,
     getClipboardState,
     getSemanticMarks: () =>
-      (ensureSnapshot().cmdOutputMarkings ?? []).flatMap((mark) => {
-        if (mark[0] !== null) return []
+      (ensureSnapshot().cmdOutputMarkings ?? []).flatMap<SemanticMark>((mark) => {
+        if (mark[0] === false) return [{ type: "prompt", startRow: mark[1], startCol: mark[2] }]
+        if (mark[0] === true) return [{ type: "output", startRow: mark[2], startCol: mark[3] }]
         if (typeof mark[1] !== "string") {
           throw new Error(
             `Kitty command-end status must be a string; received ${JSON.stringify(mark[1])}. Check cmd_output_marking in packages/kitty/build/bridge.py.`,

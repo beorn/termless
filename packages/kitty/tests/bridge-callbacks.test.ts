@@ -157,7 +157,11 @@ test.skipIf(!isKittyAvailable())(
       feed("\x1b]133;D;0\x07"),
       { op: "snapshot" },
     ]
-    const first = [[false], [true, "cmdline=printf é"], [true, ""]]
+    const first = [
+      [false, 0, 5],
+      [true, "cmdline=printf é", 0, 5],
+      [true, "", 0, 5],
+    ]
     const statuses = [
       [null, ""],
       [null, "0"],
@@ -469,8 +473,20 @@ test.skipIf(!isKittyAvailable())(
 test.each([
   { history: undefined },
   { history: [] },
-  { history: [[false], [true, "changed"], [null, "0"]] },
-  { history: [[false], [true, "cmd"], [null, "17"]] },
+  {
+    history: [
+      [false, 0, 0],
+      [true, "changed", 0, 0],
+      [null, "0"],
+    ],
+  },
+  {
+    history: [
+      [false, 0, 0],
+      [true, "cmd", 0, 0],
+      [null, "17"],
+    ],
+  },
 ])("rejects lost or changed command callback history: $history", ({ history }) => {
   // The subprocess is mocked for corruption injection; discovery still requires an existing executable path.
   vi.stubEnv("KITTY_BINARY", process.execPath)
@@ -485,7 +501,16 @@ test.each([
   }
   const replay = vi
     .mocked(childProcess.execFileSync)
-    .mockReturnValueOnce(JSON.stringify({ ...snapshot, cmdOutputMarkings: [[false], [true, "cmd"], [null, "0"]] }))
+    .mockReturnValueOnce(
+      JSON.stringify({
+        ...snapshot,
+        cmdOutputMarkings: [
+          [false, 0, 0],
+          [true, "cmd", 0, 0],
+          [null, "0"],
+        ],
+      }),
+    )
     .mockReturnValueOnce(JSON.stringify({ ...snapshot, cmdOutputMarkings: history }))
   const backend = createKittyBackend({ cols: 30, rows: 3 })
   try {

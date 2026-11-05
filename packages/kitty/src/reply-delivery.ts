@@ -42,6 +42,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // state and returns encodedKey separately. It writes no child replies and leaves history, cache and observed prefixes
 // untouched. Native exception and malformed-carrier tests preserve later ordinary reply delivery.
 // Re-audited for native OSC 7 cwd snapshot projection; replay, replies and callback delivery are unchanged.
+// Re-audited for native A/C callback-time public cursor coordinates; D tuples, replay and reply delivery are unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -50,11 +51,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "1c03deb604ac6e6288c3e44ca26af67631329aec",
+      blobOid: "3ecdff8d4b9c84db217b1794ad038c030cf1ab3a",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "ae7ff48c3a9729ac843147d597287f5726c3f1fe",
+      blobOid: "4e847e827063555f7b2f580abf3a0e372b074e47",
     },
     {
       path: "packages/kitty/build/layout.c",

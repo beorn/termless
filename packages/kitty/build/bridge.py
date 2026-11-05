@@ -276,7 +276,11 @@ class Callbacks:
     color_profile_popped = on_activity_since_last_focus = send_signal_for_key = no_reply
 
     def cmd_output_marking(self, *args):
-        self.cmd_output_markings.append(list(args))
+        mark = list(args)
+        if args[0] is not None:
+            # Screen coordinates at Kitty's applied-state callback, before later text or scrolling.
+            mark.extend((self.screen.cursor.y, self.screen.cursor.x))
+        self.cmd_output_markings.append(mark)
 
     def desktop_notify(self, osc_code, raw_data):
         # OSC 1337 only sets user variables (Window.osc_1337), and OSC 9 and 777 only show a notification;
