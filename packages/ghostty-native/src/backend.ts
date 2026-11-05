@@ -319,26 +319,30 @@ export function createGhosttyNativeBackend(
   function encodeKey(key: KeyDescriptor): Uint8Array {
     const handle = ensureHandle(),
       native = loadGhosttyNative()
-    if (typeof native.encodeKey !== "function")
+    if (typeof native.encodeKey !== "function") {
       throw new Error(
         "The loaded Ghostty native addon predates encodeKey; rebuild from a full Termless source checkout:\n  cd packages/ghostty-native && bash build/build.sh",
       )
+    }
     const scalars = [...key.key]
     if (
       !scalars.length ||
       scalars.some((c) => {
-        const cp = c.codePointAt(0)!
-        return cp >= 0xd800 && cp <= 0xdfff
+        const cp = c.codePointAt(0)
+        return cp === undefined || (cp >= 0xd800 && cp <= 0xdfff)
       })
-    )
+    ) {
       throw new Error("Ghostty key encoding requires valid Unicode scalar text or a named key")
+    }
     const named = Object.hasOwn(nativeKeyTags, key.key) ? nativeKeyTags[key.key] : undefined
     let utf8 = "",
       codepoint = 0
     if (named === undefined || key.key === "Space") {
       utf8 = key.key === "Space" ? " " : key.key
       if (scalars.length === 1 || key.key === "Space") {
-        codepoint = utf8.codePointAt(0)!
+        const scalar = utf8.codePointAt(0)
+        if (scalar === undefined) throw new Error("Ghostty key encoding requires a Unicode scalar")
+        codepoint = scalar
         if (codepoint >= 65 && codepoint <= 90) codepoint += 32
       } else if (key.shift || key.ctrl || key.alt || key.super) {
         throw new Error("Ghostty modified multi-scalar key text needs an unambiguous event")
