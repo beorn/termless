@@ -35,6 +35,12 @@ UTF-8 constructor; it does not expose libvterm's legacy byte-mode default.
 OSC 52 clipboard selection `c` uses memory owned by each backend instance.
 The engine's selection callbacks decode writes and format query responses.
 
+The `osc-metadata` extension exposes a copy of completed OSC 9 payloads through
+`getNotifications()`, in parser order, including empty payloads and `4;…` forms.
+This records parser notifications; it does not deliver desktop notifications or
+interpret progress. Reset and re-initialization clear complete and partial
+observations. Reading before initialization or after destruction throws.
+
 ```typescript
 import { createLibvtermBackend, initLibvterm } from "@termless/libvterm"
 import { createTerminal } from "@termless/core"

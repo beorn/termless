@@ -17,6 +17,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for native paste input capture: start/unichar/end uses this same callback swap, preserves queued replies
 // and OSC52 ownership on errors, and keeps primary plus cleanup failures. Native handles stay private.
 // Re-audited for the native-key extension declaration; keyboard capture and reply delivery are unchanged.
+// Re-audited for OSC 9 state fallbacks: only completed command-9 payloads enter the observer's list; other commands
+// are declined. The callback writes no replies, leaves OSC52 selection ownership intact, and preserves feed draining.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -26,15 +28,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "f48d114323007c26648cf6ea658e0e1880b29933",
+      blobOid: "0e3dc0ac1f2b67ba5d4a01aeaab062a415b3baf3",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "07d73897f201bea0b234148f5fb6ed55d3779f90",
+      blobOid: "df38d3db32ab353c7219dc46a9e050c5ef9fe492",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "98c3d4f3875dc2499d2118ade86270be8dfc1ee0",
+      blobOid: "996d2b2bf4d2509a2bfb8f59e7162e12523ac551",
     },
     {
       path: "src/terminal/key-mapping.ts",
@@ -45,7 +47,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "156dcc22456fd7e9527ba178c795759d7e5668a99d3b56fa1dd93b3abf27f5f0",
+      sha256: "2c3ec40628b0d0c7d7e9cc1fade689927720542e2e492789bcea1415a2de0af9",
     },
   },
 } as const
