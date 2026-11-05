@@ -21,6 +21,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Native paste encoding uses the existing barrier before and after send_paste, returning only bytes
 // appended after the queued-reply boundary. Pending replies retain their order and never include paste bytes.
 // Native key encoding reuses that boundary around key_down; queued replies are never drained by input encoding.
+// Native key, paste and mouse share one writer boundary; mouse_event returns only newly appended input bytes.
+// The queued DSR control remains in the response stream and is delivered once.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -30,11 +32,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "6d6b31c9c39ac866140dd704e440b7944e594a91",
+      blobOid: "4b376877280d09535bc67a6f99fc5d68b40529e3",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "a4ef23cf46fb3d2fb6d554f8952adb3c5dc3293d",
+      blobOid: "69a9d1ebc4fd86d46c131a378a9d897cdd6824b3",
     },
     {
       path: "src/load-native.ts",

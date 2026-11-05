@@ -25,6 +25,8 @@ import type {
   PasteEncodingExtension,
   KeyDescriptor,
   KeyEncodingExtension,
+  MouseEvent,
+  MouseEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
@@ -78,6 +80,7 @@ interface WeztermTerminal {
   feed(data: Buffer): void
   encodePaste(text: string): Buffer
   encodeKey(key: string, shift: boolean, ctrl: boolean, alt: boolean, superKey: boolean): Buffer
+  encodeMouse(x: number, y: number, button: string, action: string, shift: boolean, ctrl: boolean, alt: boolean): Buffer
   resize(cols: number, rows: number): void
   reset(): void
   getText(): string
@@ -218,6 +221,7 @@ export function createWeztermBackend(
   HyperlinkExtension &
   PasteEncodingExtension &
   KeyEncodingExtension &
+  MouseEncodingExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
@@ -379,6 +383,20 @@ export function createWeztermBackend(
     return new Uint8Array(t.encodePaste(text))
   }
 
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    const t = ensureTerm()
+    if (event.pixel !== undefined) {
+      throw new Error("mouse encoding unavailable: WezTerm pixel-coordinate path is not bound")
+    }
+    if (typeof t.encodeMouse !== "function") {
+      throw new Error(
+        "The loaded WezTerm native addon predates encodeMouse; rebuild and copy it from the Termless root:\n  nix shell .#native-tools --command bun run --cwd packages/wezterm build:native",
+      )
+    }
+    const bytes = t.encodeMouse(event.x, event.y, event.button, event.action, !!event.shift, !!event.ctrl, !!event.alt)
+    return bytes.length === 0 ? null : new Uint8Array(bytes)
+  }
+
   function getProgress(): { state: number; value: number | null } {
     const t = ensureTerm()
     if (typeof t.getProgress !== "function") {
@@ -439,6 +457,7 @@ export function createWeztermBackend(
       "reply-delivery",
       "paste-encoding",
       "key-encoding",
+      "mouse-encoding",
     ]),
   }
 
@@ -446,6 +465,7 @@ export function createWeztermBackend(
     HyperlinkExtension &
     PasteEncodingExtension &
     KeyEncodingExtension &
+    MouseEncodingExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
@@ -477,6 +497,7 @@ export function createWeztermBackend(
     scrollViewport,
     encodeKey,
     encodePaste,
+    encodeMouse,
     capabilities,
     replyDelivery,
   }
