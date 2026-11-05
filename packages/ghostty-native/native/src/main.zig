@@ -245,6 +245,7 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "destroyTerminal", try js.createFunction(destroyTerminal));
     try js.setNamedProperty(exports, "feed", try js.createFunction(feed));
     try js.setNamedProperty(exports, "encodePaste", try js.createFunction(encodePaste));
+    try js.setNamedProperty(exports, "encodeKey", try js.createFunction(encodeKey));
     try js.setNamedProperty(exports, "resize", try js.createFunction(resizeTerm));
     try js.setNamedProperty(exports, "reset", try js.createFunction(resetTerm));
     try js.setNamedProperty(exports, "getText", try js.createFunction(getText));
@@ -345,6 +346,52 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
 }
 
 /// Encode input for the existing Terminal without parsing it or touching replies.
+fn encodeKey(
+    js: *napigen.JsContext,
+    handle: *TerminalHandle,
+    key_tag: []const u8,
+    utf8: []const u8,
+    unshifted_codepoint: u32,
+    shift: bool,
+    ctrl: bool,
+    alt: bool,
+    super_mod: bool,
+) !napigen.napi_value {
+    if (unshifted_codepoint > 0x10ffff or
+        (unshifted_codepoint >= 0xd800 and unshifted_codepoint <= 0xdfff))
+        return error.InvalidKeyScalar;
+    const view = try std.unicode.Utf8View.init(utf8);
+    var iterator = view.iterator();
+    var scalar_count: usize = 0;
+    while (iterator.nextCodepoint() != null) scalar_count += 1;
+    if (scalar_count > 1 and (shift or ctrl or alt or super_mod))
+        return error.ModifiedMultiScalarKey;
+    var physical = std.meta.stringToEnum(ghostty.input.Key, key_tag) orelse
+        return error.UnknownKeyTag;
+    if (physical == .unidentified and scalar_count == 1 and
+        unshifted_codepoint >= 0x20 and unshifted_codepoint <= 0x7e)
+    {
+        physical = ghostty.input.Key.fromASCII(@intCast(unshifted_codepoint)) orelse .unidentified;
+    }
+    const event: ghostty.input.KeyEvent = .{
+        .action = .press,
+        .key = physical,
+        .mods = .{ .shift = shift, .ctrl = ctrl, .alt = alt, .super = super_mod },
+        .consumed_mods = .{},
+        .composing = false,
+        .utf8 = utf8,
+        .unshifted_codepoint = @intCast(unshifted_codepoint),
+    };
+    var output = std.Io.Writer.Allocating.init(allocator);
+    defer output.deinit();
+    try ghostty.input.encodeKey(
+        &output.writer,
+        event,
+        ghostty.input.KeyEncodeOptions.fromTerminal(&handle.terminal),
+    );
+    return jsBytes(js, output.written());
+}
+
 fn encodePaste(js: *napigen.JsContext, handle: *TerminalHandle, value: napigen.napi_value) !napigen.napi_value {
     const napi = napigen.napi;
     var kind: napi.napi_typedarray_type = undefined;
