@@ -9,7 +9,13 @@
 import { describe, test, expect, expectTypeOf } from "vitest"
 import { createVt100RustBackend, loadVt100RustNative } from "../src/backend.ts"
 import { createTerminal } from "../../../src/terminal/terminal.ts"
-import type { MouseEncodingExtension, MouseEvent, TerminalBackend } from "../../../src/terminal/types.ts"
+import { hasExtension } from "../../../src/terminal/types.ts"
+import type {
+  MouseEncodingExtension,
+  MouseEvent,
+  OscMetadataExtension,
+  TerminalBackend,
+} from "../../../src/terminal/types.ts"
 
 const numberedLines = (count: number): string[] =>
   Array.from({ length: count }, (_, index) => `line-${String(index).padStart(2, "0")}`)
@@ -281,6 +287,60 @@ describe.skipIf(nativeBuildError !== null)(
         backend.reset()
         expect(backend.getIconLabel?.()).toBe("")
         expect(backend.getTitle()).toBe("")
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    // Accepted requirement: expose this parser's public unhandled_osc callback. Existing title
+    // and clipboard tests exercise different callbacks and miss discarded notification payloads.
+    test("OSC 9 public callback retains ordered native payloads without other OSC commands", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      const feed = (text: string): void => backend.feed(Buffer.from(text))
+      try {
+        feed("\x1b]2;native title control\x07")
+        expect(backend.getTitle()).toBe("native title control")
+        expect(hasExtension(backend, "osc-metadata")).toBe(true)
+        if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getNotifications) {
+          throw new Error("vt100-rust osc-metadata lacks its notification callback reader")
+        }
+        expect(backend.getNotifications()).toEqual([])
+        feed("\x1b]777;notify;other;command\x07plain")
+        expect(backend.getNotifications()).toEqual([])
+        expect(backend.getText()).toContain("plain")
+        feed("\x1b]9;first;payload\x07\x1b]9;4;1;50\x1b\\\x1b]9;räv;尾\x07")
+        expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50", "räv;尾"])
+        feed("\x1b]9\x07\x1b]9;\x07\x1b]9;split")
+        expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50", "räv;尾", "", ""])
+        feed(" payload;\x07")
+        expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50", "räv;尾", "", "", "split payload;"])
+        const copy = backend.getNotifications() as string[]
+        copy.push("not a native callback")
+        expect(backend.getNotifications()).toHaveLength(6)
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    // Accepted lifecycle: the existing native reset replaces its callbacks; a new parser has no
+    // inherited observations. Do not let a native-availability skip substitute for these controls.
+    test("OSC 9 public callback storage resets with its native parser lifetime", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      try {
+        expect(hasExtension(backend, "osc-metadata")).toBe(true)
+        if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getNotifications) {
+          throw new Error("vt100-rust osc-metadata lacks its notification callback reader")
+        }
+        backend.feed(Buffer.from("\x1b]9;old observation\x07"))
+        expect(backend.getNotifications()).toEqual(["old observation"])
+        backend.reset()
+        expect(backend.getNotifications()).toEqual([])
+        backend.feed(Buffer.from("\x1b]9;after reset\x07"))
+        expect(backend.getNotifications()).toEqual(["after reset"])
+        backend.init({ cols: 20, rows: 2 })
+        expect(backend.getNotifications()).toEqual([])
+        backend.destroy()
+        expect(() => backend.getNotifications!()).toThrow("not initialized")
       } finally {
         backend.destroy()
       }
