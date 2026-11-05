@@ -81,6 +81,7 @@ import type {
   ReplyDeliveryExtension,
   HyperlinkExtension,
   MouseEncodingExtension,
+  OscMetadataExtension,
   MouseEvent,
   TerminalOptions,
   Cell,
@@ -172,8 +173,15 @@ const DEFAULT_ROWS = 24
 export function createXtermBackend(
   opts?: Partial<TerminalOptions>,
   // oxlint-disable-next-line typescript/no-deprecated -- Registered adapter still implements this lifecycle.
-): TerminalBackend & HyperlinkExtension & ReplyDeliveryExtension & MouseEncodingExtension & AdapterSourcesExtension {
+): TerminalBackend &
+  HyperlinkExtension &
+  ReplyDeliveryExtension &
+  MouseEncodingExtension &
+  AdapterSourcesExtension &
+  Pick<Required<OscMetadataExtension>, "getNotifications"> {
   let term: XTerminal | null = null
+  let notificationHandler: { dispose(): void } | null = null
+  let notifications: string[] = []
   let title = ""
   let decoder = new TextDecoder()
   let encodingMouseDepth = 0
@@ -222,8 +230,12 @@ export function createXtermBackend(
   }
 
   function init(options: TerminalOptions): void {
+    notificationHandler?.dispose()
+    notificationHandler = null
     if (term) term.dispose()
     decoder = new TextDecoder()
+    notifications = []
+    const instanceNotifications = notifications
 
     term = new Terminal({
       cols: options.cols,
@@ -248,6 +260,11 @@ export function createXtermBackend(
     // failure mode that motivated this.
     term.loadAddon(new Unicode11Addon())
     term.unicode.activeVersion = "11"
+
+    notificationHandler = term.parser.registerOscHandler(9, (payload) => {
+      instanceNotifications.push(payload)
+      return false
+    })
 
     title = ""
     term.onTitleChange((t: string) => {
@@ -307,10 +324,13 @@ export function createXtermBackend(
   }
 
   function destroy(): void {
+    notificationHandler?.dispose()
+    notificationHandler = null
     if (term) {
       term.dispose()
       term = null
     }
+    notifications = []
   }
 
   function feed(data: Uint8Array): void {
@@ -810,7 +830,7 @@ export function createXtermBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery", "mouse-encoding"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery", "mouse-encoding", "osc-metadata"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
@@ -818,11 +838,16 @@ export function createXtermBackend(
     HyperlinkExtension &
     ReplyDeliveryExtension &
     MouseEncodingExtension &
-    AdapterSourcesExtension = {
+    AdapterSourcesExtension &
+    Pick<Required<OscMetadataExtension>, "getNotifications"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "xterm",
     init,
     destroy,
+    getNotifications() {
+      ensureTerm()
+      return [...notifications]
+    },
     feed,
     resize,
     reset,

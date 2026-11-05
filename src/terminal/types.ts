@@ -657,7 +657,7 @@ export interface HyperlinkExtension {
 export interface OscMetadataExtension {
   /** Exact OSC 7 URI; only a present reader returning null means the engine reports no working directory. */
   getCwd?(): string | null
-  /** A copy of the OSC 9 payloads the engine stores, in order, without filtering or invented title/body fields. */
+  /** A copy of the OSC 9 payloads the engine stores, or passes to its public OSC handler, in order, without filtering or invented title/body fields. */
   getNotifications?(): readonly string[]
   /** A copy of every OSC 777 payload after "777;", verbatim and in order, notify or not; callers filter "notify;". */
   getOsc777Payloads?(): readonly string[]
