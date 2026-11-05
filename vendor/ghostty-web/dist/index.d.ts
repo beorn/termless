@@ -381,6 +381,8 @@ export declare class GhosttyTerminal {
     isRowWrapped(row: number): boolean;
     /** Read the stored URI at an absolute buffer row (history first, then active). */
     getHyperlinkAt(row: number, col: number): string | null;
+    /** Read the literal directory stored by the engine from OSC 7. */
+    getCwd(): string | null;
     /** Read the current window title set by OSC 0 / OSC 2, cleared on full reset. */
     getTitle(): string;
     /**
@@ -522,6 +524,7 @@ declare interface GhosttyWasmExports extends WebAssembly.Exports {
     ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
     ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
     ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
+    ghostty_terminal_get_cwd(terminal: TerminalHandle, outPtrLen: number): number;
     ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
     ghostty_terminal_get_toast_count(terminal: TerminalHandle): number;
     ghostty_terminal_get_toast(terminal: TerminalHandle, index: number, outPtrLen4: number): number;

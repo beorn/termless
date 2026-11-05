@@ -13,7 +13,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty/src/backend.ts",
-      blobOid: "e615296dd47d0fc19d7364a4de75ef366b651e65",
+      blobOid: "ae210216c50fc24001dda1022429e18ae55f842d",
     },
     {
       path: "packages/ghostty/src/load-native.ts",
@@ -21,14 +21,14 @@ export const adapterDeclaration = {
     },
     {
       path: "vendor/ghostty-web/dist/ghostty-web.js",
-      blobOid: "b174d2496d6777a4b19815b40cfc89c84819de36",
+      blobOid: "dc4d7cab5e0629d17d352cf114a4ffee91aed890",
     },
   ],
   delivery: {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "65ab32ca8b3f2f310d288e4640ff5e3a297fc830fe3766a0409fda8ebefa5e4a",
+      sha256: "aaf8ce18ad92e98b1233d85b5f71043aceccf3abbc75dea07e1c704cd3ae690a",
     },
   },
 } as const

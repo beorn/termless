@@ -185,9 +185,9 @@ describe("ghostty backend", () => {
     )
   })
 
-  // @failure The URI wrapper keeps a detached view, frees borrowed bytes before copying, or conflates status 0/1.
-  // @level l0 @consumer GhosttyTerminal URI ABI. Real engine lifecycle tests cannot force memory growth during lookup.
-  test("copies URI bytes before another WASM call and releases scratch on every ABI outcome", () => {
+  // @failure A borrowed-string wrapper keeps a detached view, frees bytes before copying, or conflates status 0/1.
+  // @level l0 @consumer GhosttyTerminal URI/CWD ABI. Real engine tests cannot force memory growth or ABI failures.
+  test.each(["hyperlink", "cwd"] as const)("copies %s bytes before another WASM call and releases scratch on every ABI outcome", (reader) => {
     const memory = new WebAssembly.Memory({ initial: 1, maximum: 32 })
     const uri = "https://example.com/é:a"
     let status = 1
@@ -206,7 +206,8 @@ describe("ghostty backend", () => {
       ghostty_terminal_free: () => {},
       ghostty_wasm_alloc_u8_array: allocate,
       ghostty_wasm_free_u8_array: release,
-      ghostty_render_state_get_hyperlink: (_handle: number, _row: number, _col: number, out: number) => {
+      [reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"]: (...args: number[]) => {
+        const out = args.at(-1)!
         memory.grow(1)
         new Uint8Array(memory.buffer).set(new TextEncoder().encode(uri), 64)
         const words = new DataView(memory.buffer, out, 8)
@@ -221,26 +222,28 @@ describe("ghostty backend", () => {
       2,
       1,
     )
-    expect(terminal.getHyperlinkAt(0, 1)).toBe(uri)
+    const get = () => reader === "cwd" ? terminal.getCwd() : terminal.getHyperlinkAt(0, 1)
+    expect(get()).toBe(uri)
     expect(release).toHaveBeenLastCalledWith(8, 8)
     length = 0
-    expect(terminal.getHyperlinkAt(0, 1)).toBe("")
+    expect(get()).toBe("")
     status = 0
-    expect(terminal.getHyperlinkAt(0, 1)).toBeNull()
+    expect(get()).toBeNull()
     for (const invalid of [-1, 2]) {
       status = invalid
       const frees = release.mock.calls.length
-      expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(`status ${invalid}`)
+      expect(get).toThrow(`status ${invalid}`)
       expect(release.mock.calls.length).toBe(frees + 1)
     }
     const frees = release.mock.calls.length
     outOfMemory = true
-    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/allocate/)
+    expect(get).toThrow(/allocate/)
     expect(release.mock.calls.length).toBe(frees)
-    exports.ghostty_render_state_get_hyperlink = undefined
-    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/missing ghostty_render_state_get_hyperlink/)
+    const lookup = reader === "cwd" ? "ghostty_terminal_get_cwd" : "ghostty_render_state_get_hyperlink"
+    exports[lookup] = undefined
+    expect(get).toThrow(`missing ${lookup}`)
     terminal.free()
-    expect(() => terminal.getHyperlinkAt(0, 1)).toThrow(/freed/)
+    expect(get).toThrow(/freed/)
   })
 
   // @failure The viewport wrapper reads a detached view after memory growth, leaks scratch on a failed read, coerces a
@@ -1090,6 +1093,76 @@ describe("ghostty backend", () => {
    * osc-metadata getToasts and getProgress
    */
   describe("stored OSC actions", () => {
+    // @failure A stale distribution pretends an expected reader is absent, or an engine error becomes null.
+    // @consumer OscMetadataExtension.getCwd; successful engine feeds cannot force these failure paths.
+    test("rejects a stale directory reader and propagates lookup errors", () => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      const raw = ghostty.createTerminal(20, 3)
+      const create = vi.spyOn(ghostty, "createTerminal").mockReturnValueOnce(raw)
+      try {
+        own.init({ cols: 20, rows: 3 })
+        const failure = new Error("directory lookup failed")
+        const lookup = vi.spyOn(raw, "getCwd").mockImplementationOnce(() => { throw failure })
+        expect(() => own.getCwd()).toThrow(failure)
+        lookup.mockRestore()
+        Object.defineProperty(raw, "getCwd", { value: undefined })
+        expect(() => own.getCwd()).toThrow(/predates getCwd; rebuild it: nix develop/)
+      } finally {
+        create.mockRestore()
+        own.destroy()
+      }
+    })
+
+    // @failure OSC 7 report_pwd is discarded before the engine's directory store reaches the reader.
+    // @consumer OscMetadataExtension / Terminfo extensions.osc7-cwd and extensions.osc633-p.
+    // Title and notification journeys do not observe directory state or its borrowed UTF-8 lifetime.
+    test("forwards the engine directory store literally across framing, resets and independent instances", () => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      const other = createGhosttyBackend(undefined, ghostty)
+      expect(() => own.getCwd()).toThrow("not initialized")
+      own.init({ cols: 20, rows: 3 })
+      other.init({ cols: 20, rows: 3 })
+      try {
+        expect(own.getCwd()).toBeNull()
+        const literal = "file://remote/窓;dir\\raw%20name"
+        feedText(own, `\x1b]7;${literal}\x07`)
+        const retained = own.getCwd()
+        expect(retained).toBe(literal)
+        expect(other.getCwd()).toBeNull()
+        feedText(own, "\x1b]7;file:///split")
+        expect(own.getCwd()).toBe(literal)
+        // This core dispatches OSC at ESC; the following ST backslash does not alter the value.
+        feedText(own, "\x1b")
+        expect(own.getCwd()).toBe("file:///split")
+        feedText(own, "\\")
+        expect(own.getCwd()).toBe("file:///split")
+        for (const sequence of ["\x1b]633;P;Cwd=/ignored\x07", "\x1b]633;P;Cwd=/ignored\x1b\\", "\x1b]633;A\x07"]) {
+          feedText(own, sequence)
+          expect(own.getCwd()).toBe("file:///split")
+        }
+        feedText(own, `\x1b]7;${"x".repeat(4097)}\x07`)
+        expect(own.getCwd()).toBe("file:///split")
+        feedText(own, "\x1b]7;\x07")
+        expect(own.getCwd()).toBeNull()
+        own.feed(new Uint8Array([27, 93, 55, 59, 102, 105, 108, 101, 58, 47, 47, 47, 255, 7]))
+        expect(() => own.getCwd()).toThrow(TypeError)
+        feedText(own, `\x1b]7;${literal}\x1b\\`)
+        expect(own.getCwd()).toBe(literal)
+        own.reset()
+        expect(own.getCwd()).toBeNull()
+        feedText(own, "\x1b]7;file:///before-ris\x07\x1bc")
+        expect(own.getCwd()).toBeNull()
+        feedText(own, "\x1b]7;file:///before-init\x07")
+        own.init({ cols: 20, rows: 3 })
+        expect(own.getCwd()).toBeNull()
+        expect(retained).toBe(literal)
+      } finally {
+        own.destroy()
+        other.destroy()
+      }
+      expect(() => own.getCwd()).toThrow("not initialized")
+    })
+
     test("stores every engine-emitted toast verbatim and in order; init empties it, reset keeps it", () => {
       const own = createGhosttyBackend(undefined, ghostty)
       own.init({ cols: 20, rows: 3 })

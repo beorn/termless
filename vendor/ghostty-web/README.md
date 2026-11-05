@@ -4,6 +4,10 @@ The package manifest retains upstream consumer metadata; build scripts and devel
 
 The private reply path traps on stream/producer errors. The wrapper propagates those failures, frees write input in `finally`, and distinguishes a failed response read from an empty buffer. RECEIPT.json pins the rebuilt artifacts.
 
+`GhosttyTerminal.getCwd()` reads the engine's OSC 7 directory store as a literal string or null. This library applies no URI scheme/host policy, percent-decoding or backslash conversion; those belong to the Ghostty app. The last completed callback wins. On pinned core `5714ed07`, OSC dispatch occurs at ESC before the ST backslash; an incomplete payload keeps the prior directory, an empty payload means null, and a 4097-byte payload is ignored. Initial state, full reset, RIS and re-init return null. Measured OSC 633 `P;Cwd=` with BEL or ST, and `A`, leave a working OSC 7 value unchanged. Strings returned to callers survive later mutations and instances remain independent.
+
+The web reader uses the existing fatal UTF-8 decoder: invalid bytes throw `TypeError`, while the native binding replaces invalid bytes with U+FFFD. A thrown lookup is an error, never absence or a support grade. The borrowed pointer/length is decoded before another WASM call; scratch is freed on success and failure. Missing reader/ABI exports fail with a rebuild instruction or named missing export.
+
 # ghostty-web
 
 [![NPM Version](https://img.shields.io/npm/v/ghostty-web)](https://npmjs.com/package/ghostty-web) [![NPM Downloads](https://img.shields.io/npm/dw/ghostty-web)](https://npmjs.com/package/ghostty-web) [![npm bundle size](https://img.shields.io/bundlephobia/minzip/ghostty-web)](https://npmjs.com/package/ghostty-web) [![license](https://img.shields.io/github/license/coder/ghostty-web)](./LICENSE)

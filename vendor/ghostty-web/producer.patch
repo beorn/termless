@@ -145,7 +145,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
        });
      }
  
-@@ -605,9 +664,123 @@
+@@ -605,9 +664,146 @@
      return this.exports.ghostty_terminal_is_row_wrapped(this.handle, row) !== 0;
    }
  
@@ -165,6 +165,29 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
 +      if (status === 0) return null;
 +      if (status !== 1) throw new Error(`Ghostty hyperlink lookup failed with status ${status} at ${row}:${col}`);
 +      // Reacquire after the export, then copy synchronously before even freeing scratch.
++      const view = new DataView(this.memory.buffer, scratch, 8);
++      const pointer = view.getUint32(0, true);
++      const length = view.getUint32(4, true);
++      const bytes = new Uint8Array(this.memory.buffer, pointer, length);
++      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
++    } finally {
++      this.exports.ghostty_wasm_free_u8_array(scratch, 8);
++    }
++  }
++
++  /** Read the literal directory stored by the engine from OSC 7. */
++  getCwd(): string | null {
++    if (!this.handle) throw new Error('Ghostty terminal has been freed');
++    const lookup = this.exports.ghostty_terminal_get_cwd;
++    if (typeof lookup !== 'function') {
++      throw new Error('Ghostty WASM is missing ghostty_terminal_get_cwd');
++    }
++    const scratch = this.exports.ghostty_wasm_alloc_u8_array(8);
++    if (!scratch) throw new Error('Failed to allocate directory pointer/length');
++    try {
++      const status = lookup(this.handle, scratch);
++      if (status === 0) return null;
++      if (status !== 1) throw new Error(`Ghostty directory lookup failed with status ${status}`);
 +      const view = new DataView(this.memory.buffer, scratch, 8);
 +      const pointer = view.getUint32(0, true);
 +      const length = view.getUint32(4, true);
@@ -271,7 +294,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
    }
  
    /**
-@@ -631,11 +804,13 @@
+@@ -631,11 +827,13 @@
  
      const bufSize = 256; // Most responses are small
      const bufPtr = this.exports.ghostty_wasm_alloc_u8_array(bufSize);
@@ -286,7 +309,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
  
        const bytes = new Uint8Array(this.memory.buffer, bufPtr, bytesRead);
        return new TextDecoder().decode(bytes.slice());
-@@ -673,6 +848,11 @@
+@@ -673,6 +871,11 @@
            width: 1,
            hyperlink_id: 0,
            grapheme_len: 0,
@@ -298,7 +321,7 @@ diff --git a/lib/ghostty.ts b/lib/ghostty.ts
          });
        }
      }
-@@ -697,6 +877,14 @@
+@@ -697,6 +900,14 @@
        cell.width = u8[offset + 11];
        cell.hyperlink_id = view.getUint16(offset + 12, true);
        cell.grapheme_len = u8[offset + 14]; // grapheme_len is at byte 14
@@ -317,7 +340,7 @@ diff --git a/lib/types.ts b/lib/types.ts
 index e9182f2..5c02af4 100644
 --- a/lib/types.ts
 +++ b/lib/types.ts
-@@ -438,13 +438,27 @@ export interface GhosttyWasmExports extends WebAssembly.Exports {
+@@ -438,13 +438,28 @@ export interface GhosttyWasmExports extends WebAssembly.Exports {
      bufLen: number
    ): number; // Returns count of codepoints or -1 on error
  
@@ -333,6 +356,7 @@ index e9182f2..5c02af4 100644
    ghostty_terminal_is_alternate_screen(terminal: TerminalHandle): boolean;
    ghostty_terminal_has_mouse_tracking(terminal: TerminalHandle): number;
    ghostty_terminal_get_mode(terminal: TerminalHandle, mode: number, isAnsi: boolean): number;
++  ghostty_terminal_get_cwd(terminal: TerminalHandle, outPtrLen: number): number;
 +  ghostty_terminal_get_title(terminal: TerminalHandle, outPtrLen: number): number;
 +  ghostty_terminal_get_toast_count(terminal: TerminalHandle): number;
 +  ghostty_terminal_get_toast(terminal: TerminalHandle, index: number, outPtrLen4: number): number;
@@ -345,7 +369,7 @@ index e9182f2..5c02af4 100644
    ghostty_terminal_get_scrollback_line(
      terminal: TerminalHandle,
      offset: number,
-@@ -536,7 +550,7 @@ export const GHOSTTY_CONFIG_SIZE = 80;
+@@ -536,7 +551,7 @@ export const GHOSTTY_CONFIG_SIZE = 80;
  export type TerminalHandle = number;
  
  /**
@@ -354,7 +378,7 @@ index e9182f2..5c02af4 100644
   */
  export interface GhosttyCell {
    codepoint: number; // u32 (Unicode codepoint - first codepoint of grapheme)
-@@ -550,6 +564,11 @@ export interface GhosttyCell {
+@@ -550,6 +565,11 @@ export interface GhosttyCell {
    width: number; // u8 (character width: 1=normal, 2=wide, etc.)
    hyperlink_id: number; // u16 (0 = no link, >0 = hyperlink ID in set)
    grapheme_len: number; // u8 (number of extra codepoints beyond first)
@@ -367,6 +391,7 @@ index e9182f2..5c02af4 100644
  
  /**
 diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
+index 03cad709f34..fd64dd8189d 100644
 --- a/patches/ghostty-wasm-api.patch
 +++ b/patches/ghostty-wasm-api.patch
 @@ -1,14 +1,12 @@
@@ -385,7 +410,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- a/include/ghostty/vt.h
  +++ b/include/ghostty/vt.h
  @@ -28,6 +28,7 @@
-@@ -19,7 +17,7 @@
+@@ -19,7 +17,7 @@ index 4f8fef88e..ca9fb1d4d 100644
    * - @ref key "Key Encoding" - Encode key events into terminal sequences
    * - @ref osc "OSC Parser" - Parse OSC (Operating System Command) sequences
    * - @ref sgr "SGR Parser" - Parse SGR (Select Graphic Rendition) sequences
@@ -394,7 +419,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   
   #include <ghostty/vt/result.h>
   #include <ghostty/vt/allocator.h>
-@@ -29,10 +27,10 @@
+@@ -29,10 +27,10 @@ index 4f8fef88e..ca9fb1d4d 100644
   #include <ghostty/vt/key.h>
  diff --git a/include/ghostty/vt/terminal.h b/include/ghostty/vt/terminal.h
  new file mode 100644
@@ -403,11 +428,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/include/ghostty/vt/terminal.h
 -@@ -0,0 +1,249 @@
-+@@ -0,0 +1,316 @@
++@@ -0,0 +1,319 @@
  +/**
  + * @file terminal.h
  + *
-@@ -84,7 +82,7 @@
+@@ -84,7 +82,7 @@ index 000000000..298ad36c1
  +    uint32_t palette[16];
  +} GhosttyTerminalConfig;
  +
@@ -416,7 +441,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +typedef struct {
  +    uint32_t codepoint;
  +    uint8_t fg_r, fg_g, fg_b;
-@@ -93,7 +91,9 @@
+@@ -93,7 +91,9 @@ index 000000000..298ad36c1
  +    uint8_t width;
  +    uint16_t hyperlink_id;
  +    uint8_t grapheme_len;  /* Number of extra codepoints beyond first (0 = no grapheme) */
@@ -427,7 +452,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +} GhosttyCell;
  +
  +/** Cell flags */
-@@ -197,6 +197,20 @@
+@@ -197,6 +197,20 @@ index 000000000..298ad36c1
  +    size_t buffer_size
  +);
  +
@@ -448,7 +473,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Terminal Modes
  + * ========================================================================= */
-@@ -215,6 +229,40 @@
+@@ -215,6 +229,43 @@ index 000000000..298ad36c1
  + */
  +bool ghostty_terminal_get_mode(GhosttyTerminal term, int mode, bool is_ansi);
  +
@@ -457,6 +482,9 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 ++ * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
 ++ * Returns -1 on error, 0 for an empty title, 1 for a non-empty title.
 ++ */
+++/** Borrow the literal engine OSC 7 directory. -1 error, 0 absent, 1 borrowed ptr/len. */
+++int ghostty_terminal_get_cwd(GhosttyTerminal term, size_t* out_ptr_len);
+++
 ++int ghostty_terminal_get_title(
 ++    GhosttyTerminal term,
 ++    size_t* out_ptr_len
@@ -489,7 +517,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/* ============================================================================
  + * Scrollback API
  + * ========================================================================= */
-@@ -223,6 +271,23 @@
+@@ -223,6 +274,23 @@ index 000000000..298ad36c1
  +int ghostty_terminal_get_scrollback_length(GhosttyTerminal term);
  +
  +/**
@@ -513,7 +541,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  + * Get a line from the scrollback buffer.
  + * @param offset 0 = oldest line, (length-1) = most recent scrollback line
  + * @param out_buffer Buffer to write cells to
-@@ -283,10 +348,9 @@
+@@ -283,10 +351,9 @@ index 000000000..298ad36c1
  +
  +#endif /* GHOSTTY_VT_TERMINAL_H */
  diff --git a/src/lib_vt.zig b/src/lib_vt.zig
@@ -521,11 +549,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- a/src/lib_vt.zig
  +++ b/src/lib_vt.zig
 -@@ -140,6 +140,41 @@ comptime {
-+@@ -140,6 +140,48 @@
++@@ -140,6 +140,49 @@
           @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
           @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
           @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
-@@ -310,14 +374,21 @@
+@@ -310,14 +377,22 @@ index 03a883e20..f07bbd759 100644
  +        @export(&c.render_state_mark_clean, .{ .name = "ghostty_render_state_mark_clean" });
  +        @export(&c.render_state_get_viewport, .{ .name = "ghostty_render_state_get_viewport" });
  +        @export(&c.render_state_get_grapheme, .{ .name = "ghostty_render_state_get_grapheme" });
@@ -535,6 +563,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        @export(&c.terminal_is_alternate_screen, .{ .name = "ghostty_terminal_is_alternate_screen" });
  +        @export(&c.terminal_has_mouse_tracking, .{ .name = "ghostty_terminal_has_mouse_tracking" });
  +        @export(&c.terminal_get_mode, .{ .name = "ghostty_terminal_get_mode" });
+++        @export(&c.terminal_get_cwd, .{ .name = "ghostty_terminal_get_cwd" });
 ++        @export(&c.terminal_get_title, .{ .name = "ghostty_terminal_get_title" });
 ++        @export(&c.terminal_get_toast_count, .{ .name = "ghostty_terminal_get_toast_count" });
 ++        @export(&c.terminal_get_toast, .{ .name = "ghostty_terminal_get_toast" });
@@ -547,7 +576,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        @export(&c.terminal_get_scrollback_line, .{ .name = "ghostty_terminal_get_scrollback_line" });
  +        @export(&c.terminal_get_scrollback_grapheme, .{ .name = "ghostty_terminal_get_scrollback_grapheme" });
  +        @export(&c.terminal_is_row_wrapped, .{ .name = "ghostty_terminal_is_row_wrapped" });
-@@ -329,10 +400,9 @@
+@@ -329,10 +404,9 @@ index 03a883e20..f07bbd759 100644
           // On Wasm we need to export our allocator convenience functions.
           if (builtin.target.cpu.arch.isWasm()) {
  diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
@@ -559,16 +588,16 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
   pub const key_encode = @import("key_encode.zig");
   pub const paste = @import("paste.zig");
   pub const sgr = @import("sgr.zig");
-@@ -340,7 +410,7 @@
+@@ -340,7 +414,7 @@ index bc92597f5..18503933f 100644
   
   // The full C API, unexported.
   pub const osc_new = osc.new;
 -@@ -52,6 +53,42 @@ pub const key_encoder_encode = key_encode.encode;
-+@@ -52,6 +53,49 @@
++@@ -52,6 +53,50 @@
   
   pub const paste_is_safe = paste.is_safe;
   
-@@ -364,14 +434,21 @@
+@@ -364,14 +438,22 @@ index bc92597f5..18503933f 100644
  +pub const render_state_mark_clean = terminal.renderStateMarkClean;
  +pub const render_state_get_viewport = terminal.renderStateGetViewport;
  +pub const render_state_get_grapheme = terminal.renderStateGetGrapheme;
@@ -578,6 +607,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +pub const terminal_is_alternate_screen = terminal.isAlternateScreen;
  +pub const terminal_has_mouse_tracking = terminal.hasMouseTracking;
  +pub const terminal_get_mode = terminal.getMode;
+++pub const terminal_get_cwd = terminal.getCwd;
 ++pub const terminal_get_title = terminal.getTitle;
 ++pub const terminal_get_toast_count = terminal.getToastCount;
 ++pub const terminal_get_toast = terminal.getToast;
@@ -590,16 +620,16 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +pub const terminal_get_scrollback_line = terminal.getScrollbackLine;
  +pub const terminal_get_scrollback_grapheme = terminal.getScrollbackGrapheme;
  +pub const terminal_is_row_wrapped = terminal.isRowWrapped;
-@@ -383,7 +460,7 @@
+@@ -383,7 +465,7 @@ index bc92597f5..18503933f 100644
   test {
       _ = color;
       _ = osc;
 -@@ -59,6 +96,7 @@ test {
-+@@ -59,6 +103,7 @@
++@@ -59,6 +104,7 @@
       _ = key_encode;
       _ = paste;
       _ = sgr;
-@@ -393,10 +470,10 @@
+@@ -393,10 +475,10 @@ index bc92597f5..18503933f 100644
       _ = @import("../../lib/allocator.zig");
  diff --git a/src/terminal/c/terminal.zig b/src/terminal/c/terminal.zig
  new file mode 100644
@@ -608,11 +638,11 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  --- /dev/null
  +++ b/src/terminal/c/terminal.zig
 -@@ -0,0 +1,1004 @@
-+@@ -0,0 +1,1339 @@
++@@ -0,0 +1,1351 @@
  +//! C API wrapper for Terminal
  +//!
  +//! This provides a minimal, high-performance interface to Ghostty's Terminal
-@@ -426,26 +503,53 @@
+@@ -426,26 +508,53 @@ index 000000000..d57b4e405
  +const point = @import("../point.zig");
  +const Style = @import("../style.zig").Style;
  +const device_status = @import("../device_status.zig");
@@ -669,7 +699,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    }
  +
  +    pub fn vt(
-@@ -561,7 +665,10 @@
+@@ -561,7 +670,10 @@ index 000000000..d57b4e405
  +            },
  +            .active_status_display => self.terminal.status_display = value,
  +            .decaln => try self.terminal.decaln(),
@@ -681,7 +711,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            .start_hyperlink => try self.terminal.screens.active.startHyperlink(value.uri, value.id),
  +            .end_hyperlink => self.terminal.screens.active.endHyperlink(),
  +            .prompt_start => {
-@@ -575,33 +682,176 @@
+@@ -575,33 +687,176 @@ index 000000000..d57b4e405
  +            .mouse_shape => self.terminal.mouse_shape = value,
  +            .color_operation => try self.colorOperation(value.op, &value.requests),
  +            .kitty_color_report => try self.kittyColorOperation(value),
@@ -761,6 +791,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 ++                try self.toasts.append(self.alloc, .{ .title = title, .body = body });
 ++            },
 ++            .progress_report => self.progress.* = value,
+++            .report_pwd => try self.terminal.setPwd(value.url),
  +
  +            // Actions that require no response and have no terminal effect
 -+            .dcs_hook,
@@ -778,7 +809,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
 -+            .device_attributes,
 -+            .kitty_keyboard_query,
 -+            .window_title,
- +            .report_pwd,
+-+            .report_pwd,
 -+            .show_desktop_notification,
 -+            .progress_report,
  +            .clipboard_contents,
@@ -870,7 +901,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    fn handleDeviceStatus(self: *ResponseHandler, req: device_status.Request) !void {
  +        switch (req) {
  +            .operating_status => {
-@@ -700,11 +950,17 @@
+@@ -700,11 +955,17 @@ index 000000000..d57b4e405
  +    render_state: RenderState,
  +    /// Response buffer for DSR and other query responses
  +    response_buffer: std.ArrayList(u8),
@@ -889,7 +920,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +pub const GhosttyCell = extern struct {
  +    codepoint: u32,
  +    fg_r: u8,
-@@ -717,7 +973,11 @@
+@@ -717,7 +978,11 @@ index 000000000..d57b4e405
  +    width: u8,
  +    hyperlink_id: u16,
  +    grapheme_len: u8 = 0, // Number of extra codepoints beyond first
@@ -902,7 +933,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +};
  +
  +/// Dirty state
-@@ -812,11 +1072,21 @@
+@@ -812,11 +1077,21 @@ index 000000000..d57b4e405
  +        return null;
  +    };
  +
@@ -928,7 +959,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +    // Initialize stream with the handler
  +    wrapper.stream = ResponseStream.init(wrapper.handler);
-@@ -828,6 +1098,9 @@
+@@ -828,6 +1103,9 @@ index 000000000..d57b4e405
  +        .stream = wrapper.stream,
  +        .render_state = RenderState.empty,
  +        .response_buffer = wrapper.response_buffer,
@@ -938,7 +969,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    };
  +
  +    // NOTE: linefeed mode must be FALSE to match native terminal behavior
-@@ -847,6 +1120,12 @@
+@@ -847,6 +1125,12 @@ index 000000000..d57b4e405
  +    const alloc = wrapper.alloc;
  +    wrapper.stream.deinit();
  +    wrapper.response_buffer.deinit(alloc);
@@ -951,7 +982,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +    wrapper.render_state.deinit(alloc);
  +    wrapper.terminal.deinit(alloc);
  +    alloc.destroy(wrapper);
-@@ -859,7 +1138,7 @@
+@@ -859,7 +1143,7 @@ index 000000000..d57b4e405
  +
  +pub fn write(ptr: ?*anyopaque, data: [*]const u8, len: usize) callconv(.c) void {
  +    const wrapper: *TerminalWrapper = @ptrCast(@alignCast(ptr orelse return));
@@ -960,7 +991,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +}
  +
  +// ============================================================================
-@@ -1038,6 +1317,7 @@
+@@ -1038,6 +1322,7 @@ index 000000000..d57b4e405
  +                .rgb => |rgb| rgb,
  +            };
  +            const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
@@ -968,7 +999,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +
  +            // Build flags
  +            var flags: u8 = 0;
-@@ -1072,6 +1352,11 @@
+@@ -1072,6 +1357,11 @@ index 000000000..d57b4e405
  +                },
  +                .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +                .grapheme_len = grapheme_len,
@@ -980,7 +1011,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +            };
  +            idx += 1;
  +        }
-@@ -1130,6 +1415,43 @@
+@@ -1130,6 +1420,43 @@ index 000000000..d57b4e405
  +    return @intCast(count);
  +}
  +
@@ -1024,10 +1055,22 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Terminal Modes (minimal set for compatibility)
  +// ============================================================================
-@@ -1154,6 +1476,63 @@
+@@ -1154,6 +1481,75 @@ index 000000000..d57b4e405
  +    return wrapper.terminal.modes.get(mode);
  +}
  +
+++/// Borrow the literal engine directory; the next mutation may invalidate the slice.
+++pub fn getCwd(ptr: ?*anyopaque, out_ptr_len: ?[*]usize) callconv(.c) c_int {
+++    const out = out_ptr_len orelse return -1;
+++    out[0] = 0;
+++    out[1] = 0;
+++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
+++    const slice = wrapper.terminal.getPwd() orelse return 0;
+++    out[0] = @intFromPtr(slice.ptr);
+++    out[1] = slice.len;
+++    return 1;
+++}
+++
 ++/// Borrow the engine-recorded window title (OSC 0 / OSC 2), cleared on full reset.
 ++pub fn getTitle(
 ++    ptr: ?*anyopaque,
@@ -1088,7 +1131,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +// ============================================================================
  +// Scrollback API
  +// ============================================================================
-@@ -1168,6 +1547,33 @@
+@@ -1168,6 +1564,33 @@ index 000000000..d57b4e405
  +    return @intCast(pages.total_rows - pages.rows);
  +}
  +
@@ -1122,7 +1165,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +/// Get a line from the scrollback buffer
  +/// offset 0 = oldest line in scrollback, offset (length-1) = most recent scrollback line
  +/// Returns number of cells written, or -1 on error
-@@ -1230,6 +1636,7 @@
+@@ -1230,6 +1653,7 @@ index 000000000..d57b4e405
  +            .rgb => |rgb| rgb,
  +        };
  +        const bg: color.RGB = if (sty.bg(cell, &rs.colors.palette)) |rgb| rgb else rs.colors.background;
@@ -1130,7 +1173,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        
  +        // Build flags
  +        var flags: u8 = 0;
-@@ -1264,6 +1671,11 @@
+@@ -1264,6 +1688,11 @@ index 000000000..d57b4e405
  +            },
  +            .hyperlink_id = if (cell.hyperlink) 1 else 0,
  +            .grapheme_len = grapheme_len,
@@ -1142,7 +1185,7 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
  +        };
  +    }
  +    return @intCast(cols);
-@@ -1402,10 +1814,9 @@
+@@ -1402,10 +1831,9 @@ index 000000000..d57b4e405
  +    try std.testing.expectEqual(@as(u32, 'o'), cells[4].codepoint);
  +}
  diff --git a/src/terminal/render.zig b/src/terminal/render.zig
@@ -1154,7 +1197,6 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
           // Colors.
           self.colors.cursor = t.colors.cursor.get();
           self.colors.palette = t.colors.palette.current;
-
 diff --git a/lib/index.ts b/lib/index.ts
 --- a/lib/index.ts
 +++ b/lib/index.ts

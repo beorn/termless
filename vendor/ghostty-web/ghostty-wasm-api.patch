@@ -30,7 +30,7 @@ new file mode 100644
 index 0000000..c86ab03
 --- /dev/null
 +++ b/include/ghostty/vt/terminal.h
-@@ -0,0 +1,316 @@
+@@ -0,0 +1,319 @@
 +/**
 + * @file terminal.h
 + *
@@ -234,6 +234,9 @@ index 0000000..c86ab03
 + * out_ptr_len receives two size_t words: a borrowed UTF-8 pointer and byte length.
 + * Returns -1 on error, 0 for an empty title, 1 for a non-empty title.
 + */
++/** Borrow the literal engine OSC 7 directory. -1 error, 0 absent, 1 borrowed ptr/len. */
++int ghostty_terminal_get_cwd(GhosttyTerminal term, size_t* out_ptr_len);
++
 +int ghostty_terminal_get_title(
 +    GhosttyTerminal term,
 +    size_t* out_ptr_len
@@ -350,7 +353,7 @@ index 0000000..c86ab03
 diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 --- a/src/lib_vt.zig
 +++ b/src/lib_vt.zig
-@@ -140,6 +140,48 @@
+@@ -140,6 +140,49 @@
          @export(&c.sgr_unknown_partial, .{ .name = "ghostty_sgr_unknown_partial" });
          @export(&c.sgr_attribute_tag, .{ .name = "ghostty_sgr_attribute_tag" });
          @export(&c.sgr_attribute_value, .{ .name = "ghostty_sgr_attribute_value" });
@@ -380,6 +383,7 @@ diff --git a/src/lib_vt.zig b/src/lib_vt.zig
 +        @export(&c.terminal_is_alternate_screen, .{ .name = "ghostty_terminal_is_alternate_screen" });
 +        @export(&c.terminal_has_mouse_tracking, .{ .name = "ghostty_terminal_has_mouse_tracking" });
 +        @export(&c.terminal_get_mode, .{ .name = "ghostty_terminal_get_mode" });
++        @export(&c.terminal_get_cwd, .{ .name = "ghostty_terminal_get_cwd" });
 +        @export(&c.terminal_get_title, .{ .name = "ghostty_terminal_get_title" });
 +        @export(&c.terminal_get_toast_count, .{ .name = "ghostty_terminal_get_toast_count" });
 +        @export(&c.terminal_get_toast, .{ .name = "ghostty_terminal_get_toast" });
@@ -410,7 +414,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  
  // The full C API, unexported.
  pub const osc_new = osc.new;
-@@ -52,6 +53,49 @@
+@@ -52,6 +53,50 @@
  
  pub const paste_is_safe = paste.is_safe;
  
@@ -440,6 +444,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
 +pub const terminal_is_alternate_screen = terminal.isAlternateScreen;
 +pub const terminal_has_mouse_tracking = terminal.hasMouseTracking;
 +pub const terminal_get_mode = terminal.getMode;
++pub const terminal_get_cwd = terminal.getCwd;
 +pub const terminal_get_title = terminal.getTitle;
 +pub const terminal_get_toast_count = terminal.getToastCount;
 +pub const terminal_get_toast = terminal.getToast;
@@ -460,7 +465,7 @@ diff --git a/src/terminal/c/main.zig b/src/terminal/c/main.zig
  test {
      _ = color;
      _ = osc;
-@@ -59,6 +103,7 @@
+@@ -59,6 +104,7 @@
      _ = key_encode;
      _ = paste;
      _ = sgr;
@@ -473,7 +478,7 @@ new file mode 100644
 index 0000000..e417c47
 --- /dev/null
 +++ b/src/terminal/c/terminal.zig
-@@ -0,0 +1,1339 @@
+@@ -0,0 +1,1351 @@
 +//! C API wrapper for Terminal
 +//!
 +//! This provides a minimal, high-performance interface to Ghostty's Terminal
@@ -758,6 +763,7 @@ index 0000000..e417c47
 +                try self.toasts.append(self.alloc, .{ .title = title, .body = body });
 +            },
 +            .progress_report => self.progress.* = value,
++            .report_pwd => try self.terminal.setPwd(value.url),
 +
 +            // Actions that require no response and have no terminal effect
 +            .apc_start,
@@ -765,7 +771,6 @@ index 0000000..e417c47
 +            .apc_put,
 +            .bell,
 +            .enquiry,
-+            .report_pwd,
 +            .clipboard_contents,
 +            // Unimplemented in Ghostty 5714ed07a1012573261b7b7e3ed2add9c1504496 src/termio/stream_handler.zig:343-346
 +            .title_push,
@@ -1474,6 +1479,18 @@ index 0000000..e417c47
 +    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return false));
 +    const mode = modespkg.modeFromInt(@intCast(mode_num), is_ansi) orelse return false;
 +    return wrapper.terminal.modes.get(mode);
++}
++
++/// Borrow the literal engine directory; the next mutation may invalidate the slice.
++pub fn getCwd(ptr: ?*anyopaque, out_ptr_len: ?[*]usize) callconv(.c) c_int {
++    const out = out_ptr_len orelse return -1;
++    out[0] = 0;
++    out[1] = 0;
++    const wrapper: *const TerminalWrapper = @ptrCast(@alignCast(ptr orelse return -1));
++    const slice = wrapper.terminal.getPwd() orelse return 0;
++    out[0] = @intFromPtr(slice.ptr);
++    out[1] = slice.len;
++    return 1;
 +}
 +
 +/// Borrow the engine-recorded window title (OSC 0 / OSC 2), cleared on full reset.

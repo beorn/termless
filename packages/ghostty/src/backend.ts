@@ -312,7 +312,7 @@ export function createGhosttyBackend(
   AdapterSourcesExtension &
   MouseEncodingExtension &
   KeyEncodingExtension &
-  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
+  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
   let term: GhosttyTerminal | null = null
   let keyEncoder: KeyEncoder | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
@@ -726,6 +726,14 @@ export function createGhosttyBackend(
     return report && { state: report.state, value: report.value }
   }
 
+  function getCwd(): string | null {
+    const t = ensureTerm()
+    if (typeof t.getCwd !== "function") {
+      throw new Error("The loaded ghostty-web predates getCwd; rebuild it: nix develop <code-checkout> --command bun vendor/ghostty-web/rebuild.ts <scratch-parent>")
+    }
+    return t.getCwd()
+  }
+
   function getTitle(): string {
     return ensureTerm().getTitle()
   }
@@ -763,7 +771,7 @@ export function createGhosttyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    // osc-metadata carries the parsed-toast and OSC 9;4 readers: ghostty-web keeps no raw OSC 9/777 payload or OSC 7.
+    // osc-metadata forwards the engine directory, parsed toasts and OSC 9;4 state; no raw OSC 9/777 payload.
     extensions: new Set([
       "adapter-sources",
       "reply-delivery",
@@ -835,7 +843,7 @@ export function createGhosttyBackend(
     ReplyDeliveryExtension &
     MouseEncodingExtension &
     KeyEncodingExtension &
-    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
+    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     replyDelivery,
     name: "ghostty",
@@ -859,6 +867,7 @@ export function createGhosttyBackend(
     getTitle,
     getToasts,
     getProgress,
+    getCwd,
     getScrollback,
     scrollViewport,
     encodeKey,
