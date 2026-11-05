@@ -4,7 +4,7 @@
     {
       "name": "vt100.js",
       "repository": "beorn/vterm",
-      "commit": "34c3918b0fcc778116eaf8db4e90441e4b727963",
+      "commit": "158f06c63f9a27041c44580f735ae27200076e83",
       "directory": "packages/vt100",
       "pack": true
     },
