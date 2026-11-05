@@ -38,7 +38,7 @@ const DEFAULT_ROWS = 24
  *
  * Supports: monochrome SGR (bold, underline, blink, reverse),
  * cursor movement, erase commands, scroll regions, DA1/DSR responses,
- * OSC title, and more. No color, hidden text, or wide chars — use
+ * and DEC character sets. No color, hidden text, or wide chars — use
  * vterm.js for those.
  */
 export function createVt100Backend(
@@ -77,46 +77,8 @@ export function createVt100Backend(
     screen = null
   }
 
-  // CSI 18t = text-area cell-size query; reply CSI 8;rows;cols t derived
-  // from engine screen dimensions (`s.rows` / `s.cols`), emitted in input order.
-  // Split raw bytes without decoding so multi-byte UTF-8 sequences split across
-  // chunks continue through vt100.js's streaming decoder intact.
-  function findCsi18t(data: Uint8Array, fromIndex: number): number {
-    for (let i = fromIndex; i <= data.length - 5; i++) {
-      if (
-        data[i] === 0x1b &&
-        data[i + 1] === 0x5b &&
-        data[i + 2] === 0x31 &&
-        data[i + 3] === 0x38 &&
-        data[i + 4] === 0x74
-      ) {
-        return i
-      }
-    }
-    return -1
-  }
-
   function feed(data: Uint8Array): void {
-    const s = ensureScreen()
-    const first = findCsi18t(data, 0)
-    if (first === -1) {
-      s.process(data)
-      return
-    }
-    const enc = new TextEncoder()
-    let cursor = 0
-    let match = first
-    while (match !== -1) {
-      if (match > cursor) {
-        s.process(data.subarray(cursor, match))
-      }
-      backend.onResponse?.(enc.encode(`\x1b[8;${s.rows};${s.cols}t`))
-      cursor = match + 5
-      match = findCsi18t(data, cursor)
-    }
-    if (cursor < data.length) {
-      s.process(data.subarray(cursor))
-    }
+    ensureScreen().process(data)
   }
 
   function resize(cols: number, rows: number): void {

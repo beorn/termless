@@ -2,7 +2,7 @@
  * Pure TypeScript VT220 backend for termless.
  *
  * Wraps the vt220.js screen emulator to implement the TerminalBackend interface.
- * Extends VT100 with 8 standard colors, insert/delete characters/lines,
+ * Extends VT100 with insert/delete characters/lines,
  * insert mode (IRM), selective erase (DECSED/DECSEL), and soft reset (DECSTR).
  */
 
@@ -32,10 +32,10 @@ const DEFAULT_ROWS = 24
 /**
  * Create a pure TypeScript VT220 backend for termless.
  *
- * Extends VT100 with: 8 standard colors (SGR 30-37/40-47), insert mode (IRM),
+ * Extends VT100 with insert mode (IRM),
  * insert/delete characters (ICH/DCH), insert/delete lines (IL/DL),
- * erase characters (ECH), selective erase (DECSED/DECSEL), hidden/conceal
- * (SGR 8/28), and soft reset (DECSTR). No truecolor, no 256 colors, no wide
+ * erase characters (ECH), selective erase (DECSED/DECSEL),
+ * and soft reset (DECSTR). No color, hidden text, or wide
  * chars — use vterm.js for those.
  */
 export function createVt220Backend(
@@ -74,46 +74,8 @@ export function createVt220Backend(
     screen = null
   }
 
-  // CSI 18t = text-area cell-size query; reply CSI 8;rows;cols t derived
-  // from engine screen dimensions (`s.rows` / `s.cols`), emitted in input order.
-  // Split raw bytes without decoding so multi-byte UTF-8 sequences split across
-  // chunks continue through vt220.js's streaming decoder intact.
-  function findCsi18t(data: Uint8Array, fromIndex: number): number {
-    for (let i = fromIndex; i <= data.length - 5; i++) {
-      if (
-        data[i] === 0x1b &&
-        data[i + 1] === 0x5b &&
-        data[i + 2] === 0x31 &&
-        data[i + 3] === 0x38 &&
-        data[i + 4] === 0x74
-      ) {
-        return i
-      }
-    }
-    return -1
-  }
-
   function feed(data: Uint8Array): void {
-    const s = ensureScreen()
-    const first = findCsi18t(data, 0)
-    if (first === -1) {
-      s.process(data)
-      return
-    }
-    const enc = new TextEncoder()
-    let cursor = 0
-    let match = first
-    while (match !== -1) {
-      if (match > cursor) {
-        s.process(data.subarray(cursor, match))
-      }
-      backend.onResponse?.(enc.encode(`\x1b[8;${s.rows};${s.cols}t`))
-      cursor = match + 5
-      match = findCsi18t(data, cursor)
-    }
-    if (cursor < data.length) {
-      s.process(data.subarray(cursor))
-    }
+    ensureScreen().process(data)
   }
 
   function resize(cols: number, rows: number): void {
