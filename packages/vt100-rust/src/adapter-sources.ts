@@ -1,5 +1,5 @@
 // Adapter identity only. This engine's reply-delivery capability is unchanged.
-// Re-audited for nullable conceal and strikethrough; native ABI and reply delivery are unchanged.
+// Re-audited for nullable conceal/strikethrough and public OSC notification readback.
 export const adapterDeclaration = {
   sources: [
     {
@@ -8,7 +8,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt100-rust/src/backend.ts",
-      blobOid: "645f53ce78ddacfc4ad3ce995de4f5f88956b1ed",
+      blobOid: "f19d7ffbb9093440786b791ceb90132946cae49a",
     },
   ],
 } as const

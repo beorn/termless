@@ -8,6 +8,7 @@ use std::sync::Mutex;
 struct TerminalCallbacks {
     title: String,
     icon_label: String,
+    notifications: Vec<String>,
     clipboard: BTreeMap<String, ClipboardPayload>,
     paste_selector: Option<String>,
 }
@@ -19,6 +20,18 @@ struct ClipboardPayload {
 }
 
 impl vt100::Callbacks for TerminalCallbacks {
+    fn unhandled_osc(&mut self, _: &mut vt100::Screen, params: &[&[u8]]) {
+        let Some((command, fields)) = params.split_first() else {
+            return;
+        };
+        if *command == b"9" {
+            // Retain the payload as the library dispatches it: vte keeps at most 16 OSC
+            // parameters, so excess separators are truncated. Never reparse raw feed bytes.
+            self.notifications
+                .push(String::from_utf8_lossy(&fields.join(&b';')).into_owned());
+        }
+    }
+
     fn set_window_title(&mut self, _: &mut vt100::Screen, title: &[u8]) {
         self.title = String::from_utf8_lossy(title).into_owned();
     }
@@ -375,6 +388,15 @@ impl Vt100RustTerminal {
             vt100::MouseProtocolEncoding::Utf8 => 1005,
             vt100::MouseProtocolEncoding::Sgr => 1006,
         })
+    }
+
+    #[napi]
+    pub fn get_notifications(&self) -> Result<Vec<String>> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(parser.callbacks().notifications.clone())
     }
 
     #[napi]

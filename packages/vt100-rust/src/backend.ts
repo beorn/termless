@@ -20,6 +20,7 @@ import type {
   TerminalCapabilities,
   Color,
   MouseEncodingExtension,
+  OscMetadataExtension,
   MouseEvent,
 } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -73,6 +74,7 @@ interface Vt100RustTerminal {
   getCursor(): NapiCursor
   getMode(mode: string): boolean | null
   getTitle(): string
+  getNotifications(): string[]
   getIconLabel(): string
   getClipboardState(): {
     writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
@@ -196,7 +198,10 @@ const DEFAULT_ROWS = 24
 export function createVt100RustBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
-): TerminalBackend & AdapterSourcesExtension & MouseEncodingExtension {
+): TerminalBackend &
+  AdapterSourcesExtension &
+  MouseEncodingExtension &
+  Pick<Required<OscMetadataExtension>, "getNotifications"> {
   let term: Vt100RustTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -310,6 +315,10 @@ export function createVt100RustBackend(
     return ensureTerm().getTitle()
   }
 
+  function getNotifications(): readonly string[] {
+    return [...ensureTerm().getNotifications()]
+  }
+
   function getIconLabel(): string {
     return ensureTerm().getIconLabel()
   }
@@ -346,7 +355,7 @@ export function createVt100RustBackend(
     semanticPrompts: false,
     unicode: "13.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "mouse-encoding"]),
+    extensions: new Set(["adapter-sources", "mouse-encoding", "osc-metadata"]),
   }
 
   // TODO(native): Wire DA1/DA2/DSR response capture in lib.rs.
@@ -376,7 +385,10 @@ export function createVt100RustBackend(
     return encodeMouseReport(event, { tracking, encoding })
   }
 
-  const backend: TerminalBackend & AdapterSourcesExtension & MouseEncodingExtension = {
+  const backend: TerminalBackend &
+    AdapterSourcesExtension &
+    MouseEncodingExtension &
+    Pick<Required<OscMetadataExtension>, "getNotifications"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100-rust",
     init,
@@ -394,6 +406,7 @@ export function createVt100RustBackend(
     getCursor,
     getMode,
     getTitle,
+    getNotifications,
     getIconLabel,
     getClipboardState,
     getScrollback,
