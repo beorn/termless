@@ -9,6 +9,45 @@ import { describe, test, expect } from "vitest"
 import { createVt220Backend } from "../src/backend.ts"
 
 describe("createVt220Backend", () => {
+  // R2: unknown SGR operands must not swallow adjacent genuine DEC operands.
+  test("applies documented SGR operands independently and ignores colon operands whole", () => {
+    const backend = createVt220Backend({ cols: 12, rows: 3 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[38;2;1;4;5mA\x1b[0m\x1b[38:2:1:4:5mB"))
+      expect(backend.getCell(0, 0)).toMatchObject({
+        bold: true,
+        underline: "single",
+        blink: true,
+        fg: null,
+        bg: null,
+      })
+      expect(backend.getCell(0, 1)).toMatchObject({
+        bold: false,
+        underline: false,
+        blink: false,
+        fg: null,
+        bg: null,
+      })
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  // R1: unsupported XTWINOPS must be silent while genuine DEC reports still recover.
+  test("ignores CSI 18t and preserves following DSR and CPR replies", () => {
+    const backend = createVt220Backend({ cols: 12, rows: 3 })
+    const replies: string[] = []
+    backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[18t"))
+      expect(replies).toEqual([])
+      backend.feed(new TextEncoder().encode("\x1b[2;3H\x1b[5n\x1b[6n"))
+      expect(replies.join("")).toBe("\x1b[0n\x1b[2;3R")
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // @failure Native paste must use this adapter instance without leaking bytes to responses.
   // @level l0
   // @consumer Library-native paste probes through PasteEncodingExtension.
@@ -186,33 +225,31 @@ describe("createVt220Backend", () => {
     backend.destroy()
   })
 
-  // ── 8 standard colors ──
+  // ── Monochrome SGR ──
 
-  test("feed ANSI color codes, getCell() has correct fg color", () => {
+  test("ignores unsupported ANSI foreground color", () => {
     const backend = createVt220Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[31mR\x1b[0m"))
     const cell = backend.getCell(0, 0)
     expect(cell.char).toBe("R")
-    expect(cell.fg).not.toBeNull()
-    expect(cell.fg!.r).toBe(0x80)
+    expect(cell.fg).toBeNull()
     backend.destroy()
   })
 
-  test("feed text with background color, getCell() has correct bg", () => {
+  test("ignores unsupported ANSI background color", () => {
     const backend = createVt220Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[42mG\x1b[0m"))
     const cell = backend.getCell(0, 0)
-    expect(cell.bg).not.toBeNull()
-    expect(cell.bg!.g).toBe(0x80)
+    expect(cell.bg).toBeNull()
     backend.destroy()
   })
 
   // ── Hidden/conceal ──
 
-  test("hidden attribute (SGR 8/28)", () => {
+  test("ignores unsupported conceal operands (SGR 8/28)", () => {
     const backend = createVt220Backend({ cols: 80, rows: 24 })
     backend.feed(new TextEncoder().encode("\x1b[8mH\x1b[28mV"))
-    expect(backend.getCell(0, 0).hidden).toBe(true)
+    expect(backend.getCell(0, 0).hidden).toBe(false)
     expect(backend.getCell(0, 1).hidden).toBe(false)
     backend.destroy()
   })

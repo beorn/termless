@@ -1,14 +1,6 @@
 /**
- * Window-op probe responses — vt220 backend.
- *
- * vt220 is a pure-TypeScript cell-grid emulator with no native window
- * pixel concept, so we synthesize CSI 14t (text-area pixel size) and
- * CSI 18t (text-area cell count) responses from configured grid × cell
- * metrics. silvery's `resolveMouseOption()` uses both to enable
- * SGR-Pixels (1016) mouse coordinate mode.
- *
- * See `tests/window-ops-probes.test.ts` at the termless root for the
- * full rationale.
+ * Historical DEC engines ignore window queries and preserve genuine DEC reports.
+ * Split UTF-8 input continues through the engine's streaming decoder.
  */
 
 import { describe, test, expect } from "vitest"
@@ -16,7 +8,6 @@ import { createVt220Backend } from "../src/backend.ts"
 import type { TerminalBackend } from "../../../src/terminal/types.ts"
 
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
-const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
 
 async function probeBackend(backend: TerminalBackend, query: string): Promise<string[]> {
   backend.init?.({ cols: 80, rows: 24 })
@@ -36,10 +27,10 @@ describe("window-op probe responses — vt220 backend", () => {
     expect(pixelResponse, `unexpected synthetic CSI 4;h;w t response in ${JSON.stringify(responses)}`).toBeUndefined()
   })
 
-  test("answers CSI 18t from engine screen dimensions in input order before subsequent DA1", async () => {
+  test("ignores CSI 18t and returns only subsequent DA1", async () => {
     const backend = createVt220Backend()
     const responses = await probeBackend(backend, "\x1b[18t\x1b[c")
-    expect(responses.join("")).toBe("\x1b[8;24;80t\x1b[?62;1;2;6;7;8;9c")
+    expect(responses.join("")).toBe("\x1b[?62;1;2;6;7;8;9c")
 
     backend.resize(132, 30)
     const resizedResponses: string[] = []
@@ -47,7 +38,7 @@ describe("window-op probe responses — vt220 backend", () => {
       resizedResponses.push(new TextDecoder().decode(b))
     }
     backend.feed(new TextEncoder().encode("\x1b[18t\x1b[c"))
-    expect(resizedResponses.join("")).toBe("\x1b[8;30;132t\x1b[?62;1;2;6;7;8;9c")
+    expect(resizedResponses.join("")).toBe("\x1b[?62;1;2;6;7;8;9c")
   })
 
   test("preserves multi-byte UTF-8 characters split across chunks when a chunk contains CSI 18t", () => {
@@ -64,6 +55,6 @@ describe("window-op probe responses — vt220 backend", () => {
 
     expect(backend.getText()).toContain("€!")
     expect(backend.getText()).not.toContain("\uFFFD")
-    expect(responses).toEqual(["\x1b[8;24;80t"])
+    expect(responses).toEqual([])
   })
 })
