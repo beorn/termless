@@ -2,6 +2,8 @@
 
 Rust vt100 backend for termless -- wraps the [vt100](https://crates.io/crates/vt100) Rust crate via napi-rs.
 
+**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a feature page for this library. The vt100.js page covers the separate TypeScript backend.
+
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 
 ## Build

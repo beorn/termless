@@ -4,6 +4,8 @@ Alacritty backend for [Termless](../../) -- headless terminal emulation using
 the [alacritty_terminal](https://crates.io/crates/alacritty_terminal) Rust
 crate via [napi-rs](https://napi.rs).
 
+**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Alacritty's application page covers the full terminal.
+
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 
 ## Status

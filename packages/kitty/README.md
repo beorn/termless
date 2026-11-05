@@ -2,6 +2,8 @@
 
 Kitty backend for termless — uses [kitty's](https://github.com/kovidgoyal/kitty) actual VT parser via a Python subprocess bridge.
 
+**Feature support:** No dedicated headless page is published on [terminfo.dev](https://terminfo.dev/backends). Kitty's application page covers the full terminal.
+
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 
 ## How it works
