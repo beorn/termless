@@ -10,6 +10,7 @@ import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
   AdapterSourcesExtension,
+  OscMetadataExtension,
   PasteEncodingExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
@@ -43,7 +44,7 @@ const DEFAULT_ROWS = 24
  */
 export function createVt100Backend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension {
+): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -236,7 +237,7 @@ export function createVt100Backend(
 
   const capabilities: TerminalCapabilities = {
     name: "vt100",
-    version: "0.12.0",
+    version: "0.13.0",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,
@@ -245,10 +246,14 @@ export function createVt100Backend(
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding"]),
+    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding", "osc-metadata"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension = {
+  const backend: TerminalBackend &
+    ReplyDeliveryExtension &
+    AdapterSourcesExtension &
+    PasteEncodingExtension &
+    OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100",
     init,
@@ -266,6 +271,7 @@ export function createVt100Backend(
     getCursor,
     getMode,
     getTitle,
+    getUnhandledSequences: () => ensureScreen().getUnhandledSequences(),
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,

@@ -1,4 +1,8 @@
-import type { PasteEncodingExtension, ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import type {
+  OscMetadataExtension,
+  PasteEncodingExtension,
+  ReplyDeliveryExtension,
+} from "../../../src/terminal/types.ts"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { dirname, join, relative } from "node:path"
@@ -9,6 +13,39 @@ import { describe, test, expect } from "vitest"
 import { createVt100Backend } from "../src/backend.ts"
 
 describe("createVt100Backend", () => {
+  // @failure The extension invents metadata or loses the same engine's report/lifecycle errors.
+  // @level l0
+  // @consumer OscMetadataExtension users through the VT100 backend.
+  test("forwards the native ignored report through the existing initialized lifecycle", () => {
+    const backend = createVt100Backend()
+    expect(hasExtension<OscMetadataExtension>(backend, "osc-metadata")).toBe(true)
+    if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getUnhandledSequences)
+      throw new Error("missing public VT100 ignored report")
+    const read = backend.getUnhandledSequences.bind(backend)
+    expect(() => read()).toThrow(/not initialized/)
+    backend.init({ cols: 12, rows: 2 })
+    try {
+      backend.feed(new TextEncoder().encode("\x1b[1mA"))
+      expect(backend.getCell(0, 0).bold).toBe(true)
+      expect(read()).toEqual([])
+      backend.feed(new TextEncoder().encode("\x1b[3m\x1b]9;private\x07"))
+      expect(read()).toEqual([
+        { kind: "csi", code: "3m" },
+        { kind: "osc", code: "9" },
+      ])
+      expect(backend.getCwd).toBeUndefined()
+      expect(backend.getNotifications).toBeUndefined()
+      backend.reset()
+      expect(read()).toEqual([])
+      backend.destroy()
+      expect(() => read()).toThrow(/not initialized/)
+      backend.init({ cols: 12, rows: 2 })
+      expect(read()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // R2: unknown SGR operands must not swallow adjacent genuine DEC operands.
   test("applies documented SGR operands independently and ignores colon operands whole", () => {
     const backend = createVt100Backend({ cols: 12, rows: 3 })
@@ -641,7 +678,9 @@ describe("createVt100Backend", () => {
     expect(backend.capabilities.osc8Hyperlinks).toBe(false)
     expect(backend.capabilities.reflow).toBe(false)
     expect(backend.capabilities.extensions).toBeInstanceOf(Set)
-    expect(backend.capabilities.extensions).toEqual(new Set(["adapter-sources", "reply-delivery", "paste-encoding"]))
+    expect(backend.capabilities.extensions).toEqual(
+      new Set(["adapter-sources", "reply-delivery", "paste-encoding", "osc-metadata"]),
+    )
     backend.destroy()
   })
 

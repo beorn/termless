@@ -11,6 +11,7 @@ import { createVt220Screen as createScreen, type ScreenCell, type Vt220Screen as
 import type {
   AdapterSourcesExtension,
   PasteEncodingExtension,
+  OscMetadataExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   TerminalOptions,
@@ -40,7 +41,7 @@ const DEFAULT_ROWS = 24
  */
 export function createVt220Backend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension {
+): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -218,7 +219,7 @@ export function createVt220Backend(
 
   const capabilities: TerminalCapabilities = {
     name: "vt220",
-    version: "0.12.0",
+    version: "0.13.0",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,
@@ -227,10 +228,14 @@ export function createVt220Backend(
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding"]),
+    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding", "osc-metadata"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension = {
+  const backend: TerminalBackend &
+    ReplyDeliveryExtension &
+    AdapterSourcesExtension &
+    PasteEncodingExtension &
+    OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt220",
     init,
@@ -248,6 +253,7 @@ export function createVt220Backend(
     getCursor,
     getMode,
     getTitle,
+    getUnhandledSequences: () => ensureScreen().getUnhandledSequences(),
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
