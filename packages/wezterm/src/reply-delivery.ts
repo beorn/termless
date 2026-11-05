@@ -20,6 +20,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for readonly current Progress enum projection: no feed, parser, writer, barrier or reply path changes.
 // Native paste encoding uses the existing barrier before and after send_paste, returning only bytes
 // appended after the queued-reply boundary. Pending replies retain their order and never include paste bytes.
+// Native key encoding reuses that boundary around key_down; queued replies are never drained by input encoding.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -29,7 +30,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "ec9216029262a5639790c62d9cdffbd1dc764cf8",
+      blobOid: "6d6b31c9c39ac866140dd704e440b7944e594a91",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
@@ -44,7 +45,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "773a7fd244ec7cc4090d5ee50ac22050c4b15d78254b7deb576652f72028140d",
+      sha256: "06fb7a314ec3850ba041cec07fc777450a40ac04dcb3ec53b9133e57c20790c9",
     },
   },
 } as const
