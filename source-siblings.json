@@ -4,23 +4,23 @@
     {
       "name": "vt100.js",
       "repository": "beorn/vterm",
-      "commit": "bd3d32aea2f1994376a71adfc55b92705eedbd8c",
+      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
       "directory": "packages/vt100",
-      "pack": false
+      "pack": true
     },
     {
       "name": "vt220.js",
       "repository": "beorn/vterm",
-      "commit": "bd3d32aea2f1994376a71adfc55b92705eedbd8c",
+      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
       "directory": "packages/vt220",
-      "pack": false
+      "pack": true
     },
     {
       "name": "vterm.js",
       "repository": "beorn/vterm",
-      "commit": "67dd3960746766ed47e2bb4b2ced6503a78549cc",
+      "commit": "f98f138dc76a4e179c300fe5e1f60d11557ccd6b",
       "directory": "packages/vterm",
-      "pack": false
+      "pack": true
     },
     {
       "name": "@silvery/commander",
