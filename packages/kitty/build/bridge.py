@@ -30,6 +30,8 @@ Color format:
   [r, g, b] = RGB truecolor or resolved indexed color
 """
 
+import kitty.fast_data_types as native
+
 import base64
 import hashlib
 import json
@@ -687,6 +689,37 @@ def handle_command(cmd):
                 result["osc777Payloads"] = osc777_payloads
         return result
 
+    elif op == "encode-key":
+        event = cmd["event"]
+        key = event["key"]
+        names = {
+            "ArrowUp": "UP", "ArrowDown": "DOWN", "ArrowLeft": "LEFT", "ArrowRight": "RIGHT",
+            "Home": "HOME", "End": "END", "PageUp": "PAGE_UP", "PageDown": "PAGE_DOWN",
+            "Enter": "ENTER", "Tab": "TAB", "Backspace": "BACKSPACE", "Delete": "DELETE", "Escape": "ESCAPE",
+            "Control": "LEFT_CONTROL", "Shift": "LEFT_SHIFT", "Alt": "LEFT_ALT", "Meta": "LEFT_SUPER",
+            **{f"F{i}": f"F{i}" for i in range(1, 13)},
+        }
+        scalar = " " if key == "Space" else key
+        if key in names:
+            native_key = getattr(native, "GLFW_FKEY_" + names[key])
+            text = ""
+        elif len(scalar) == 1 and not 0xD800 <= ord(scalar) <= 0xDFFF:
+            if event.get("shift"):
+                raise ValueError("Kitty Shift with a printable scalar needs a keyboard-layout fixture")
+            native_key = ord(scalar)
+            text = "" if any(event.get(m) for m in ("ctrl", "alt", "super")) else scalar
+        else:
+            raise ValueError(f"Kitty key encoding requires one named key or Unicode scalar: {key!r}")
+        mods = 0
+        for field, constant in (("shift", "SHIFT"), ("ctrl", "CONTROL"), ("alt", "ALT"), ("super", "SUPER")):
+            if event.get(field):
+                mods |= getattr(native, "GLFW_MOD_" + constant)
+        encoded = native.encode_key_for_tty(
+            key=native_key, shifted_key=0, alternate_key=0, mods=mods, action=native.GLFW_PRESS,
+            key_encoding_flags=screen.current_key_encoding_flags(), text=text, cursor_key_mode=screen.cursor_key_mode,
+        )
+        return {"encodedKey": base64.b64encode(encoded.encode("utf-8")).decode("ascii")}
+
     elif op == "resize":
         cols = cmd["cols"]
         rows = cmd["rows"]
@@ -756,6 +789,7 @@ def batch_main():
         # Accumulate response data from all feed commands
         all_responses = b""
         paste_encoding = None
+        encoded_key = None
         all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         all_prompts = []  # Likewise prefix-compared
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
@@ -768,6 +802,8 @@ def batch_main():
                 return
             if "pasteEncoding" in result:
                 paste_encoding = result["pasteEncoding"]
+            if "encodedKey" in result:
+                encoded_key = result["encodedKey"]
             # Collect per-feed response data
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
@@ -781,6 +817,8 @@ def batch_main():
         snapshot = make_snapshot()
         if paste_encoding is not None:
             snapshot["pasteEncoding"] = paste_encoding
+        if encoded_key is not None:
+            snapshot["encodedKey"] = encoded_key
         all_cmd_output_markings.extend(snapshot.get("cmdOutputMarkings", ()))
         if all_cmd_output_markings:
             snapshot["cmdOutputMarkings"] = all_cmd_output_markings

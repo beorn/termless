@@ -22,6 +22,8 @@
 
 import type {
   AdapterSourcesExtension,
+  KeyDescriptor,
+  KeyEncodingExtension,
   PasteEncodingExtension,
   TerminalBackend,
   TerminalOptions,
@@ -40,7 +42,7 @@ import type {
   OscMetadataExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
+import { isNamedKey } from "../../../src/terminal/key-mapping.ts"
 import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, rmSync } from "node:fs"
@@ -99,7 +101,7 @@ function findKitty(): string {
 // ===============================================================
 
 interface BridgeCommand {
-  op: "init" | "feed" | "resize" | "reset" | "scroll" | "snapshot" | "quit" | "encode-paste"
+  op: "init" | "feed" | "resize" | "reset" | "scroll" | "snapshot" | "quit" | "encode-paste" | "encode-key"
   [key: string]: unknown
 }
 
@@ -127,6 +129,7 @@ interface BridgeCursor {
 }
 
 interface BridgeSnapshot {
+  encodedKey?: string
   cells: BridgeCell[][]
   cursor: BridgeCursor
   title: string
@@ -283,6 +286,7 @@ export function isKittyAvailable(): boolean {
 export function createKittyBackend(
   opts?: Partial<TerminalOptions>,
 ): TerminalBackend &
+  KeyEncodingExtension &
   WarningExtension &
   ReplyDeliveryExtension &
   HyperlinkExtension &
@@ -384,6 +388,24 @@ export function createKittyBackend(
     const bytes = Buffer.from(encoded, "base64")
     if (bytes.toString("base64") !== encoded) throw new Error("Kitty bridge returned malformed pasteEncoding base64")
     return new Uint8Array(bytes)
+  }
+
+  function encodeKey(key: KeyDescriptor): Uint8Array {
+    ensureInit()
+    const scalar = [...key.key]
+    const named = isNamedKey(key.key)
+    const codePoint = key.key.codePointAt(0)
+    if (!named && (scalar.length !== 1 || codePoint === undefined || (codePoint >= 0xd800 && codePoint <= 0xdfff))) {
+      throw new Error(`Kitty key encoding requires one named key or Unicode scalar: ${JSON.stringify(key.key)}`)
+    }
+    if (key.shift && (!named || key.key === "Space")) {
+      throw new Error("Kitty Shift with a printable scalar needs a keyboard-layout fixture")
+    }
+    const encoded = replayAndSnapshot({ op: "encode-key", event: key }).encodedKey
+    if (typeof encoded !== "string" || Buffer.from(encoded, "base64").toString("base64") !== encoded) {
+      throw new Error("Kitty bridge returned missing, non-string or malformed base64 encodedKey")
+    }
+    return new Uint8Array(Buffer.from(encoded, "base64"))
   }
 
   function ensureSnapshot(): BridgeSnapshot {
@@ -627,6 +649,7 @@ export function createKittyBackend(
     unicode: "15.1",
     reflow: true,
     extensions: new Set([
+      "key-encoding",
       "adapter-sources",
       "paste-encoding",
       "warnings",
@@ -648,6 +671,7 @@ export function createKittyBackend(
   // for testing but may cause timing issues with interactive PTY usage.
 
   const backend: TerminalBackend &
+    KeyEncodingExtension &
     WarningExtension &
     ReplyDeliveryExtension &
     HyperlinkExtension &
@@ -693,7 +717,7 @@ export function createKittyBackend(
     },
     getScrollback,
     scrollViewport,
-    encodeKey: encodeKeyToAnsi,
+    encodeKey,
     encodePaste,
     capabilities,
     getWarnings: () => [...warnings],

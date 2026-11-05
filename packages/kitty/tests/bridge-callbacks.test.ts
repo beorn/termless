@@ -21,6 +21,7 @@ import {
   type PasteEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
+import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>()
@@ -1027,4 +1028,297 @@ print(json.dumps(results))
     expect(results[2]?.error).toContain("cleanup buffer failure")
     expect(results[2]?.wtc).toBe("\x1b[1;1R")
   })
+})
+
+// Current native state and delegation cannot be proved by the legacy host encoder's default bytes.
+test.skipIf(!isKittyAvailable())(
+  "native keys follow per-call modes, flags and reset through the replay Screen",
+  async () => {
+    const actual = await vi.importActual<typeof childProcess>("node:child_process")
+    const traces: Record<string, unknown>[] = []
+    const hook = `
+import base64, io, json, sys
+import kitty.fast_data_types as native
+original_encode = native.encode_key_for_tty
+key_calls = []
+def observed_encode(*args, **kwargs):
+    names = ("key", "shifted_key", "alternate_key", "mods", "action", "key_encoding_flags", "text", "cursor_key_mode")
+    fields = dict(key=0, shifted_key=0, alternate_key=0, mods=0, action=native.GLFW_PRESS, key_encoding_flags=0, text="", cursor_key_mode=False)
+    fields.update(zip(names, args))
+    fields.update(kwargs)
+    current = sys.modules["bridge"].screen
+    fields["nativePress"] = native.GLFW_PRESS
+    fields["nativeMods"] = dict(shift=native.GLFW_MOD_SHIFT, ctrl=native.GLFW_MOD_CONTROL, alt=native.GLFW_MOD_ALT, super=native.GLFW_MOD_SUPER)
+    fields["screenFlags"] = current.current_key_encoding_flags()
+    fields["screenCursor"] = current.cursor_key_mode
+    result = original_encode(*args, **kwargs)
+    fields["nativeBytes"] = base64.b64encode(result.encode("utf-8")).decode("ascii")
+    key_calls.append(fields)
+    return result
+native.encode_key_for_tty = observed_encode
+import bridge
+saved_stdout = sys.stdout
+captured = io.StringIO()
+sys.stdout = captured
+try:
+    bridge.batch_main()
+finally:
+    sys.stdout = saved_stdout
+result = json.loads(captured.getvalue())
+result["testNativeKeyCalls"] = key_calls
+print(json.dumps(result))
+`
+    const replay = vi.mocked(childProcess.execFileSync).mockImplementation((file, args, options) => {
+      if (args?.[0] !== "+runpy") return actual.execFileSync(file, args, options)
+      const script = args[1]!
+      expect(script).toContain("import bridge; bridge.batch_main()")
+      const output = actual.execFileSync(
+        file,
+        ["+runpy", script.replace("import bridge; bridge.batch_main()", `exec(${JSON.stringify(hook)}, {})`)],
+        options,
+      )
+      const parsed = JSON.parse(String(output)) as {
+        error?: string
+        traceback?: string
+        testNativeKeyCalls: Record<string, unknown>[]
+      }
+      if (parsed.error) throw new Error(`${parsed.error}\n${parsed.traceback ?? ""}`)
+      expect(parsed.testNativeKeyCalls).toHaveLength(1)
+      traces.push(...parsed.testNativeKeyCalls)
+      return output
+    })
+    const host = vi.spyOn(hostKeyEncoding, "encodeKeyToAnsi")
+    const backend = createKittyBackend({ cols: 8, rows: 3 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    const bytes = (text: string) => new TextEncoder().encode(text)
+    try {
+      expect(hasExtension(backend, "key-encoding")).toBe(true)
+      feed("\x1b[?1h")
+      expect(backend.encodeKey({ key: "ArrowUp" })).toEqual(bytes("\x1bOA"))
+      feed("\x1b[?1l")
+      expect(backend.encodeKey({ key: "ArrowUp" })).toEqual(bytes("\x1b[A"))
+      feed("\x1b[>1u")
+      expect(backend.encodeKey({ key: "Escape" })).toEqual(bytes("\x1b[27u"))
+      feed("\x1b[<u")
+      expect(backend.encodeKey({ key: "Escape" })).toEqual(bytes("\x1b"))
+      feed("\x1b[?1h\x1b[>1u")
+      backend.reset()
+      expect(backend.encodeKey({ key: "ArrowUp" })).toEqual(bytes("\x1b[A"))
+      expect(backend.encodeKey({ key: "Escape" })).toEqual(bytes("\x1b"))
+      expect(backend.encodeKey({ key: "🦊" })).toEqual(bytes("🦊"))
+      expect(traces.at(-1)).toMatchObject({ key: 0x1f98a, text: "🦊" })
+      expect(backend.encodeKey({ key: "Tab", shift: true })).toEqual(bytes("\x1b[Z"))
+      const tabTrace = traces.at(-1)!
+      expect(tabTrace.mods).toBe((tabTrace.nativeMods as Record<string, number>).shift)
+      for (const descriptor of [
+        { key: "i", ctrl: true },
+        { key: "x", alt: true },
+        { key: "x", super: true },
+      ]) {
+        const output = backend.encodeKey(descriptor)
+        const trace = traces.at(-1)!
+        const nativeMods = trace.nativeMods as Record<string, number>
+        const modifier = descriptor.ctrl ? "ctrl" : descriptor.alt ? "alt" : "super"
+        expect(trace.mods).toBe(nativeMods[modifier])
+        expect(trace.key).toBe(descriptor.key.codePointAt(0))
+        expect(trace.text).toBe("")
+        expect(output).toEqual(new Uint8Array(Buffer.from(String(trace.nativeBytes), "base64")))
+      }
+      expect(backend.encodeKey({ key: "Control" })).toEqual(new Uint8Array())
+      expect(traces.map((trace) => [trace.key_encoding_flags, trace.cursor_key_mode])).toEqual([
+        [0, true],
+        [0, false],
+        [1, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+        [0, false],
+      ])
+      for (const trace of traces) {
+        expect(trace.key_encoding_flags).toBe(trace.screenFlags)
+        expect(trace.cursor_key_mode).toBe(trace.screenCursor)
+        expect(trace.action).toBe(trace.nativePress)
+        expect(trace.shifted_key).toBe(0)
+        expect(trace.alternate_key).toBe(0)
+      }
+      // Empty bytes are accepted here only after the real native encoder returned them.
+      expect(traces.at(-1)?.nativeBytes).toBe("")
+      expect(host).not.toHaveBeenCalled()
+    } finally {
+      backend.destroy()
+      host.mockRestore()
+      replay.mockImplementation(actual.execFileSync)
+      replay.mockClear()
+    }
+  },
+)
+
+// Observe the public effects of private cache/log/reply state without adding a production inspection seam.
+test("encoding leaves cached snapshots, mutation logs and pending reply ownership unchanged", async () => {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  vi.stubEnv("KITTY_BINARY", process.execPath)
+  const base = {
+    cells: [],
+    cursor: { x: 0, y: 0, visible: true, style: "block" },
+    title: "",
+    modes: {},
+    scrollback: { viewportOffset: 0, totalLines: 3, screenLines: 3 },
+    text: "",
+  }
+  const reply = Buffer.from("\x1b[0n").toString("base64")
+  const replay = vi
+    .mocked(childProcess.execFileSync)
+    .mockReturnValueOnce(JSON.stringify(base))
+    .mockReturnValueOnce(JSON.stringify({ ...base, cursor: { ...base.cursor, x: 7 }, encodedKey: "YQ==" }))
+    .mockReturnValueOnce(JSON.stringify({ ...base, responses: reply, encodedKey: "YQ==" }))
+    .mockReturnValueOnce(JSON.stringify({ ...base, responses: reply }))
+    .mockReturnValueOnce(JSON.stringify({ ...base, responses: reply }))
+  replay.mockClear()
+  const backend = createKittyBackend({ cols: 8, rows: 3 })
+  const replies: Uint8Array[] = []
+  backend.onResponse = (bytes) => replies.push(bytes)
+  try {
+    expect(backend.getCursor().x).toBe(0)
+    expect(backend.encodeKey({ key: "a" })).toEqual(new Uint8Array([97]))
+    expect(backend.getCursor().x).toBe(0)
+    expect(replay).toHaveBeenCalledTimes(2)
+    backend.feed(new TextEncoder().encode("\x1b[5n"))
+    expect(backend.encodeKey({ key: "a" })).toEqual(new Uint8Array([97]))
+    expect(replies).toEqual([])
+    backend.getCursor()
+    backend.getCursor()
+    expect(replies).toEqual([new TextEncoder().encode("\x1b[0n")])
+    expect(replay).toHaveBeenCalledTimes(4)
+    backend.feed(new Uint8Array([65]))
+    backend.getCursor()
+    expect(replies).toHaveLength(1)
+    const logs = replay.mock.calls.map(([, , options]) => {
+      return JSON.parse(String((options as { input: unknown }).input)).commands as { op: string }[]
+    })
+    expect(logs.map((commands) => commands.filter((command) => command.op === "encode-key").length)).toEqual([
+      0, 1, 1, 0, 0,
+    ])
+    expect(logs[1]?.slice(0, -1)).toEqual(logs[0])
+    expect(logs[2]?.slice(0, -1)).toEqual(logs[3])
+    expect(logs[4]?.slice(0, -1)).toEqual(logs[3])
+  } finally {
+    backend.destroy()
+    replay.mockImplementation(actual.execFileSync)
+    replay.mockClear()
+    vi.unstubAllEnvs()
+  }
+})
+
+test("invalid key descriptors fail before any subprocess and leave the next snapshot healthy", async () => {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  vi.stubEnv("KITTY_BINARY", process.execPath)
+  const replay = vi.mocked(childProcess.execFileSync)
+  replay.mockClear()
+  const backend = createKittyBackend({ cols: 8, rows: 3 })
+  try {
+    for (const descriptor of [
+      { key: "UnknownKey" },
+      { key: "" },
+      { key: "hello" },
+      { key: "🦊a" },
+      { key: "F13" },
+      { key: "a", shift: true },
+      { key: "🦊", shift: true },
+    ]) {
+      expect(() => backend.encodeKey(descriptor)).toThrow(/kitty.*(?:key|scalar|Shift)/i)
+    }
+    expect(replay).not.toHaveBeenCalled()
+    replay.mockReturnValueOnce(
+      JSON.stringify({
+        cells: [],
+        cursor: { x: 0, y: 0, visible: true, style: "block" },
+        title: "",
+        modes: {},
+        scrollback: { viewportOffset: 0, totalLines: 3, screenLines: 3 },
+        text: "",
+      }),
+    )
+    expect(backend.getCursor().x).toBe(0)
+    const commands = JSON.parse(String((replay.mock.calls[0]?.[2] as { input: unknown }).input)).commands
+    expect(commands).toEqual([{ op: "init", cols: 8, rows: 3, scrollbackLimit: 1000 }])
+  } finally {
+    backend.destroy()
+    replay.mockImplementation(actual.execFileSync)
+    replay.mockClear()
+    vi.unstubAllEnvs()
+  }
+})
+
+test.skipIf(!isKittyAvailable())("a native encoder exception leaves the next ordinary replay healthy", async () => {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  const hook = `
+import kitty.fast_data_types as native
+def failed_encode(*args, **kwargs):
+    raise RuntimeError("injected native key encoding failure")
+native.encode_key_for_tty = failed_encode
+import bridge
+bridge.batch_main()
+`
+  const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
+    expect(args?.[0]).toBe("+runpy")
+    expect(args?.[1]).toContain("import bridge; bridge.batch_main()")
+    return actual.execFileSync(
+      file,
+      ["+runpy", args![1]!.replace("import bridge; bridge.batch_main()", `exec(${JSON.stringify(hook)}, {})`)],
+      options,
+    )
+  })
+  const backend = createKittyBackend({ cols: 8, rows: 3 })
+  const replies: Uint8Array[] = []
+  backend.onResponse = (bytes) => replies.push(bytes)
+  try {
+    backend.feed(new TextEncoder().encode("A\x1b[5n"))
+    expect(() => backend.encodeKey({ key: "a" })).toThrow(/injected native key encoding failure/)
+    expect(replies).toEqual([])
+    expect(backend.getCell(0, 0).char).toBe("A")
+    expect(backend.getCursor()).toMatchObject({ x: 1, y: 0 })
+    expect(replies).toEqual([new TextEncoder().encode("\x1b[0n")])
+  } finally {
+    backend.destroy()
+    replay.mockImplementation(actual.execFileSync)
+    replay.mockClear()
+  }
+})
+
+test.each([
+  { label: "missing", field: {} },
+  { label: "null", field: { encodedKey: null } },
+  { label: "non-string", field: { encodedKey: 1 } },
+  { label: "non-base64", field: { encodedKey: "%%%" } },
+  { label: "noncanonical base64", field: { encodedKey: "YQ" } },
+])("rejects $label encodedKey instead of substituting bytes", async ({ field }) => {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  vi.stubEnv("KITTY_BINARY", process.execPath)
+  const base = {
+    cells: [],
+    cursor: { x: 0, y: 0, visible: true, style: "block" },
+    title: "",
+    modes: {},
+    scrollback: { viewportOffset: 0, totalLines: 3, screenLines: 3 },
+    text: "",
+  }
+  const replay = vi
+    .mocked(childProcess.execFileSync)
+    .mockReturnValueOnce(JSON.stringify({ ...base, ...field }))
+    .mockReturnValueOnce(JSON.stringify(base))
+  const backend = createKittyBackend({ cols: 8, rows: 3 })
+  try {
+    expect(() => backend.encodeKey({ key: "a" })).toThrow(/encodedKey|base64/)
+    expect(backend.getCursor().x).toBe(0)
+  } finally {
+    backend.destroy()
+    replay.mockImplementation(actual.execFileSync)
+    replay.mockClear()
+    vi.unstubAllEnvs()
+  }
 })

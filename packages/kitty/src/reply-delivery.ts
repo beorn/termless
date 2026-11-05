@@ -38,6 +38,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for native Screen.paste: a temporary final batch command captures test-child bytes in pasteEncoding,
 // restores both callback buffer prefixes in finally, and never enters persistent history or ordinary reply-prefix
 // bookkeeping. Queued parser replies retain their existing feed-and-getCursor delivery boundary.
+// Re-audited for native encode_key_for_tty: an ephemeral final command reads the replay Screen's public cursor/flag
+// state and returns encodedKey separately. It writes no child replies and leaves history, cache and observed prefixes
+// untouched. Native exception and malformed-carrier tests preserve later ordinary reply delivery.
 export const adapterDeclaration = {
   sources: [
     {
@@ -46,11 +49,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "c9e4eb8541231830b51a541f10282ecf24988087",
+      blobOid: "664e3ad58e6fe0c926a9ca1b0ce7c930aa542a1c",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "57c9da47bdcd052b99741c307fe1c22485a82288",
+      blobOid: "36f36fdd6cd2749565a824f044c73856cfff8a35",
     },
     {
       path: "packages/kitty/build/layout.c",
