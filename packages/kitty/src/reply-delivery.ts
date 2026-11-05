@@ -43,6 +43,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // untouched. Native exception and malformed-carrier tests preserve later ordinary reply delivery.
 // Re-audited for native OSC 7 cwd snapshot projection; replay, replies and callback delivery are unchanged.
 // Re-audited for native A/C callback-time public cursor coordinates; D tuples, replay and reply delivery are unchanged.
+// Native mouse encoding is an ephemeral final replay command: send_mouse_event writes the returned bytes, while
+// both callback buffer prefixes are restored and ordinary queued replies retain feed-and-getCursor delivery.
 export const adapterDeclaration = {
   sources: [
     {
@@ -51,23 +53,23 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "3ecdff8d4b9c84db217b1794ad038c030cf1ab3a",
+      blobOid: "88dd0f299e059457946b92edfc6eb324ac3c7e30",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "4e847e827063555f7b2f580abf3a0e372b074e47",
+      blobOid: "95a46fee6da18621bf9293f5acddc18ff357d349",
     },
     {
       path: "packages/kitty/build/layout.c",
-      blobOid: "49c0beef4424190e89d2884eac5efe4da50e3630",
+      blobOid: "f58c0e943ad60daf20d54360184e039e16ff3826",
     },
     {
       path: "packages/kitty/build/native-mode-layout.json",
-      blobOid: "6bd0f2d5b6936f8f6298e4cb9ae4b228172a9502",
+      blobOid: "20b976ba87de032248a787fcb8b5adc64c640f07",
     },
     {
       path: "packages/kitty/build/native-mode-layout.receipt.json",
-      blobOid: "02899a0c97f70eeba38f5030de1ba7ef4665b6f6",
+      blobOid: "1e1e450aa08538ffb2d7ba80d45015aae4d86921",
     },
   ],
   delivery: {

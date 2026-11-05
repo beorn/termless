@@ -4,6 +4,8 @@ libvterm backend for termless -- wraps [neovim's libvterm](https://github.com/ne
 
 libvterm is the VT parser used by neovim's built-in terminal. It provides a clean, standards-compliant implementation that differs from all other termless backends.
 
+**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a feature page for this library.
+
 > Install from npm; a git install resolves the TypeScript source and runs only under Bun.
 
 ## Build

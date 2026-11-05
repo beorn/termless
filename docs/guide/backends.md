@@ -99,6 +99,8 @@ Each backend can be used via factory function (explicit, sync) or string name vi
 
 The default backend. Uses `@xterm/headless` — the same xterm.js terminal emulator used in VS Code's integrated terminal, but without a DOM renderer.
 
+**Feature support:** [xterm.js results on terminfo.dev](https://terminfo.dev/terminals/xterm-js).
+
 - **Engine**: @xterm/headless 6.0
 - **Upstream**: `npm:@xterm/headless`
 - **Best for**: Most testing scenarios. Well-tested, stable, zero native dependencies.
@@ -121,6 +123,8 @@ const term = createTerminal({ backend: b })
 ### @termless/ghostty
 
 Uses Ghostty's VT parser via `ghostty-web` WASM. Ghostty is a modern GPU-accelerated terminal with strong standards compliance.
+
+**Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates the WASM backend.
 
 - **Engine**: ghostty-web 0.4 (WebAssembly)
 - **Upstream**: `npm:ghostty-web`
@@ -146,6 +150,8 @@ const term = createTerminal({ backend: b })
 
 Pure TypeScript VT100 emulator with zero dependencies. Lightweight and fast, inspired by the Rust `vt100` crate.
 
+**Feature support:** [vt100.js results on terminfo.dev](https://terminfo.dev/terminals/vt100-js).
+
 - **Engine**: Built-in (pure TypeScript, zero deps)
 - **Upstream**: `npm:@termless/vt100` (self-contained)
 - **Best for**: Environments where you want zero native dependencies and zero WASM. CI runners with constrained environments.
@@ -165,9 +171,17 @@ const b = await backend("vt100")
 const term = createTerminal({ backend: b })
 ```
 
+### @termless/vt220
+
+TypeScript VT220 emulator, available as `@termless/vt220` or through `backend("vt220")`.
+
+**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a feature page for this library. Its historical DEC VT220 page describes the hardware terminal.
+
 ### @termless/vterm
 
 Full-featured TypeScript terminal emulator targeting 100% of the [terminfo.dev](https://terminfo.dev) feature matrix. Pure TypeScript, zero dependencies — the comprehensive counterpart to `@termless/vt100`.
+
+**Feature support:** [vterm.js results on terminfo.dev](https://terminfo.dev/terminals/vterm-js).
 
 - **Engine**: Built-in (pure TypeScript, zero deps)
 - **Upstream**: `npm:vterm.js`
@@ -209,6 +223,8 @@ const term = createTerminal({ backend: b })
 
 Uses Alacritty's `alacritty_terminal` crate via napi-rs native bindings. Alacritty is a GPU-accelerated terminal focused on simplicity and performance.
 
+**Feature support:** [Alacritty results on terminfo.dev](https://terminfo.dev/terminals/alacritty) combine application and parser-backend results; no separate page isolates this library.
+
 - **Engine**: alacritty_terminal 0.26 (Rust via napi-rs)
 - **Upstream**: `crate:alacritty_terminal`
 - **Best for**: Testing against Alacritty's VT parser. Cross-checking reflow behavior.
@@ -231,6 +247,8 @@ const term = createTerminal({ backend: b })
 ### @termless/wezterm
 
 Uses WezTerm's `wezterm-term` VT parser via napi-rs native bindings. WezTerm has the broadest feature set of any terminal emulator.
+
+**Feature support:** [WezTerm results on terminfo.dev](https://terminfo.dev/terminals/wezterm) combine application and parser-backend results; no separate page isolates this library.
 
 - **Engine**: tattoy-wezterm-term (Rust via napi-rs)
 - **Upstream**: `crate:tattoy-wezterm-term`
@@ -278,6 +296,8 @@ const term = createTerminal({ backend: b })
 
 Reference Rust implementation of VT100 terminal emulation. Uses the `vt100` Rust crate by doy — the same parser used in several terminal multiplexers.
 
+**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a feature page for this library. The vt100.js page covers the separate TypeScript backend.
+
 - **Engine**: vt100 0.15.0 (Rust via napi-rs)
 - **Upstream**: `crate:vt100`
 - **Best for**: Cross-validating the TypeScript vt100 backend. Finding disagreements between implementations. Reference conformance testing.
@@ -300,6 +320,8 @@ const term = createTerminal({ backend: b })
 ### @termless/libvterm
 
 Neovim's VT parser compiled to WebAssembly via Emscripten. A completely different C implementation from all other backends — high conformance testing value.
+
+**Feature support:** [Terminfo.dev](https://terminfo.dev/backends) does not currently publish a feature page for this library.
 
 - **Engine**: libvterm (C via Emscripten WASM)
 - **Upstream**: `github:neovim/libvterm`
@@ -325,6 +347,8 @@ const term = createTerminal({ backend: b })
 
 Native Ghostty backend using Ghostty's VT Zig module via napigen N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
 
+**Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates this library.
+
 - **Engine**: ghostty-vt Zig module pinned to Ghostty 1.3.1 (napigen N-API)
 - **Upstream**: `github:ghostty-org/ghostty`
 - **Best for**: High-performance Ghostty conformance testing without WASM startup cost. Same parser fidelity as `@termless/ghostty` but faster.
@@ -345,6 +369,8 @@ const term = createTerminal({ backend: b })
 ```
 
 ### @termless/kitty
+
+**Feature support:** [Kitty results on terminfo.dev](https://terminfo.dev/terminals/kitty) combine application and parser-backend results; no separate page isolates this library.
 
 The `semantic-command-end` extension exposes the same
 `SemanticMarkExtension.getSemanticMarks()` getter, returning copied, ordered
