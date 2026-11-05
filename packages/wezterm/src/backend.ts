@@ -348,7 +348,7 @@ export function createWeztermBackend(
     const t = ensureTerm()
     if (typeof t.getProgress !== "function") {
       throw new Error(
-        "The loaded WezTerm native addon predates getProgress; rebuild it:\n  cd packages/wezterm/native && cargo build --release",
+        "The loaded WezTerm native addon predates getProgress; rebuild and copy it from the Termless root:\n  nix shell .#native-tools --command bun run --cwd packages/wezterm build:native",
       )
     }
     return t.getProgress()
