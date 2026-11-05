@@ -540,6 +540,12 @@ impl WeztermTerminal {
         Ok(state.toasts.clone())
     }
 
+    /// Serialize the current engine-owned directory without reconstructing its input.
+    #[napi]
+    pub fn get_cwd(&self) -> Option<String> {
+        self.term.get_current_dir().map(|url| url.as_str().to_owned())
+    }
+
     /// Project current engine state, without inventing last-report history.
     #[napi]
     pub fn get_progress(&self) -> NapiProgress {

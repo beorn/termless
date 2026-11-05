@@ -33,7 +33,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "5ca6f4a32c5853df234372b0477eb7a4aaf7b210",
+      blobOid: "5e634f36adfd1957b2052547b5393a3c81595e99",
     },
     {
       path: "src/load-native.ts",
