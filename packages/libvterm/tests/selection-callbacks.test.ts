@@ -1,5 +1,5 @@
 /**
- * @failure Engine-delivered OSC 9 notifications or OSC 52 selection callbacks disappear, join interrupted strings, or leak across instance lifecycles.
+ * @failure Engine-delivered OSC 9/777 notifications or OSC 52 selection callbacks disappear, join interrupted strings, or leak across instance lifecycles.
  * @level l1
  * @consumer Terminfo OSC 9 notifications and OSC 52 clipboard criteria through real libvterm WASM and TerminalBackend.
  * @testonly none
@@ -41,6 +41,89 @@ test("OSC 52 clipboard writes roundtrip through per-instance selection callbacks
     first.destroy()
     second.destroy()
   }
+})
+
+// Accepted OSC 777 requirement: the existing OSC 9 tests never read completed
+// 777 payloads, so cannot catch a missing native fallback/export/getter binding.
+describe("OSC 777 notifications", () => {
+  function payloads(backend: ReturnType<typeof createLibvtermBackend>): () => readonly string[] {
+    if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getOsc777Payloads) {
+      throw new Error("libvterm must expose engine-delivered OSC 777 payloads")
+    }
+    return () => backend.getOsc777Payloads!()
+  }
+
+  test("copies ordered completed payloads, including both empty forms and fragmented UTF-8", () => {
+    const backend = createLibvtermBackend(undefined, module)
+    try {
+      backend.init({ cols: 80, rows: 24 })
+      const read = payloads(backend)
+      expect(read()).toEqual([])
+      backend.feed(encoder.encode("\x1b]777\x07\x1b]777;\x07\x1b]9;separate\x07\x1b]777;notify;title;body\x1b\\"))
+      expect(read()).toEqual(["", "", "notify;title;body"])
+      const text = "notify;café;尾🦊".repeat(1024)
+      const bytes = encoder.encode(`\x1b]777;${text}\x1b\\`)
+      for (const byte of bytes.subarray(0, bytes.length - 1)) backend.feed(Uint8Array.of(byte))
+      expect(read()).toEqual(["", "", "notify;title;body"])
+      backend.feed(bytes.subarray(bytes.length - 1))
+      backend.feed(encoder.encode("\x1b]777;duplicate\x07".repeat(12)))
+      const expected = ["", "", "notify;title;body", text, ...Array(12).fill("duplicate")]
+      expect(read()).toEqual(expected)
+      const copy = read() as string[]
+      copy.splice(0)
+      expect(read()).toEqual(expected)
+      expect(backend.getNotifications?.()).toEqual(["separate"])
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("uses one instance lifetime for both histories and clears partial payloads on reset and re-init", () => {
+    // This native observer owns both subscriptions: reset clears complete and partial histories.
+    const backend = createLibvtermBackend(undefined, module)
+    const other = createLibvtermBackend(undefined, module)
+    let reply = ""
+    backend.onResponse = (bytes) => {
+      reply += new TextDecoder().decode(bytes)
+    }
+    try {
+      const read = payloads(backend)
+      expect(read).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      other.init({ cols: 80, rows: 24 })
+      const clipboard = Buffer.from("selection café").toString("base64")
+      backend.feed(
+        encoder.encode(`\x1b]0;title\x07\x1b]52;c;${clipboard}\x07\x1b]9;nine\x07\x1b]777;old\x07\x1b]777;aborted`),
+      )
+      expect(read()).toEqual(["old"])
+      expect(payloads(other)()).toEqual([])
+      backend.feed(encoder.encode("\x18\x1b]777;complete\x07"))
+      expect(read()).toEqual(["old", "complete"])
+      expect(backend.getNotifications?.()).toEqual(["nine"])
+      expect(backend.getTitle()).toBe("title")
+      expect(reply).toBe("")
+      backend.feed(encoder.encode(query + "\x1b[5n"))
+      expect(reply).toBe(`\x1b]52;c;${clipboard}\x1b\\\x1b[0n`)
+      backend.feed(encoder.encode("\x1b]9;partial-nine"))
+      backend.reset()
+      expect(read()).toEqual([])
+      expect(backend.getNotifications?.()).toEqual([])
+      backend.feed(encoder.encode("\x1b]777;after reset\x07\x1b]777;partial-reset"))
+      backend.reset()
+      backend.feed(encoder.encode("\x1b]777;fresh\x07\x1b]777;partial-init"))
+      expect(read()).toEqual(["fresh"])
+      backend.init({ cols: 80, rows: 24 })
+      expect(read()).toEqual([])
+      expect(backend.getNotifications?.()).toEqual([])
+      backend.destroy()
+      expect(read).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      expect(read()).toEqual([])
+    } finally {
+      backend.destroy()
+      other.destroy()
+    }
+  })
 })
 
 test("selection fragments retain the complete decoded payload until a query", () => {

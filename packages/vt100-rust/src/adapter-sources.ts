@@ -1,5 +1,6 @@
 // Adapter identity only. This engine's reply-delivery capability is unchanged.
 // Re-audited for nullable conceal/strikethrough and public OSC notification/Cwd readback.
+// OSC777 uses the same native callback owner and copied metadata read path; reply delivery is unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -8,7 +9,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt100-rust/src/backend.ts",
-      blobOid: "e23189b0b645a90313d497ec850386d70e0fd518",
+      blobOid: "b6080f968928d9ed40969bd15de3573180287272",
     },
   ],
 } as const

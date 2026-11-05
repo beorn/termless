@@ -33,3 +33,5 @@ including the command: OSC 7 retains at most 15 payload fields, OSC 633 Cwd at
 most 14. Only those fields are joined with semicolons; excess raw input is not
 recovered. As with notifications, Rust's `String::from_utf8_lossy` replaces
 invalid UTF-8 sequences with the Unicode replacement character (U+FFFD).
+
+`getNotifications()` and `getOsc777Payloads()` retain each ordered OSC 9 and OSC 777 payload as the library dispatches it: at most 15 payload fields after the command are joined with semicolons, with the same lossy UTF-8 decoding. Both return copies, start empty on init/re-init, and clear together when reset replaces their native callback owner; their getters throw after destroy.

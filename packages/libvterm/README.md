@@ -37,6 +37,9 @@ The engine's selection callbacks decode writes and format query responses.
 
 The `osc-metadata` extension exposes a copy of completed OSC 9 payloads through
 `getNotifications()`, in parser order, including empty payloads and `4;…` forms.
+`getOsc777Payloads()` returns copied OSC 777 payloads as the library dispatches
+them, including both empty command forms. OSC 9 and OSC 777 share the same
+per-instance callback owner and have separate ordered histories.
 This records parser notifications; it does not deliver desktop notifications or
 interpret progress. Reset and re-initialization clear complete and partial
 observations. Reading before initialization or after destruction throws.

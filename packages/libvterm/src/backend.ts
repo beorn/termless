@@ -620,6 +620,15 @@ export function createLibvtermBackend(
     })
   }
 
+  function getOsc777Payloads(): readonly string[] {
+    const m = ensureInit()
+    const count = m.termless_vterm_osc777_count(cursorPropsPtr)
+    return Array.from({ length: count }, (_, index) => {
+      const len = m.termless_vterm_osc777_len(cursorPropsPtr, index)
+      return len ? m.UTF8ToString(m.termless_vterm_osc777_get(cursorPropsPtr, index), len) : ""
+    })
+  }
+
   function getScrollback(): ScrollbackState {
     const history = ensureInit().termless_vterm_history_count(cursorPropsPtr)
     return {
@@ -694,6 +703,7 @@ export function createLibvtermBackend(
     getTitle,
     getIconLabel,
     getNotifications,
+    getOsc777Payloads,
     getScrollback,
     getReflowState: () => ({ enabled: ensureInit().termless_vterm_observer_get_reflow(cursorPropsPtr) !== 0 }),
     scrollViewport,

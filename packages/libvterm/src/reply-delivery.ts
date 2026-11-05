@@ -17,8 +17,9 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for native paste input capture: start/unichar/end uses this same callback swap, preserves queued replies
 // and OSC52 ownership on errors, and keeps primary plus cleanup failures. Native handles stay private.
 // Re-audited for the native-key extension declaration; keyboard capture and reply delivery are unchanged.
-// Re-audited for OSC 9 state fallbacks: only completed command-9 payloads enter the observer's list; other commands
-// are declined. The callback writes no replies, leaves OSC52 selection ownership intact, and preserves feed draining.
+// Re-audited for shared OSC 9/777 state fallbacks: only completed payloads enter the observer's separate histories;
+// both families reuse one append/cleanup path and failed-allocation latch. Other commands are declined. The callback
+// writes no replies, leaves OSC52 selection ownership intact, and preserves feed draining and reset cleanup.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -28,15 +29,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "0e3dc0ac1f2b67ba5d4a01aeaab062a415b3baf3",
+      blobOid: "88c0aaa586f22c68bdfcde4197d9a4db0ebb3614",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "df38d3db32ab353c7219dc46a9e050c5ef9fe492",
+      blobOid: "0fc3564c8940d7ffa0dd943f35efb98719512806",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "996d2b2bf4d2509a2bfb8f59e7162e12523ac551",
+      blobOid: "f0d0fc72e10692dc67b5218069da571efd1bdba6",
     },
     {
       path: "src/terminal/key-mapping.ts",
@@ -47,7 +48,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "2c3ec40628b0d0c7d7e9cc1fade689927720542e2e492789bcea1415a2de0af9",
+      sha256: "f8f6ea0b245362ce173aaec3c1c3ca83326064d033210544cde7af1ad324603b",
     },
   },
 } as const
