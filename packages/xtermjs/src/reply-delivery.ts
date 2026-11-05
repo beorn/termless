@@ -2,6 +2,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
 // Re-audited pixel event binding: synchronous feed/getCursor and onResponse forwarding are unchanged.
+// OSC777 uses a non-consuming public handler; feed and response delivery remain unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -11,7 +12,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/xtermjs/src/backend.ts",
-      blobOid: "dc4ea4cf1cb7facde57dae3b01a0bdd946f1b80c",
+      blobOid: "3038734b7e267c72f5aec90ab5366d2ab995ce6e",
     },
   ],
   delivery: {

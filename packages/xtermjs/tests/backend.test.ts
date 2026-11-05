@@ -82,28 +82,36 @@ describe("createXtermBackend", () => {
 
   // Accepted requirement: forward the same instance's public OSC callback, including progress
   // payloads, without parsing feed bytes. Existing title/input tests never observe this callback.
-  test("OSC 9 public callback retains exact payloads and excludes other OSC commands", () => {
+  test.each([
+    [9, "getNotifications"],
+    [777, "getOsc777Payloads"],
+  ] as const)("OSC %i public callback retains exact payloads and excludes other OSC commands", (command, reader) => {
     const backend = createXtermBackend({ cols: 80, rows: 24 })
     try {
       expect(hasExtension(backend, "osc-metadata")).toBe(true)
-      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getNotifications) {
+      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend[reader]) {
         throw new Error("xterm osc-metadata lacks its notification callback reader")
       }
+      const read = backend[reader]!
       const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
-      expect(backend.getNotifications()).toEqual([])
-      feed("\x1b]2;window title\x07\x1b]777;notify;other;command\x07plain")
-      expect(backend.getNotifications()).toEqual([])
+      expect(read()).toEqual([])
+      feed(`\x1b]2;window title\x07\x1b]${command === 9 ? 777 : 9};notify;other;command\x07plain`)
+      expect(read()).toEqual([])
       expect(backend.getTitle()).toBe("window title")
       expect(backend.getText()).toContain("plain")
-      feed("\x1b]9;first;payload\x07\x1b]9;4;1;50\x1b\\\x1b]9;split")
-      expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50"])
-      feed(" payload\x07\x1b]9;\x07")
-      expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50", "split payload", ""])
-      const copy = backend.getNotifications() as string[]
+      feed(`\x1b]${command};first;payload\x07\x1b]${command};4;1;50\x1b\\\x1b]${command};split`)
+      expect(read()).toEqual(["first;payload", "4;1;50"])
+      feed(` payload\x07\x1b]${command};\x07`)
+      expect(read()).toEqual(["first;payload", "4;1;50", "split payload", ""])
+      const copy = read() as string[]
       copy.push("not an engine callback")
-      expect(backend.getNotifications()).toEqual(["first;payload", "4;1;50", "split payload", ""])
+      const expected = ["first;payload", "4;1;50", "split payload", ""]
+      expect(read()).toEqual(expected)
+      // RIS resets this same xterm parser; its public callback history remains attached.
+      backend.reset()
+      expect(read()).toEqual(expected)
       backend.destroy()
-      expect(() => backend.getNotifications!()).toThrow("not initialized")
+      expect(read).toThrow("not initialized")
     } finally {
       backend.destroy()
     }
@@ -111,51 +119,58 @@ describe("createXtermBackend", () => {
 
   // CTO lifecycle requirement: dispose the actual public registration and isolate old callbacks.
   // The real parser still registers/dispatches; the spy only retains its public callback/handle.
-  test("OSC 9 public callback is synchronous, disposed and isolated across terminal instances", () => {
-    const parserGetter = Object.getOwnPropertyDescriptor(xterm.Terminal.prototype, "parser")?.get
-    if (!parserGetter) throw new Error("xterm public parser getter unavailable")
-    const registrations: { callback: (payload: string) => boolean | Promise<boolean>; disposed: () => number }[] = []
-    const parserSpy = vi
-      .spyOn(xterm.Terminal.prototype, "parser", "get")
-      .mockImplementation(function (this: InstanceType<typeof xterm.Terminal>) {
-        const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
-        const register = parser.registerOscHandler.bind(parser)
-        vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
-          const handle = register(ident, callback)
-          if (ident === 9) {
-            const dispose = vi.spyOn(handle, "dispose")
-            registrations.push({ callback, disposed: () => dispose.mock.calls.length })
-          }
-          return handle
+  test.each([
+    [9, "getNotifications"],
+    [777, "getOsc777Payloads"],
+  ] as const)(
+    "OSC %i public callback is synchronous, disposed and isolated across terminal instances",
+    (command, reader) => {
+      const parserGetter = Object.getOwnPropertyDescriptor(xterm.Terminal.prototype, "parser")?.get
+      if (!parserGetter) throw new Error("xterm public parser getter unavailable")
+      const registrations: { callback: (payload: string) => boolean | Promise<boolean>; disposed: () => number }[] = []
+      const parserSpy = vi
+        .spyOn(xterm.Terminal.prototype, "parser", "get")
+        .mockImplementation(function (this: InstanceType<typeof xterm.Terminal>) {
+          const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
+          const register = parser.registerOscHandler.bind(parser)
+          vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
+            const handle = register(ident, callback)
+            if (ident === command) {
+              const dispose = vi.spyOn(handle, "dispose")
+              registrations.push({ callback, disposed: () => dispose.mock.calls.length })
+            }
+            return handle
+          })
+          return parser
         })
-        return parser
-      })
-    const backend = createXtermBackend()
-    try {
-      backend.init({ cols: 80, rows: 24 })
-      expect(registrations).toHaveLength(1)
-      expect(registrations[0]!.callback("first instance")).toBe(false)
-      backend.init({ cols: 80, rows: 24 })
-      expect(registrations).toHaveLength(2)
-      expect(registrations[0]!.disposed()).toBe(1)
-      expect(hasExtension(backend, "osc-metadata")).toBe(true)
-      if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getNotifications) {
-        throw new Error("xterm osc-metadata lacks its notification callback reader")
+      const backend = createXtermBackend()
+      try {
+        backend.init({ cols: 80, rows: 24 })
+        expect(registrations).toHaveLength(1)
+        expect(registrations[0]!.callback("first instance")).toBe(false)
+        backend.init({ cols: 80, rows: 24 })
+        expect(registrations).toHaveLength(2)
+        expect(registrations[0]!.disposed()).toBe(1)
+        expect(hasExtension(backend, "osc-metadata")).toBe(true)
+        if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend[reader]) {
+          throw new Error("xterm osc-metadata lacks its notification callback reader")
+        }
+        const read = backend[reader]!
+        expect(registrations[0]!.callback("late old-instance callback")).toBe(false)
+        expect(read()).toEqual([])
+        backend.feed(new TextEncoder().encode(`\x1b]${command};new instance\x07`))
+        expect(read()).toEqual(["new instance"])
+        expect(registrations[1]!.callback("synchronous result")).toBe(false)
+        backend.destroy()
+        expect(registrations[1]!.disposed()).toBe(1)
+        backend.destroy()
+        expect(registrations[1]!.disposed()).toBe(1)
+      } finally {
+        backend.destroy()
+        parserSpy.mockRestore()
       }
-      expect(registrations[0]!.callback("late old-instance callback")).toBe(false)
-      expect(backend.getNotifications()).toEqual([])
-      backend.feed(new TextEncoder().encode("\x1b]9;new instance\x07"))
-      expect(backend.getNotifications()).toEqual(["new instance"])
-      expect(registrations[1]!.callback("synchronous result")).toBe(false)
-      backend.destroy()
-      expect(registrations[1]!.disposed()).toBe(1)
-      backend.destroy()
-      expect(registrations[1]!.disposed()).toBe(1)
-    } finally {
-      backend.destroy()
-      parserSpy.mockRestore()
-    }
-  })
+    },
+  )
 
   // Accepted shared-reader requirement: OSC7 and OSC633 P update one exact, literal directory
   // observation. Existing notification and title tests cannot detect an unforwarded Cwd callback.

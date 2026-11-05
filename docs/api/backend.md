@@ -304,6 +304,11 @@ or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
 "osc-metadata")` before calling these methods. The vterm backend implements them;
 other backends can omit the extension.
 
+The vterm and xterm.js backends also expose `getOsc777Payloads()`: copied, ordered
+payloads from their public completed-OSC callbacks, including non-notify payloads.
+History follows that parser instance across reset and starts empty on re-init;
+this observes parser events and does not attest OS notification delivery.
+
 Check `hasExtension<SemanticMarkExtension>(backend, "semantic-marks")` for start
 observations or `hasExtension<SemanticMarkExtension>(backend, "semantic-command-end")`
 for end observations. Both keys use the same getter; an engine recording both kinds
