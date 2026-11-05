@@ -618,6 +618,12 @@ export interface MouseEvent {
   alt?: boolean
 }
 
+/** Native key bytes from this engine's current terminal modes, never a host ANSI encoder. */
+export interface KeyEncodingExtension {
+  /** Returns only input bytes; preserves modes and queued replies, and never calls onResponse. */
+  encodeKey(key: KeyDescriptor): Uint8Array
+}
+
 export interface MouseEncodingExtension {
   encodeMouse(event: MouseEvent): Uint8Array | null
 }

@@ -16,6 +16,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // in finally without changing selection callbacks; tests retain a queued reply prefix and OSC52 state after failures.
 // Re-audited for native paste input capture: start/unichar/end uses this same callback swap, preserves queued replies
 // and OSC52 ownership on errors, and keeps primary plus cleanup failures. Native handles stay private.
+// Re-audited for the native-key extension declaration; keyboard capture and reply delivery are unchanged.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -25,7 +26,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "1077a72090bc8e54b63523c4517f7e9bb51c774f",
+      blobOid: "f48d114323007c26648cf6ea658e0e1880b29933",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",

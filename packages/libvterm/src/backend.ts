@@ -33,6 +33,7 @@ import type {
   TerminalCapabilities,
   Color,
   KeyDescriptor,
+  KeyEncodingExtension,
   MouseEvent,
   MouseEncodingExtension,
   PasteEncodingExtension,
@@ -198,7 +199,7 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
 export function createLibvtermBackend(
   opts?: Partial<TerminalOptions>,
   mod?: LibvtermModule,
-): LegacyBackend & AdapterSourcesExtension & MouseEncodingExtension & PasteEncodingExtension {
+): LegacyBackend & AdapterSourcesExtension & KeyEncodingExtension & MouseEncodingExtension & PasteEncodingExtension {
   const configuredLimit = checkedScrollbackLimit(opts?.scrollbackLimit ?? DEFAULT_SCROLLBACK_LIMIT)
   // Private VTerm*: callers cannot send raw paste boundaries into this backend's reply sink.
   let vt: number = 0
@@ -640,12 +641,19 @@ export function createLibvtermBackend(
       reason:
         "libvterm supplies history callbacks; this adapter retains rows for readback without an application viewport.",
     },
-    extensions: new Set<string>(["adapter-sources", "reply-delivery", "mouse-encoding", "paste-encoding"]),
+    extensions: new Set<string>([
+      "adapter-sources",
+      "reply-delivery",
+      "key-encoding",
+      "mouse-encoding",
+      "paste-encoding",
+    ]),
   }
 
   const backend: LegacyBackend &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
+    KeyEncodingExtension &
     MouseEncodingExtension &
     PasteEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
