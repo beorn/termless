@@ -19,6 +19,72 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Existing paste/key stale-addon cases cannot catch a missing CWD reader.
+    test("an old addon missing native cwd gives the existing rebuild guidance", () => {
+      const native = loadGhosttyNative()
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const original = native.getCwd
+      try {
+        Object.defineProperty(native, "getCwd", { value: undefined, configurable: true, writable: true })
+        expect(() => backend.getCwd()).toThrow(
+          "The loaded Ghostty native addon predates getCwd; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+        )
+      } finally {
+        Object.defineProperty(native, "getCwd", { value: original, configurable: true, writable: true })
+        backend.destroy()
+      }
+    })
+
+    /** Existing progress/toast journeys cannot observe lost report_pwd transport or its native Terminal lifetime. */
+    test("reads native cwd callbacks through the public getter and native lifecycle", () => {
+      expect(() => createGhosttyNativeBackend().getCwd()).toThrow(/not initialized/)
+      const backend = createGhosttyNativeBackend({ cols: 30, rows: 3 })
+      const other = createGhosttyNativeBackend({ cols: 30, rows: 3 })
+      const feed = (value: string | Uint8Array) => {
+        backend.feed(typeof value === "string" ? new TextEncoder().encode(value) : value)
+        return backend.getCwd()
+      }
+      try {
+        expect(backend.getCwd()).toBeNull()
+        expect(other.getCwd()).toBeNull()
+        const literal = "file://remote/\u96ea\\path;part%20x?x=1#frag"
+        expect(feed("\x1b]7;" + literal + "\x07")).toBe(literal)
+        const first = backend.getCwd()
+        expect(feed("\x1b]7;file:///next")).toBe(literal)
+        // The real core dispatches pending OSC at lone ESC; the following backslash does not dispatch again.
+        expect(feed("\x1b")).toBe("file:///next")
+        expect(feed("\\")).toBe("file:///next")
+        expect(first).toBe(literal)
+        expect(other.getCwd()).toBeNull()
+        expect(feed("\x1b]7;/st-control\x1b\\")).toBe("/st-control")
+        expect(feed("\x1b]633;P;Cwd=/ignored-bel\x07")).toBe("/st-control")
+        expect(feed("\x1b]633;P;Cwd=/ignored-st\x1b\\")).toBe("/st-control")
+        expect(feed("\x1b]633;A\x07")).toBe("/st-control")
+        expect(feed("\x1b]7;\x07")).toBeNull()
+        expect(feed(new Uint8Array([27, 93, 55, 59, 47, 114, 97, 119, 47, 255, 192, 175, 226, 40, 161, 7]))).toBe(
+          "/raw/\ufffd\ufffd\ufffd\ufffd(\ufffd",
+        )
+        const prior = backend.getCwd()
+        expect(feed("\x1b]7;/" + "x".repeat(4096) + "\x1b\\")).toBe(prior)
+        // These pin the native result on the rebuilt addon; never clear cwd in the adapter to satisfy them.
+        backend.reset()
+        expect(backend.getCwd()).toBeNull()
+        expect(feed("\x1b]7;/before-ris\x07")).toBe("/before-ris")
+        expect(feed("\x1bc")).toBeNull()
+        expect(feed("\x1b]7;/before-init\x07")).toBe("/before-init")
+        backend.init({ cols: 30, rows: 3 })
+        expect(backend.getCwd()).toBeNull()
+        other.feed(new TextEncoder().encode("\x1b]7;/other\x07"))
+        expect(other.getCwd()).toBe("/other")
+        expect(backend.getCwd()).toBeNull()
+        expect(first).toBe(literal)
+      } finally {
+        backend.destroy()
+        other.destroy()
+      }
+      expect(() => backend.getCwd()).toThrow(/not initialized/)
+    })
+
     test("native key encoding follows the same handle's modes and lifecycle", () => {
       const native = loadGhosttyNative()
       const spy = vi.spyOn(native, "encodeKey")

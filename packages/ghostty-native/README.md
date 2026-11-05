@@ -61,6 +61,12 @@ returns empty bytes when unbracketed and the native empty frame when bracketed.
 Calls before init or after destroy fail. Reset and re-init use native default
 modes. An older addon without this method reports the existing rebuild command.
 
+## Working directory
+
+The `osc-metadata` reader `getCwd(): string | null` returns Ghostty's stored OSC 7 URL literally. Ghostty the app applies scheme, host and percent-decoding policy; this library binding applies none of those checks or transformations. Valid Unicode, backslashes and percent escapes stay literal. Napigen's UTF-8 string projection replaces invalid bytes with U+FFFD; it is not lossless byte transport.
+
+On the pinned 1.3.1 engine, BEL or ESC dispatches the pending OSC 7 payload. An incomplete payload leaves the prior value until ESC arrives; the backslash completing ST adds no second dispatch. Initial state, empty OSC 7, reset, RIS and re-init return `null`. A measured 4,097-byte payload was ignored and retained the prior value. OSC 633 `P;Cwd=` with BEL or ST, and unrelated OSC 633, left the value unchanged after successful OSC 7 controls. Calls before init or after destroy fail; an older addon without the reader names the existing rebuild command.
+
 ## Pinned version
 
 Built against ghostty v1.3.1 (`332b2aef`). The stable C API migration is tracked in km as `@km/termless/libghostty-stable-api`.
