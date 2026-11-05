@@ -1198,7 +1198,7 @@ test("encoding leaves cached snapshots, mutation logs and pending reply ownershi
     backend.getCursor()
     expect(replies).toHaveLength(1)
     const logs = replay.mock.calls.map(([, , options]) => {
-      return JSON.parse(String((options as { input: unknown }).input)).commands as { op: string }[]
+      return (JSON.parse(String((options as { input: unknown }).input)) as { commands: { op: string }[] }).commands
     })
     expect(logs.map((commands) => commands.filter((command) => command.op === "encode-key").length)).toEqual([
       0, 1, 1, 0, 0,
@@ -1244,7 +1244,9 @@ test("invalid key descriptors fail before any subprocess and leave the next snap
       }),
     )
     expect(backend.getCursor().x).toBe(0)
-    const commands = JSON.parse(String((replay.mock.calls[0]?.[2] as { input: unknown }).input)).commands
+    const commands = (
+      JSON.parse(String((replay.mock.calls[0]?.[2] as { input: unknown }).input)) as { commands: unknown[] }
+    ).commands
     expect(commands).toEqual([{ op: "init", cols: 8, rows: 3, scrollbackLimit: 1000 }])
   } finally {
     backend.destroy()
