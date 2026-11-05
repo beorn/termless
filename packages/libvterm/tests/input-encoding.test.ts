@@ -21,6 +21,33 @@ const encoder = new TextEncoder()
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes)
 const query = "\x1b]52;c;?\x07"
 
+// Mouse probes need the engine's current state, including resets that emit no property callback.
+test.each([1000, 1002, 1003])("mouse tracking mode %s follows native on/off/reset/re-init", (mode) => {
+  const backend = createLibvtermBackend(undefined, module)
+  const isolated = createLibvtermBackend(undefined, module)
+  backend.init({ cols: 80, rows: 24 })
+  isolated.init({ cols: 80, rows: 24 })
+  try {
+    expect(backend.getMode("mouseTracking")).toBe(false)
+    backend.feed(encoder.encode(`\x1b[?${mode}h`))
+    expect(backend.getMode("mouseTracking")).toBe(true)
+    expect(isolated.getMode("mouseTracking")).toBe(false)
+    backend.feed(encoder.encode(`\x1b[?${mode}l`))
+    expect(backend.getMode("mouseTracking")).toBe(false)
+    backend.feed(encoder.encode(`\x1b[?${mode}h`))
+    isolated.feed(encoder.encode(`\x1b[?${mode}h`))
+    backend.reset()
+    expect(backend.getMode("mouseTracking")).toBe(false)
+    expect(isolated.getMode("mouseTracking")).toBe(true)
+    backend.feed(encoder.encode(`\x1b[?${mode}h`))
+    backend.init({ cols: 80, rows: 24 })
+    expect(backend.getMode("mouseTracking")).toBe(false)
+  } finally {
+    backend.destroy()
+    isolated.destroy()
+  }
+})
+
 function feedNative(m: LibvtermModule, vt: number, text: string): void {
   const bytes = encoder.encode(text)
   const ptr = m._malloc(bytes.length)

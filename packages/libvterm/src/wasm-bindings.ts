@@ -85,6 +85,7 @@ export interface LibvtermModule {
     bufLen: number,
   ): number
   termless_vterm_state_get_application_keypad(state: number): number
+  termless_vterm_state_get_mouse_tracking(state: number): number
 
   // Emscripten runtime
   getValue(ptr: number, type: string): number
@@ -182,6 +183,7 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "_termless_vterm_history_get_cell_flat",
       "_termless_vterm_history_get_text",
       "_termless_vterm_state_get_application_keypad",
+      "_termless_vterm_state_get_mouse_tracking",
     ]) {
       if (!(name in loaded) || typeof (loaded as Record<string, unknown>)[name] !== "function") {
         throw new Error(`Generated libvterm module is missing ${name}; rebuild WASM`)
@@ -284,6 +286,10 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "number",
       ["number"],
     )
+
+    module.termless_vterm_state_get_mouse_tracking = cwrap("termless_vterm_state_get_mouse_tracking", "number", [
+      "number",
+    ])
 
     loadedModule = module
     loadedWasm = { path, sha256 }

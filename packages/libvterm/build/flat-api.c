@@ -16,6 +16,10 @@ int termless_vterm_state_get_application_keypad(const VTermState *state) {
   return state->mode.keypad;
 }
 
+int termless_vterm_state_get_mouse_tracking(const VTermState *state) {
+  return state->mouse_flags;
+}
+
 // TerminalBackend accepts UTF-8 bytes; libvterm itself defaults to legacy
 // single-byte input. Select the encoding before state/screen initialization.
 VTerm *termless_vterm_new_utf8(int rows, int cols) {

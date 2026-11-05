@@ -581,6 +581,9 @@ export function createLibvtermBackend(
   }
 
   function getMode(mode: Mode): boolean | null {
+    if (mode === "mouseTracking") {
+      return ensureInit().termless_vterm_state_get_mouse_tracking(state) !== 0
+    }
     if (mode === "applicationKeypad") {
       return ensureInit().termless_vterm_state_get_application_keypad(state) !== 0
     }

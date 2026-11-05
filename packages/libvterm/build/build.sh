@@ -111,6 +111,7 @@ emcc -O2 \
     "_termless_vterm_history_get_cell_flat",
     "_termless_vterm_history_get_text",
     "_termless_vterm_state_get_application_keypad",
+    "_termless_vterm_state_get_mouse_tracking",
     "_termless_vterm_screen_observe_props",
     "_termless_vterm_screen_get_title",
     "_termless_vterm_screen_get_title_len",

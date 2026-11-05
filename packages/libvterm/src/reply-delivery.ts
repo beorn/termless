@@ -26,6 +26,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // This declaration excludes itself; determining adapter edits require re-audit.
 // Number-only unhandled OSC reports share the observer's existing allocation latch and clear path;
 // their first-fragment append preserves fallback return values and emits no replies.
+// Re-audited for native mouse-tracking state: one read-only flag accessor leaves reply, selection and observer
+// ownership unchanged; real-WASM input lifecycle tests and the full probe run exercise the rebuilt pair.
 export const adapterDeclaration = {
   sources: [
     {
@@ -34,15 +36,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "deb23c67ed4fdef31ee81066dd7021da1033976e",
+      blobOid: "d6db3f41fb255cbb3822238432ad3c535757c697",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "86ef3f64c5424f474bc46621f2547e23a1d19895",
+      blobOid: "9ff9e59c30efe03ca0ee6ec18faf9521d045323b",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "393db9b3cba3e2895160a94e92003dd4be806a1b",
+      blobOid: "a57d8193c36702e3d9f72e446a0677f5d0e83e2a",
     },
     {
       path: "src/terminal/key-mapping.ts",
@@ -53,7 +55,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "6ab1a659db995b67753b633f162e65f01e2a0f3649e8a554aabf76775d172f0c",
+      sha256: "3b7c02322357c00adb8addea05240d1d348d901cf6d6300c10401eb62b945fe0",
     },
   },
 } as const

@@ -541,7 +541,6 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
         "cursorVisible",
         "bracketedPaste",
         "autoWrap",
-        "mouseTracking",
         "focusTracking",
         "originMode",
         "insertMode",
