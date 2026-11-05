@@ -1190,7 +1190,23 @@ describe("ghostty backend", () => {
         expect(own.capabilities.extensions.has("key-encoding")).toBe(true)
         expect([...own.encodeKey({ key: "a" })]).toEqual([97])
         expect([...own.encodeKey({ key: "a", ctrl: true })]).toEqual([1])
-        expect(encode).toHaveBeenCalledTimes(2)
+        // A function-key name is not associated text, even when its enum is found outside the alias map.
+        expect([...own.encodeKey({ key: "F1" })]).toEqual([27, 79, 80])
+        expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: ghosttyApi.Key.F1, utf8: undefined }))
+        for (const [key, nativeKey] of [
+          ["CapsLock", ghosttyApi.Key.CAPS_LOCK],
+          ["ContextMenu", ghosttyApi.Key.CONTEXT_MENU],
+          ["NumLock", ghosttyApi.Key.NUM_LOCK],
+          ["FnLock", ghosttyApi.Key.FN_LOCK],
+          ["PrintScreen", ghosttyApi.Key.PRINT_SCREEN],
+          ["ScrollLock", ghosttyApi.Key.SCROLL_LOCK],
+          ["Pause", ghosttyApi.Key.PAUSE],
+          ["MediaPlayPause", ghosttyApi.Key.MEDIA_PLAY_PAUSE],
+        ] as const) {
+          own.encodeKey({ key })
+          expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: nativeKey, utf8: undefined }))
+        }
+        expect(encode).toHaveBeenCalledTimes(11)
         expect(host).not.toHaveBeenCalled()
         const failure = new Error("native encoder failed")
         encode.mockImplementationOnce(() => {
@@ -1262,7 +1278,7 @@ describe("ghostty backend", () => {
     // Printable digits have named native keys too; retaining only their key code drops their text.
     // @failure Native field translation loses printable digit input; existing letter cases miss this branch.
     // @level l0 @consumer KeyEncodingExtension callers sending printable text.
-    test.each([..."a0123456789"])("encodes regular characters (%s)", (key) => {
+    test.each([..."a0123456789é😀"])("encodes regular characters (%s)", (key) => {
       backend = createBackend()
       const encoded = backend.encodeKey({ key })
       expect(new TextDecoder().decode(encoded)).toBe(key)

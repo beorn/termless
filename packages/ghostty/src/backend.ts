@@ -267,6 +267,13 @@ const nativeKeyNames: Record<string, Key> = {
   Delete: Key.DELETE,
   PageUp: Key.PAGE_UP,
   PageDown: Key.PAGE_DOWN,
+  CapsLock: Key.CAPS_LOCK,
+  ContextMenu: Key.CONTEXT_MENU,
+  NumLock: Key.NUM_LOCK,
+  FnLock: Key.FN_LOCK,
+  PrintScreen: Key.PRINT_SCREEN,
+  ScrollLock: Key.SCROLL_LOCK,
+  MediaPlayPause: Key.MEDIA_PLAY_PAUSE,
   Space: Key.SPACE,
   Control: Key.CONTROL_LEFT,
   Shift: Key.SHIFT_LEFT,
@@ -465,8 +472,8 @@ export function createGhosttyBackend(
       action: KeyAction.PRESS,
       key,
       mods,
-      // Printable keys retain their text even when they also have a named enum (digits).
-      utf8: event.key === "Space" ? " " : !named || event.key.length === 1 ? event.key : undefined,
+      // Character input retains its text, including Unicode; physical key names never become text.
+      utf8: event.key === "Space" ? " " : [...event.key].length === 1 ? event.key : undefined,
     })
   }
 
