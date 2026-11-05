@@ -263,6 +263,8 @@ test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 
     backend.feed(typeof value === "string" ? new TextEncoder().encode(value) : value)
     return backend.getCwd()
   }
+  // Like the progress journey below, capture native diagnostics and reject every unexpected byte.
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
   try {
     expect(backend.getCwd()).toBeNull()
     expect(other.getCwd()).toBeNull()
@@ -294,9 +296,16 @@ test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 
     other.feed(new TextEncoder().encode("\x1b]7;/other\x07"))
     expect(other.getCwd()).toBe("/other")
     expect(backend.getCwd()).toBeNull()
+    expect(stderr.mock.calls.length).toBeGreaterThan(0)
+    for (const [chunk] of stderr.mock.calls) {
+      expect(String(chunk)).toMatch(
+        /^(?:\[\d+\.\d+\] \[PARSE ERROR\] Ignoring OSC 633, use by Windows Terminal for VSCode actions\n)+$/,
+      )
+    }
   } finally {
     backend.destroy()
     other.destroy()
+    stderr.mockRestore()
   }
 })
 
