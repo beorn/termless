@@ -24,8 +24,9 @@ import type {
   HyperlinkExtension,
   OscMetadataExtension,
   PasteEncodingExtension,
+  KeyDescriptor,
+  KeyEncodingExtension,
 } from "../../../src/terminal/types.ts"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // ═══════════════════════════════════════════════════════
@@ -89,6 +90,16 @@ interface NativeModule {
   destroyTerminal(handle: NativeTerminalHandle): void
   feed(handle: NativeTerminalHandle, data: Uint8Array): void
   encodePaste(handle: NativeTerminalHandle, data: Uint8Array): Uint8Array
+  encodeKey(
+    handle: NativeTerminalHandle,
+    keyTag: string,
+    utf8: string,
+    unshiftedCodepoint: number,
+    shift: boolean,
+    ctrl: boolean,
+    alt: boolean,
+    superMod: boolean,
+  ): Uint8Array
   resize(handle: NativeTerminalHandle, cols: number, rows: number): void
   reset(handle: NativeTerminalHandle): void
   getText(handle: NativeTerminalHandle): string
@@ -214,6 +225,28 @@ function convertNativeCell(nc: NativeCell): Cell {
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
 
+const nativeKeyTags: Record<string, string> = {
+  ArrowUp: "arrow_up",
+  ArrowDown: "arrow_down",
+  ArrowLeft: "arrow_left",
+  ArrowRight: "arrow_right",
+  Home: "home",
+  End: "end",
+  PageUp: "page_up",
+  PageDown: "page_down",
+  Enter: "enter",
+  Tab: "tab",
+  Backspace: "backspace",
+  Delete: "delete",
+  Escape: "escape",
+  Space: "space",
+  Control: "control_left",
+  Shift: "shift_left",
+  Alt: "alt_left",
+  Meta: "meta_left",
+  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`F${i + 1}`, `f${i + 1}`])),
+}
+
 /**
  * Create a native Ghostty backend for termless.
  *
@@ -228,6 +261,7 @@ export function createGhosttyNativeBackend(
   opts?: Partial<TerminalOptions>,
 ): TerminalBackend &
   PasteEncodingExtension &
+  KeyEncodingExtension &
   HyperlinkExtension &
   DefaultColorsExtension &
   AdapterSourcesExtension &
@@ -280,6 +314,49 @@ export function createGhosttyNativeBackend(
         }
       }
     }
+  }
+
+  function encodeKey(key: KeyDescriptor): Uint8Array {
+    const handle = ensureHandle(),
+      native = loadGhosttyNative()
+    if (typeof native.encodeKey !== "function")
+      throw new Error(
+        "The loaded Ghostty native addon predates encodeKey; rebuild from a full Termless source checkout:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    const scalars = [...key.key]
+    if (
+      !scalars.length ||
+      scalars.some((c) => {
+        const cp = c.codePointAt(0)!
+        return cp >= 0xd800 && cp <= 0xdfff
+      })
+    )
+      throw new Error("Ghostty key encoding requires valid Unicode scalar text or a named key")
+    const named = Object.hasOwn(nativeKeyTags, key.key) ? nativeKeyTags[key.key] : undefined
+    let utf8 = "",
+      codepoint = 0
+    if (named === undefined || key.key === "Space") {
+      utf8 = key.key === "Space" ? " " : key.key
+      if (scalars.length === 1 || key.key === "Space") {
+        codepoint = utf8.codePointAt(0)!
+        if (codepoint >= 65 && codepoint <= 90) codepoint += 32
+      } else if (key.shift || key.ctrl || key.alt || key.super) {
+        throw new Error("Ghostty modified multi-scalar key text needs an unambiguous event")
+      }
+    }
+    // unidentified is the specified public tag for text without an explicit named physical key.
+    return new Uint8Array(
+      native.encodeKey(
+        handle,
+        named === undefined ? "unidentified" : named,
+        utf8,
+        codepoint,
+        !!key.shift,
+        !!key.ctrl,
+        !!key.alt,
+        !!key.super,
+      ),
+    )
   }
 
   function encodePaste(text: string): Uint8Array {
@@ -396,7 +473,14 @@ export function createGhosttyNativeBackend(
     unicode: "15.1",
     reflow: true,
     // osc-metadata carries the OSC 9;4 and parsed-toast readers: Ghostty keeps no raw OSC 9/777 payload and no raw OSC 7.
-    extensions: new Set(["adapter-sources", "hyperlinks", "default-colors", "osc-metadata", "paste-encoding"]),
+    extensions: new Set([
+      "adapter-sources",
+      "hyperlinks",
+      "default-colors",
+      "osc-metadata",
+      "paste-encoding",
+      "key-encoding",
+    ]),
   }
 
   function getProgress(): { state: number; value: number | null } | null {
@@ -423,6 +507,7 @@ export function createGhosttyNativeBackend(
 
   const backend: TerminalBackend &
     PasteEncodingExtension &
+    KeyEncodingExtension &
     HyperlinkExtension &
     DefaultColorsExtension &
     AdapterSourcesExtension &
@@ -451,7 +536,7 @@ export function createGhosttyNativeBackend(
     getToasts,
     getScrollback,
     scrollViewport,
-    encodeKey: encodeKeyToAnsi,
+    encodeKey,
     capabilities,
   }
 
