@@ -75,6 +75,7 @@ interface Vt100RustTerminal {
   getMode(mode: string): boolean | null
   getTitle(): string
   getNotifications(): string[]
+  getCwd(): string | null
   getIconLabel(): string
   getClipboardState(): {
     writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
@@ -201,7 +202,7 @@ export function createVt100RustBackend(
 ): TerminalBackend &
   AdapterSourcesExtension &
   MouseEncodingExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications"> {
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> {
   let term: Vt100RustTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -319,6 +320,10 @@ export function createVt100RustBackend(
     return [...ensureTerm().getNotifications()]
   }
 
+  function getCwd(): string | null {
+    return ensureTerm().getCwd()
+  }
+
   function getIconLabel(): string {
     return ensureTerm().getIconLabel()
   }
@@ -388,7 +393,7 @@ export function createVt100RustBackend(
   const backend: TerminalBackend &
     AdapterSourcesExtension &
     MouseEncodingExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications"> = {
+    Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100-rust",
     init,
@@ -407,6 +412,7 @@ export function createVt100RustBackend(
     getMode,
     getTitle,
     getNotifications,
+    getCwd,
     getIconLabel,
     getClipboardState,
     getScrollback,

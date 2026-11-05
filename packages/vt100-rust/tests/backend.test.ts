@@ -292,6 +292,55 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // Accepted requirement: expose completed OSC 7 and literal OSC 633 P Cwd from this
+    // parser's public callback. Title/notification tests do not exercise that metadata slot.
+    test("Cwd callback retains completed literal values and follows its native parser lifetime", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      const other = createVt100RustBackend({ cols: 20, rows: 2 })
+      const feed = (text: string): void => backend.feed(Buffer.from(text))
+      try {
+        expectTypeOf(backend.getCwd).returns.toEqualTypeOf<string | null>()
+        expect(backend.getCwd()).toBeNull()
+        feed("\x1b]7;file://localhost/cwd-A")
+        expect(backend.getCwd()).toBeNull()
+        feed("\x1b\\")
+        expect(backend.getCwd()).toBe("file://localhost/cwd-A")
+        feed("\x1b]633;P;Cwd=/literal\\x3b;räv\x07")
+        expect(backend.getCwd()).toBe("/literal\\x3b;räv")
+        feed("\x1b]633;A\x07\x1b]633;P;Other=ignored\x07\x1b]633;P;Cwd\x07\x1b]633;p;Cwd=ignored\x07")
+        expect(backend.getCwd()).toBe("/literal\\x3b;räv")
+        feed("\x1b]7;file://remote.example/cwd-B;tail\x07")
+        expect(backend.getCwd()).toBe("file://remote.example/cwd-B;tail")
+        expect(other.getCwd()).toBeNull()
+
+        // The measured vt100 0.16.2 callback has at most 16 fields, including the command.
+        // Match only the delivered fields; raw bytes after that boundary are not recovered.
+        const fields = Array.from({ length: 20 }, (_, i) => `part-${i}`)
+        feed(`\x1b]7;${fields.join(";")}\x07`)
+        expect(backend.getCwd()).toBe(fields.slice(0, 15).join(";"))
+        feed(`\x1b]633;P;Cwd=${fields.join(";")}\x07`)
+        expect(backend.getCwd()).toBe(fields.slice(0, 14).join(";"))
+        backend.feed(Buffer.concat([Buffer.from("\x1b]7;file:///bad-"), Buffer.from([0xff, 0x2d, 0xc3, 0x28, 0x07])]))
+        expect(backend.getCwd()).toBe("file:///bad-�-�(")
+        feed("\x1b]7;\x07")
+        expect(backend.getCwd()).toBeNull()
+        feed("\x1b]7;file:///before-empty-633\x07\x1b]633;P;Cwd=\x07")
+        expect(backend.getCwd()).toBeNull()
+        feed("\x1b]7;file:///before-reset\x07")
+        backend.reset()
+        expect(backend.getCwd()).toBeNull()
+        feed("\x1b]633;P;Cwd=/after-reset\x07")
+        expect(backend.getCwd()).toBe("/after-reset")
+        backend.init({ cols: 20, rows: 2 })
+        expect(backend.getCwd()).toBeNull()
+        backend.destroy()
+        expect(() => backend.getCwd()).toThrow("not initialized")
+      } finally {
+        backend.destroy()
+        other.destroy()
+      }
+    })
+
     // Accepted requirement: expose this parser's public unhandled_osc callback. Existing title
     // and clipboard tests exercise different callbacks and miss discarded notification payloads.
     test("OSC 9 public callback retains ordered native payloads without other OSC commands", () => {

@@ -9,6 +9,7 @@ struct TerminalCallbacks {
     title: String,
     icon_label: String,
     notifications: Vec<String>,
+    cwd: Option<String>,
     clipboard: BTreeMap<String, ClipboardPayload>,
     paste_selector: Option<String>,
 }
@@ -29,6 +30,18 @@ impl vt100::Callbacks for TerminalCallbacks {
             // parameters, so excess separators are truncated. Never reparse raw feed bytes.
             self.notifications
                 .push(String::from_utf8_lossy(&fields.join(&b';')).into_owned());
+        }
+        if *command == b"7" {
+            let value = String::from_utf8_lossy(&fields.join(&b';')).into_owned();
+            self.cwd = if value.is_empty() { None } else { Some(value) };
+        } else if *command == b"633"
+            && fields.len() >= 2
+            && fields[0] == b"P"
+            && fields[1].starts_with(b"Cwd=")
+        {
+            let joined = fields[1..].join(&b';');
+            let value = String::from_utf8_lossy(&joined[b"Cwd=".len()..]).into_owned();
+            self.cwd = if value.is_empty() { None } else { Some(value) };
         }
     }
 
@@ -397,6 +410,15 @@ impl Vt100RustTerminal {
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         Ok(parser.callbacks().notifications.clone())
+    }
+
+    #[napi]
+    pub fn get_cwd(&self) -> Result<Option<String>> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(parser.callbacks().cwd.clone())
     }
 
     #[napi]
