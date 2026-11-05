@@ -57,6 +57,42 @@ describe.skipIf(nativeBuildError !== null)(
       backend.destroy()
     })
 
+    // Existing toast/progress tests do not observe the directory or its native instance boundary.
+    test("reads engine-owned Cwd without changing replies or sharing instance state", () => {
+      const metadata = backend as typeof backend & Required<Pick<OscMetadataExtension, "getCwd">>
+      expect(metadata.getCwd).toBeTypeOf("function")
+      const replies: string[] = []
+      backend.onResponse = (data) => replies.push(new TextDecoder().decode(data))
+      expect(metadata.getCwd()).toBeNull()
+      backend.feed(encode("\x1b]7;file://localhost/termless-cwd-A\x07"))
+      expect(metadata.getCwd()).toBe("file:///termless-cwd-A")
+      backend.feed(encode("\x1b]633;P;Cwd=/ignored-property\x07\x1b]633;A\x07"))
+      expect(metadata.getCwd()).toBe("file:///termless-cwd-A")
+      backend.feed(encode("\x1b]7;file://otherhost/termless-cwd-B\x07"))
+      expect(metadata.getCwd()).toBe("file://otherhost/termless-cwd-B")
+      expect(replies).toEqual([])
+      backend.feed(encode("\x1b[5n"))
+      expect(replies.join("")).toBe("\x1b[0n")
+
+      const other = createWeztermBackend({ cols: 80, rows: 24 }) as typeof metadata
+      try {
+        expect(other.getCwd()).toBeNull()
+        other.feed(encode("\x1b]7;file://localhost/other-instance\x07"))
+        expect(other.getCwd()).toBe("file:///other-instance")
+        expect(metadata.getCwd()).toBe("file://otherhost/termless-cwd-B")
+        backend.feed(encode("\x1b]7;\x07"))
+        expect(metadata.getCwd()).toBeNull()
+        backend.feed(encode("\x1b]7;file://localhost/before-reinit\x07"))
+        backend.init({ cols: 80, rows: 24 })
+        expect(metadata.getCwd()).toBeNull()
+        expect(other.getCwd()).toBe("file:///other-instance")
+        backend.destroy()
+        expect(() => metadata.getCwd()).toThrow("not initialized")
+      } finally {
+        other.destroy()
+      }
+    })
+
     // Counter-only tests miss the absolute-row origin once the engine retains primary history.
     test("reads retained physical rows across alternate screens, resize and eviction", () => {
       backend.destroy()

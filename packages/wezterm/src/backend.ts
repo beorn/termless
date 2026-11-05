@@ -89,6 +89,7 @@ interface WeztermTerminal {
   /** Every engine-emitted OSC 9/777 toast since construction, in order; title null where the engine sets none. */
   getToasts(): { title: string | null; body: string }[]
   getProgress(): { state: number; value: number | null }
+  getCwd(): string | null
   getScrollback(): NapiScrollback
   scrollViewport(delta: number): void
   /** Read pending response data (DA1/DA2/DSR/DECRPM/window-ops). Returns null if no responses pending. */
@@ -216,7 +217,7 @@ export function createWeztermBackend(
   PasteEncodingExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
+  Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
   let term: WeztermTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -337,6 +338,10 @@ export function createWeztermBackend(
     return ensureTerm().getMode(mode)
   }
 
+  function getCwd(): string | null {
+    return ensureTerm().getCwd()
+  }
+
   function getToasts(): { title: string | null; body: string }[] {
     const t = ensureTerm()
     if (typeof t.getToasts !== "function") {
@@ -409,7 +414,7 @@ export function createWeztermBackend(
       reason:
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
-    // Parsed toasts and current progress state only; no raw OSC 9/777 payload or OSC 7 reader.
+    // Parsed toasts, current progress and engine-owned Cwd; no raw OSC 9/777 payload.
     extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery", "paste-encoding"]),
   }
 
@@ -418,7 +423,7 @@ export function createWeztermBackend(
     PasteEncodingExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
-    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
+    Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "wezterm",
     init,
@@ -442,6 +447,7 @@ export function createWeztermBackend(
     getIconLabel: () => ensureTerm().getIconLabel(),
     getToasts,
     getProgress,
+    getCwd,
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
