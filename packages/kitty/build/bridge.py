@@ -565,7 +565,9 @@ def make_snapshot():
     notifications = callbacks.drain_notifications() if callbacks else []
     osc777_payloads = callbacks.drain_osc777_payloads() if callbacks else []
 
+    cwd = screen.last_reported_cwd
     result = {
+        "cwd": str(cwd, "utf-8", "replace") if cwd else None,
         "cells": cell_rows,
         "cursor": cursor,
         "title": title,
