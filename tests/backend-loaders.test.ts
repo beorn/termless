@@ -59,7 +59,17 @@ describe("backendLoaders matches backends.json", () => {
         expect(backend.replyDelivery.adapterSources, name).toBe(sources)
       }
     }
-    expect(delivery.sort()).toEqual(["alacritty", "ghostty", "kitty", "libvterm", "vt100", "vt220", "vterm", "wezterm", "xtermjs"])
+    expect(delivery.sort()).toEqual([
+      "alacritty",
+      "ghostty",
+      "kitty",
+      "libvterm",
+      "vt100",
+      "vt220",
+      "vterm",
+      "wezterm",
+      "xtermjs",
+    ])
   })
   test("the loader map and the manifest name the same packages", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
