@@ -148,7 +148,8 @@ function convertNapiCell(cell: NapiCell): Cell {
     italic: cell.italic,
     underline: cell.underline === "none" ? false : (cell.underline as Cell["underline"]),
     underlineColor: null,
-    strikethrough: cell.strikethrough,
+    // The pinned vt100 crate exposes no strikethrough getter; the binding's false is a placeholder.
+    strikethrough: null,
     inverse: cell.inverse,
     blink: null,
     overline: null,
@@ -168,7 +169,7 @@ const EMPTY_CELL: Cell = {
   italic: false,
   underline: false,
   underlineColor: null,
-  strikethrough: false,
+  strikethrough: null,
   inverse: false,
   blink: false,
   overline: null,

@@ -11,6 +11,7 @@ import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   AdapterSourcesExtension,
+  PasteEncodingExtension,
   MouseEncodingExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
@@ -76,7 +77,8 @@ export function createVtermBackend(
   SixelStorageExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
-  MouseEncodingExtension {
+  MouseEncodingExtension &
+  PasteEncodingExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -309,6 +311,7 @@ export function createVtermBackend(
       "adapter-sources",
       "reply-delivery",
       "mouse-encoding",
+      "paste-encoding",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
       "osc-metadata", // Exact cwd URI and copied notification payloads
       "semantic-marks", // Copied start markers, without invented zone boundaries
@@ -341,7 +344,8 @@ export function createVtermBackend(
     SixelStorageExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
-    MouseEncodingExtension = {
+    MouseEncodingExtension &
+    PasteEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vterm",
     init,
@@ -370,6 +374,9 @@ export function createVtermBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodePaste(text) {
+      return ensureScreen().encodePaste(text)
+    },
     encodeMouse(event) {
       const modes = ensureScreen().signals.modes$.get()
       const tracking = modes.mouseTrackingMode

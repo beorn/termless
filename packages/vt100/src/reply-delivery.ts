@@ -1,6 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
+// Native paste delegates to this Screen and returns bytes without entering that path.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -10,7 +11,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt100/src/backend.ts",
-      blobOid: "cdb8be8c5ebbba68a5920cfa4df27c9deb31745a",
+      blobOid: "037c36a21cc96ddb1c9d1e4450cad1efb44f2932",
     },
   ],
   delivery: {
@@ -18,7 +19,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "b941dae48b25ae8825c394750bda5245c9d93dfa",
+      treeOid: "8e082c695f238ec87dd22a496b836e5b1ef56458",
     },
   },
 } as const

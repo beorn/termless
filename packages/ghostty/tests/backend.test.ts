@@ -6,7 +6,7 @@
  */
 import { describe, test, expect, beforeAll, afterEach, vi } from "vitest"
 import { createHash } from "node:crypto"
-import { readFileSync, realpathSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { delimiter, join } from "node:path"
 import { execFileSync } from "node:child_process"
 import { pathToFileURL } from "node:url"
@@ -112,7 +112,13 @@ describe("ghostty backend", () => {
     const node = process.versions.bun
       ? process.env.PATH?.split(delimiter)
           .map((directory) => Bun.which("node", { PATH: directory }))
-          .find((candidate) => candidate && realpathSync(candidate) !== realpathSync(process.execPath))
+          .find(
+            (candidate) =>
+              candidate &&
+              execFileSync(candidate, ["-p", "process.versions.bun ? 'bun' : 'node'"], {
+                encoding: "utf8",
+              }).trim() === "node",
+          )
       : process.execPath
     expect(node, "the allocator pressure test requires the installed Node runtime").toBeTruthy()
     const wasm = resolveGhosttyWebWasm()

@@ -49,8 +49,8 @@ function cellChar(cell: Cell): string {
 
 /**
  * Compare a single cell between the two backends.
- * Asserts shared styles and each backend's observation of the Rust-only styles.
- * These shared-style fixtures leave Rust's italic and strikethrough off.
+ * Asserts shared styles and each backend's observation of italic.
+ * Neither public engine reader exposes strikethrough.
  */
 function compareCells(ts: TerminalBackend, rust: TerminalBackend, row: number, col: number, label?: string): void {
   const tsCell = ts.getCell(row, col)
@@ -64,7 +64,7 @@ function compareCells(ts: TerminalBackend, rust: TerminalBackend, row: number, c
   expect(rustCell.italic, `Rust italic at ${pos}`).toBe(false)
   expect(tsCell.underline, `underline at ${pos}`).toBe(rustCell.underline)
   expect(tsCell.strikethrough, `VT100 strikethrough at ${pos}`).toBeNull()
-  expect(rustCell.strikethrough, `Rust strikethrough at ${pos}`).toBe(false)
+  expect(rustCell.strikethrough, `Rust strikethrough at ${pos}`).toBeNull()
   expect(tsCell.inverse, `inverse at ${pos}`).toBe(rustCell.inverse)
   expect(tsCell.wide, `wide at ${pos}`).toBe(rustCell.wide)
   expect(tsCell.fg, `fg at ${pos}`).toEqual(rustCell.fg)
@@ -181,12 +181,12 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("strikethrough", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[9mS\x1b[0mN")
-      // VT100 leaves strikethrough unreported; the Rust adapter reports false.
+      // Both public engine readers leave strikethrough unreported.
       const tsCell = ts.getCell(0, 0)
       const rustCell = rust.getCell(0, 0)
       expect(cellChar(tsCell)).toBe(cellChar(rustCell))
       expect(tsCell.strikethrough).toBeNull()
-      expect(rustCell.strikethrough).toBe(false)
+      expect(rustCell.strikethrough).toBeNull()
       compareCells(ts, rust, 0, 1, "normal N")
     })
 
@@ -282,8 +282,8 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("bracketed paste", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[?2004h")
-      // vt100.js does not expose bracketed-paste mode state.
-      expect(ts.getMode("bracketedPaste")).toBeNull()
+      // Historical vt100.js reports its fixed-off paste policy.
+      expect(ts.getMode("bracketedPaste")).toBe(false)
       expect(rust.getMode("bracketedPaste")).toBe(true) // Rust: supported
     })
   })

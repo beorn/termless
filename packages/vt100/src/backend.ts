@@ -10,6 +10,7 @@ import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
   AdapterSourcesExtension,
+  PasteEncodingExtension,
   TerminalBackend,
   ReplyDeliveryExtension,
   TerminalOptions,
@@ -42,7 +43,7 @@ const DEFAULT_ROWS = 24
  */
 export function createVt100Backend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension {
+): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -282,10 +283,10 @@ export function createVt100Backend(
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "reply-delivery"]),
+    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding"]),
   }
 
-  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension = {
+  const backend: TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100",
     init,
@@ -306,6 +307,9 @@ export function createVt100Backend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodePaste(text) {
+      return ensureScreen().encodePaste(text)
+    },
     capabilities,
     replyDelivery,
   }
