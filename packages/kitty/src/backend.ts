@@ -134,6 +134,7 @@ interface BridgeSnapshot {
   cursor: BridgeCursor
   title: string
   iconLabel: string
+  cwd: string | null
   modes: Record<string, boolean>
   /** Private native-mode failure; generic snapshot readers remain usable. */
   nativeModeError?: string
@@ -292,7 +293,7 @@ export function createKittyBackend(
   HyperlinkExtension &
   PasteEncodingExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
+  Pick<Required<OscMetadataExtension>, "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress"> &
   SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
@@ -412,6 +413,11 @@ export function createKittyBackend(
     ensureInit()
     if (snapshot && !snapshotDirty) return snapshot
     const nextSnapshot = replayAndSnapshot()
+    if (nextSnapshot.cwd !== null && typeof nextSnapshot.cwd !== "string") {
+      throw new Error(
+        "Kitty bridge snapshot cwd must be a string or null; the bridge is stale or malformed. Copy packages/kitty/build/bridge.py from the same package version as src/backend.ts.",
+      )
+    }
 
     // Native batch_main omits this key only for empty history; a previously observed prefix must still be present.
     const commandMarks = nextSnapshot.cmdOutputMarkings ?? []
@@ -656,7 +662,7 @@ export function createKittyBackend(
       "reply-delivery",
       "hyperlinks",
       "semantic-command-end",
-      "osc-metadata", // OSC 9, OSC 777 and OSC 9;4 readers only: no OSC 7 reader, so cwd stays missing evidence
+      "osc-metadata", // Native OSC 7 cwd, OSC 9, OSC 777 and OSC 9;4 readers
     ]),
   }
 
@@ -676,7 +682,7 @@ export function createKittyBackend(
     ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getProgress"> &
+    Pick<Required<OscMetadataExtension>, "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress"> &
     AdapterSourcesExtension &
     PasteEncodingExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
@@ -709,6 +715,7 @@ export function createKittyBackend(
         }
         return [{ type: "command-end" as const, rawStatus: mark[1] }]
       }),
+    getCwd: () => ensureSnapshot().cwd,
     getNotifications: () => [...(ensureSnapshot().notifications ?? [])],
     getOsc777Payloads: () => [...(ensureSnapshot().osc777Payloads ?? [])],
     getProgress: () => {

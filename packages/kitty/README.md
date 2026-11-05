@@ -17,6 +17,8 @@ Each mutation (`feed`, `resize`, `reset`) is logged. When you query the terminal
 
 The `paste-encoding` extension observes Kitty's terminal-state `Screen.paste` bytes, including native bracketed framing, rather than the application's sanitizing `Window.paste` action.
 
+The `osc-metadata` getter `getCwd()` reads only native OSC 7 state: the last completed BEL- or ST-terminated payload wins, and split or incomplete sequences retain the previous value. Payloads stay literal, without URI, percent or backslash decoding; invalid UTF-8 becomes U+FFFD. Initial state, empty OSC 7, reset and re-init return `null`. Kitty 0.49.2 left cwd unchanged for OSC 633 `P;Cwd=` when measured alongside a working OSC 7 control; native stderr reported `Ignoring OSC 633, use by Windows Terminal for VSCode actions`.
+
 ## License
 
 This package's source code (bridge script + TypeScript wrapper) is MIT licensed.

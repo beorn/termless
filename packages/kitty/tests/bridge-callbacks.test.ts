@@ -255,13 +255,80 @@ test.skipIf(!isKittyAvailable())(
   },
 )
 
+/** Native completed OSC 7 state must survive replay and snapshot projection without URI decoding or OSC 633 emulation. */
+test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 7 and lifecycle changes", () => {
+  const backend = createKittyBackend({ cols: 30, rows: 3 })
+  const other = createKittyBackend({ cols: 30, rows: 3 })
+  const feed = (value: string | Uint8Array) => {
+    backend.feed(typeof value === "string" ? new TextEncoder().encode(value) : value)
+    return backend.getCwd()
+  }
+  try {
+    expect(backend.getCwd()).toBeNull()
+    expect(other.getCwd()).toBeNull()
+    const literal = "file://host/tmp/\u96EA\\path;%20"
+    expect(feed("\x1b]7;" + literal + "\x07")).toBe(literal)
+    const retained = backend.getCwd()
+    expect(feed("\x1b]7;file:///next")).toBe(literal)
+    expect(feed("\x1b")).toBe(literal)
+    expect(feed("\\")).toBe("file:///next")
+    expect(retained).toBe(literal)
+    expect(other.getCwd()).toBeNull()
+    // The real OSC 7 positive control above distinguishes ignored 633 from a broken reader.
+    expect(feed("\x1b]633;P;Cwd=/ignored-bel\x07")).toBe("file:///next")
+    expect(feed("\x1b]633;P;Cwd=/ignored-st\x1b\\")).toBe("file:///next")
+    expect(feed("\x1b]633;A\x07")).toBe("file:///next")
+    expect(feed("\x1b]7;\x07")).toBeNull()
+    expect(feed(new Uint8Array([27, 93, 55, 59, 47, 255, 254, 7]))).toBe("/\ufffd\ufffd")
+    const long = "/" + "x".repeat(4096)
+    expect(feed("\x1b]7;" + long + "\x1b\\")).toBe(long)
+    expect(feed("\x1b]9;cwd-notification\x07\x1b]777;notify;cwd;body\x07")).toBe(long)
+    expect(backend.getNotifications()).toEqual(["cwd-notification"])
+    expect(backend.getOsc777Payloads()).toEqual(["notify;cwd;body"])
+    expect(backend.getText().trim()).toBe("")
+    backend.reset()
+    expect(backend.getCwd()).toBeNull()
+    expect(feed("\x1b]7;/before-init\x07")).toBe("/before-init")
+    backend.init({ cols: 30, rows: 3 })
+    expect(backend.getCwd()).toBeNull()
+    other.feed(new TextEncoder().encode("\x1b]7;/other\x07"))
+    expect(other.getCwd()).toBe("/other")
+    expect(backend.getCwd()).toBeNull()
+  } finally {
+    backend.destroy()
+    other.destroy()
+  }
+})
+
+// Existing subprocess seam models an old copied bridge, without a new product/test injection point.
+test.each([
+  { label: "missing", field: {} },
+  { label: "number", field: { cwd: 7 } },
+  { label: "object", field: { cwd: {} } },
+])("rejects a $label cwd snapshot with a bridge-copy remedy", async ({ field }) => {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  vi.stubEnv("KITTY_BINARY", process.execPath)
+  const replay = vi.mocked(childProcess.execFileSync).mockReturnValueOnce(JSON.stringify({ cells: [], ...field }))
+  const backend = createKittyBackend({ cols: 8, rows: 3 })
+  try {
+    expect(() => backend.getCwd()).toThrow(
+      "Kitty bridge snapshot cwd must be a string or null; the bridge is stale or malformed. Copy packages/kitty/build/bridge.py from the same package version as src/backend.ts.",
+    )
+  } finally {
+    backend.destroy()
+    replay.mockReset()
+    replay.mockImplementation(actual.execFileSync)
+    vi.unstubAllEnvs()
+  }
+})
+
 /**
  * @failure #32053: kitty dispatches OSC 9 to Window.desktop_notify, but the bridge recorded every OSC 9 as an
  * unreproduced callback and the backend declared no osc-metadata reader, so the Terminfo OSC 9 library criterion
  * could not observe the payloads kitty's own parser hands its notification path.
- * @consumer Terminfo extensions.notifications through osc-metadata (no cwd reader: OSC 7 stays missing evidence)
+ * @consumer Terminfo extensions.notifications through osc-metadata
  */
-test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata reader, with no cwd reader", () => {
+test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata reader", () => {
   const backend = createKittyBackend({ cols: 30, rows: 3 })
   const feed = (value: string) => {
     backend.feed(new TextEncoder().encode(value))
@@ -273,8 +340,7 @@ test.skipIf(!isKittyAvailable())("reads OSC 9 payloads through the osc-metadata 
       .filter((warning) => warning.code === "UNREPRODUCED_CALLBACK" && warning.message === "desktop_notify")
   try {
     expect(hasExtension<OscMetadataExtension>(backend, "osc-metadata")).toBe(true)
-    // A declared extension with no getCwd is missing evidence for OSC 7, never "no working directory".
-    expect("getCwd" in backend).toBe(false)
+    expect(backend.getCwd()).toBeNull()
     expect(backend.getNotifications()).toEqual([])
     feed("\x1b]9;terminfo-notification-A\x07")
     const first = backend.getNotifications()
@@ -387,6 +453,7 @@ test.each([
   vi.stubEnv("KITTY_BINARY", process.execPath)
   const snapshot = {
     cells: [],
+    cwd: null,
     cursor: { x: 0, y: 0, visible: true, style: "block" },
     title: "",
     modes: {},
@@ -1164,6 +1231,7 @@ test("encoding leaves cached snapshots, mutation logs and pending reply ownershi
   vi.stubEnv("KITTY_BINARY", process.execPath)
   const base = {
     cells: [],
+    cwd: null,
     cursor: { x: 0, y: 0, visible: true, style: "block" },
     title: "",
     modes: {},
@@ -1236,6 +1304,7 @@ test("invalid key descriptors fail before any subprocess and leave the next snap
     replay.mockReturnValueOnce(
       JSON.stringify({
         cells: [],
+        cwd: null,
         cursor: { x: 0, y: 0, visible: true, style: "block" },
         title: "",
         modes: {},
@@ -1303,6 +1372,7 @@ test.each([
   vi.stubEnv("KITTY_BINARY", process.execPath)
   const base = {
     cells: [],
+    cwd: null,
     cursor: { x: 0, y: 0, visible: true, style: "block" },
     title: "",
     modes: {},
