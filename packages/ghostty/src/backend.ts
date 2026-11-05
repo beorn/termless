@@ -472,8 +472,9 @@ export function createGhosttyBackend(
       action: KeyAction.PRESS,
       key,
       mods,
-      // Character input retains its text, including Unicode; physical key names never become text.
-      utf8: event.key === "Space" ? " " : [...event.key].length === 1 ? event.key : undefined,
+      // Preserve original text for unmapped characters; mapped physical key names are not text.
+      utf8:
+        event.key === "Space" ? " " : key === Key.UNIDENTIFIED || [...event.key].length === 1 ? event.key : undefined,
     })
   }
 
