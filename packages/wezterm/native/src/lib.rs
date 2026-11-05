@@ -5,7 +5,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    color::ColorPalette, Alert, AlertHandler, Terminal, TerminalConfiguration, TerminalSize,
+    color::ColorPalette, Alert, AlertHandler, Progress, Terminal, TerminalConfiguration, TerminalSize,
 };
 
 struct ResponseBufferState {
@@ -141,6 +141,12 @@ pub struct NapiScrollback {
 pub struct NapiToast {
     pub title: Option<String>,
     pub body: String,
+}
+
+#[napi(object, use_nullable = true)]
+pub struct NapiProgress {
+    pub state: u32,
+    pub value: Option<u32>,
 }
 
 #[derive(Default)]
@@ -510,6 +516,18 @@ impl WeztermTerminal {
             .lock()
             .map_err(|_| Error::from_reason("wezterm title observer mutex poisoned"))?;
         Ok(state.toasts.clone())
+    }
+
+    /// Project current engine state, without inventing last-report history.
+    #[napi]
+    pub fn get_progress(&self) -> NapiProgress {
+        let (state, value) = match self.term.get_progress() {
+            Progress::None => (0, None),
+            Progress::Percentage(value) => (1, Some(u32::from(value))),
+            Progress::Error(value) => (2, Some(u32::from(value))),
+            Progress::Indeterminate => (3, None),
+        };
+        NapiProgress { state, value }
     }
 
     #[napi]

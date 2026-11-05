@@ -17,6 +17,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // unchanged.
 // Re-audited for stored conceal cell/empty-cell projection: feed/response delivery is unchanged.
 // Re-audited for the readonly DECCKM getter and maintained Cargo source: feed/response delivery is unchanged.
+// Re-audited for readonly current Progress enum projection: no feed, parser, writer, barrier or reply path changes.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -26,11 +27,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "e78a7cedb068806bd9cbe883a2f2c9a8ad78b6fa",
+      blobOid: "f1dd2c6fea29f648901fa3276ad8b72aa3ce2507",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "5d380725b95df7451eb9f743270c548dff91cb7b",
+      blobOid: "0e30ee669130e11fa435e30a440c29ee61f9a01a",
     },
     {
       path: "src/load-native.ts",
@@ -41,7 +42,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "4e7355947c4ec0849f25adde1438ef40b684a16a42dca8ef7014a4f6a91b5a99",
+      sha256: "6f47972d80eb1f77214fac335e3e8c76f8b9fda017a1d7ba2b547d065e44b70c",
     },
   },
 } as const

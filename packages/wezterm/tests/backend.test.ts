@@ -15,6 +15,7 @@
 
 import { describe, test, expect, beforeEach, afterEach } from "vitest"
 import { createWeztermBackend, loadWeztermNative } from "../src/backend.ts"
+import type { OscMetadataExtension } from "../../../src/terminal/types.ts"
 
 const encoder = new TextEncoder()
 const encode = (s: string) => encoder.encode(s)
@@ -675,6 +676,34 @@ describe.skipIf(nativeBuildError !== null)(
           other.destroy()
         }
       })
+    })
+
+    // Accepted #32288: observe the engine current state through the existing progress API.
+    // Toast tests never read progress; a missing bridge or stale/constant projection must fail here.
+    test("reads stored progress transitions without inventing report history or changing toasts", () => {
+      const metadata: OscMetadataExtension = backend
+      expect(typeof metadata.getProgress).toBe("function")
+      const read = () => metadata.getProgress!()
+      expect(read()).toEqual({ state: 0, value: null })
+      const toasts = backend.getToasts()
+      for (const [sequence, expected] of [
+        ["\x1b]9;4;1;17\x07", { state: 1, value: 17 }],
+        ["\x1b]9;4;1;83\x1b\\", { state: 1, value: 83 }],
+        ["\x1b]9;4;2;29\x07", { state: 2, value: 29 }],
+        ["\x1b]9;4;3\x07", { state: 3, value: null }],
+        ["\x1b]9;4;0\x07", { state: 0, value: null }],
+        ["\x1b]9;4;1;61\x07", { state: 1, value: 61 }],
+        ["\x1b]9;4;4\x07", { state: 0, value: null }],
+      ] as const) {
+        backend.feed(encode(sequence))
+        expect(read(), sequence).toEqual(expected)
+        expect(read(), "reader must not mutate state").toEqual(expected)
+      }
+      expect(backend.getToasts()).toEqual(toasts)
+      backend.init({ cols: 30, rows: 4 })
+      expect(read()).toEqual({ state: 0, value: null })
+      backend.destroy()
+      expect(read).toThrow("not initialized")
     })
 
     // ── Toasts ──

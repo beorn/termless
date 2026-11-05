@@ -656,8 +656,9 @@ export interface OscMetadataExtension {
   /** A copy of every OSC 777 payload after "777;", verbatim and in order, notify or not; callers filter "notify;". */
   getOsc777Payloads?(): readonly string[]
   /**
-   * The last OSC 9;4 report as the engine stores it: its raw state code and stored value. null means never reported;
-   * a state-0 report is never null. Values the engine discards are passed on as it stores them, never restored.
+   * The engine's stored OSC 9;4 state and value. Engines retaining report history return null before any report;
+   * a state-0 report is never null. WezTerm retains current state only: initial, cleared and paused all return
+   * { state: 0, value: null }, never null. Values the engine discards stay discarded, never reconstructed.
    */
   getProgress?(): { state: number; value: number | null } | null
   /**
