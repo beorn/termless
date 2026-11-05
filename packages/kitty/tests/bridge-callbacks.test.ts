@@ -19,6 +19,7 @@ import {
   type HyperlinkExtension,
   type OscMetadataExtension,
   type PasteEncodingExtension,
+  type SemanticMark,
 } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
@@ -218,17 +219,30 @@ test.skipIf(!isKittyAvailable())(
 // Private bridge coverage cannot catch an absent public reader, cache-object leaks, fabricated coordinates,
 // or reset clearing callback history that native replay retains. This tests the public projection/lifetime contract.
 test.skipIf(!isKittyAvailable())(
-  "projects copied command ends through the public reader across reset and replay",
+  "projects copied command marks at insertion coordinates across scroll, reset and replay",
   () => {
     const backend = createKittyBackend({ cols: 30, rows: 3 })
     const feed = (value: string) => backend.feed(new TextEncoder().encode(value))
     try {
       expect(hasExtension(backend, "semantic-command-end")).toBe(true)
-      expect(hasExtension(backend, "semantic-marks")).toBe(false)
       expect(backend.getSemanticMarks()).toEqual([])
-      feed("\x1b]133;A\x07\x1b]133;C;cmdline=echo hi\x07")
-      expect(backend.getSemanticMarks()).toEqual([])
-      const expected: { type: "command-end"; rawStatus: string }[] = []
+      // A late snapshot cursor points after X, not where Kitty applied the native callback.
+      const expected: SemanticMark[] = [{ type: "prompt", startRow: 0, startCol: 0 }]
+      feed("\x1b]133;A\x07X")
+      expect(backend.getSemanticMarks()).toEqual(expected)
+      expect(hasExtension(backend, "semantic-marks")).toBe(true)
+      feed("\x1b[2;3H\x1b]133;C;cmdline=echo hi\x07X")
+      expected.push({ type: "output", startRow: 1, startCol: 2 })
+      expect(backend.getSemanticMarks()).toEqual(expected)
+      feed("\x1b]133;A\x07\x1b]133;A\x07")
+      expected.push(...Array.from({ length: 2 }, () => ({ type: "prompt" as const, startRow: 1, startCol: 3 })))
+      const retained = backend.getSemanticMarks()
+      expect(retained).toEqual(expected)
+      feed("\r\n".repeat(5))
+      expect(backend.getCursor()).toMatchObject({ x: 0, y: 2 })
+      expect(backend.getSemanticMarks()).toEqual(retained)
+      Object.assign(retained[0]!, { startRow: 99, startCol: 99 })
+      expect(backend.getSemanticMarks()).toEqual(expected)
       for (const status of ["0", "17", "", "not-a-code", "-2", "0", "0"]) {
         const before = backend.getSemanticMarks()
         feed(`\x1b]133;D;${status}\x07`)
