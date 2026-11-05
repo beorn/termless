@@ -222,8 +222,8 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("combined bold+italic+truecolor", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[1;3;38;2;255;0;0mX\x1b[0m")
-      // vt100.js: only bold survives (italic + truecolor ignored)
-      expect(ts.getCell(0, 0).bold).toBe(true)
+      // vt100.js applies SGR operands independently; trailing 0 operands reset bold.
+      expect(ts.getCell(0, 0).bold).toBe(false)
       expect(ts.getCell(0, 0).italic).toBeNull()
       expect(ts.getCell(0, 0).fg).toBeNull()
       // Rust: all three apply
