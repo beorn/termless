@@ -193,7 +193,11 @@ typedef struct {
   int limit;
   int reflow;
   TermlessNotificationHistory notifications[2]; // OSC 9 and OSC 777 share one owner.
+  TermlessStringProp cwd_payload; // Complete public OSC callback payload, before 633 property selection.
+  TermlessStringProp cwd;
 } TermlessObserver;
+
+_Static_assert(offsetof(TermlessObserver, state) == 68, "observer property prefix ABI changed");
 
 static void clear_history(TermlessObserver *observer) {
   for (int row = 0; row < observer->count; row++) free(observer->rows[row].cells);
@@ -308,10 +312,32 @@ static void clear_notifications(TermlessObserver *observer) {
   }
 }
 
+static void clear_cwd(TermlessObserver *observer) {
+  clear_string_prop(&observer->cwd_payload);
+  clear_string_prop(&observer->cwd);
+}
+
 static int observe_osc(int command, VTermStringFragment frag, void *user) {
-  if (command != 9 && command != 777) return 0;
+  if (command != 7 && command != 633 && command != 9 && command != 777) return 0;
   TermlessObserver *observer = user;
   if (observer->props.failed) return 1;
+  if (command == 7 || command == 633) {
+    TermlessStringProp *payload = &observer->cwd_payload;
+    size_t previous = frag.initial ? 0 : payload->staging_len;
+    if (frag.len > (size_t)INT_MAX - previous || !observe_string_prop(payload, frag)) goto failed;
+    if (!frag.final) return 1;
+    size_t offset = 0;
+    if (command == 633) {
+      if (payload->len < 6 || memcmp(payload->value, "P;Cwd=", 6)) return 1;
+      offset = 6;
+    }
+    size_t len = payload->len - offset;
+    if (!len) clear_string_prop(&observer->cwd);
+    else if (!observe_string_prop(&observer->cwd, (VTermStringFragment){
+      .str = payload->value + offset, .len = len, .initial = 1, .final = 1,
+    })) goto failed;
+    return 1;
+  }
   TermlessNotificationHistory *history = &observer->notifications[command == 777];
   TermlessStringProp *rec = &history->staging;
   // observe_string_prop resets staging on initial, including after CAN/SUB.
@@ -371,6 +397,7 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
     TermlessPropRecord *rec = (TermlessPropRecord *)record;
     clear_history((TermlessObserver *)record);
     clear_notifications((TermlessObserver *)record);
+    clear_cwd((TermlessObserver *)record);
     clear_string_prop(&rec->title);
     clear_string_prop(&rec->icon);
     memset(rec, 0, sizeof(*rec));
@@ -385,6 +412,7 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
     clear_string_prop(&rec->title);
     clear_string_prop(&rec->icon);
     clear_notifications((TermlessObserver *)record);
+    clear_cwd((TermlessObserver *)record);
   }
 }
 
@@ -393,6 +421,7 @@ void termless_vterm_observer_free(TermlessObserver *observer) {
   vterm_state_set_unrecognised_fallbacks(observer->state, NULL, NULL);
   clear_history(observer);
   clear_notifications(observer);
+  clear_cwd(observer);
   clear_string_prop(&observer->props.title);
   clear_string_prop(&observer->props.icon);
   free(observer);
@@ -405,6 +434,8 @@ void termless_vterm_observer_enable_reflow(VTermScreen *screen, TermlessObserver
 
 int termless_vterm_observer_get_reflow(const TermlessObserver *observer) { return observer->reflow; }
 int termless_vterm_history_count(const TermlessObserver *observer) { return observer->count; }
+const char *termless_vterm_screen_get_cwd(const TermlessObserver *observer) { return observer->cwd.value; }
+int termless_vterm_screen_get_cwd_len(const TermlessObserver *observer) { return (int)observer->cwd.len; }
 int termless_vterm_notification_count(const TermlessObserver *observer) { return observer->notifications[0].count; }
 const char *termless_vterm_notification_get(const TermlessObserver *observer, int index) {
   const TermlessNotificationHistory *history = &observer->notifications[0];

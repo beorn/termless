@@ -46,6 +46,8 @@ export interface LibvtermModule {
   termless_vterm_screen_get_title_len(record: number): number
   termless_vterm_screen_get_icon(record: number): number
   termless_vterm_screen_get_icon_len(record: number): number
+  termless_vterm_screen_get_cwd(record: number): number
+  termless_vterm_screen_get_cwd_len(record: number): number
   vterm_screen_get_cell(screen: number, row: number, col: number, cellPtr: number): number
   vterm_screen_get_text(
     screen: number,
@@ -164,6 +166,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "_termless_vterm_observer_enable_reflow",
       "_termless_vterm_observer_get_reflow",
       "_termless_vterm_history_count",
+      "_termless_vterm_screen_get_cwd",
+      "_termless_vterm_screen_get_cwd_len",
       "_termless_vterm_notification_count",
       "_termless_vterm_notification_get",
       "_termless_vterm_notification_len",
@@ -246,6 +250,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     ])
     module.termless_vterm_observer_get_reflow = cwrap("termless_vterm_observer_get_reflow", "number", ["number"])
     module.termless_vterm_history_count = cwrap("termless_vterm_history_count", "number", ["number"])
+    module.termless_vterm_screen_get_cwd = cwrap("termless_vterm_screen_get_cwd", "number", ["number"])
+    module.termless_vterm_screen_get_cwd_len = cwrap("termless_vterm_screen_get_cwd_len", "number", ["number"])
     module.termless_vterm_notification_count = cwrap("termless_vterm_notification_count", "number", ["number"])
     module.termless_vterm_notification_get = cwrap("termless_vterm_notification_get", "number", ["number", "number"])
     module.termless_vterm_notification_len = cwrap("termless_vterm_notification_len", "number", ["number", "number"])

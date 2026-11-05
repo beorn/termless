@@ -18,8 +18,11 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // and OSC52 ownership on errors, and keeps primary plus cleanup failures. Native handles stay private.
 // Re-audited for the native-key extension declaration; keyboard capture and reply delivery are unchanged.
 // Re-audited for shared OSC 9/777 state fallbacks: only completed payloads enter the observer's separate histories;
-// both families reuse one append/cleanup path and failed-allocation latch. Other commands are declined. The callback
+// both families reuse one append/cleanup path and failed-allocation latch. The callback
 // writes no replies, leaves OSC52 selection ownership intact, and preserves feed draining and reset cleanup.
+// Re-audited for completed OSC 7/633 CWD payloads on this same fallback: the existing accumulator and failure latch
+// own the copied value, pointer/length reads emit no output, and explicit reset/teardown clear its buffers.
+// Other OSC commands remain declined; notification, clipboard and reply paths are unchanged on this rebuilt pair.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -29,15 +32,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "88c0aaa586f22c68bdfcde4197d9a4db0ebb3614",
+      blobOid: "d586b8db4ddb33f8c6ba46415809d262bd09f433",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "0fc3564c8940d7ffa0dd943f35efb98719512806",
+      blobOid: "c3609eb1b61fbbb0576ed1a381a6b045882ea971",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "f0d0fc72e10692dc67b5218069da571efd1bdba6",
+      blobOid: "f6c361bfd388a5f22b75217a1f40128391f69a6c",
     },
     {
       path: "src/terminal/key-mapping.ts",
@@ -48,7 +51,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "f8f6ea0b245362ce173aaec3c1c3ca83326064d033210544cde7af1ad324603b",
+      sha256: "e08b487e5efdab5655add31e27f8564d75c74e31fb447c6bec34595c310bea15",
     },
   },
 } as const

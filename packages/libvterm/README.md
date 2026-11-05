@@ -44,6 +44,15 @@ This records parser notifications; it does not deliver desktop notifications or
 interpret progress. Reset and re-initialization clear complete and partial
 observations. Reading before initialization or after destruction throws.
 
+`getCwd()` reads the last completed OSC 7 payload or OSC 633 `P;Cwd=` suffix
+from that same public parser callback, literally: no URL validation or unescaping.
+An empty report clears it to `null`; incomplete, aborted and other OSC 633
+messages leave the previous value intact. Explicit reset and re-initialization
+clear it. Native RIS retains it because libvterm supplies no directory-reset
+callback, unlike Ghostty and Kitty, which clear on RIS.
+Malformed UTF-8 throws on read; a leading BOM remains literal. This observer
+has no 4096-byte cap (Ghostty ignores larger directory payloads).
+
 ```typescript
 import { createLibvtermBackend, initLibvterm } from "@termless/libvterm"
 import { createTerminal } from "@termless/core"

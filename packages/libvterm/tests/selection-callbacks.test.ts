@@ -1,5 +1,5 @@
 /**
- * @failure Engine-delivered OSC 9/777 notifications or OSC 52 selection callbacks disappear, join interrupted strings, or leak across instance lifecycles.
+ * @failure Engine-delivered CWD, OSC 9/777 notifications or OSC 52 selection callbacks disappear, join interrupted strings, or leak across instance lifecycles.
  * @level l1
  * @consumer Terminfo OSC 9 notifications and OSC 52 clipboard criteria through real libvterm WASM and TerminalBackend.
  * @testonly none
@@ -12,6 +12,100 @@ import { initLibvterm } from "../src/wasm-bindings.ts"
 const module = await initLibvterm()
 const encoder = new TextEncoder()
 const query = "\x1b]52;c;?\x07"
+
+// Accepted CWD contract: notification/selection tests never read directory state,
+// so cannot catch missing forwarding, premature fragment commits or lossy decoding.
+describe("callback-backed working directory", () => {
+  function cwd(backend: ReturnType<typeof createLibvtermBackend>): () => string | null {
+    if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getCwd) {
+      throw new Error("libvterm must expose engine-delivered CWD")
+    }
+    return () => backend.getCwd!()
+  }
+
+  test("commits only complete 7/633 Cwd payloads and keeps literal callback bytes", () => {
+    const backend = createLibvtermBackend(undefined, module)
+    try {
+      backend.init({ cols: 80, rows: 24 })
+      const read = cwd(backend)
+      expect(read()).toBeNull()
+      for (const [command, payload, expected] of [
+        [7, "file://remote/窓;dir\\raw%20", "file://remote/窓;dir\\raw%20"],
+        [633, "P;Cwd=/from633", "/from633"],
+        [633, "P;Other=ignored", "/from633"],
+        [633, "A", "/from633"],
+        [633, "P;Cwd=\uFEFF/literal", "\uFEFF/literal"],
+        [7, "/".repeat(4097), "/".repeat(4097)],
+      ] as const) {
+        const previous = read()
+        const bytes = encoder.encode(`\x1b]${command};${payload}\x1b\\`)
+        for (const byte of bytes.subarray(0, -1)) backend.feed(Uint8Array.of(byte))
+        expect(read()).toBe(previous) // Even the lone ESC is not a completed ST.
+        backend.feed(bytes.subarray(-1))
+        expect(read()).toBe(expected)
+      }
+      for (const abort of ["\x18", "\x1a"]) {
+        backend.feed(encoder.encode(`\x1b]633;P;Cwd=/aborted${abort}`))
+        expect(read()).toBe("/".repeat(4097))
+      }
+      backend.feed(encoder.encode("\x1b]7;/a\0b\x7fc\x07\x1b]633;A\x07\x1b]9;nine\x07\x1b]777;seven\x07"))
+      expect(read()).toBe("/abc") // Native parser strips NUL and DEL across fragments.
+      expect(backend.getNotifications?.()).toEqual(["nine"])
+      expect(backend.getOsc777Payloads?.()).toEqual(["seven"])
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("empty reports clear, RIS retains, and reset/re-init isolate observer lifetimes", () => {
+    const backend = createLibvtermBackend(undefined, module)
+    const other = createLibvtermBackend(undefined, module)
+    try {
+      const read = cwd(backend)
+      expect(read).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      other.init({ cols: 80, rows: 24 })
+      for (const empty of ["\x1b]7\x07", "\x1b]7;\x07", "\x1b]633;P;Cwd=\x1b\\"]) {
+        backend.feed(encoder.encode("\x1b]7;/old\x07" + empty))
+        expect(read()).toBeNull()
+      }
+      backend.feed(encoder.encode("\x1b]7;/before-ris\x07\x1b]7;partial\x1bc"))
+      expect(read()).toBe("/before-ris")
+      expect(cwd(other)()).toBeNull()
+      backend.feed(encoder.encode("\x1b]633;P;Cwd=/new\x07\x1b]633;P;Cwd=partial"))
+      expect(read()).toBe("/new")
+      backend.reset()
+      expect(read()).toBeNull()
+      backend.feed(encoder.encode("\x1b]7;/after-reset\x07\x1b]7;partial"))
+      backend.init({ cols: 80, rows: 24 })
+      expect(read()).toBeNull()
+      backend.feed(encoder.encode("\x1b]633;P;Cwd=/after-init\x07"))
+      expect(read()).toBe("/after-init")
+      backend.destroy()
+      expect(read).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      expect(read()).toBeNull()
+    } finally {
+      backend.destroy()
+      other.destroy()
+    }
+  })
+
+  test.each(["/raw/", "file:///longer-prefix/"])("rejects malformed callback UTF-8 after %s", (prefix) => {
+    const backend = createLibvtermBackend(undefined, module)
+    try {
+      backend.init({ cols: 80, rows: 24 })
+      const read = cwd(backend)
+      backend.feed(encoder.encode(`\x1b]7;${prefix}`))
+      backend.feed(Uint8Array.of(0xff, 0xc0, 0xaf, 0xe2, 0x28, 0xa1, 7))
+      expect(read).toThrow(TypeError)
+      backend.feed(encoder.encode("\x1b]7;/recovered\x07"))
+      expect(read()).toBe("/recovered")
+    } finally {
+      backend.destroy()
+    }
+  })
+})
 
 // Receipt/window-query coverage never exercises the engine's selection callbacks.
 test("OSC 52 clipboard writes roundtrip through per-instance selection callbacks", () => {

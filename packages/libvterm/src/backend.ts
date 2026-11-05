@@ -611,6 +611,16 @@ export function createLibvtermBackend(
     return len > 0 ? m.UTF8ToString(m.termless_vterm_screen_get_icon(cursorPropsPtr), len) : ""
   }
 
+  function getCwd(): string | null {
+    const m = ensureInit()
+    const ptr = m.termless_vterm_screen_get_cwd(cursorPropsPtr)
+    if (!ptr) return null
+    const len = m.termless_vterm_screen_get_cwd_len(cursorPropsPtr)
+    const bytes = new Uint8Array(len)
+    for (let index = 0; index < len; index++) bytes[index] = m.getValue(ptr + index, "i8")
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes)
+  }
+
   function getNotifications(): readonly string[] {
     const m = ensureInit()
     const count = m.termless_vterm_notification_count(cursorPropsPtr)
@@ -702,6 +712,7 @@ export function createLibvtermBackend(
     getMode,
     getTitle,
     getIconLabel,
+    getCwd,
     getNotifications,
     getOsc777Payloads,
     getScrollback,
