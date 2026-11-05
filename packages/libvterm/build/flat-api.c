@@ -2,6 +2,7 @@
 #include "vterm_internal.h"
 #include "utf8.h"
 #include <stdint.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -184,6 +185,10 @@ typedef struct {
   int count;
   int limit;
   int reflow;
+  TermlessStringProp notification;
+  TermlessStringProp *notifications;
+  int notification_count;
+  int notification_cap;
 } TermlessObserver;
 
 static void clear_history(TermlessObserver *observer) {
@@ -238,10 +243,17 @@ static int history_pop(int cols, VTermScreenCell *cells, void *user) {
   return 1;
 }
 
+static int observe_osc(int command, VTermStringFragment frag, void *user);
+static const VTermStateFallbacks observer_fallbacks = { .osc = observe_osc };
+
 TermlessObserver *termless_vterm_observer_new(VTermState *state, int limit) {
   if (!state || limit < 0) return NULL;
   TermlessObserver *observer = calloc(1, sizeof(*observer));
-  if (observer) { observer->state = state; observer->limit = limit; }
+  if (observer) {
+    observer->state = state;
+    observer->limit = limit;
+    vterm_state_set_unrecognised_fallbacks(state, &observer_fallbacks, observer);
+  }
   return observer;
 }
 
@@ -282,6 +294,45 @@ static int observe_string_prop(TermlessStringProp *rec, VTermStringFragment frag
   return 1;
 }
 
+static void clear_notifications(TermlessObserver *observer) {
+  clear_string_prop(&observer->notification);
+  for (int i = 0; i < observer->notification_count; i++) clear_string_prop(&observer->notifications[i]);
+  free(observer->notifications);
+  observer->notifications = NULL;
+  observer->notification_count = observer->notification_cap = 0;
+}
+
+static int observe_osc(int command, VTermStringFragment frag, void *user) {
+  if (command != 9) return 0;
+  TermlessObserver *observer = user;
+  if (observer->props.failed) return 1;
+  TermlessStringProp *rec = &observer->notification;
+  // observe_string_prop resets staging on initial, including after CAN/SUB.
+  size_t previous = frag.initial ? 0 : rec->staging_len;
+  if (frag.len > (size_t)INT_MAX - previous || !observe_string_prop(rec, frag)) goto failed;
+  if (!frag.final) return 1;
+  if (observer->notification_count == INT_MAX) goto failed;
+  if (observer->notification_count == observer->notification_cap) {
+    int cap = observer->notification_cap ? observer->notification_cap : 8;
+    if (observer->notification_cap) cap = cap > INT_MAX / 2 ? INT_MAX : cap * 2;
+    if ((size_t)cap > SIZE_MAX / sizeof(*observer->notifications)) goto failed;
+    TermlessStringProp *grown = realloc(observer->notifications, (size_t)cap * sizeof(*grown));
+    if (!grown) goto failed;
+    observer->notifications = grown;
+    observer->notification_cap = cap;
+  }
+  // Transfer the complete value; keep only the reusable fragment staging buffer.
+  observer->notifications[observer->notification_count++] = (TermlessStringProp){
+    .value = rec->value, .len = rec->len, .cap = rec->cap,
+  };
+  rec->value = NULL;
+  rec->len = rec->cap = 0;
+  return 1;
+failed:
+  observer->props.failed = 1;
+  return 1;
+}
+
 static int observe_termprop(VTermProp prop, VTermValue *val, void *user) {
   TermlessPropRecord *rec = user;
   switch (prop) {
@@ -312,6 +363,7 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
   if (screen && record) {
     TermlessPropRecord *rec = (TermlessPropRecord *)record;
     clear_history((TermlessObserver *)record);
+    clear_notifications((TermlessObserver *)record);
     clear_string_prop(&rec->title);
     clear_string_prop(&rec->icon);
     memset(rec, 0, sizeof(*rec));
@@ -325,12 +377,15 @@ void termless_vterm_screen_observe_props(VTermScreen *screen, int32_t *record) {
     // changes only when the engine invokes sb_clear (or the owner is freed).
     clear_string_prop(&rec->title);
     clear_string_prop(&rec->icon);
+    clear_notifications((TermlessObserver *)record);
   }
 }
 
 void termless_vterm_observer_free(TermlessObserver *observer) {
   if (!observer) return;
+  vterm_state_set_unrecognised_fallbacks(observer->state, NULL, NULL);
   clear_history(observer);
+  clear_notifications(observer);
   clear_string_prop(&observer->props.title);
   clear_string_prop(&observer->props.icon);
   free(observer);
@@ -343,6 +398,13 @@ void termless_vterm_observer_enable_reflow(VTermScreen *screen, TermlessObserver
 
 int termless_vterm_observer_get_reflow(const TermlessObserver *observer) { return observer->reflow; }
 int termless_vterm_history_count(const TermlessObserver *observer) { return observer->count; }
+int termless_vterm_notification_count(const TermlessObserver *observer) { return observer->notification_count; }
+const char *termless_vterm_notification_get(const TermlessObserver *observer, int index) {
+  return index >= 0 && index < observer->notification_count ? observer->notifications[index].value : "";
+}
+int termless_vterm_notification_len(const TermlessObserver *observer, int index) {
+  return index >= 0 && index < observer->notification_count ? (int)observer->notifications[index].len : 0;
+}
 int termless_vterm_history_cols(const TermlessObserver *observer, int row) {
   return row >= 0 && row < observer->count ? observer->rows[row].cols : 0;
 }

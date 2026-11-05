@@ -37,6 +37,7 @@ import type {
   MouseEvent,
   MouseEncodingExtension,
   PasteEncodingExtension,
+  OscMetadataExtension,
   ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
@@ -199,7 +200,12 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
 export function createLibvtermBackend(
   opts?: Partial<TerminalOptions>,
   mod?: LibvtermModule,
-): LegacyBackend & AdapterSourcesExtension & KeyEncodingExtension & MouseEncodingExtension & PasteEncodingExtension {
+): LegacyBackend &
+  AdapterSourcesExtension &
+  KeyEncodingExtension &
+  MouseEncodingExtension &
+  PasteEncodingExtension &
+  OscMetadataExtension {
   const configuredLimit = checkedScrollbackLimit(opts?.scrollbackLimit ?? DEFAULT_SCROLLBACK_LIMIT)
   // Private VTerm*: callers cannot send raw paste boundaries into this backend's reply sink.
   let vt: number = 0
@@ -605,6 +611,15 @@ export function createLibvtermBackend(
     return len > 0 ? m.UTF8ToString(m.termless_vterm_screen_get_icon(cursorPropsPtr), len) : ""
   }
 
+  function getNotifications(): readonly string[] {
+    const m = ensureInit()
+    const count = m.termless_vterm_notification_count(cursorPropsPtr)
+    return Array.from({ length: count }, (_, index) => {
+      const len = m.termless_vterm_notification_len(cursorPropsPtr, index)
+      return len ? m.UTF8ToString(m.termless_vterm_notification_get(cursorPropsPtr, index), len) : ""
+    })
+  }
+
   function getScrollback(): ScrollbackState {
     const history = ensureInit().termless_vterm_history_count(cursorPropsPtr)
     return {
@@ -647,6 +662,7 @@ export function createLibvtermBackend(
       "key-encoding",
       "mouse-encoding",
       "paste-encoding",
+      "osc-metadata",
     ]),
   }
 
@@ -655,7 +671,8 @@ export function createLibvtermBackend(
     AdapterSourcesExtension &
     KeyEncodingExtension &
     MouseEncodingExtension &
-    PasteEncodingExtension = {
+    PasteEncodingExtension &
+    OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "libvterm",
     init,
@@ -676,6 +693,7 @@ export function createLibvtermBackend(
     getMode,
     getTitle,
     getIconLabel,
+    getNotifications,
     getScrollback,
     getReflowState: () => ({ enabled: ensureInit().termless_vterm_observer_get_reflow(cursorPropsPtr) !== 0 }),
     scrollViewport,
