@@ -1193,11 +1193,20 @@ describe("ghostty backend", () => {
         // A function-key name is not associated text, even when its enum is found outside the alias map.
         expect([...own.encodeKey({ key: "F1" })]).toEqual([27, 79, 80])
         expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: ghosttyApi.Key.F1, utf8: undefined }))
-        expect([...own.encodeKey({ key: "NumLock" })]).toEqual([])
-        expect(encode).toHaveBeenLastCalledWith(
-          expect.objectContaining({ key: ghosttyApi.Key.NUM_LOCK, utf8: undefined }),
-        )
-        expect(encode).toHaveBeenCalledTimes(4)
+        for (const [key, nativeKey] of [
+          ["CapsLock", ghosttyApi.Key.CAPS_LOCK],
+          ["ContextMenu", ghosttyApi.Key.CONTEXT_MENU],
+          ["NumLock", ghosttyApi.Key.NUM_LOCK],
+          ["FnLock", ghosttyApi.Key.FN_LOCK],
+          ["PrintScreen", ghosttyApi.Key.PRINT_SCREEN],
+          ["ScrollLock", ghosttyApi.Key.SCROLL_LOCK],
+          ["Pause", ghosttyApi.Key.PAUSE],
+          ["MediaPlayPause", ghosttyApi.Key.MEDIA_PLAY_PAUSE],
+        ] as const) {
+          own.encodeKey({ key })
+          expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: nativeKey, utf8: undefined }))
+        }
+        expect(encode).toHaveBeenCalledTimes(11)
         expect(host).not.toHaveBeenCalled()
         const failure = new Error("native encoder failed")
         encode.mockImplementationOnce(() => {
