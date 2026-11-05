@@ -78,6 +78,8 @@ _Fixed at the same time:_ peekaboo declared `@termless/xtermjs` as a peer depend
 
 ## Commands
 
+Native input changes: stage libvterm build inputs, build its WASM pair and staged-subtree receipt, commit source/tests/artifacts with the hook enabled, then rebuild Rust on clean HEAD for its native receipt; an initial Rust receipt refusal before that commit is expected, and only the receipted addon is delivered.
+
 ```bash
 bun test                              # Run all tests
 bun cli backend list                  # List backends and install status

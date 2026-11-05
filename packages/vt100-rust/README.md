@@ -35,3 +35,5 @@ recovered. As with notifications, Rust's `String::from_utf8_lossy` replaces
 invalid UTF-8 sequences with the Unicode replacement character (U+FFFD).
 
 `getNotifications()` and `getOsc777Payloads()` retain each ordered OSC 9 and OSC 777 payload as the library dispatches it: at most 15 payload fields after the command are joined with semicolons, with the same lossy UTF-8 decoding. Both return copies, start empty on init/re-init, and clear together when reset replaces their native callback owner; their getters throw after destroy.
+
+`getUnhandledSequences()` copies unhandled OSC command numbers and CSI native normalized parameter groups plus final byte (intermediate characters first), without OSC payloads; it shares that callback owner's reset/re-init lifetime and throws after destroy.

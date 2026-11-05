@@ -44,6 +44,8 @@ This records parser notifications; it does not deliver desktop notifications or
 interpret progress. Reset and re-initialization clear complete and partial
 observations. Reading before initialization or after destruction throws.
 
+`getUnhandledSequences()` copies the library's unhandled OSC command numbers, one per initial fragment; it retains no payload and clears with the same observer on reset/re-init.
+
 `getCwd()` reads the last completed OSC 7 payload or OSC 633 `P;Cwd=` suffix
 from that same public parser callback, literally: no URL validation or unescaping.
 An empty report clears it to `null`; incomplete, aborted and other OSC 633

@@ -70,6 +70,8 @@ export interface LibvtermModule {
   termless_vterm_notification_get(record: number, index: number): number
   termless_vterm_notification_len(record: number, index: number): number
   termless_vterm_osc777_count(record: number): number
+  termless_vterm_unhandled_osc_count(record: number): number
+  termless_vterm_unhandled_osc_get(record: number, index: number): number
   termless_vterm_osc777_get(record: number, index: number): number
   termless_vterm_osc777_len(record: number, index: number): number
   termless_vterm_history_cols(record: number, row: number): number
@@ -172,6 +174,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "_termless_vterm_notification_get",
       "_termless_vterm_notification_len",
       "_termless_vterm_osc777_count",
+      "_termless_vterm_unhandled_osc_count",
+      "_termless_vterm_unhandled_osc_get",
       "_termless_vterm_osc777_get",
       "_termless_vterm_osc777_len",
       "_termless_vterm_history_cols",
@@ -256,6 +260,8 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.termless_vterm_notification_get = cwrap("termless_vterm_notification_get", "number", ["number", "number"])
     module.termless_vterm_notification_len = cwrap("termless_vterm_notification_len", "number", ["number", "number"])
     module.termless_vterm_osc777_count = cwrap("termless_vterm_osc777_count", "number", ["number"])
+    module.termless_vterm_unhandled_osc_count = cwrap("termless_vterm_unhandled_osc_count", "number", ["number"])
+    module.termless_vterm_unhandled_osc_get = cwrap("termless_vterm_unhandled_osc_get", "number", ["number", "number"])
     module.termless_vterm_osc777_get = cwrap("termless_vterm_osc777_get", "number", ["number", "number"])
     module.termless_vterm_osc777_len = cwrap("termless_vterm_osc777_len", "number", ["number", "number"])
     module.termless_vterm_history_cols = cwrap("termless_vterm_history_cols", "number", ["number", "number"])

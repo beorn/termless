@@ -247,11 +247,12 @@ interface HyperlinkExtension {
 
 // OSC parser metadata (extension name "osc-metadata")
 interface OscMetadataExtension {
+  getUnhandledSequences?(): readonly { readonly kind: "osc" | "csi"; readonly code: string }[]
   getCwd(): string | null
   getNotifications(): readonly string[]
 }
 
-// Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b.
+// Track A compatibility read; migrate onto Emulator with TerminalBackend at A4b.
 // "semantic-marks" declares starts; "semantic-command-end" declares ends.
 interface SemanticStartMark {
   readonly type: "prompt" | "command" | "output"
@@ -303,6 +304,17 @@ retain their raw strings; this reader does not attest an OS notification appeari
 or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
 "osc-metadata")` before calling these methods. The vterm backend implements them;
 other backends can omit the extension.
+
+Libvterm and vt100-rust expose `getUnhandledSequences()`: copied, ordered reports
+from the library's own unhandled callbacks. OSC `code` is only its command number;
+vt100-rust CSI `code` retains native normalized parameter groups (colon and
+semicolon separated), with intermediate characters in front and the final byte
+last, such as `5m`, `4:3m` or `?5m`. These are callback values, not raw input spelling.
+History clears with the same callback owner as OSC 9 and 777 on reset/re-init.
+A missing member is missing evidence; an empty report decides nothing. A report
+can witness a state feature the library did not handle, while a delivery feature
+can succeed through that same callback. Recording the callback does not create
+library state or change how the library handles the sequence.
 
 The vterm and xterm.js backends also expose `getOsc777Payloads()`: copied, ordered
 payloads from their public completed-OSC callbacks, including non-notify payloads.

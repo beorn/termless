@@ -24,6 +24,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // own the copied value, pointer/length reads emit no output, and explicit reset/teardown clear its buffers.
 // Other OSC commands remain declined; notification, clipboard and reply paths are unchanged on this rebuilt pair.
 // This declaration excludes itself; determining adapter edits require re-audit.
+// Number-only unhandled OSC reports share the observer's existing allocation latch and clear path;
+// their first-fragment append preserves fallback return values and emits no replies.
 export const adapterDeclaration = {
   sources: [
     {
@@ -32,15 +34,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "d586b8db4ddb33f8c6ba46415809d262bd09f433",
+      blobOid: "deb23c67ed4fdef31ee81066dd7021da1033976e",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "c3609eb1b61fbbb0576ed1a381a6b045882ea971",
+      blobOid: "86ef3f64c5424f474bc46621f2547e23a1d19895",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "f6c361bfd388a5f22b75217a1f40128391f69a6c",
+      blobOid: "393db9b3cba3e2895160a94e92003dd4be806a1b",
     },
     {
       path: "src/terminal/key-mapping.ts",
@@ -51,7 +53,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "wasm",
-      sha256: "e08b487e5efdab5655add31e27f8564d75c74e31fb447c6bec34595c310bea15",
+      sha256: "6ab1a659db995b67753b633f162e65f01e2a0f3649e8a554aabf76775d172f0c",
     },
   },
 } as const

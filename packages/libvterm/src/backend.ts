@@ -639,6 +639,16 @@ export function createLibvtermBackend(
     })
   }
 
+  function getUnhandledSequences(): readonly { readonly kind: "osc"; readonly code: string }[] {
+    const m = ensureInit()
+    if (m.getValue(cursorPropsPtr + 64, "i32")) throw new Error("libvterm OSC observation failed")
+    const count = m.termless_vterm_unhandled_osc_count(cursorPropsPtr)
+    return Array.from({ length: count }, (_, index) => ({
+      kind: "osc",
+      code: String(m.termless_vterm_unhandled_osc_get(cursorPropsPtr, index)),
+    }))
+  }
+
   function getScrollback(): ScrollbackState {
     const history = ensureInit().termless_vterm_history_count(cursorPropsPtr)
     return {
@@ -715,6 +725,7 @@ export function createLibvtermBackend(
     getCwd,
     getNotifications,
     getOsc777Payloads,
+    getUnhandledSequences,
     getScrollback,
     getReflowState: () => ({ enabled: ensureInit().termless_vterm_observer_get_reflow(cursorPropsPtr) !== 0 }),
     scrollViewport,

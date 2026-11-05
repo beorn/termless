@@ -10,6 +10,7 @@ struct TerminalCallbacks {
     icon_label: String,
     notifications: Vec<String>,
     osc777_payloads: Vec<String>,
+    unhandled_sequences: Vec<NapiUnhandledSequence>,
     cwd: Option<String>,
     clipboard: BTreeMap<String, ClipboardPayload>,
     paste_selector: Option<String>,
@@ -22,10 +23,39 @@ struct ClipboardPayload {
 }
 
 impl vt100::Callbacks for TerminalCallbacks {
+    fn unhandled_csi(
+        &mut self,
+        _: &mut vt100::Screen,
+        i1: Option<u8>,
+        i2: Option<u8>,
+        params: &[&[u16]],
+        final_byte: char,
+    ) {
+        // The callback has already normalized parameter spelling. Retain its
+        // intermediates too, so a private CSI cannot masquerade as plain SGR.
+        let mut code: String = i1.into_iter().chain(i2).map(char::from).collect();
+        code.push_str(
+            &params
+                .iter()
+                .map(|group| group.iter().map(u16::to_string).collect::<Vec<_>>().join(":"))
+                .collect::<Vec<_>>()
+                .join(";"),
+        );
+        code.push(final_byte);
+        self.unhandled_sequences.push(NapiUnhandledSequence {
+            kind: "csi".to_owned(),
+            code,
+        });
+    }
+
     fn unhandled_osc(&mut self, _: &mut vt100::Screen, params: &[&[u8]]) {
         let Some((command, fields)) = params.split_first() else {
             return;
         };
+        self.unhandled_sequences.push(NapiUnhandledSequence {
+            kind: "osc".to_owned(),
+            code: String::from_utf8_lossy(command).into_owned(),
+        });
         if *command == b"9" {
             // Retain the payload as the library dispatches it: vte keeps at most 16 OSC
             // parameters, so excess separators are truncated. Never reparse raw feed bytes.
@@ -82,6 +112,13 @@ impl vt100::Callbacks for TerminalCallbacks {
         // vt100 emits a host request, not protocol reply bytes. Do not fabricate a reply.
         self.paste_selector = Some(String::from_utf8_lossy(selector).into_owned());
     }
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct NapiUnhandledSequence {
+    pub kind: String,
+    pub code: String,
 }
 
 #[napi(object)]
@@ -424,6 +461,15 @@ impl Vt100RustTerminal {
             .lock()
             .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
         Ok(parser.callbacks().osc777_payloads.clone())
+    }
+
+    #[napi]
+    pub fn get_unhandled_sequences(&self) -> Result<Vec<NapiUnhandledSequence>> {
+        let parser = self
+            .parser
+            .lock()
+            .map_err(|e| Error::from_reason(format!("Failed to lock parser: {}", e)))?;
+        Ok(parser.callbacks().unhandled_sequences.clone())
     }
 
     #[napi]

@@ -195,6 +195,9 @@ typedef struct {
   TermlessNotificationHistory notifications[2]; // OSC 9 and OSC 777 share one owner.
   TermlessStringProp cwd_payload; // Complete public OSC callback payload, before 633 property selection.
   TermlessStringProp cwd;
+  int *unhandled_osc;
+  int unhandled_count;
+  int unhandled_cap;
 } TermlessObserver;
 
 _Static_assert(offsetof(TermlessObserver, state) == 68, "observer property prefix ABI changed");
@@ -303,6 +306,9 @@ static int observe_string_prop(TermlessStringProp *rec, VTermStringFragment frag
 }
 
 static void clear_notifications(TermlessObserver *observer) {
+  free(observer->unhandled_osc);
+  observer->unhandled_osc = NULL;
+  observer->unhandled_count = observer->unhandled_cap = 0;
   for (int family = 0; family < 2; family++) {
     TermlessNotificationHistory *history = &observer->notifications[family];
     clear_string_prop(&history->staging);
@@ -318,8 +324,27 @@ static void clear_cwd(TermlessObserver *observer) {
 }
 
 static int observe_osc(int command, VTermStringFragment frag, void *user) {
-  if (command != 7 && command != 633 && command != 9 && command != 777) return 0;
   TermlessObserver *observer = user;
+  // Record the library's first callback fragment only, before the existing
+  // delivery handlers select their payloads. Do not change its return policy.
+  if (frag.initial && !observer->props.failed) {
+    if (observer->unhandled_count == INT_MAX) observer->props.failed = 1;
+    else {
+      if (observer->unhandled_count == observer->unhandled_cap) {
+        int cap = observer->unhandled_cap ? observer->unhandled_cap : 8;
+        if (observer->unhandled_cap) cap = cap > INT_MAX / 2 ? INT_MAX : cap * 2;
+        int *grown = (size_t)cap > SIZE_MAX / sizeof(*grown) ? NULL :
+          realloc(observer->unhandled_osc, (size_t)cap * sizeof(*grown));
+        if (!grown) observer->props.failed = 1;
+        else {
+          observer->unhandled_osc = grown;
+          observer->unhandled_cap = cap;
+        }
+      }
+      if (!observer->props.failed) observer->unhandled_osc[observer->unhandled_count++] = command;
+    }
+  }
+  if (command != 7 && command != 633 && command != 9 && command != 777) return 0;
   if (observer->props.failed) return 1;
   if (command == 7 || command == 633) {
     TermlessStringProp *payload = &observer->cwd_payload;
@@ -446,6 +471,10 @@ int termless_vterm_notification_len(const TermlessObserver *observer, int index)
   return index >= 0 && index < history->count ? (int)history->entries[index].len : 0;
 }
 int termless_vterm_osc777_count(const TermlessObserver *observer) { return observer->notifications[1].count; }
+int termless_vterm_unhandled_osc_count(const TermlessObserver *observer) { return observer->unhandled_count; }
+int termless_vterm_unhandled_osc_get(const TermlessObserver *observer, int index) {
+  return index >= 0 && index < observer->unhandled_count ? observer->unhandled_osc[index] : -1;
+}
 const char *termless_vterm_osc777_get(const TermlessObserver *observer, int index) {
   const TermlessNotificationHistory *history = &observer->notifications[1];
   return index >= 0 && index < history->count ? history->entries[index].value : "";

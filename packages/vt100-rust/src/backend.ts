@@ -76,6 +76,7 @@ interface Vt100RustTerminal {
   getTitle(): string
   getNotifications(): string[]
   getOsc777Payloads(): string[]
+  getUnhandledSequences(): { kind: "osc" | "csi"; code: string }[]
   getCwd(): string | null
   getIconLabel(): string
   getClipboardState(): {
@@ -203,7 +204,7 @@ export function createVt100RustBackend(
 ): TerminalBackend &
   AdapterSourcesExtension &
   MouseEncodingExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> {
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd" | "getUnhandledSequences"> {
   let term: Vt100RustTerminal | null = null
   let nativeMod: NativeModule | null = native ?? null
   let cols = DEFAULT_COLS
@@ -398,7 +399,10 @@ export function createVt100RustBackend(
   const backend: TerminalBackend &
     AdapterSourcesExtension &
     MouseEncodingExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> = {
+    Pick<
+      Required<OscMetadataExtension>,
+      "getNotifications" | "getOsc777Payloads" | "getCwd" | "getUnhandledSequences"
+    > = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100-rust",
     init,
@@ -418,6 +422,7 @@ export function createVt100RustBackend(
     getTitle,
     getNotifications,
     getOsc777Payloads,
+    getUnhandledSequences: () => ensureTerm().getUnhandledSequences(),
     getCwd,
     getIconLabel,
     getClipboardState,

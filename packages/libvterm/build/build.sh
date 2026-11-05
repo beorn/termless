@@ -103,6 +103,8 @@ emcc -O2 \
     "_termless_vterm_notification_get",
     "_termless_vterm_notification_len",
     "_termless_vterm_osc777_count",
+    "_termless_vterm_unhandled_osc_count",
+    "_termless_vterm_unhandled_osc_get",
     "_termless_vterm_osc777_get",
     "_termless_vterm_osc777_len",
     "_termless_vterm_history_cols",

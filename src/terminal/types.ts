@@ -661,6 +661,8 @@ export interface HyperlinkExtension {
  * no reader for it, which is missing evidence, never an engine negative.
  */
 export interface OscMetadataExtension {
+  /** Copied reports from the library's own unhandled callbacks, in order; OSC code is its command number, CSI code its native parameters and final byte. No entry means no decision. */
+  getUnhandledSequences?(): readonly { readonly kind: "osc" | "csi"; readonly code: string }[]
   /** Exact directory value from engine state or its public OSC7 / OSC633 P;Cwd callback (literal, not unescaped); null means no reported directory. */
   getCwd?(): string | null
   /** A copy of the OSC 9 payloads the engine stores, or passes to its public OSC handler, in order, without filtering or invented title/body fields. */
@@ -693,7 +695,7 @@ export interface SemanticStartMark {
 /** An engine observation: a positional start or a raw command-end callback without coordinates. */
 export type SemanticMark = SemanticStartMark | { readonly type: "command-end"; readonly rawStatus: string }
 
-/** Track A compatibility read; migrate onto Emulator or delete with TerminalBackend at A4b. */
+/** Track A compatibility read; migrate onto Emulator with TerminalBackend at A4b. */
 export interface SemanticMarkExtension {
   /** Ordered copies; "semantic-marks" declares starts, "semantic-command-end" declares ends. Lifetime is engine-specific. */
   getSemanticMarks(): readonly SemanticMark[]

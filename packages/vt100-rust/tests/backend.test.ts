@@ -35,6 +35,69 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Rust vt100 backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // The separate native CSI callback must report each missing style, while a
+    // same-run handled SGR proves both the reader and state path work.
+    test("unhandled CSI numbers retain native parameter groups with a handled SGR control", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      try {
+        for (const code of ["5m", "9m", "21m", "4:3m", "4:4m", "4:5m"]) {
+          backend.reset()
+          backend.feed(Buffer.from("\x1b[1mX"))
+          expect(backend.getCell(0, 0).bold).toBe(true)
+          expect(backend.getUnhandledSequences?.() ?? []).toEqual([])
+          backend.feed(Buffer.from(`\x1b[${code}`))
+          expect(backend.getUnhandledSequences?.()).toEqual([{ kind: "csi", code }])
+        }
+        backend.reset()
+        backend.feed(Buffer.from("\x1b[?5m\x1b[005m"))
+        expect(backend.getUnhandledSequences?.()).toEqual([
+          { kind: "csi", code: "?5m" },
+          { kind: "csi", code: "5m" },
+        ])
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    // Case 1: payload delivery tests miss the unhandled state report. Use the
+    // real native callback and a handled title control on the same instance.
+    test("unhandled OSC numbers follow the native callback lifetime without recording handled title", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      const other = createVt100RustBackend({ cols: 20, rows: 2 })
+      const read = (value = backend) => {
+        expect(hasExtension<OscMetadataExtension>(value, "osc-metadata")).toBe(true)
+        return value.getUnhandledSequences?.()
+      }
+      const feed = (text: string) => backend.feed(Buffer.from(text))
+      try {
+        feed("\x1b]2;handled control\x07")
+        expect(backend.getTitle()).toBe("handled control")
+        expect(read() ?? []).toEqual([])
+        feed("\x1b]133;A;private payload\x07\x1b[5m\x1b]633;B\x1b\\\x1b]999;unknown\x07")
+        expect(read()).toEqual([
+          { kind: "osc", code: "133" },
+          { kind: "csi", code: "5m" },
+          { kind: "osc", code: "633" },
+          { kind: "osc", code: "999" },
+        ])
+        const copy = read() as { kind: "osc" | "csi"; code: string }[]
+        copy[0]!.code = "changed copy"
+        expect(read()?.[0]).toEqual({ kind: "osc", code: "133" })
+        expect(read(other)).toEqual([])
+        backend.reset()
+        expect(read()).toEqual([])
+        feed("\x1b]133;C\x07")
+        expect(read()).toEqual([{ kind: "osc", code: "133" }])
+        backend.init({ cols: 20, rows: 2 })
+        expect(read()).toEqual([])
+        backend.destroy()
+        expect(() => read()).toThrow("not initialized")
+      } finally {
+        backend.destroy()
+        other.destroy()
+      }
+    })
+
     // Neither conceal nor strikethrough has a getter in the pinned crate, including blank cells.
     test("cell and row readers retain unreported attributes separately from reported bold", () => {
       const backend = createVt100RustBackend({ cols: 5, rows: 2 })

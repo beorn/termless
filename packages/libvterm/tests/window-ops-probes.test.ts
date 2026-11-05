@@ -16,7 +16,12 @@ import { describe, test, expect } from "vitest"
 import { spawnSync } from "node:child_process"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, loadedLibvtermWasm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import { hasExtension, type ReplyDeliveryExtension, type TerminalBackend } from "../../../src/terminal/types.ts"
+import {
+  hasExtension,
+  type OscMetadataExtension,
+  type ReplyDeliveryExtension,
+  type TerminalBackend,
+} from "../../../src/terminal/types.ts"
 
 const CSI_4_TEXT_AREA_PIXELS_RE = /^\x1b\[4;(\d+);(\d+)t$/
 const CSI_8_TEXT_AREA_CELLS_RE = /^\x1b\[8;(\d+);(\d+)t$/
@@ -44,6 +49,51 @@ try {
 }
 
 const describeWasm = wasmModule ? describe : describe.skip
+
+// Case 1: existing metadata tests retain delivery payloads, but do not witness the
+// library's negative state report. Only its unrecognised callback may add numbers.
+test("unhandled OSC numbers follow the native observer lifetime without recording handled title", async () => {
+  const module = await initLibvterm()
+  const backend = createLibvtermBackend(undefined, module)
+  const other = createLibvtermBackend(undefined, module)
+  const options = { cols: 20, rows: 2 }
+  backend.init(options)
+  other.init(options)
+  const read = (value = backend) => {
+    expect(hasExtension<OscMetadataExtension>(value, "osc-metadata")).toBe(true)
+    return value.getUnhandledSequences?.()
+  }
+  const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+  try {
+    feed("\x1b]2;handled control\x07")
+    expect(backend.getTitle()).toBe("handled control")
+    // Before this member existed the public interface supplied no report.
+    expect(read() ?? []).toEqual([])
+    feed("\x1b]133;A;private payload")
+    expect(read()).toEqual([{ kind: "osc", code: "133" }])
+    feed(";more payload\x07\x1b]633;B\x1b\\\x1b]999;unknown\x07")
+    expect(read()).toEqual([
+      { kind: "osc", code: "133" },
+      { kind: "osc", code: "633" },
+      { kind: "osc", code: "999" },
+    ])
+    const copy = read() as { kind: "osc"; code: string }[]
+    copy[0]!.code = "changed copy"
+    expect(read()?.[0]).toEqual({ kind: "osc", code: "133" })
+    expect(read(other)).toEqual([])
+    backend.reset()
+    expect(read()).toEqual([])
+    feed("\x1b]133;C\x07")
+    expect(read()).toEqual([{ kind: "osc", code: "133" }])
+    backend.init(options)
+    expect(read()).toEqual([])
+    backend.destroy()
+    expect(() => read()).toThrow("not initialized")
+  } finally {
+    backend.destroy()
+    other.destroy()
+  }
+})
 
 // The old suite observes application-cursor state and window properties, but
 // cannot catch missing keypad state or a declared-only reflow capability.
