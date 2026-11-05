@@ -13,9 +13,10 @@
  * @testonly none
  */
 
-import { describe, test, expect, beforeEach, afterEach } from "vitest"
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest"
 import { createWeztermBackend, loadWeztermNative } from "../src/backend.ts"
-import type { OscMetadataExtension } from "../../../src/terminal/types.ts"
+import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
+import type { KeyDescriptor, OscMetadataExtension } from "../../../src/terminal/types.ts"
 
 const encoder = new TextEncoder()
 const encode = (s: string) => encoder.encode(s)
@@ -635,8 +636,18 @@ describe.skipIf(nativeBuildError !== null)(
         expect(backend.encodeKey({ key: "c", ctrl: true })).toEqual(new Uint8Array([3]))
       })
 
-      test("ArrowUp", () => {
-        expect(backend.encodeKey({ key: "ArrowUp" })).toEqual(encode("\x1b[A"))
+      // Default-byte checks cannot distinguish the host shim from this engine's current mode.
+      test("ArrowUp follows the same engine's DECCKM off/on/off state", () => {
+        expect(backend.capabilities.extensions.has("key-encoding")).toBe(true)
+        for (const [mode, enabled, expected] of [
+          ["\x1b[?1l", false, "\x1b[A"],
+          ["\x1b[?1h", true, "\x1bOA"],
+          ["\x1b[?1l", false, "\x1b[A"],
+        ] as const) {
+          backend.feed(encode(mode))
+          expect(backend.getMode("applicationCursor")).toBe(enabled)
+          expect(backend.encodeKey({ key: "ArrowUp" })).toEqual(encode(expected))
+        }
       })
 
       test("regular character", () => {
@@ -649,6 +660,144 @@ describe.skipIf(nativeBuildError !== null)(
 
       test("Alt+letter", () => {
         expect(backend.encodeKey({ key: "x", alt: true })).toEqual(encode("\x1bx"))
+      })
+
+      // Matching bytes alone miss host encoding; the existing constructor seam observes real native calls.
+      test("delegates the shared named keys and one scalar to the native instance", () => {
+        const native = loadWeztermNative()
+        const calls: [string, boolean, boolean, boolean, boolean][] = []
+        class ObservedTerminal extends native.WeztermTerminal {
+          override encodeKey(key: string, shift: boolean, ctrl: boolean, alt: boolean, superKey: boolean): Buffer {
+            calls.push([key, shift, ctrl, alt, superKey])
+            return super.encodeKey(key, shift, ctrl, alt, superKey)
+          }
+        }
+        const local = createWeztermBackend({ cols: 80, rows: 24 }, { WeztermTerminal: ObservedTerminal })
+        const host = vi.spyOn(hostKeyEncoding, "encodeKeyToAnsi")
+        try {
+          const descriptors: KeyDescriptor[] = [
+            ...[
+              "ArrowUp",
+              "ArrowDown",
+              "ArrowLeft",
+              "ArrowRight",
+              "Home",
+              "End",
+              "PageUp",
+              "PageDown",
+              "Enter",
+              "Tab",
+              "Backspace",
+              "Delete",
+              "Escape",
+              "Space",
+              "Control",
+              "Shift",
+              "Alt",
+              "Meta",
+              ...Array.from({ length: 24 }, (_, index) => `F${index + 1}`),
+              "é",
+              "🦊",
+            ].map((key) => ({ key })),
+            { key: "a", shift: true, ctrl: true, alt: true, super: true },
+          ]
+          for (const descriptor of descriptors) {
+            calls.length = 0
+            expect(local.encodeKey(descriptor)).toBeInstanceOf(Uint8Array)
+            expect(calls).toEqual([
+              [descriptor.key, !!descriptor.shift, !!descriptor.ctrl, !!descriptor.alt, !!descriptor.super],
+            ])
+          }
+          for (const key of ["Control", "Shift", "Alt", "Meta"]) {
+            expect(local.encodeKey({ key })).toEqual(new Uint8Array())
+          }
+          expect(host).not.toHaveBeenCalled()
+        } finally {
+          host.mockRestore()
+          local.destroy()
+        }
+      })
+
+      test("rejects unknown names and multi-scalar descriptors before touching queued replies", () => {
+        // N-API converts malformed UTF-16 to replacement text before Rust sees it.
+        for (const key of ["\uD800", "\uDC00", "a\uD800"]) {
+          expect(() => backend.encodeKey({ key })).toThrow(/Unicode scalar/)
+        }
+        const native = new (loadWeztermNative().WeztermTerminal)(80, 24)
+        native.feed(Buffer.from("\x1b[5n"))
+        for (const key of ["", "hello", "UnknownKey", "F0", "F25", "F01", "🦊a"]) {
+          expect(() => native.encodeKey(key, false, false, false, false)).toThrow(/wezterm.*no native encoding/)
+        }
+        expect(() => native.encodeKey("ab", false, true, false, false)).toThrow(/wezterm.*no native encoding/)
+        expect(native.readResponse()).toEqual(Buffer.from("\x1b[0n"))
+        expect(native.readResponse()).toBeNull()
+      })
+
+      test("keeps native key bytes separate from pending replies and screen state", () => {
+        const native = new (loadWeztermNative().WeztermTerminal)(80, 24)
+        native.feed(Buffer.from("\x1b[5n\x1b[?1h\x1b[?1$p"))
+        expect(native.encodeKey("ArrowUp", false, false, false, false)).toEqual(Buffer.from("\x1bOA"))
+        expect(native.readResponse()).toEqual(Buffer.from("\x1b[0n\x1b[?1;1$y"))
+        expect(native.readResponse()).toBeNull()
+        const replies: Uint8Array[] = []
+        backend.onResponse = (bytes) => replies.push(bytes)
+        const before = { screen: backend.getText(), cursor: backend.getCursor() }
+        backend.encodeKey({ key: "a" })
+        expect(replies).toEqual([])
+        expect({ screen: backend.getText(), cursor: backend.getCursor() }).toEqual(before)
+        backend.feed(encode("\x1b[6n"))
+        expect(replies).toEqual([encode("\x1b[1;1R")])
+      })
+
+      test("requires initialization and fresh mode state after re-init", () => {
+        const local = createWeztermBackend()
+        expect(() => local.encodeKey({ key: "ArrowUp" })).toThrow("not initialized")
+        local.init({ cols: 80, rows: 24 })
+        try {
+          local.feed(encode("\x1b[?1h"))
+          expect(local.encodeKey({ key: "ArrowUp" })).toEqual(encode("\x1bOA"))
+          local.init({ cols: 80, rows: 24 })
+          expect(local.encodeKey({ key: "ArrowUp" })).toEqual(encode("\x1b[A"))
+        } finally {
+          local.destroy()
+        }
+        expect(() => local.encodeKey({ key: "ArrowUp" })).toThrow("not initialized")
+      })
+
+      test("propagates a native boundary error and encodes on a fresh instance", () => {
+        const native = loadWeztermNative()
+        const failure = new Error("injected native key boundary failure")
+        class FailedTerminal extends native.WeztermTerminal {
+          override encodeKey(key: string, shift: boolean, ctrl: boolean, alt: boolean, superKey: boolean): Buffer {
+            super.encodeKey(key, shift, ctrl, alt, superKey)
+            throw failure
+          }
+        }
+        const failed = createWeztermBackend({ cols: 80, rows: 24 }, { WeztermTerminal: FailedTerminal })
+        try {
+          expect(() => failed.encodeKey({ key: "ArrowUp" })).toThrow(failure)
+        } finally {
+          // An error after the boundary requires destroy, never same-instance retry.
+          failed.destroy()
+        }
+        const fresh = createWeztermBackend({ cols: 80, rows: 24 })
+        try {
+          expect(fresh.encodeKey({ key: "ArrowUp" })).toEqual(encode("\x1b[A"))
+        } finally {
+          fresh.destroy()
+        }
+      })
+
+      test("names the rebuild command when the native method is missing", () => {
+        const native = loadWeztermNative()
+        class StaleTerminal extends native.WeztermTerminal {}
+        Object.defineProperty(StaleTerminal.prototype, "encodeKey", { value: undefined })
+        const stale = createWeztermBackend({ cols: 80, rows: 24 }, { WeztermTerminal: StaleTerminal })
+        try {
+          expect(() => stale.encodeKey({ key: "ArrowUp" })).toThrow(/predates encodeKey.*rebuild and copy/)
+        } finally {
+          stale.destroy()
+        }
       })
     })
 

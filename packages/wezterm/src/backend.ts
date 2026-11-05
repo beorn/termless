@@ -23,9 +23,10 @@ import type {
   HyperlinkExtension,
   OscMetadataExtension,
   PasteEncodingExtension,
+  KeyDescriptor,
+  KeyEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
 
@@ -76,6 +77,7 @@ interface NapiScrollback {
 interface WeztermTerminal {
   feed(data: Buffer): void
   encodePaste(text: string): Buffer
+  encodeKey(key: string, shift: boolean, ctrl: boolean, alt: boolean, superKey: boolean): Buffer
   resize(cols: number, rows: number): void
   reset(): void
   getText(): string
@@ -215,6 +217,7 @@ export function createWeztermBackend(
 ): TerminalBackend &
   HyperlinkExtension &
   PasteEncodingExtension &
+  KeyEncodingExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
@@ -352,6 +355,20 @@ export function createWeztermBackend(
     return t.getToasts().map((toast) => ({ title: toast.title, body: toast.body }))
   }
 
+  function encodeKey(key: KeyDescriptor): Uint8Array {
+    const t = ensureTerm()
+    // N-API replaces lone UTF-16 surrogates before Rust validates the scalar.
+    if (/[\uD800-\uDFFF]/u.test(key.key)) {
+      throw new Error("WezTerm key must contain a valid Unicode scalar")
+    }
+    if (typeof t.encodeKey !== "function") {
+      throw new Error(
+        "The loaded WezTerm native addon predates encodeKey; rebuild and copy it from the Termless root:\n  nix shell .#native-tools --command bun run --cwd packages/wezterm build:native",
+      )
+    }
+    return new Uint8Array(t.encodeKey(key.key, !!key.shift, !!key.ctrl, !!key.alt, !!key.super))
+  }
+
   function encodePaste(text: string): Uint8Array {
     const t = ensureTerm()
     if (typeof t.encodePaste !== "function") {
@@ -415,12 +432,20 @@ export function createWeztermBackend(
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
     // Parsed toasts, current progress and engine-owned Cwd; no raw OSC 9/777 payload.
-    extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery", "paste-encoding"]),
+    extensions: new Set([
+      "adapter-sources",
+      "hyperlinks",
+      "osc-metadata",
+      "reply-delivery",
+      "paste-encoding",
+      "key-encoding",
+    ]),
   }
 
   const backend: TerminalBackend &
     HyperlinkExtension &
     PasteEncodingExtension &
+    KeyEncodingExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
@@ -450,7 +475,7 @@ export function createWeztermBackend(
     getCwd,
     getScrollback,
     scrollViewport,
-    encodeKey: encodeKeyToAnsi,
+    encodeKey,
     encodePaste,
     capabilities,
     replyDelivery,

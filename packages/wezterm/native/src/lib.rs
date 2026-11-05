@@ -5,7 +5,8 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    color::ColorPalette, Alert, AlertHandler, Progress, Terminal, TerminalConfiguration, TerminalSize,
+    color::ColorPalette, Alert, AlertHandler, KeyCode, KeyModifiers, Progress, Terminal,
+    TerminalConfiguration, TerminalSize,
 };
 
 struct ResponseBufferState {
@@ -299,6 +300,92 @@ impl WeztermTerminal {
         self.term.advance_bytes(bytes);
         self.sync_responses()?;
         Ok(())
+    }
+
+    /// Encode one named key or Unicode scalar using this terminal's current modes.
+    /// After a writer-boundary error, this instance must be destroyed: late input
+    /// bytes can reach the reply buffer, as with encode_paste. No recovery is promised.
+    #[napi]
+    pub fn encode_key(
+        &mut self,
+        key: String,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        super_key: bool,
+    ) -> Result<Buffer> {
+        let unsupported = || {
+            Error::from_reason(format!(
+                "wezterm keyboard API has no native encoding for {key:?}; expected a shared named key, F1-F24, or one Unicode scalar"
+            ))
+        };
+        // Translate the whole descriptor before entering the writer boundary.
+        let native_key = match key.as_str() {
+            "ArrowUp" => KeyCode::UpArrow,
+            "ArrowDown" => KeyCode::DownArrow,
+            "ArrowLeft" => KeyCode::LeftArrow,
+            "ArrowRight" => KeyCode::RightArrow,
+            "Home" => KeyCode::Home,
+            "End" => KeyCode::End,
+            "PageUp" => KeyCode::PageUp,
+            "PageDown" => KeyCode::PageDown,
+            "Enter" => KeyCode::Enter,
+            "Tab" => KeyCode::Tab,
+            "Backspace" => KeyCode::Backspace,
+            "Delete" => KeyCode::Delete,
+            "Escape" => KeyCode::Escape,
+            "Space" => KeyCode::Char(' '),
+            "Control" => KeyCode::Control,
+            "Shift" => KeyCode::Shift,
+            "Alt" => KeyCode::Alt,
+            "Meta" => KeyCode::Meta,
+            name if name.starts_with('F') && name.len() > 1 => {
+                let number = name[1..].parse::<u8>().map_err(|_| unsupported())?;
+                if !(1..=24).contains(&number) || format!("F{number}") != name {
+                    return Err(unsupported());
+                }
+                KeyCode::Function(number)
+            }
+            _ => {
+                let mut scalars = key.chars();
+                match (scalars.next(), scalars.next()) {
+                    (Some(scalar), None) => KeyCode::Char(scalar),
+                    _ => return Err(unsupported()),
+                }
+            }
+        };
+        let mut modifiers = KeyModifiers::empty();
+        if shift {
+            modifiers.insert(KeyModifiers::SHIFT);
+        }
+        if ctrl {
+            modifiers.insert(KeyModifiers::CTRL);
+        }
+        if alt {
+            modifiers.insert(KeyModifiers::ALT);
+        }
+        if super_key {
+            modifiers.insert(KeyModifiers::SUPER);
+        }
+
+        self.sync_responses()?;
+        let boundary = {
+            let (lock, _) = &*self.writer.inner;
+            let state = lock
+                .lock()
+                .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+            state.buf.len()
+        };
+        self.term
+            .key_down(native_key, modifiers)
+            .map_err(|err| Error::from_reason(format!("wezterm key encoding failed: {err}")))?;
+        self.sync_responses()?;
+        let (lock, _) = &*self.writer.inner;
+        let mut state = lock
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+        // Only native key output belongs to the encoder; queued replies stay in order.
+        Ok(state.buf.split_off(boundary).into())
     }
 
     #[napi]
