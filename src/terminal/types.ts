@@ -655,7 +655,7 @@ export interface HyperlinkExtension {
  * no reader for it, which is missing evidence, never an engine negative.
  */
 export interface OscMetadataExtension {
-  /** Exact OSC 7 URI; only a present reader returning null means the engine reports no working directory. */
+  /** Exact directory value from engine state or its public OSC7 / OSC633 P;Cwd callback (literal, not unescaped); null means no reported directory. */
   getCwd?(): string | null
   /** A copy of the OSC 9 payloads the engine stores, or passes to its public OSC handler, in order, without filtering or invented title/body fields. */
   getNotifications?(): readonly string[]
