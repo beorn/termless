@@ -1,6 +1,7 @@
 import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 
 // Audited synchronous feed -> engine response -> onResponse path.
+// Native paste delegates to this Screen and returns bytes without entering that path.
 // Re-audited bd3d32ae -> 7e6c993c: removing DEC-private 4 leaves byte feed and reply forwarding unchanged.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
@@ -11,7 +12,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt220/src/backend.ts",
-      blobOid: "7369e3710e36aa649372fd09011ecfdd6ba47c73",
+      blobOid: "d3f9204da47be8e77a6b9942f4493acf91e0b68f",
     },
   ],
   delivery: {
@@ -19,7 +20,7 @@ export const adapterDeclaration = {
     engine: {
       kind: "source",
       repository: "git@github.com:beorn/vterm.git",
-      treeOid: "4205f8936ad1848d1029729f3ada888cd61759a8",
+      treeOid: "4c946bbce73a95093ed16bab183b17032c622e21",
     },
   },
 } as const

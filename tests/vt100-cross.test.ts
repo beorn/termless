@@ -282,8 +282,8 @@ describeIfAvailable("vt100 cross-comparison (TypeScript vs Rust)", () => {
     test("bracketed paste", () => {
       const { ts, rust } = init()
       feedBoth(ts, rust, "\x1b[?2004h")
-      // vt100.js does not expose bracketed-paste mode state.
-      expect(ts.getMode("bracketedPaste")).toBeNull()
+      // Historical vt100.js reports its fixed-off paste policy.
+      expect(ts.getMode("bracketedPaste")).toBe(false)
       expect(rust.getMode("bracketedPaste")).toBe(true) // Rust: supported
     })
   })

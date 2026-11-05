@@ -1,5 +1,6 @@
 import type {
   MouseEvent,
+  PasteEncodingExtension,
   OscMetadataExtension,
   ReplyDeliveryExtension,
   SemanticMarkExtension,
@@ -16,6 +17,57 @@ import { createVtermScreen } from "vterm.js"
 import { createVtermBackend } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
+  // @failure Native paste must use this adapter instance without leaking bytes to responses.
+  // @level l0
+  // @consumer Library-native paste probes through PasteEncodingExtension.
+  test("forwards same-instance native paste and preserves response delivery", () => {
+    const backend = createVtermBackend({ cols: 12, rows: 3 })
+    const replies: string[] = []
+    backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
+    try {
+      expect(hasExtension(backend, "paste-encoding")).toBe(true)
+      if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding"))
+        throw new Error("missing native paste encoder")
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      feed("seed\x1b[5n")
+      expect(replies.join("")).toBe("\x1b[0n")
+      const before = { text: backend.getText(), cursor: backend.getCursor(), scrollback: backend.getScrollback() }
+      for (const enabled of [false, true, false]) {
+        feed(enabled ? "\x1b[?2004h" : "\x1b[?2004l")
+        expect(backend.getMode("bracketedPaste")).toBe(enabled && true)
+        const text = "é中😀\r\n"
+        const expected = enabled && true ? "\x1b[200~" + text + "\x1b[201~" : text
+        expect(backend.encodePaste(text)).toEqual(new TextEncoder().encode(expected))
+      }
+      expect(replies.join("")).toBe("\x1b[0n")
+      expect({ text: backend.getText(), cursor: backend.getCursor(), scrollback: backend.getScrollback() }).toEqual(
+        before,
+      )
+      feed("\x1b[5n")
+      expect(replies.join("")).toBe("\x1b[0n\x1b[0n")
+    } finally {
+      backend.destroy()
+    }
+  })
+
+  test("native paste follows the existing init, destroy and re-init lifecycle", () => {
+    const backend = createVtermBackend()
+    expect(hasExtension(backend, "paste-encoding")).toBe(true)
+    if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding"))
+      throw new Error("missing native paste encoder")
+    expect(() => backend.encodePaste("x")).toThrow(/not initialized/)
+    backend.init({ cols: 12, rows: 3 })
+    expect(backend.encodePaste("x")).toEqual(new TextEncoder().encode("x"))
+    backend.destroy()
+    expect(() => backend.encodePaste("x")).toThrow(/not initialized/)
+    backend.init({ cols: 12, rows: 3 })
+    try {
+      expect(backend.encodePaste("")).toEqual(new Uint8Array())
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // @failure Missing, cached, or mutable adapter readback hides the engine's actual start markers.
   // @level l0
   // @consumer Conformance probes through the shared SemanticMarkExtension.

@@ -288,8 +288,11 @@ interface BellExtension {
 `PasteEncodingExtension` is declared by `"paste-encoding"`. `encodePaste(text)`
 returns the engine's native input bytes in its current mode, including its own
 framing and text rules. It preserves modes and queued replies, does not feed the
-parser or write to a PTY, and never calls the backend's `onResponse`. Libvterm and
-WezTerm implement it; another backend may omit it when no path is exposed.
+parser or write to a PTY, and never calls the backend's `onResponse`. Libvterm,
+WezTerm, vt100, vt220 and vterm implement it. The historical vt100/vt220 encoders
+never frame paste; modern vterm follows its native mode 2004 and removes payload
+framing markers only while bracketed. Those three native libraries preserve
+newlines regardless of LNM. Another backend may omit the extension when no path is exposed.
 
 `OscMetadataExtension` exposes the engine's exact OSC 7 URI and copied, ordered
 OSC 9 payloads. Null cwd means the engine reports no URI. Notification payloads
