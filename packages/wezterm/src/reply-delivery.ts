@@ -47,7 +47,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "06fb7a314ec3850ba041cec07fc777450a40ac04dcb3ec53b9133e57c20790c9",
+      sha256: "4753e20984ab7e15ea7ef8d4ddf9bd11237f79146087939e9c37771aaadbf186",
     },
   },
 } as const

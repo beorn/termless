@@ -22,7 +22,7 @@ test("declares audited native reply delivery without initializing the engine", (
   }
   expect(backend.replyDelivery.engine).toEqual({
     kind: "native",
-    sha256: "06fb7a314ec3850ba041cec07fc777450a40ac04dcb3ec53b9133e57c20790c9",
+    sha256: "4753e20984ab7e15ea7ef8d4ddf9bd11237f79146087939e9c37771aaadbf186",
   })
   expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
