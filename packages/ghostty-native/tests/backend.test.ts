@@ -19,6 +19,103 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    test("native key encoding follows the same handle's modes and lifecycle", () => {
+      const native = loadGhosttyNative()
+      const spy = vi.spyOn(native, "encodeKey")
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const other = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const encoder = new TextEncoder()
+      const decoder = new TextDecoder()
+      const onResponse = vi.fn()
+      backend.onResponse = onResponse
+      try {
+        expect(backend.capabilities.extensions.has("key-encoding")).toBe(true)
+        expect(decoder.decode(backend.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+        backend.feed(encoder.encode("one\r\ntwo\r\nthree\x1b[?1h"))
+        const before = {
+          text: backend.getText(),
+          cursor: backend.getCursor(),
+          lines: backend.getLines(),
+          scrollback: backend.getScrollback(),
+        }
+        expect(backend.getMode("applicationCursor")).toBe(true)
+        expect(decoder.decode(backend.encodeKey({ key: "ArrowUp" }))).toBe("\x1bOA")
+        expect(decoder.decode(other.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+        expect({
+          text: backend.getText(),
+          cursor: backend.getCursor(),
+          lines: backend.getLines(),
+          scrollback: backend.getScrollback(),
+        }).toEqual(before)
+        expect(decoder.decode(backend.encodeKey({ key: "é" }))).toBe("é")
+        expect(decoder.decode(backend.encodeKey({ key: "😀" }))).toBe("😀")
+        expect(decoder.decode(backend.encodeKey({ key: "two scalars" }))).toBe("two scalars")
+        expect([...backend.encodeKey({ key: "Control" })]).toEqual([])
+        backend.encodeKey({ key: "F12", shift: true, ctrl: true, alt: true, super: true })
+        expect(spy).toHaveBeenLastCalledWith(expect.anything(), "f12", "", 0, true, true, true, true)
+        backend.encodeKey({ key: "A", shift: true })
+        expect(spy).toHaveBeenLastCalledWith(expect.anything(), "unidentified", "A", 97, true, false, false, false)
+        expect(onResponse).not.toHaveBeenCalled()
+        backend.feed(encoder.encode("\x1b[?1l"))
+        expect(decoder.decode(backend.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+        backend.feed(encoder.encode("\x1b[?1h"))
+        backend.reset()
+        expect(backend.getMode("applicationCursor")).toBe(false)
+        expect(decoder.decode(backend.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+      } finally {
+        spy.mockRestore()
+        backend.destroy()
+        other.destroy()
+      }
+      expect(() => backend.encodeKey({ key: "a" })).toThrow(/not initialized/)
+      backend.init({ cols: 10, rows: 2 })
+      try {
+        expect(decoder.decode(backend.encodeKey({ key: "ArrowUp" }))).toBe("\x1b[A")
+      } finally {
+        backend.destroy()
+      }
+      expect(() => createGhosttyNativeBackend().encodeKey({ key: "a" })).toThrow(/not initialized/)
+    })
+
+    test("native key validation rejects ambiguous events and returns owned bytes", () => {
+      const native = loadGhosttyNative()
+      const handle = native.createTerminal(10, 2, 100)
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      let result: Uint8Array
+      try {
+        const encode = (tag: string, text: string, scalar: number, shift = false) =>
+          native.encodeKey(handle, tag, text, scalar, shift, false, false, false)
+        expect(() => encode("unknown_native_tag", "", 0)).toThrow()
+        expect(() => encode("unidentified", "a", 0xd800)).toThrow()
+        expect(() => encode("unidentified", "a", 0x110000)).toThrow()
+        expect(() => encode("unidentified", "ab", 97, true)).toThrow()
+        expect(() => backend.encodeKey({ key: "\ud800" })).toThrow(/Unicode scalar/)
+        expect(() => backend.encodeKey({ key: "ab", ctrl: true })).toThrow(/multi-scalar/)
+        expect(() => backend.encodeKey({ key: "" })).toThrow(/Unicode scalar/)
+        result = encode("unidentified", "é", 233)
+        expect(result).toBeInstanceOf(Uint8Array)
+        expect([...encode("control_left", "", 0)]).toEqual([])
+      } finally {
+        native.destroyTerminal(handle)
+        backend.destroy()
+      }
+      expect([...result!]).toEqual([...new TextEncoder().encode("é")])
+    })
+
+    test("an old addon missing native key encoding gives the existing rebuild guidance", () => {
+      const native = loadGhosttyNative()
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const original = native.encodeKey
+      try {
+        Object.defineProperty(native, "encodeKey", { value: undefined, configurable: true, writable: true })
+        expect(() => backend.encodeKey({ key: "a" })).toThrow(/predates encodeKey.*rebuild/s)
+        expect(() => backend.encodeKey({ key: "a" })).toThrow(/cd packages\/ghostty-native && bash build\/build.sh/)
+      } finally {
+        Object.defineProperty(native, "encodeKey", { value: original, configurable: true, writable: true })
+        backend.destroy()
+      }
+    })
+
     // Native text rules and lifecycle belong to the real addon, not a shared host encoder.
     test("encodes native paste on the same handle without callbacks or state changes", () => {
       const encoder = new TextEncoder()
