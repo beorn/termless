@@ -25,7 +25,16 @@ import { adapterDeclaration, replyDelivery } from "./adapter-sources.ts"
  * Calling init() without loading WASM first throws a clear error.
  */
 
-import { Ghostty, type GhosttyTerminal, type GhosttyCell, CellFlags } from "ghostty-web"
+import {
+  Ghostty,
+  type GhosttyTerminal,
+  type GhosttyCell,
+  type KeyEncoder,
+  Key,
+  KeyAction,
+  Mods,
+  CellFlags,
+} from "ghostty-web"
 import { createHash } from "node:crypto"
 import { readFileSync, realpathSync } from "node:fs"
 import { resolveGhosttyWebWasm } from "./load-native.ts"
@@ -43,6 +52,8 @@ import type {
   WarningExtension,
   HyperlinkExtension,
   MouseEncodingExtension,
+  KeyEncodingExtension,
+  KeyDescriptor,
   MouseEvent,
   OscMetadataExtension,
   ScreenshotOptions,
@@ -54,7 +65,6 @@ import type { Mode } from "@termless/core/io"
 // registry while consumers drain @termless/core's (silvery fresh-clone bug,
 // km vendor-CI seam 2026-07-02). Pure helpers may inline; state must not.
 import { pushWarning } from "@termless/core"
-import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { encodeMouseReport, type MouseEncodingState } from "../../../src/terminal/mouse-encoding.ts"
 import { renderTerminalPng } from "./render.ts"
 import type { RenderOptions } from "./render.ts"
@@ -241,6 +251,39 @@ function convertScrollbackCell(
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 24
 
+// KeyDescriptor names translated to the library's public key enum, never wire bytes.
+const nativeKeyNames: Record<string, Key> = {
+  ArrowUp: Key.UP,
+  ArrowDown: Key.DOWN,
+  ArrowLeft: Key.LEFT,
+  ArrowRight: Key.RIGHT,
+  Enter: Key.ENTER,
+  Escape: Key.ESCAPE,
+  Backspace: Key.BACKSPACE,
+  Tab: Key.TAB,
+  Home: Key.HOME,
+  End: Key.END,
+  Insert: Key.INSERT,
+  Delete: Key.DELETE,
+  PageUp: Key.PAGE_UP,
+  PageDown: Key.PAGE_DOWN,
+  Space: Key.SPACE,
+  Control: Key.CONTROL_LEFT,
+  Shift: Key.SHIFT_LEFT,
+  Alt: Key.ALT_LEFT,
+  Meta: Key.META_LEFT,
+  "0": Key.ZERO,
+  "1": Key.ONE,
+  "2": Key.TWO,
+  "3": Key.THREE,
+  "4": Key.FOUR,
+  "5": Key.FIVE,
+  "6": Key.SIX,
+  "7": Key.SEVEN,
+  "8": Key.EIGHT,
+  "9": Key.NINE,
+}
+
 /**
  * Create a Ghostty backend for termless.
  *
@@ -261,8 +304,10 @@ export function createGhosttyBackend(
   HyperlinkExtension &
   AdapterSourcesExtension &
   MouseEncodingExtension &
+  KeyEncodingExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
   let term: GhosttyTerminal | null = null
+  let keyEncoder: KeyEncoder | null = null
   const ghosttyInstance: Ghostty | null = ghostty ?? sharedGhostty
   const producerDigest = ghosttyInstance === sharedGhostty ? loadedWasm?.sha256 : undefined
   let cols = DEFAULT_COLS
@@ -336,9 +381,7 @@ export function createGhosttyBackend(
   }
 
   function init(options: TerminalOptions): void {
-    if (term) {
-      term.free()
-    }
+    destroy()
 
     if (!ghosttyInstance) {
       throw new Error(
@@ -350,34 +393,81 @@ export function createGhosttyBackend(
     cols = options.cols
     rows = options.rows
 
-    term = ghosttyInstance.createTerminal(cols, rows, {
-      scrollbackLimit: options.scrollbackLimit ?? 1000,
-    })
+    try {
+      term = ghosttyInstance.createTerminal(cols, rows, {
+        scrollbackLimit: options.scrollbackLimit ?? 1000,
+      })
+      keyEncoder = ghosttyInstance.createKeyEncoder()
 
-    // ghostty-web's WASM `createTerminal` recycles freed buffer memory, so a
-    // fresh terminal can inherit the previous one's cell grid. Send RIS
-    // (Reset to Initial State) immediately so every `init()` starts from a
-    // guaranteed-blank screen — critical when multiple ghostty-backed
-    // terminals run in one process (e.g. cross-backend canvas compare).
-    term.write("\x1bc")
+      // ghostty-web's WASM `createTerminal` recycles freed buffer memory, so a
+      // fresh terminal can inherit the previous one's cell grid. Send RIS
+      // (Reset to Initial State) immediately so every `init()` starts from a
+      // guaranteed-blank screen — critical when multiple ghostty-backed
+      // terminals run in one process (e.g. cross-backend canvas compare).
+      term.write("\x1bc")
 
-    // Capture default colors so we can distinguish "default" from "explicitly set"
-    term.update()
-    const colors = term.getColors() as {
-      foreground: { r: number; g: number; b: number }
-      background: { r: number; g: number; b: number }
-    }
-    defaultColors = {
-      fg: { r: colors.foreground.r, g: colors.foreground.g, b: colors.foreground.b },
-      bg: { r: colors.background.r, g: colors.background.g, b: colors.background.b },
+      // Capture default colors so we can distinguish "default" from "explicitly set"
+      term.update()
+      const colors = term.getColors() as {
+        foreground: { r: number; g: number; b: number }
+        background: { r: number; g: number; b: number }
+      }
+      defaultColors = {
+        fg: { r: colors.foreground.r, g: colors.foreground.g, b: colors.foreground.b },
+        bg: { r: colors.background.r, g: colors.background.g, b: colors.background.b },
+      }
+    } catch (error) {
+      try {
+        destroy()
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], "Ghostty initialization and cleanup failed")
+      }
+      throw error
     }
   }
 
   function destroy(): void {
-    if (term) {
-      term.free()
-      term = null
+    const encoder = keyEncoder
+    const terminal = term
+    keyEncoder = null
+    term = null
+    const errors: unknown[] = []
+    try {
+      encoder?.dispose()
+    } catch (error) {
+      errors.push(error)
     }
+    try {
+      terminal?.free()
+    } catch (error) {
+      errors.push(error)
+    }
+    if (errors.length === 1) throw errors[0]
+    if (errors.length > 1) throw new AggregateError(errors, "Ghostty cleanup failed")
+  }
+
+  function encodeKey(event: KeyDescriptor): Uint8Array {
+    ensureTerm()
+    const encoder = keyEncoder
+    if (!encoder) throw new Error("ghostty key encoder not initialized — call init() first")
+    const namedKey = Object.hasOwn(nativeKeyNames, event.key) ? nativeKeyNames[event.key] : undefined
+    const named = typeof namedKey === "number"
+    const candidate = Key[event.key.toUpperCase() as keyof typeof Key]
+    // Text without a physical key name uses the public UNIDENTIFIED key plus its original UTF-8.
+    const key = named ? namedKey : typeof candidate === "number" ? candidate : Key.UNIDENTIFIED
+    const mods =
+      (event.shift ? Mods.SHIFT : 0) |
+      (event.ctrl ? Mods.CTRL : 0) |
+      (event.alt ? Mods.ALT : 0) |
+      (event.super ? Mods.SUPER : 0)
+    // ghostty-web 0.4.0 ignores consumedMods, composing and unshiftedCodepoint; do not invent their behavior.
+    return encoder.encode({
+      action: KeyAction.PRESS,
+      key,
+      mods,
+      // Printable keys retain their text even when they also have a named enum (digits).
+      utf8: event.key === "Space" ? " " : !named || event.key.length === 1 ? event.key : undefined,
+    })
   }
 
   function feed(data: Uint8Array): void {
@@ -673,6 +763,7 @@ export function createGhosttyBackend(
       "warnings",
       "hyperlinks",
       "mouse-encoding",
+      "key-encoding",
       "osc-metadata",
     ]),
   }
@@ -735,6 +826,7 @@ export function createGhosttyBackend(
     AdapterSourcesExtension &
     ReplyDeliveryExtension &
     MouseEncodingExtension &
+    KeyEncodingExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     replyDelivery,
@@ -761,7 +853,7 @@ export function createGhosttyBackend(
     getProgress,
     getScrollback,
     scrollViewport,
-    encodeKey: encodeKeyToAnsi,
+    encodeKey,
     encodeMouse,
     capabilities,
     getWarnings,

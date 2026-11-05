@@ -10,7 +10,9 @@ import { readFileSync } from "node:fs"
 import { delimiter, join } from "node:path"
 import { execFileSync } from "node:child_process"
 import { pathToFileURL } from "node:url"
-import { Ghostty, GhosttyTerminal } from "ghostty-web"
+import { Ghostty, GhosttyTerminal, KeyEncoder } from "ghostty-web"
+import * as ghosttyApi from "ghostty-web"
+import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
 import { resolveGhosttyWebWasm } from "../src/load-native.ts"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
 import type {
@@ -129,7 +131,7 @@ describe("ghostty backend", () => {
       assert.throws(() => new WebAssembly.Memory({initial:257}), RangeError, '16 MiB WASM cap must apply before allocation pressure');
       globalThis.self = globalThis;
       const { createGhosttyBackend } = await import(process.argv[1]);
-      const { GhosttyTerminal } = await import(process.argv[2]);
+      const { Ghostty } = await import(process.argv[2]);
       const { instance } = await WebAssembly.instantiate(readFileSync(process.argv[3]), {env:{log(){}}});
       const e = instance.exports, held = [];
       const input = new TextEncoder().encode('\x1b[c'.repeat(200));
@@ -148,9 +150,7 @@ describe("ghostty backend", () => {
           }
         }
       };
-      const backend = createGhosttyBackend(undefined, {
-        createTerminal: (...args) => new GhosttyTerminal(ffi,e.memory,...args)
-      });
+      const backend = createGhosttyBackend(undefined, new Ghostty({exports:ffi}));
       backend.init({cols:2,rows:1});
       let response = '';
       backend.onResponse = data => response += new TextDecoder().decode(data);
@@ -1164,6 +1164,83 @@ describe("ghostty backend", () => {
   })
 
   describe("key encoding", () => {
+    // @failure The declared runtime enums are erased, or the qualified adapter returns host-encoded bytes.
+    // @level l0 @consumer KeyEncodingExtension / terminfo input.xtest-key.
+    // Existing byte-only cases pass for the host helper and cannot establish native encoder ownership.
+    test("exports the public key enums consumed by native callers", () => {
+      const api = ghosttyApi as unknown as Record<string, Record<string, number> | undefined>
+      expect({ key: api.Key?.A, action: api.KeyAction?.PRESS, mods: api.Mods?.CTRL }).toEqual({
+        key: 20,
+        action: 1,
+        mods: 2,
+      })
+    })
+
+    test("delegates to the native encoder, propagates errors and disposes each lifecycle", () => {
+      const create = vi.spyOn(ghostty, "createKeyEncoder")
+      const encode = vi.spyOn(KeyEncoder.prototype, "encode")
+      const dispose = vi.spyOn(KeyEncoder.prototype, "dispose")
+      const host = vi.spyOn(hostKeyEncoding, "encodeKeyToAnsi").mockImplementation(() => {
+        throw new Error("host encoder must not answer a native key operation")
+      })
+      const own = createGhosttyBackend(undefined, ghostty)
+      try {
+        own.init({ cols: 20, rows: 24 })
+        expect(create).toHaveBeenCalledTimes(1)
+        expect(own.capabilities.extensions.has("key-encoding")).toBe(true)
+        expect([...own.encodeKey({ key: "a" })]).toEqual([97])
+        expect([...own.encodeKey({ key: "a", ctrl: true })]).toEqual([1])
+        expect(encode).toHaveBeenCalledTimes(2)
+        expect(host).not.toHaveBeenCalled()
+        const failure = new Error("native encoder failed")
+        encode.mockImplementationOnce(() => {
+          throw failure
+        })
+        expect(() => own.encodeKey({ key: "a" })).toThrow(failure)
+        own.init({ cols: 20, rows: 24 })
+        expect(create).toHaveBeenCalledTimes(2)
+        expect(dispose).toHaveBeenCalledTimes(1)
+        own.destroy()
+        expect(dispose).toHaveBeenCalledTimes(2)
+        expect(() => own.encodeKey({ key: "a" })).toThrow(/not initialized/)
+        expect(host).not.toHaveBeenCalled()
+      } finally {
+        own.destroy()
+        host.mockRestore()
+        dispose.mockRestore()
+        encode.mockRestore()
+        create.mockRestore()
+      }
+    })
+
+    // @failure A native encoder creation error leaves an allocated terminal live after partial init.
+    // @level l0 @consumer backend init/destroy. Normal lifecycle tests never force allocation failure.
+    test("releases a partially initialized terminal when encoder creation fails", () => {
+      const created: GhosttyTerminal[] = []
+      const originalCreate = ghostty.createTerminal.bind(ghostty)
+      const terminals = vi.spyOn(ghostty, "createTerminal").mockImplementation((...args) => {
+        const terminal = originalCreate(...args)
+        vi.spyOn(terminal, "free")
+        created.push(terminal)
+        return terminal
+      })
+      const failure = new Error("native encoder allocation failed")
+      const encoders = vi.spyOn(ghostty, "createKeyEncoder").mockImplementationOnce(() => {
+        throw failure
+      })
+      const own = createGhosttyBackend(undefined, ghostty)
+      try {
+        expect(() => own.init({ cols: 20, rows: 24 })).toThrow(failure)
+        for (const terminal of created) expect(terminal.free).toHaveBeenCalledTimes(1)
+        expect(() => own.encodeKey({ key: "a" })).toThrow(/not initialized/)
+      } finally {
+        own.destroy()
+        for (const terminal of created) vi.mocked(terminal.free).mockRestore()
+        encoders.mockRestore()
+        terminals.mockRestore()
+      }
+    })
+
     test("encodes Enter", () => {
       backend = createBackend()
       const encoded = backend.encodeKey({ key: "Enter" })
@@ -1182,10 +1259,13 @@ describe("ghostty backend", () => {
       expect(encoded).toEqual(new Uint8Array([3])) // ETX
     })
 
-    test("encodes regular characters", () => {
+    // Printable digits have named native keys too; retaining only their key code drops their text.
+    // @failure Native field translation loses printable digit input; existing letter cases miss this branch.
+    // @level l0 @consumer KeyEncodingExtension callers sending printable text.
+    test.each([..."a0123456789"])("encodes regular characters (%s)", (key) => {
       backend = createBackend()
-      const encoded = backend.encodeKey({ key: "a" })
-      expect(new TextDecoder().decode(encoded)).toBe("a")
+      const encoded = backend.encodeKey({ key })
+      expect(new TextDecoder().decode(encoded)).toBe(key)
     })
 
     test("encodes arrow keys", () => {
