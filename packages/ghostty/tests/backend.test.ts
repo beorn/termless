@@ -6,8 +6,8 @@
  */
 import { describe, test, expect, beforeAll, afterEach, vi } from "vitest"
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { readFileSync, realpathSync } from "node:fs"
+import { delimiter, join } from "node:path"
 import { execFileSync } from "node:child_process"
 import { pathToFileURL } from "node:url"
 import { Ghostty, GhosttyTerminal } from "ghostty-web"
@@ -108,10 +108,19 @@ describe("ghostty backend", () => {
   // @failure The native producer drops replies on allocator failure while feed returns successfully (#32286).
   // @level l0 @consumer TerminalBackend.feed. Other tests exercise only successful WASM allocations.
   test("propagates a real reply producer allocation failure through feed", () => {
+    // bun --bun prepends a node shim; this pressure test needs V8's real 16 MiB cap.
+    const node = process.versions.bun
+      ? process.env.PATH?.split(delimiter)
+          .map((directory) => Bun.which("node", { PATH: directory }))
+          .find((candidate) => candidate && realpathSync(candidate) !== realpathSync(process.execPath))
+      : process.execPath
+    expect(node, "the allocator pressure test requires the installed Node runtime").toBeTruthy()
     const wasm = resolveGhosttyWebWasm()
     const script = String.raw`
       import { readFileSync } from 'node:fs';
       import assert from 'node:assert/strict';
+      assert.equal(process.versions.bun, undefined, 'allocator pressure must run in Node');
+      assert.throws(() => new WebAssembly.Memory({initial:257}), RangeError, '16 MiB WASM cap must apply before allocation pressure');
       globalThis.self = globalThis;
       const { createGhosttyBackend } = await import(process.argv[1]);
       const { GhosttyTerminal } = await import(process.argv[2]);
@@ -156,7 +165,7 @@ describe("ghostty backend", () => {
       backend.destroy();
     `
     execFileSync(
-      "node",
+      node!,
       [
         "--wasm-max-mem-pages=256",
         "--input-type=module",

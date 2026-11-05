@@ -422,14 +422,14 @@ Some backends may not expose all modes. Return `false` for modes you can't detec
 
 Beyond the core `TerminalBackend`, Termless defines optional extension interfaces in `src/types.ts`. If your backend supports any of these, add the extension name to `capabilities.extensions`:
 
-| Extension              | Interface                | Capability string |
-| ---------------------- | ------------------------ | ----------------- |
+| Extension              | Interface                | Capability string  |
+| ---------------------- | ------------------------ | ------------------ |
 | Mouse encoding         | `MouseEncodingExtension` | `"mouse-encoding"` |
 | Native paste encoding  | `PasteEncodingExtension` | `"paste-encoding"` |
-| Color palette mutation | `ColorPaletteExtension`  | `"colorPalette"`  |
-| Dirty row tracking     | `DirtyTrackingExtension` | `"dirtyTracking"` |
-| OSC 8 hyperlinks       | `HyperlinkExtension`     | `"hyperlinks"`    |
-| Bell detection         | `BellExtension`          | `"bell"`          |
+| Color palette mutation | `ColorPaletteExtension`  | `"colorPalette"`   |
+| Dirty row tracking     | `DirtyTrackingExtension` | `"dirtyTracking"`  |
+| OSC 8 hyperlinks       | `HyperlinkExtension`     | `"hyperlinks"`     |
+| Bell detection         | `BellExtension`          | `"bell"`           |
 
 Use `hasExtension<T>(backend, "extensionName")` to type-narrow at runtime.
 
