@@ -32,9 +32,10 @@ const allocator = gpa.allocator();
 /// writer, so the engine's query actions are dropped. This handler keeps the readonly handler for
 /// all state changes and writes the replies Ghostty itself writes for the same actions, formatted
 /// as in Ghostty 332b2aef src/termio/stream_handler.zig (requestMode :602-618, requestModeUnknown
-/// :620-632, deviceStatusReport :838-870, queryKittyKeyboard :961-973). Every other query stays
-/// silent, including the size reports Ghostty answers from its window (src/termio/Termio.zig) and
-/// the answers that need app state a headless terminal lacks (DA, XTVERSION, color scheme, clipboard).
+/// :620-632, deviceStatusReport :838-870, queryKittyKeyboard :961-973, colorOperation queries
+/// :1335-1414, kittyColorReport queries :1455-1545). Every other query stays silent, including the
+/// size reports Ghostty answers from its window (src/termio/Termio.zig) and the answers that need
+/// app state a headless terminal lacks (DA, XTVERSION, color scheme, clipboard).
 /// The engine-emitted OSC 9;4 report (Ghostty 332b2aef src/terminal/osc.zig:199-213): a State enum remove=0, set=1,
 /// error=2, indeterminate=3, pause=4 and an optional u8 progress, stored verbatim from stream.zig:2042-2043.
 const ProgressReport = StreamAction.Value(.progress_report);
@@ -110,6 +111,90 @@ const ResponseHandler = struct {
                 .color_scheme => {},
             },
             .kitty_keyboard_query => try self.reply("\x1b[?{}u", .{terminal.screens.active.kitty_keyboard.current().int()}),
+            .color_operation => {
+                // OSC 4/5/10-19 in request order (Ghostty 332b2aef stream_handler.zig colorOperation
+                // :1204-1425). Each set or reset goes to readonly alone, so a later query reads the colour
+                // it left; each query reads live terminal.colors. Reports use Ghostty's shipped
+                // `osc-color-report-format` default, 16-bit (src/config/Config.zig:2881); the other config
+                // branches are not ported. Like termio, special, highlight, pointer and tektronix colours
+                // are not reported. termio unwraps an unset foreground/background (`.?`, :1341-1344) and
+                // would panic; this adapter skips only that request instead (@cto 1c6ca570), never a value.
+                var it = value.requests.constIterator(0);
+                while (it.next()) |request| switch (request.*) {
+                    .query => |target| {
+                        const colors = &terminal.colors;
+                        const rgb = switch (target) {
+                            .palette => |index| colors.palette.current[index],
+                            .dynamic => |dynamic| switch (dynamic) {
+                                .foreground => colors.foreground.get() orelse continue,
+                                .background => colors.background.get() orelse continue,
+                                .cursor => colors.cursor.get() orelse colors.foreground.get() orelse continue,
+                                else => continue,
+                            },
+                            .special => continue,
+                        };
+                        switch (target) {
+                            .palette => |index| try self.reply("\x1b]4;{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}", .{
+                                index,
+                                @as(u16, rgb.r) * 257,
+                                @as(u16, rgb.g) * 257,
+                                @as(u16, rgb.b) * 257,
+                            }),
+                            .dynamic => |dynamic| try self.reply("\x1b]{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}", .{
+                                @intFromEnum(dynamic),
+                                @as(u16, rgb.r) * 257,
+                                @as(u16, rgb.g) * 257,
+                                @as(u16, rgb.b) * 257,
+                            }),
+                            .special => unreachable,
+                        }
+                        try self.reply("{s}", .{value.terminator.string()});
+                    },
+                    else => {
+                        var one: @TypeOf(value.requests) = .{};
+                        defer one.deinit(allocator);
+                        try one.append(allocator, request.*);
+                        try self.readonly.vt(.color_operation, .{ .op = value.op, .requests = one, .terminator = value.terminator });
+                    },
+                };
+            },
+            .kitty_color_report => {
+                // OSC 21 in request order (Ghostty 332b2aef stream_handler.zig kittyColorReport
+                // :1455-1545): the first query writes the `ESC ] 21` prefix, a query for an unset colour
+                // writes `;key=`, an unsupported special key is skipped after that prefix, and the reply
+                // ends with the request's own terminator. Each set or reset goes to readonly alone, so a
+                // later query reads the colour it left; each query reads live terminal.colors.
+                var wrote = false;
+                for (value.list.items) |item| switch (item) {
+                    .query => |key| {
+                        if (!wrote) try self.reply("\x1b]21", .{});
+                        wrote = true;
+                        const colors = &terminal.colors;
+                        const rgb: ?ghostty.color.RGB = switch (key) {
+                            .palette => |index| colors.palette.current[index],
+                            .special => |special| switch (special) {
+                                .foreground => colors.foreground.get(),
+                                .background => colors.background.get(),
+                                .cursor => colors.cursor.get(),
+                                else => continue,
+                            },
+                        };
+                        if (rgb) |c| {
+                            try self.reply(";{f}=rgb:{x:0>2}/{x:0>2}/{x:0>2}", .{ key, c.r, c.g, c.b });
+                        } else {
+                            try self.reply(";{f}=", .{key});
+                        }
+                    },
+                    else => {
+                        var one = [_]@TypeOf(item){item};
+                        try self.readonly.vt(.kitty_color_report, .{
+                            .list = .{ .items = &one, .capacity = one.len },
+                            .terminator = value.terminator,
+                        });
+                    },
+                };
+                if (wrote) try self.reply("{s}", .{value.terminator.string()});
+            },
             else => try self.readonly.vt(action, value),
         }
     }
