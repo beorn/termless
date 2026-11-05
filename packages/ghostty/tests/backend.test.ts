@@ -1194,7 +1194,9 @@ describe("ghostty backend", () => {
         expect([...own.encodeKey({ key: "F1" })]).toEqual([27, 79, 80])
         expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: ghosttyApi.Key.F1, utf8: undefined }))
         expect([...own.encodeKey({ key: "NumLock" })]).toEqual([])
-        expect(encode).toHaveBeenLastCalledWith(expect.objectContaining({ key: ghosttyApi.Key.NUM_LOCK, utf8: undefined }))
+        expect(encode).toHaveBeenLastCalledWith(
+          expect.objectContaining({ key: ghosttyApi.Key.NUM_LOCK, utf8: undefined }),
+        )
         expect(encode).toHaveBeenCalledTimes(4)
         expect(host).not.toHaveBeenCalled()
         const failure = new Error("native encoder failed")
