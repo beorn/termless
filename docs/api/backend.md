@@ -305,7 +305,7 @@ or OSC 9;4 progress behavior. Check `hasExtension<OscMetadataExtension>(backend,
 "osc-metadata")` before calling these methods. The vterm backend implements them;
 other backends can omit the extension.
 
-Libvterm, vt100-rust and VT100.js expose `getUnhandledSequences()`: copied, ordered reports
+Libvterm, vt100-rust, VT100.js and VT220.js expose `getUnhandledSequences()`: copied, ordered reports
 from the library's own unhandled callbacks. OSC `code` is only its command number;
 vt100-rust CSI `code` retains native normalized parameter groups (colon and
 semicolon separated), with intermediate characters in front and the final byte
@@ -322,6 +322,12 @@ not reconstruct discarded colon groups. Its engine keeps at least the most recen
 1000 entries, trimming oldest entries after 2000; reset/re-init clear them. Before
 initialization or after destroy the adapter retains its normal lifecycle error.
 The extension adds no Cwd, notification, or other metadata reader on VT100.js.
+
+VT220.js also forwards its native engine's completed OSC command numbers and
+ignored numeric SGR operands. Reports contain copied, ordered summaries without
+payloads; an empty report decides nothing. Init/re-init starts fresh, reset/RIS
+clears observations, and calls before initialization or after destroy use the
+normal lifecycle error. Other optional metadata readers remain absent.
 
 The vterm and xterm.js backends also expose `getOsc777Payloads()`: copied, ordered
 payloads from their public completed-OSC callbacks, including non-notify payloads.

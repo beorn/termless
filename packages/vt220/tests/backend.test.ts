@@ -1,4 +1,8 @@
-import type { PasteEncodingExtension, ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import type {
+  OscMetadataExtension,
+  PasteEncodingExtension,
+  ReplyDeliveryExtension,
+} from "../../../src/terminal/types.ts"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { dirname, join, relative } from "node:path"
@@ -9,6 +13,45 @@ import { describe, test, expect } from "vitest"
 import { createVt220Backend } from "../src/backend.ts"
 
 describe("createVt220Backend", () => {
+  // @failure The extension binds another Screen, invents payload readers, or hides lifecycle errors with an empty report.
+  // @level l0 @consumer Terminfo's public unhandled-sequence reader.
+  test("forwards same-instance ignored reports with normal lifecycle and reply behavior", () => {
+    const backend = createVt220Backend()
+    expect(hasExtension<OscMetadataExtension>(backend, "osc-metadata")).toBe(true)
+    if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getUnhandledSequences) {
+      throw new Error("missing native ignored-sequence reader")
+    }
+    const read = backend.getUnhandledSequences
+    expect(() => read()).toThrow(/not initialized/)
+    backend.init({ cols: 12, rows: 3 })
+    const replies: string[] = []
+    backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    try {
+      expect(read()).toEqual([])
+      expect(backend.getCwd).toBeUndefined()
+      expect(backend.getNotifications).toBeUndefined()
+      feed("\x1b[1mA")
+      expect(backend.getCell(0, 0).bold).toBe(true)
+      expect(read()).toEqual([])
+      feed("\x1b[3m\x1b]777;private payload\x07\x1b[5n")
+      expect(read()).toEqual([
+        { kind: "csi", code: "3m" },
+        { kind: "osc", code: "777" },
+      ])
+      expect(replies).toEqual(["\x1b[0n"])
+      backend.reset()
+      expect(read()).toEqual([])
+      feed("\x1b[3m")
+      expect(read()).toEqual([{ kind: "csi", code: "3m" }])
+      backend.init({ cols: 12, rows: 3 })
+      expect(read()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+    expect(() => read()).toThrow(/not initialized/)
+  })
+
   // R2: unknown SGR operands must not swallow adjacent genuine DEC operands.
   test("applies documented SGR operands independently and ignores colon operands whole", () => {
     const backend = createVt220Backend({ cols: 12, rows: 3 })
