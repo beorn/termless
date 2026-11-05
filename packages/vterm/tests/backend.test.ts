@@ -26,8 +26,9 @@ describe("createVtermBackend", () => {
     backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
     try {
       expect(hasExtension(backend, "paste-encoding")).toBe(true)
-      if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding"))
+      if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding")) {
         throw new Error("missing native paste encoder")
+      }
       const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
       feed("seed\x1b[5n")
       expect(replies.join("")).toBe("\x1b[0n")
@@ -53,8 +54,9 @@ describe("createVtermBackend", () => {
   test("native paste follows the existing init, destroy and re-init lifecycle", () => {
     const backend = createVtermBackend()
     expect(hasExtension(backend, "paste-encoding")).toBe(true)
-    if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding"))
+    if (!hasExtension<PasteEncodingExtension>(backend, "paste-encoding")) {
       throw new Error("missing native paste encoder")
+    }
     expect(() => backend.encodePaste("x")).toThrow(/not initialized/)
     backend.init({ cols: 12, rows: 3 })
     expect(backend.encodePaste("x")).toEqual(new TextEncoder().encode("x"))
