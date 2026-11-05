@@ -131,7 +131,7 @@ describe("ghostty backend", () => {
       assert.throws(() => new WebAssembly.Memory({initial:257}), RangeError, '16 MiB WASM cap must apply before allocation pressure');
       globalThis.self = globalThis;
       const { createGhosttyBackend } = await import(process.argv[1]);
-      const { GhosttyTerminal } = await import(process.argv[2]);
+      const { Ghostty } = await import(process.argv[2]);
       const { instance } = await WebAssembly.instantiate(readFileSync(process.argv[3]), {env:{log(){}}});
       const e = instance.exports, held = [];
       const input = new TextEncoder().encode('\x1b[c'.repeat(200));
@@ -150,9 +150,7 @@ describe("ghostty backend", () => {
           }
         }
       };
-      const backend = createGhosttyBackend(undefined, {
-        createTerminal: (...args) => new GhosttyTerminal(ffi,e.memory,...args)
-      });
+      const backend = createGhosttyBackend(undefined, new Ghostty({exports:ffi}));
       backend.init({cols:2,rows:1});
       let response = '';
       backend.onResponse = data => response += new TextDecoder().decode(data);
@@ -1172,7 +1170,9 @@ describe("ghostty backend", () => {
     test("exports the public key enums consumed by native callers", () => {
       const api = ghosttyApi as unknown as Record<string, Record<string, number> | undefined>
       expect({ key: api.Key?.A, action: api.KeyAction?.PRESS, mods: api.Mods?.CTRL }).toEqual({
-        key: 20, action: 1, mods: 2,
+        key: 20,
+        action: 1,
+        mods: 2,
       })
     })
 
@@ -1193,7 +1193,9 @@ describe("ghostty backend", () => {
         expect(encode).toHaveBeenCalledTimes(2)
         expect(host).not.toHaveBeenCalled()
         const failure = new Error("native encoder failed")
-        encode.mockImplementationOnce(() => { throw failure })
+        encode.mockImplementationOnce(() => {
+          throw failure
+        })
         expect(() => own.encodeKey({ key: "a" })).toThrow(failure)
         own.init({ cols: 20, rows: 24 })
         expect(create).toHaveBeenCalledTimes(2)
@@ -1223,7 +1225,9 @@ describe("ghostty backend", () => {
         return terminal
       })
       const failure = new Error("native encoder allocation failed")
-      const encoders = vi.spyOn(ghostty, "createKeyEncoder").mockImplementationOnce(() => { throw failure })
+      const encoders = vi.spyOn(ghostty, "createKeyEncoder").mockImplementationOnce(() => {
+        throw failure
+      })
       const own = createGhosttyBackend(undefined, ghostty)
       try {
         expect(() => own.init({ cols: 20, rows: 24 })).toThrow(failure)

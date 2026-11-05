@@ -12,7 +12,7 @@
     "commit": "5714ed07a1012573261b7b7e3ed2add9c1504496",
     "archiveSha256": "55cee28558945de6e984bc183cd51f28eefdbf805544da2e70d4635476178790"
   },
-  "patchSha256": "db877655e5515f0e90a107559f4a50832f869f8a3343a1178c4f461c058287f1",
+  "patchSha256": "5b59287a64d43e67810f8fa902f50eaf9e12edb5d8ed377e9d8f3b26fdb20f99",
   "innerPatchSha256": "5dea132a843ff3dd9f158e87af01d10d58424d8f4f9aa5cfecf94227b3cb075e",
   "upstreamLockSha256": "f956fc4300424f4195e454084d3c749d3b9ca4ef68079e21c192772380b4168a",
   "toolchain": {
@@ -26,8 +26,8 @@
   "outputs": {
     "ghostty-vt.wasm": "65ab32ca8b3f2f310d288e4640ff5e3a297fc830fe3766a0409fda8ebefa5e4a",
     "dist/ghostty-vt.wasm": "65ab32ca8b3f2f310d288e4640ff5e3a297fc830fe3766a0409fda8ebefa5e4a",
-    "dist/ghostty-web.js": "bb4fb8fd8c77d5663f2b53ee3ac346d1b1b35122bcef2ea2c3123a611a445ffd",
-    "dist/ghostty-web.umd.cjs": "d2d0fa814eeb35a0071194dc662a8a636af047beb3abcf20975139029c4177e1",
+    "dist/ghostty-web.js": "1f6888c79d96438bf38d057c204cc5ed230dc6e885f2dfd7f6aaac06124a5f06",
+    "dist/ghostty-web.umd.cjs": "73072a91e71196c9672ed5f9016cf94633251241a81bced81bc7ffea4321a9fe",
     "dist/index.d.ts": "69c0f15b92fd848fe4bd1190f892377dd096940a6306abc3d3d89169c70c7713",
     "dist/__vite-browser-external-2447137e.js": "f8c456031e5001c0cda4837cd9ee3a33d79beeba120ec633ec9d990632fb2aa6"
   },

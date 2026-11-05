@@ -65,7 +65,7 @@ if (sha(new Uint8Array(await Bun.file(patch).arrayBuffer())) !== receipt.patchSh
   throw new Error("producer.patch differs from RECEIPT.json")
 }
 await run(["git", "apply", "--check", "--verbose", patch], web)
-await run(["git", "apply", "--verbose", patch], web, 4)
+await run(["git", "apply", "--verbose", patch], web, 5)
 const inner = join(web, "patches/ghostty-wasm-api.patch")
 if (sha(new Uint8Array(await Bun.file(inner).arrayBuffer())) !== receipt.innerPatchSha256) {
   throw new Error("Patched inner API differs from RECEIPT.json")

@@ -1154,3 +1154,20 @@ diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
           // Colors.
           self.colors.cursor = t.colors.cursor.get();
           self.colors.palette = t.colors.palette.current;
+
+diff --git a/lib/index.ts b/lib/index.ts
+--- a/lib/index.ts
++++ b/lib/index.ts
+@@ -72,11 +72,9 @@
+ 
+ // Ghostty WASM components (for advanced usage)
+ export { Ghostty, GhosttyTerminal, KeyEncoder, CellFlags, KeyEncoderOption } from './ghostty';
++export { KeyAction, Key, Mods } from './types';
+ export type {
+   KeyEvent,
+-  KeyAction,
+-  Key,
+-  Mods,
+   GhosttyCell,
+   RGB,
+   Cursor,
