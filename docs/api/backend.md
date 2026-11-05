@@ -217,9 +217,14 @@ Backends can optionally implement extension interfaces. Use `hasExtension()` to 
 ```typescript
 import { hasExtension } from "@termless/core"
 
-// Mouse encoding
+// Native mouse encoding (extension name "mouse-encoding")
 interface MouseEncodingExtension {
   encodeMouse(event: MouseEvent): Uint8Array | null
+}
+
+// Native paste encoding (extension name "paste-encoding")
+interface PasteEncodingExtension {
+  encodePaste(text: string): Uint8Array
 }
 
 // Color palette manipulation
@@ -279,6 +284,12 @@ interface BellExtension {
   clearBellCount(): void
 }
 ```
+
+`PasteEncodingExtension` is declared by `"paste-encoding"`. `encodePaste(text)`
+returns the engine's native input bytes in its current mode, including its own
+framing and text rules. It preserves modes and queued replies, does not feed the
+parser or write to a PTY, and never calls the backend's `onResponse`. Libvterm and
+WezTerm implement it; another backend may omit it when no path is exposed.
 
 `OscMetadataExtension` exposes the engine's exact OSC 7 URI and copied, ordered
 OSC 9 payloads. Null cwd means the engine reports no URI. Notification payloads

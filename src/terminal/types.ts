@@ -622,6 +622,12 @@ export interface MouseEncodingExtension {
   encodeMouse(event: MouseEvent): Uint8Array | null
 }
 
+/** Native paste input encoding, with this engine's current framing and text rules. */
+export interface PasteEncodingExtension {
+  /** Returns only paste bytes; preserves modes and queued replies, and never calls onResponse. */
+  encodePaste(text: string): Uint8Array
+}
+
 export interface ColorPaletteExtension {
   setColorPalette(entries: Partial<Record<number, Color>>): void
   setDefaultFg(color: Color): void

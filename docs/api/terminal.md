@@ -509,7 +509,7 @@ Type-safe extension check for backend capabilities:
 import { hasExtension } from "@termless/core"
 import type { MouseEncodingExtension } from "@termless/core"
 
-if (hasExtension<MouseEncodingExtension>(backend, "mouse")) {
+if (hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")) {
   const encoded = backend.encodeMouse({ x: 5, y: 10, button: "left", action: "press" })
 }
 ```

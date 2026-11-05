@@ -533,6 +533,57 @@ describe.skipIf(nativeBuildError !== null)(
       })
     })
 
+    // Mode getters cannot prove native input encoding or separation from protocol replies.
+    describe("paste encoding", () => {
+      test("encodes native paste through off/on/off without rendering or dispatching replies", () => {
+        const responses: Uint8Array[] = []
+        backend.onResponse = (bytes) => responses.push(bytes)
+        expect(backend.capabilities.extensions?.has("paste-encoding")).toBe(true)
+        const text = "paste-32310 λ🙂"
+        const screen = backend.getText()
+        const cursor = backend.getCursor()
+        for (const [mode, enabled] of [
+          ["\x1b[?2004l", false],
+          ["\x1b[?2004h", true],
+          ["\x1b[?2004l", false],
+        ] as const) {
+          backend.feed(encode(mode))
+          expect(backend.encodePaste(text)).toEqual(encode(enabled ? `\x1b[200~${text}\x1b[201~` : text))
+          expect(backend.encodePaste("")).toEqual(encode(enabled ? "\x1b[200~\x1b[201~" : ""))
+          expect(backend.getMode("bracketedPaste")).toBe(enabled)
+          expect(backend.getText()).toBe(screen)
+          expect(backend.getCursor()).toEqual(cursor)
+        }
+        backend.feed(encode("\x1b[5n"))
+        expect(responses).toEqual([encode("\x1b[0n")])
+      })
+
+      test("preserves pending native replies in order and excludes paste bytes from the next read", () => {
+        // backend.feed drains replies, so use the same native boundary before its response read.
+        const native = new (loadWeztermNative().WeztermTerminal)(80, 24)
+        native.feed(Buffer.from("\x1b[5n\x1b[?2004h\x1b[?2004$p"))
+        expect(native.encodePaste("queued-prefix λ🙂")).toEqual(Buffer.from("\x1b[200~queued-prefix λ🙂\x1b[201~"))
+        native.feed(Buffer.from("\x1b[?2004l\x1b[?2004$p"))
+        expect(native.readResponse()).toEqual(Buffer.from("\x1b[0n\x1b[?2004;1$y\x1b[?2004;2$y"))
+        expect(native.readResponse()).toBeNull()
+      })
+
+      test("requires initialization and observes fresh mode state after re-init", () => {
+        const local = createWeztermBackend()
+        expect(() => local.encodePaste("before init")).toThrow("not initialized")
+        local.init({ cols: 80, rows: 24 })
+        try {
+          local.feed(encode("\x1b[?2004h"))
+          expect(local.encodePaste("first")).toEqual(encode("\x1b[200~first\x1b[201~"))
+          local.init({ cols: 80, rows: 24 })
+          expect(local.encodePaste("fresh")).toEqual(encode("fresh"))
+        } finally {
+          local.destroy()
+        }
+        expect(() => local.encodePaste("after destroy")).toThrow("not initialized")
+      })
+    })
+
     // ── Key encoding ──
 
     describe("key encoding", () => {

@@ -7,7 +7,7 @@
 import { expect, test } from "vitest"
 import { createLibvtermBackend } from "../src/backend.ts"
 import { initLibvterm, type LibvtermModule } from "../src/wasm-bindings.ts"
-import { hasExtension, type MouseEncodingExtension, type KeyDescriptor } from "../../../src/terminal/types.ts"
+import { hasExtension, type MouseEncodingExtension, type PasteEncodingExtension, type KeyDescriptor } from "../../../src/terminal/types.ts"
 
 const module = await initLibvterm()
 const encoder = new TextEncoder()
@@ -64,7 +64,7 @@ test("raw native capture preserves a pending reply prefix and the OSC52 owner", 
   }
 })
 
-// Paste belongs to the raw module binding, with an independently created handle and its own callback sink.
+// Raw handles exercise native boundaries independently of the backend capture and selection owner.
 test("raw input APIs follow native keypad and bracketed-paste state", () => {
   const vt = module.vterm_new(3, 8)
   const reply = module.termless_vterm_output_attach(vt)
@@ -100,14 +100,19 @@ test("input during a reply callback cannot steal the rest of a multi-chunk respo
   backend.init({ cols: 8, rows: 3 })
   let replies = ""
   let input = ""
+  let paste = ""
   let calls = 0
   backend.onResponse = (bytes) => {
     replies += decode(bytes)
-    if (++calls === 1) input = decode(backend.encodeKey({ key: "ArrowUp" }))
+    if (++calls === 1) {
+      input = decode(backend.encodeKey({ key: "ArrowUp" }))
+      paste = decode(backend.encodePaste("café🦊"))
+    }
   }
   try {
-    backend.feed(encoder.encode("\x1b[?1h" + "\x1b[5n".repeat(400)))
+    backend.feed(encoder.encode("\x1b[?1h\x1b[?2004h" + "\x1b[5n".repeat(400)))
     expect(input).toBe("\x1bOA")
+    expect(paste).toBe("\x1b[200~café🦊\x1b[201~")
     expect(replies).toBe("\x1b[0n".repeat(400))
     expect(calls).toBe(2)
   } finally {
@@ -117,60 +122,66 @@ test("input during a reply callback cannot steal the rest of a multi-chunk respo
 
 // Success-only input tests miss restoration after native failure or either allocation/read boundary fails.
 test("capture failures restore replies and selection callbacks before subsequent input and destroy", () => {
-  for (const failure of ["begin", "allocation", "read", "native"] as const) {
-    let armed = false
-    let capture = 0
-    let ended = 0
-    const injected: LibvtermModule = {
-      ...module,
-      termless_vterm_output_capture_begin(vt) {
-        if (armed && failure === "begin") return 0
-        capture = module.termless_vterm_output_capture_begin(vt)
-        return capture
-      },
-      termless_vterm_output_capture_end(vt, reply, sink) {
-        ++ended
-        module.termless_vterm_output_capture_end(vt, reply, sink)
-      },
-      _malloc(size) {
-        return armed && failure === "allocation" ? 0 : module._malloc(size)
-      },
-      termless_vterm_output_read(sink, ptr, size) {
-        return armed && failure === "read" && sink === capture ? -1 : module.termless_vterm_output_read(sink, ptr, size)
-      },
-      vterm_keyboard_key(vt, key, mods) {
-        module.vterm_keyboard_key(vt, key, mods)
-        if (armed && failure === "native") throw new Error("injected native input failure")
-      },
-    }
-    const backend = createLibvtermBackend(undefined, injected)
-    backend.init({ cols: 8, rows: 3 })
-    let replies = ""
-    backend.onResponse = (bytes) => {
-      replies += decode(bytes)
-    }
-    try {
-      backend.feed(encoder.encode("\x1b]52;c;aGVsbG8=\x07" + query))
-      expect(replies).toBe("\x1b]52;c;aGVsbG8=\x1b\\")
-      replies = ""
-      armed = true
-      expect(() => backend.encodeKey({ key: "ArrowUp" }), failure).toThrow(
-        failure === "native" ? /injected native input failure/ : /libvterm input capture/,
-      )
-      armed = false
-      expect(ended, failure).toBe(failure === "begin" ? 0 : 1)
-      backend.feed(encoder.encode("\x1b[5n" + query))
-      expect(replies, failure).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
-      expect(decode(backend.encodeKey({ key: "ArrowDown" }))).toBe("\x1b[B")
-      expect(replies).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
-      backend.destroy()
+  for (const input of ["key", "paste"] as const) {
+    for (const failure of ["begin", "allocation", "read", "native"] as const) {
+      let armed = false
+      let capture = 0
+      let ended = 0
+      const injected: LibvtermModule = {
+        ...module,
+        termless_vterm_output_capture_begin(vt) {
+          if (armed && failure === "begin") return 0
+          capture = module.termless_vterm_output_capture_begin(vt)
+          return capture
+        },
+        termless_vterm_output_capture_end(vt, reply, sink) {
+          ++ended
+          module.termless_vterm_output_capture_end(vt, reply, sink)
+        },
+        _malloc(size) {
+          return armed && failure === "allocation" ? 0 : module._malloc(size)
+        },
+        termless_vterm_output_read(sink, ptr, size) {
+          return armed && failure === "read" && sink === capture ? -1 : module.termless_vterm_output_read(sink, ptr, size)
+        },
+        vterm_keyboard_unichar(vt, codepoint, mods) {
+          module.vterm_keyboard_unichar(vt, codepoint, mods)
+          if (armed && failure === "native") throw new Error("injected native input failure")
+        },
+        vterm_keyboard_key(vt, key, mods) {
+          module.vterm_keyboard_key(vt, key, mods)
+          if (armed && failure === "native") throw new Error("injected native input failure")
+        },
+      }
+      const backend = createLibvtermBackend(undefined, injected)
       backend.init({ cols: 8, rows: 3 })
-      replies = ""
-      backend.feed(encoder.encode(query))
-      expect(replies).toBe("\x1b]52;c;\x1b\\")
-    } finally {
-      armed = false
-      backend.destroy()
+      let replies = ""
+      backend.onResponse = (bytes) => {
+        replies += decode(bytes)
+      }
+      try {
+        backend.feed(encoder.encode("\x1b]52;c;aGVsbG8=\x07" + query))
+        expect(replies).toBe("\x1b]52;c;aGVsbG8=\x1b\\")
+        replies = ""
+        armed = true
+        expect(() => input === "key" ? backend.encodeKey({ key: "ArrowUp" }) : backend.encodePaste("hello"), failure).toThrow(
+          failure === "native" ? /injected native input failure/ : /libvterm input capture/,
+        )
+        armed = false
+        expect(ended, failure).toBe(failure === "begin" ? 0 : 1)
+        backend.feed(encoder.encode("\x1b[5n" + query))
+        expect(replies, failure).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
+        expect(decode(backend.encodeKey({ key: "ArrowDown" }))).toBe("\x1b[B")
+        expect(replies).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
+        backend.destroy()
+        backend.init({ cols: 8, rows: 3 })
+        replies = ""
+        backend.feed(encoder.encode(query))
+        expect(replies).toBe("\x1b]52;c;\x1b\\")
+      } finally {
+        armed = false
+        backend.destroy()
+      }
     }
   }
 })
@@ -245,5 +256,90 @@ test("native mouse encoding follows tracking state, coordinates and protocols", 
     expect(decode(backend.encodeMouse({ ...event, x: 5, button: "wheelDown" })!)).toBe("\x1b[<65;6;3M")
   } finally {
     backend.destroy()
+  }
+})
+
+// Raw boundary tests miss routing text through this instance's native modes and Unicode input API.
+test("backend paste encoding follows current native bracketed-paste mode without parsing text", () => {
+  const backend = createLibvtermBackend(undefined, module)
+  backend.init({ cols: 20, rows: 3 })
+  let replies = ""
+  backend.onResponse = (bytes) => {
+    replies += decode(bytes)
+  }
+  try {
+    expect(hasExtension<PasteEncodingExtension>(backend, "paste-encoding")).toBe(true)
+    const text = "café🦊\t\n\x1b[5n"
+    for (const [mode, expected] of [
+      ["\x1b[?2004l", text],
+      ["\x1b[?2004h", "\x1b[200~" + text + "\x1b[201~"],
+      ["\x1b[?2004l", text],
+    ] as const) {
+      backend.feed(encoder.encode(mode))
+      expect(backend.encodePaste(text)).toEqual(encoder.encode(expected))
+      expect(replies).toBe("")
+      expect(backend.getText()).toBe("\n\n")
+    }
+    expect(backend.encodePaste("")).toEqual(new Uint8Array())
+    backend.feed(encoder.encode("\x1b[?2004h"))
+    expect(decode(backend.encodePaste(""))).toBe("\x1b[200~\x1b[201~")
+  } finally {
+    backend.destroy()
+  }
+  expect(() => backend.encodePaste("text")).toThrow(/not initialized/i)
+})
+
+// A native text exception must still finish paste; a second cleanup failure must not mask the first.
+test("paste cleanup restores response and OSC52 owners and preserves native failures", () => {
+  for (const failure of ["start", "text", "end", "text-and-end"] as const) {
+    let armed = false
+    let ended = 0
+    const primary = new Error("injected native paste failure")
+    const cleanup = new Error("injected native paste cleanup failure")
+    const injected: LibvtermModule = {
+      ...module,
+      vterm_keyboard_start_paste(vt) {
+        module.vterm_keyboard_start_paste(vt)
+        if (armed && failure === "start") throw primary
+      },
+      vterm_keyboard_unichar(vt, codepoint, mods) {
+        module.vterm_keyboard_unichar(vt, codepoint, mods)
+        if (armed && (failure === "text" || failure === "text-and-end")) throw primary
+      },
+      vterm_keyboard_end_paste(vt) {
+        ++ended
+        module.vterm_keyboard_end_paste(vt)
+        if (armed && (failure === "end" || failure === "text-and-end")) throw cleanup
+      },
+    }
+    const backend = createLibvtermBackend(undefined, injected)
+    backend.init({ cols: 8, rows: 3 })
+    let replies = ""
+    backend.onResponse = (bytes) => {
+      replies += decode(bytes)
+    }
+    try {
+      backend.feed(encoder.encode("\x1b[?2004h\x1b]52;c;aGVsbG8=\x07"))
+      armed = true
+      let caught: unknown
+      try {
+        backend.encodePaste("abc")
+      } catch (error) {
+        caught = error
+      }
+      if (failure === "text-and-end") {
+        expect(caught).toBeInstanceOf(AggregateError)
+        expect((caught as AggregateError).errors).toEqual([primary, cleanup])
+      } else expect(caught).toBe(failure === "end" ? cleanup : primary)
+      expect(ended).toBe(1)
+      armed = false
+      backend.feed(encoder.encode("\x1b[5n" + query))
+      expect(replies).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
+      expect(decode(backend.encodePaste("ok"))).toBe("\x1b[200~ok\x1b[201~")
+      expect(replies).toBe("\x1b[0n\x1b]52;c;aGVsbG8=\x1b\\")
+    } finally {
+      armed = false
+      backend.destroy()
+    }
   }
 })

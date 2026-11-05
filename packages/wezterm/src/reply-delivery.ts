@@ -18,6 +18,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for stored conceal cell/empty-cell projection: feed/response delivery is unchanged.
 // Re-audited for the readonly DECCKM getter and maintained Cargo source: feed/response delivery is unchanged.
 // Re-audited for readonly current Progress enum projection: no feed, parser, writer, barrier or reply path changes.
+// Native paste encoding uses the existing barrier before and after send_paste, returning only bytes
+// appended after the queued-reply boundary. Pending replies retain their order and never include paste bytes.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -27,11 +29,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "f1dd2c6fea29f648901fa3276ad8b72aa3ce2507",
+      blobOid: "804aac9c6937a465a6506196193290b286271d14",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "0e30ee669130e11fa435e30a440c29ee61f9a01a",
+      blobOid: "5ca6f4a32c5853df234372b0477eb7a4aaf7b210",
     },
     {
       path: "src/load-native.ts",
@@ -42,7 +44,7 @@ export const adapterDeclaration = {
     boundary: "feed-and-getCursor",
     engine: {
       kind: "native",
-      sha256: "6f47972d80eb1f77214fac335e3e8c76f8b9fda017a1d7ba2b547d065e44b70c",
+      sha256: "8571d6e70cd096055d2e56a33cf5ee0c4570b420a41aa3f9b6c329f5efea5ef8",
     },
   },
 } as const

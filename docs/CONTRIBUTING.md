@@ -424,7 +424,8 @@ Beyond the core `TerminalBackend`, Termless defines optional extension interface
 
 | Extension              | Interface                | Capability string |
 | ---------------------- | ------------------------ | ----------------- |
-| Mouse encoding         | `MouseEncodingExtension` | `"mouseEncoding"` |
+| Mouse encoding         | `MouseEncodingExtension` | `"mouse-encoding"` |
+| Native paste encoding  | `PasteEncodingExtension` | `"paste-encoding"` |
 | Color palette mutation | `ColorPaletteExtension`  | `"colorPalette"`  |
 | Dirty row tracking     | `DirtyTrackingExtension` | `"dirtyTracking"` |
 | OSC 8 hyperlinks       | `HyperlinkExtension`     | `"hyperlinks"`    |

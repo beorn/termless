@@ -302,6 +302,28 @@ impl WeztermTerminal {
     }
 
     #[napi]
+    pub fn encode_paste(&mut self, text: String) -> Result<Buffer> {
+        self.sync_responses()?;
+        let boundary = {
+            let (lock, _) = &*self.writer.inner;
+            let state = lock
+                .lock()
+                .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+            state.buf.len()
+        };
+        self.term
+            .send_paste(&text)
+            .map_err(|err| Error::from_reason(format!("wezterm paste encoding failed: {err}")))?;
+        self.sync_responses()?;
+        let (lock, _) = &*self.writer.inner;
+        let mut state = lock
+            .lock()
+            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
+        // Only the native paste output belongs to the encoder; queued replies stay in order.
+        Ok(state.buf.split_off(boundary).into())
+    }
+
+    #[napi]
     pub fn resize(&mut self, cols: u32, rows: u32) {
         self.cols = cols as usize;
         self.rows = rows as usize;

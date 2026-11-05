@@ -35,6 +35,7 @@ import type {
   KeyDescriptor,
   MouseEvent,
   MouseEncodingExtension,
+  PasteEncodingExtension,
   ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
@@ -197,7 +198,7 @@ function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array
 export function createLibvtermBackend(
   opts?: Partial<TerminalOptions>,
   mod?: LibvtermModule,
-): LegacyBackend & AdapterSourcesExtension & MouseEncodingExtension {
+): LegacyBackend & AdapterSourcesExtension & MouseEncodingExtension & PasteEncodingExtension {
   const configuredLimit = checkedScrollbackLimit(opts?.scrollbackLimit ?? DEFAULT_SCROLLBACK_LIMIT)
   // Private VTerm*: callers cannot send raw paste boundaries into this backend's reply sink.
   let vt: number = 0
@@ -386,6 +387,32 @@ export function createLibvtermBackend(
         const codepoint = scalar.codePointAt(0)
         if (codepoint === undefined) throw unsupported()
         m.vterm_keyboard_unichar(vt, codepoint, modifiers)
+      }
+    })
+  }
+
+  function encodePaste(text: string): Uint8Array {
+    return captureInput((m) => {
+      let failed = false
+      let primary: unknown
+      try {
+        m.vterm_keyboard_start_paste(vt)
+        for (const scalar of text) {
+          const codepoint = scalar.codePointAt(0)
+          if (codepoint === undefined) throw new Error("libvterm paste text has no Unicode codepoint")
+          m.vterm_keyboard_unichar(vt, codepoint, 0)
+        }
+      } catch (error) {
+        failed = true
+        primary = error
+        throw error
+      } finally {
+        try {
+          m.vterm_keyboard_end_paste(vt)
+        } catch (cleanup) {
+          if (failed) throw new AggregateError([primary, cleanup], "libvterm paste input and cleanup failed")
+          throw cleanup
+        }
       }
     })
   }
@@ -613,10 +640,14 @@ export function createLibvtermBackend(
       reason:
         "libvterm supplies history callbacks; this adapter retains rows for readback without an application viewport.",
     },
-    extensions: new Set<string>(["adapter-sources", "reply-delivery", "mouse-encoding"]),
+    extensions: new Set<string>(["adapter-sources", "reply-delivery", "mouse-encoding", "paste-encoding"]),
   }
 
-  const backend: LegacyBackend & ReplyDeliveryExtension & AdapterSourcesExtension & MouseEncodingExtension = {
+  const backend: LegacyBackend &
+    ReplyDeliveryExtension &
+    AdapterSourcesExtension &
+    MouseEncodingExtension &
+    PasteEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "libvterm",
     init,
@@ -642,6 +673,7 @@ export function createLibvtermBackend(
     scrollViewport,
     encodeKey,
     encodeMouse,
+    encodePaste,
     capabilities,
     replyDelivery,
   }

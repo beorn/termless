@@ -22,6 +22,7 @@ import type {
   ReplyDeliveryExtension,
   HyperlinkExtension,
   OscMetadataExtension,
+  PasteEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
@@ -74,6 +75,7 @@ interface NapiScrollback {
 
 interface WeztermTerminal {
   feed(data: Buffer): void
+  encodePaste(text: string): Buffer
   resize(cols: number, rows: number): void
   reset(): void
   getText(): string
@@ -211,6 +213,7 @@ export function createWeztermBackend(
   native?: NativeModule,
 ): TerminalBackend &
   HyperlinkExtension &
+  PasteEncodingExtension &
   ReplyDeliveryExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> {
@@ -344,6 +347,16 @@ export function createWeztermBackend(
     return t.getToasts().map((toast) => ({ title: toast.title, body: toast.body }))
   }
 
+  function encodePaste(text: string): Uint8Array {
+    const t = ensureTerm()
+    if (typeof t.encodePaste !== "function") {
+      throw new Error(
+        "The loaded WezTerm native addon predates encodePaste; rebuild and copy it from the Termless root:\n  nix shell .#native-tools --command bun run --cwd packages/wezterm build:native",
+      )
+    }
+    return new Uint8Array(t.encodePaste(text))
+  }
+
   function getProgress(): { state: number; value: number | null } {
     const t = ensureTerm()
     if (typeof t.getProgress !== "function") {
@@ -397,11 +410,12 @@ export function createWeztermBackend(
         "WezTerm Screen library subject (tattoy-wezterm-term 0.1.0-fork.5) owns history and stable rows but no user viewport: src/screen.rs:15-45,335,493,522,527; scroll_up at :645 mutates content. Application pane viewports are a different subject.",
     },
     // Parsed toasts and current progress state only; no raw OSC 9/777 payload or OSC 7 reader.
-    extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "osc-metadata", "reply-delivery", "paste-encoding"]),
   }
 
   const backend: TerminalBackend &
     HyperlinkExtension &
+    PasteEncodingExtension &
     ReplyDeliveryExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress"> = {
@@ -431,6 +445,7 @@ export function createWeztermBackend(
     getScrollback,
     scrollViewport,
     encodeKey: encodeKeyToAnsi,
+    encodePaste,
     capabilities,
     replyDelivery,
   }

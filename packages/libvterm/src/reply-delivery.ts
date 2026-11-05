@@ -14,7 +14,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Reply/selection sinks and feed draining retain the existing path; exact artifact tests verify this pair.
 // Re-audited for native keyboard/mouse input capture: synchronous callback swaps restore the original reply sink
 // in finally without changing selection callbacks; tests retain a queued reply prefix and OSC52 state after failures.
-// Paste is exposed only on LibvtermModule handles created by their callers; backend handles stay private.
+// Re-audited for native paste input capture: start/unichar/end uses this same callback swap, preserves queued replies
+// and OSC52 ownership on errors, and keeps primary plus cleanup failures. Native handles stay private.
 // This declaration excludes itself; determining adapter edits require re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -24,7 +25,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "c4dc54d3def60001ae8a200c2d2cb3fda3e46ec7",
+      blobOid: "1077a72090bc8e54b63523c4517f7e9bb51c774f",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
