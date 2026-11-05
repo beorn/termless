@@ -19,10 +19,53 @@ import {
   type HyperlinkExtension,
   type OscMetadataExtension,
   type PasteEncodingExtension,
+  type MouseEncodingExtension,
   type SemanticMark,
 } from "../../../src/terminal/types.ts"
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
+
+// @failure Kitty's mouse extension must return its native Screen's reports, with held-button motion and wheel mapping,
+// while a tracking-off Screen stays silent and encoding does not consume or deliver parser replies.
+// @level l5
+// @consumer Terminfo's five cell-coordinate mouse criteria; pixel and prompt-click paths remain unmeasured.
+test.skipIf(!isKittyAvailable())(
+  "native mouse reports follow tracking, buttons and actions without leaking replies",
+  () => {
+    const backend = createKittyBackend({ cols: 20, rows: 5 })
+    const bytes = (value: string) => new TextEncoder().encode(value)
+    const replies: string[] = []
+    backend.onResponse = (value) => replies.push(new TextDecoder().decode(value))
+    try {
+      expect(hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")).toBe(true)
+      if (!hasExtension<MouseEncodingExtension>(backend, "mouse-encoding")) {
+        throw new Error("Kitty mouse extension missing")
+      }
+      const press = { x: 4, y: 2, button: "left", action: "press" } as const
+      expect(backend.encodeMouse(press)).toBeNull()
+      backend.feed(bytes("\x1b[?1000;1006h\x1b[6n"))
+      expect(backend.encodeMouse(press)).toEqual(bytes("\x1b[<0;5;3M"))
+      expect(backend.encodeMouse({ ...press, action: "release" })).toEqual(bytes("\x1b[<0;5;3m"))
+      expect(backend.encodeMouse({ ...press, button: "wheelUp" })).toEqual(bytes("\x1b[<64;5;3M"))
+      expect(backend.encodeMouse({ ...press, action: "move" })).toBeNull()
+      backend.feed(bytes("\x1b[?1002h"))
+      expect(backend.encodeMouse({ ...press, action: "move" })).toEqual(bytes("\x1b[<32;5;3M"))
+      expect(backend.encodeMouse({ ...press, button: "none", action: "move" })).toBeNull()
+      expect(backend.encodeMouse({ ...press, shift: true, ctrl: true, alt: true })).toEqual(bytes("\x1b[<28;5;3M"))
+      expect(() => backend.encodeMouse({ ...press, pixel: { x: 40, y: 24 } })).toThrow(/^mouse encoding unavailable:/)
+      expect(replies).toEqual([])
+      backend.getCursor()
+      expect(replies).toEqual(["\x1b[1;1R"])
+      backend.getCursor()
+      expect(replies).toHaveLength(1)
+      backend.reset()
+      expect(backend.encodeMouse(press)).toBeNull()
+    } finally {
+      backend.destroy()
+      vi.mocked(childProcess.execFileSync).mockClear()
+    }
+  },
+)
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>()
@@ -127,7 +170,7 @@ test.skipIf(!isKittyAvailable()).each([
           ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
           : cause
     const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
-    for (const mode of ["reverseVideo", "syncOutput"] as const) {
+    for (const mode of ["reverseVideo", "syncOutput", "mouseTracking"] as const) {
       expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))
     }
     expect(backend.getCell(0, 0).char).toBe("A")

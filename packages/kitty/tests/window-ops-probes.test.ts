@@ -212,16 +212,21 @@ describe.skipIf(!kittyAvailable)("window-op probe responses — kitty backend", 
     expect(backend.getMode("altScreen")).toBe(false)
     expect(backend.getMode("cursorVisible")).toBe(true)
     expect(backend.getMode("autoWrap")).toBeNull()
-    expect(backend.getMode("mouseTracking")).toBeNull()
+    expect(backend.getMode("mouseTracking")).toBe(true)
     expect(backend.getMode("applicationKeypad")).toBeNull()
     expect(backend.getMode("originMode")).toBeNull()
     expect(backend.getMode("insertMode")).toBeNull()
     expect(backend.getMode("sgrMouse" as never)).toBeNull()
     expect(responses.join("")).toBe("\x1b[?1000;1$y\x1b[?1003;1$y\x1b[?1006;1$y")
+    backend.reset()
+    expect(backend.getMode("mouseTracking")).toBe(false)
     for (const [mode, number] of [
       ["colorSchemeReporting", 2031],
       ["syncOutput", 2026],
       ["reverseVideo", 5],
+      ["mouseTracking", 1000],
+      ["mouseTracking", 1002],
+      ["mouseTracking", 1003],
     ] as const) {
       backend.feed(new TextEncoder().encode(`\x1b[?${number}h`)) // Make the first explicit reset an actual transition.
       for (const [control, enabled, reported] of [

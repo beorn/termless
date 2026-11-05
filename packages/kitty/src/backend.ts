@@ -24,6 +24,8 @@ import type {
   AdapterSourcesExtension,
   KeyDescriptor,
   KeyEncodingExtension,
+  MouseEncodingExtension,
+  MouseEvent,
   PasteEncodingExtension,
   TerminalBackend,
   TerminalOptions,
@@ -102,7 +104,17 @@ function findKitty(): string {
 // ===============================================================
 
 interface BridgeCommand {
-  op: "init" | "feed" | "resize" | "reset" | "scroll" | "snapshot" | "quit" | "encode-paste" | "encode-key"
+  op:
+    | "init"
+    | "feed"
+    | "resize"
+    | "reset"
+    | "scroll"
+    | "snapshot"
+    | "quit"
+    | "encode-paste"
+    | "encode-key"
+    | "encode-mouse"
   [key: string]: unknown
 }
 
@@ -131,6 +143,7 @@ interface BridgeCursor {
 
 interface BridgeSnapshot {
   encodedKey?: string
+  encodedMouse?: string | null
   cells: BridgeCell[][]
   cursor: BridgeCursor
   title: string
@@ -410,6 +423,20 @@ export function createKittyBackend(
     return new Uint8Array(Buffer.from(encoded, "base64"))
   }
 
+  function encodeMouse(event: MouseEvent): Uint8Array | null {
+    ensureInit()
+    // This adapter binds cell-coordinate mouse events only; pixel input remains a separate unmeasured path.
+    if (event.pixel !== undefined) {
+      throw new Error("mouse encoding unavailable: Kitty pixel-coordinate path is not bound")
+    }
+    const encoded = replayAndSnapshot({ op: "encode-mouse", event }).encodedMouse
+    if (encoded === null) return null
+    if (typeof encoded !== "string" || Buffer.from(encoded, "base64").toString("base64") !== encoded) {
+      throw new Error("Kitty bridge returned missing, non-string or malformed base64 encodedMouse")
+    }
+    return new Uint8Array(Buffer.from(encoded, "base64"))
+  }
+
   function ensureSnapshot(): BridgeSnapshot {
     ensureInit()
     if (snapshot && !snapshotDirty) return snapshot
@@ -601,7 +628,7 @@ export function createKittyBackend(
 
   function getMode(mode: TerminalMode): ModeState {
     const s = ensureSnapshot()
-    if ((mode === "reverseVideo" || mode === "syncOutput") && s.nativeModeError) {
+    if ((mode === "reverseVideo" || mode === "syncOutput" || mode === "mouseTracking") && s.nativeModeError) {
       throw new Error(s.nativeModeError)
     }
     return s.modes[mode] ?? null
@@ -657,6 +684,7 @@ export function createKittyBackend(
     reflow: true,
     extensions: new Set([
       "key-encoding",
+      "mouse-encoding",
       "adapter-sources",
       "paste-encoding",
       "warnings",
@@ -680,6 +708,7 @@ export function createKittyBackend(
 
   const backend: TerminalBackend &
     KeyEncodingExtension &
+    MouseEncodingExtension &
     WarningExtension &
     ReplyDeliveryExtension &
     HyperlinkExtension &
@@ -728,6 +757,7 @@ export function createKittyBackend(
     getScrollback,
     scrollViewport,
     encodeKey,
+    encodeMouse,
     encodePaste,
     capabilities,
     getWarnings: () => [...warnings],
