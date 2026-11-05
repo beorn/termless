@@ -178,10 +178,12 @@ export function createXtermBackend(
   ReplyDeliveryExtension &
   MouseEncodingExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> {
+  Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> {
   let term: XTerminal | null = null
   let notificationHandler: { dispose(): void } | null = null
   let notifications: string[] = []
+  let osc777Handler: { dispose(): void } | null = null
+  let osc777Payloads: string[] = []
   let cwdHandler: { dispose(): void } | null = null
   let cwdPropertyHandler: { dispose(): void } | null = null
   let cwd: { value: string | null } = { value: null }
@@ -239,10 +241,14 @@ export function createXtermBackend(
     cwdPropertyHandler = null
     notificationHandler?.dispose()
     notificationHandler = null
+    osc777Handler?.dispose()
+    osc777Handler = null
     if (term) term.dispose()
     decoder = new TextDecoder()
     notifications = []
     const instanceNotifications = notifications
+    osc777Payloads = []
+    const instanceOsc777Payloads = osc777Payloads
     cwd = { value: null }
     const instanceCwd = cwd
 
@@ -273,6 +279,10 @@ export function createXtermBackend(
     const parser = term.parser
     notificationHandler = parser.registerOscHandler(9, (payload) => {
       instanceNotifications.push(payload)
+      return false
+    })
+    osc777Handler = parser.registerOscHandler(777, (payload) => {
+      instanceOsc777Payloads.push(payload)
       return false
     })
     cwdHandler = parser.registerOscHandler(7, (payload) => {
@@ -351,11 +361,14 @@ export function createXtermBackend(
     cwdPropertyHandler = null
     notificationHandler?.dispose()
     notificationHandler = null
+    osc777Handler?.dispose()
+    osc777Handler = null
     if (term) {
       term.dispose()
       term = null
     }
     notifications = []
+    osc777Payloads = []
     cwd = { value: null }
   }
 
@@ -420,7 +433,7 @@ export function createXtermBackend(
   function reset(): void {
     const t = ensureTerm()
     decoder = new TextDecoder()
-    // RIS (Reset to Initial State) escape sequence
+    // RIS keeps this parser instance, including its public OSC callback histories.
     writeSync(t, "\x1bc")
     title = ""
     const inputHandler = coreOf(t)._inputHandler
@@ -865,7 +878,7 @@ export function createXtermBackend(
     ReplyDeliveryExtension &
     MouseEncodingExtension &
     AdapterSourcesExtension &
-    Pick<Required<OscMetadataExtension>, "getNotifications" | "getCwd"> = {
+    Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "xterm",
     init,
@@ -873,6 +886,10 @@ export function createXtermBackend(
     getNotifications() {
       ensureTerm()
       return [...notifications]
+    },
+    getOsc777Payloads() {
+      ensureTerm()
+      return [...osc777Payloads]
     },
     getCwd() {
       ensureTerm()

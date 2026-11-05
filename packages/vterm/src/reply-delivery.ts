@@ -4,6 +4,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Native paste delegates to this Screen and returns bytes without entering that path.
 // Re-audited 7e6c993c -> 67dd396: independent mouse DECRQM replies remain inline;
 // byte feed/onResponse forwarding is unchanged, and mouse encoding emits returned bytes only.
+// OSC777 observes the public parser tap without changing feed or response delivery.
 // This module deliberately never binds itself; determining adapter edits need re-audit.
 export const adapterDeclaration = {
   sources: [
@@ -13,7 +14,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vterm/src/backend.ts",
-      blobOid: "012de550a2c26b3c4b4e159a5e1de2e46a48bf22",
+      blobOid: "77ccc9dbbb8ae5845356152032b4d402bcef4b96",
     },
   ],
   delivery: {

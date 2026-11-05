@@ -166,6 +166,43 @@ describe("createVtermBackend", () => {
     }
   })
 
+  // @failure Existing OSC9 metadata tests cannot catch a missing completed-OSC777 callback or its parser lifetime.
+  // @level l0
+  // @consumer Headless OSC777 controls and notify observations through OscMetadataExtension.
+  test("OSC 777 payload history follows its parser instance and returns copies", () => {
+    const backend = createVtermBackend({ cols: 80, rows: 24 })
+    const other = createVtermBackend({ cols: 80, rows: 24 })
+    try {
+      if (!backend.getOsc777Payloads || !other.getOsc777Payloads) throw new Error("missing OSC777 reader")
+      const read = backend.getOsc777Payloads
+      const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+      expect(read()).toEqual([])
+      feed("\x1b]9;other family\x07\x1b]777;preexec\x07\x1b]777;notify;title;split")
+      expect(read()).toEqual(["preexec"])
+      feed(" body\x1b\\\x1b]777;notify;second;body\x07")
+      const expected = ["preexec", "notify;title;split body", "notify;second;body"]
+      expect(read()).toEqual(expected)
+      const copy = read() as string[]
+      copy.push("external mutation")
+      expect(read()).toEqual(expected)
+      expect(other.getOsc777Payloads()).toEqual([])
+      // reset() resets the same Screen; the public parser subscription and its history survive.
+      backend.reset()
+      expect(read()).toEqual(expected)
+      feed("\x1b]777;after reset\x07")
+      expect(read()).toEqual([...expected, "after reset"])
+      backend.destroy()
+      expect(read).toThrow("not initialized")
+      backend.init({ cols: 80, rows: 24 })
+      expect(read()).toEqual([])
+      feed("\x1b]777;new instance\x07")
+      expect(read()).toEqual(["new instance"])
+    } finally {
+      backend.destroy()
+      other.destroy()
+    }
+  })
+
   // Adapter-byte pins remain mandatory with source and packed/registry engines.
   test("declares reply delivery bound to actual imported adapter bytes", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })

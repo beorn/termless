@@ -80,6 +80,8 @@ export function createVtermBackend(
   MouseEncodingExtension &
   PasteEncodingExtension {
   let screen: Screen | null = null
+  let stopOsc777: (() => void) | null = null
+  let osc777Payloads: string[] = []
 
   function ensureScreen(): Screen {
     if (!screen) throw new Error("vterm backend not initialized — call init() first")
@@ -87,6 +89,10 @@ export function createVtermBackend(
   }
 
   function init(options: TerminalOptions): void {
+    stopOsc777?.()
+    stopOsc777 = null
+    osc777Payloads = []
+    const instanceOsc777Payloads = osc777Payloads
     screen = createScreen({
       cols: options.cols,
       rows: options.rows,
@@ -98,10 +104,16 @@ export function createVtermBackend(
         }
       },
     })
+    stopOsc777 = screen.tapParser((event) => {
+      if (event.kind === "osc" && event.code === 777) instanceOsc777Payloads.push(event.data)
+    })
   }
 
   function destroy(): void {
+    stopOsc777?.()
+    stopOsc777 = null
     screen = null
+    osc777Payloads = []
   }
 
   function feed(data: Uint8Array): void {
@@ -113,6 +125,7 @@ export function createVtermBackend(
   }
 
   function reset(): void {
+    // This keeps the same Screen parser and its subscribed OSC777 history.
     ensureScreen().reset()
   }
 
@@ -242,6 +255,11 @@ export function createVtermBackend(
     return ensureScreen().getNotifications()
   }
 
+  function getOsc777Payloads(): readonly string[] {
+    ensureScreen()
+    return [...osc777Payloads]
+  }
+
   function getSemanticMarks(): readonly SemanticMark[] {
     return ensureScreen().getSemanticZones()
   }
@@ -369,6 +387,7 @@ export function createVtermBackend(
     getIconLabel,
     getCwd,
     getNotifications,
+    getOsc777Payloads,
     getSemanticMarks,
     getSixelImages,
     getScrollback,
