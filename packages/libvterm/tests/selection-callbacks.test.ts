@@ -125,7 +125,7 @@ describe("OSC 9 notifications", () => {
         ),
       )
       expect(backend.getTitle()).toBe("final title")
-      expect(backend.getIconLabel()).toBe("icon and title")
+      expect(backend.getIconLabel?.()).toBe("icon and title")
       expect(backend.getCell(0, 0).char).toBe("X")
       expect(read()).toEqual(["notice"])
       expect(reply).toBe("")
