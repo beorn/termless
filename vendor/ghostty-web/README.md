@@ -2,6 +2,8 @@ This is a patched, source-backed distribution of ghostty-web0.4.0, never an upst
 
 The package manifest retains upstream consumer metadata; build scripts and development dependencies are omitted from this installable distribution. Rebuilds use the pinned upstream archive's own manifest and lockfile through rebuild.ts.
 
+The private reply path traps on stream/producer errors. The wrapper propagates those failures, frees write input in `finally`, and distinguishes a failed response read from an empty buffer. RECEIPT.json pins the rebuilt artifacts.
+
 # ghostty-web
 
 [![NPM Version](https://img.shields.io/npm/v/ghostty-web)](https://npmjs.com/package/ghostty-web) [![NPM Downloads](https://img.shields.io/npm/dw/ghostty-web)](https://npmjs.com/package/ghostty-web) [![npm bundle size](https://img.shields.io/bundlephobia/minzip/ghostty-web)](https://npmjs.com/package/ghostty-web) [![license](https://img.shields.io/github/license/coder/ghostty-web)](./LICENSE)

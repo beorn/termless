@@ -1,4 +1,10 @@
-// Adapter identity only. This engine's reply-delivery capability is unchanged.
+import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+
+// Synchronous feed writes, updates, then drains the entire growable response buffer into onResponse.
+// The wrapper retains unread tails across 256-byte reads; native stream/producer errors trap,
+// failed reads throw, and write scratch is freed in finally. Tests exercise real allocation failure
+// and DA1/DA2 behind a 900-byte backlog. The WASM is reproduced by vendor/ghostty-web/rebuild.ts.
+// This declaration excludes itself; determining source or artifact edits require re-audit.
 export const adapterDeclaration = {
   sources: [
     {
@@ -7,7 +13,27 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty/src/backend.ts",
-      blobOid: "edda9a2dcb4788ead267b52257b11536a10407a9",
+      blobOid: "645576e88b29eaa5e38354207567cc0275a5c330",
+    },
+    {
+      path: "packages/ghostty/src/load-native.ts",
+      blobOid: "56f1eb8218a5d450635d8ab7ff0ec507eddd960c",
+    },
+    {
+      path: "vendor/ghostty-web/dist/ghostty-web.js",
+      blobOid: "f9c05acd4c10b4a1ad1e49e6a95e467c294808ff",
     },
   ],
+  delivery: {
+    boundary: "feed-and-getCursor",
+    engine: {
+      kind: "wasm",
+      sha256: "65ab32ca8b3f2f310d288e4640ff5e3a297fc830fe3766a0409fda8ebefa5e4a",
+    },
+  },
 } as const
+
+export const replyDelivery: ReplyDeliveryExtension["replyDelivery"] = {
+  ...adapterDeclaration.delivery,
+  adapterSources: adapterDeclaration.sources,
+}

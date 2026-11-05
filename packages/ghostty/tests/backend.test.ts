@@ -8,6 +8,8 @@ import { describe, test, expect, beforeAll, afterEach, vi } from "vitest"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { execFileSync } from "node:child_process"
+import { pathToFileURL } from "node:url"
 import { Ghostty, GhosttyTerminal } from "ghostty-web"
 import { resolveGhosttyWebWasm } from "../src/load-native.ts"
 import { createGhosttyBackend, initGhostty, _resetSharedForTesting } from "../src/backend.ts"
@@ -70,6 +72,102 @@ describe("ghostty backend", () => {
 
   afterEach(() => {
     if (backend) backend.destroy()
+  })
+
+  // @failure A failed reply read is reported as empty, or a native write trap leaks its input buffer.
+  // @level l0 @consumer GhosttyTerminal reply ABI. Success-path engine tests cannot force these ABI errors.
+  test("distinguishes failed and empty reply reads and frees input after a write trap", () => {
+    const memory = new WebAssembly.Memory({ initial: 1 })
+    let status = -1
+    const release = vi.fn()
+    const terminal = new GhosttyTerminal(
+      {
+        ghostty_terminal_new: () => 1,
+        ghostty_terminal_free: () => {},
+        ghostty_wasm_alloc_u8_array: () => 16,
+        ghostty_wasm_free_u8_array: release,
+        ghostty_terminal_has_response: () => true,
+        ghostty_terminal_read_response: () => status,
+        ghostty_terminal_write: () => {
+          throw new WebAssembly.RuntimeError("producer failed")
+        },
+      } as unknown as ConstructorParameters<typeof GhosttyTerminal>[0],
+      memory,
+      2,
+      1,
+    )
+    expect(() => terminal.readResponse()).toThrow(/response.*-1/)
+    expect(release).toHaveBeenLastCalledWith(16, 256)
+    status = 0
+    expect(terminal.readResponse()).toBeNull()
+    expect(() => terminal.write("\x1b[c")).toThrow("producer failed")
+    expect(release).toHaveBeenLastCalledWith(16, 3)
+    terminal.free()
+  })
+
+  // @failure The native producer drops replies on allocator failure while feed returns successfully (#32286).
+  // @level l0 @consumer TerminalBackend.feed. Other tests exercise only successful WASM allocations.
+  test("propagates a real reply producer allocation failure through feed", () => {
+    const wasm = resolveGhosttyWebWasm()
+    const script = String.raw`
+      import { readFileSync } from 'node:fs';
+      import assert from 'node:assert/strict';
+      globalThis.self = globalThis;
+      const { createGhosttyBackend } = await import(process.argv[1]);
+      const { GhosttyTerminal } = await import(process.argv[2]);
+      const { instance } = await WebAssembly.instantiate(readFileSync(process.argv[3]), {env:{log(){}}});
+      const e = instance.exports, held = [];
+      const input = new TextEncoder().encode('\x1b[c'.repeat(200));
+      let forcing = false, reserved;
+      const ffi = {...e,
+        // Reserve only the input allocation: the producer still uses its real exhausted allocator.
+        ghostty_wasm_alloc_u8_array(size) {
+          return forcing && size === input.length ? reserved : e.ghostty_wasm_alloc_u8_array(size);
+        },
+        ghostty_terminal_write(...args) {
+          try { return e.ghostty_terminal_write(...args); }
+          finally {
+            // Release pressure before update/read so only a producer failure can satisfy the assertion.
+            for (const [ptr,size] of held) e.ghostty_wasm_free_u8_array(ptr,size);
+            held.length = 0;
+          }
+        }
+      };
+      const backend = createGhosttyBackend(undefined, {
+        createTerminal: (...args) => new GhosttyTerminal(ffi,e.memory,...args)
+      });
+      backend.init({cols:2,rows:1});
+      let response = '';
+      backend.onResponse = data => response += new TextDecoder().decode(data);
+      backend.feed(new TextEncoder().encode('\x1b[c'));
+      assert.equal(response, '\x1b[?62;22c');
+      reserved = e.ghostty_wasm_alloc_u8_array(input.length);
+      assert.ok(reserved);
+      for (const size of [65536,4096,256,16,1]) {
+        for (let i=0;i<100000;i++) {
+          const ptr = e.ghostty_wasm_alloc_u8_array(size);
+          if (!ptr) break;
+          held.push([ptr,size]);
+          assert.notEqual(i,99999,'allocator did not exhaust within bound');
+        }
+      }
+      forcing = true;
+      assert.throws(() => backend.feed(input), WebAssembly.RuntimeError);
+      backend.destroy();
+    `
+    execFileSync(
+      "node",
+      [
+        "--wasm-max-mem-pages=256",
+        "--input-type=module",
+        "-e",
+        script,
+        new URL("../src/backend.ts", import.meta.url).href,
+        pathToFileURL(join(wasm, "..", "dist", "ghostty-web.js")).href,
+        wasm,
+      ],
+      { encoding: "utf8", timeout: 30000 },
+    )
   })
 
   // @failure The URI wrapper keeps a detached view, frees borrowed bytes before copying, or conflates status 0/1.
@@ -382,6 +480,8 @@ describe("ghostty backend", () => {
         // DA1 in the clipboard-deny form (no 52: the shim has no clipboard write) and no 4 (no sixel); DA2; XTVERSION.
         expect(first.write("\x1b[c")).toBe("\x1b[?62;22c")
         expect(first.write("\x1b[>c")).toBe("\x1b[>1;10;0c")
+        // Replies behind a backlog cross the wrapper's 256-byte reads without losing their tail or order.
+        expect(first.write("\x1b[c".repeat(100) + "\x1b[>c")).toBe("\x1b[?62;22c".repeat(100) + "\x1b[>1;10;0c")
         expect(first.write("\x1b[>q")).toBe("\x1bP>|ghostty 1.3.0-dev+0000000\x1b\\")
         // DECRQSS reports the live state: SGR, DECSTBM, DECSCUSR (default steady block, matching the DECRQM ?12 reset
         // reply), and the invalid form for DECSLRM while left/right margin mode is off and for an unknown setting.

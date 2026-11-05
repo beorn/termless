@@ -27,10 +27,10 @@ interface Manifest {
 }
 
 describe("backendLoaders matches backends.json", () => {
-  // Universal identity AC: existing delivery tests cover only the eight delivery-capable engines.
+  // Universal identity AC: existing delivery tests cover only the nine delivery-capable engines.
   // Real-file hashes catch stale runtime declarations that synthetic qualification identities cannot exercise.
-  // Keep the three non-delivery engines outside the reply-delivery membership.
-  test("every library backend exposes its exact source list without widening reply delivery", async () => {
+  // Keep the two non-delivery engines outside the reply-delivery membership.
+  test("every library backend exposes its exact source list and audited reply delivery", async () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
     const manifest = JSON.parse(readFileSync(join(root, "backends.json"), "utf8")) as Manifest
     const delivery: string[] = []
@@ -59,7 +59,7 @@ describe("backendLoaders matches backends.json", () => {
         expect(backend.replyDelivery.adapterSources, name).toBe(sources)
       }
     }
-    expect(delivery.sort()).toEqual(["alacritty", "kitty", "libvterm", "vt100", "vt220", "vterm", "wezterm", "xtermjs"])
+    expect(delivery.sort()).toEqual(["alacritty", "ghostty", "kitty", "libvterm", "vt100", "vt220", "vterm", "wezterm", "xtermjs"])
   })
   test("the loader map and the manifest name the same packages", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
