@@ -26,7 +26,8 @@ import hashlib, json, os, pathlib, sys, sysconfig
 out = pathlib.Path(os.environ["KITTY_LAYOUT_OUT"])
 measured = json.loads(pathlib.Path("measured.json").read_text())
 expected = {"size": 3888, "reverseVideo": {"offset": 667, "width": 1, "cType": "bool"},
-            "syncOutput": {"offset": 1112, "width": 8, "cType": "int64_t"}}
+            "syncOutput": {"offset": 1112, "width": 8, "cType": "int64_t"},
+            "mouseTracking": {"offset": 684, "width": 4, "cType": "unsigned int"}}
 if measured["screen"] != expected:
     raise SystemExit("Kitty header layout disagrees with independently inspected native ELF: " + repr(measured["screen"]))
 manifest = {"schemaVersion": 1, "kittyVersion": "0.49.2",

@@ -28,6 +28,11 @@
       "offset": 1112,
       "width": 8,
       "cType": "int64_t"
+    },
+    "mouseTracking": {
+      "offset": 684,
+      "width": 4,
+      "cType": "unsigned int"
     }
   }
 }

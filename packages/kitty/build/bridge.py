@@ -400,7 +400,7 @@ class NativeModeStateUnavailable(RuntimeError):
 
 
 def read_native_modes(native_screen):
-    """Read only the two header-derived fields of the independently attested Screen layout."""
+    """Read only the header-derived fields of the independently attested Screen layout."""
     layout_path = Path(__file__).with_name("native-mode-layout.json")
     receipt_path = Path(__file__).with_name("native-mode-layout.receipt.json")
 
@@ -441,7 +441,8 @@ def read_native_modes(native_screen):
         screen_layout = layout["screen"]
         match("Screen basicsize", type(native_screen).__basicsize__, screen_layout["size"])
         match("Screen itemsize", type(native_screen).__itemsize__, 0)
-        readers = (("reverseVideo", ctypes.c_bool, "bool"), ("syncOutput", ctypes.c_int64, "int64_t"))
+        readers = (("reverseVideo", ctypes.c_bool, "bool"), ("syncOutput", ctypes.c_int64, "int64_t"),
+                   ("mouseTracking", ctypes.c_uint, "unsigned int"))
         for name, scalar, c_type in readers:
             field = screen_layout[name]
             match(f"{name}.cType", field["cType"], c_type)
@@ -459,6 +460,7 @@ def read_native_modes(native_screen):
         return {
             "reverseVideo": ctypes.c_bool.from_address(address + screen_layout["reverseVideo"]["offset"]).value,
             "syncOutput": ctypes.c_int64.from_address(address + screen_layout["syncOutput"]["offset"]).value != 0,
+            "mouseTracking": ctypes.c_uint.from_address(address + screen_layout["mouseTracking"]["offset"]).value != 0,
         }
     except (OSError, ValueError, KeyError, TypeError, ImportError, AttributeError) as error:
         raise NativeModeStateUnavailable(
@@ -695,6 +697,33 @@ def handle_command(cmd):
                 result["osc777Payloads"] = osc777_payloads
         return result
 
+    elif op == "encode-mouse":
+        event = cmd["event"]
+        # send_mouse_event takes protocol button numbers, not GLFW mouse button constants.
+        buttons = {"left": 1, "middle": 2, "right": 3, "wheelUp": 4, "wheelDown": 5, "none": 0}
+        actions = {
+            "press": native.PRESS,
+            "release": native.RELEASE,
+            "move": native.MOVE if event["button"] == "none" else native.DRAG,
+        }
+        mods = 0
+        for field, constant in (("shift", "SHIFT"), ("ctrl", "CONTROL"), ("alt", "ALT")):
+            if event.get(field):
+                mods |= getattr(native, "GLFW_MOD_" + constant)
+        response_prefix, wtc_prefix = callbacks.responses, callbacks.wtcbuf
+        try:
+            sent = native.send_mouse_event(
+                screen, event["x"], event["y"], buttons[event["button"]], actions[event["action"]], mods,
+            )
+            encoded = callbacks.responses[len(response_prefix):]
+            if callback_errors:
+                raised = "".join(callback_errors)
+                callback_errors.clear()
+                raise RuntimeError("kitty Window callback raised during mouse encoding: " + raised)
+        finally:
+            callbacks.responses, callbacks.wtcbuf = response_prefix, wtc_prefix
+        return {"encodedMouse": base64.b64encode(encoded).decode("ascii") if sent else None}
+
     elif op == "encode-key":
         event = cmd["event"]
         key = event["key"]
@@ -796,6 +825,8 @@ def batch_main():
         all_responses = b""
         paste_encoding = None
         encoded_key = None
+        encoded_mouse = None
+        mouse_encoding_requested = False
         all_unreproduced = []  # In feed order, so a later replay can be prefix-compared like responses
         all_prompts = []  # Likewise prefix-compared
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
@@ -810,6 +841,9 @@ def batch_main():
                 paste_encoding = result["pasteEncoding"]
             if "encodedKey" in result:
                 encoded_key = result["encodedKey"]
+            if "encodedMouse" in result:
+                encoded_mouse = result["encodedMouse"]
+                mouse_encoding_requested = True
             # Collect per-feed response data
             if "responses" in result:
                 all_responses += base64.b64decode(result["responses"])
@@ -825,6 +859,8 @@ def batch_main():
             snapshot["pasteEncoding"] = paste_encoding
         if encoded_key is not None:
             snapshot["encodedKey"] = encoded_key
+        if mouse_encoding_requested:
+            snapshot["encodedMouse"] = encoded_mouse
         all_cmd_output_markings.extend(snapshot.get("cmdOutputMarkings", ()))
         if all_cmd_output_markings:
             snapshot["cmdOutputMarkings"] = all_cmd_output_markings

@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "sha256": "4e248375728ff952617c82b65fa156f249857fbc26c2514d0386b7e419f785a8",
+  "sha256": "5984d12cc5bf6394e4736618669083e26893a5cf634d3e6083c5a9f770c73d96",
   "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
   "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz",
   "sourceNarHash": "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=",
   "generator": {
     "path": "packages/kitty/build/layout.c",
-    "gitBlob": "49c0beef4424190e89d2884eac5efe4da50e3630",
-    "sha256": "36473c67c5ec580b46ead3c1ceeddb94e8ca3d096ab6a52ba07149173dc6e6f6"
+    "gitBlob": "f58c0e943ad60daf20d54360184e039e16ff3826",
+    "sha256": "0a9c12d39546083eb2e814d5ea96328df944162d790dd776704b18a562564863"
   },
-  "recipeSha256": "c3c8dfdbe3e3f4e4b3524524dc71825b48779ece3f0ed3fb765f08c5dc40338c",
+  "recipeSha256": "d5c474986bba7757f9d93cd54a34a8cadf80917c192c8151cd22d540fc21d03b",
   "flakeLockSha256": "c35dfce676cb9829405d83938d67155bad2818583f2c56f347efbe96e0d295ea",
   "headers": [
     {
@@ -131,6 +131,11 @@
         "offset": 1112,
         "width": 8,
         "cType": "int64_t"
+      },
+      "mouseTracking": {
+        "offset": 684,
+        "width": 4,
+        "cType": "unsigned int"
       }
     }
   }
