@@ -621,6 +621,49 @@ describe.skipIf(nativeBuildError !== null)(
       })
     })
 
+    // @failure Mouse input is host-encoded, invents a press before a drag, or changes screen/reply state.
+    // @level l5
+    // @consumer Real WezTerm native mouse encoder through the public backend.
+    describe("mouse encoding", () => {
+      test("forwards native buttons, actions and modifiers without inventing input", () => {
+        const event = { x: 4, y: 2, button: "left", action: "press" } as const
+        const screen = backend.getText()
+        const cursor = backend.getCursor()
+        expect(backend.encodeMouse(event)).toBeNull()
+        expect(backend.encodeMouse({ ...event, action: "release" })).toBeNull()
+        backend.feed(encode("\x1b[?1002;1006h"))
+        expect(backend.encodeMouse({ ...event, action: "move" })).toBeNull()
+        expect(backend.encodeMouse(event)).toEqual(encode("\x1b[<0;5;3M"))
+        expect(backend.encodeMouse({ ...event, action: "move" })).toEqual(encode("\x1b[<32;5;3M"))
+        expect(backend.encodeMouse({ ...event, action: "move", button: "none", x: 5 })).toEqual(encode("\x1b[<32;6;3M"))
+        expect(backend.encodeMouse({ ...event, action: "release" })).toEqual(encode("\x1b[<0;5;3m"))
+        for (const [button, report] of [
+          ["left", "\x1b[<0;5;3M"],
+          ["middle", "\x1b[<1;5;3M"],
+          ["right", "\x1b[<2;5;3M"],
+          ["wheelUp", "\x1b[<64;5;3M"],
+          ["wheelDown", "\x1b[<65;5;3M"],
+        ] as const) {
+          expect(backend.encodeMouse({ ...event, button }), button).toEqual(encode(report))
+        }
+        expect(backend.encodeMouse({ ...event, button: "none" })).toBeNull()
+        expect(backend.encodeMouse({ ...event, shift: true, ctrl: true, alt: true })).toEqual(encode("\x1b[<28;5;3M"))
+        expect(() => backend.encodeMouse({ ...event, pixel: { x: 40, y: 24 } })).toThrow(
+          "mouse encoding unavailable: WezTerm pixel-coordinate path is not bound",
+        )
+        expect(backend.getText()).toBe(screen)
+        expect(backend.getCursor()).toEqual(cursor)
+      })
+
+      test("keeps a queued native DSR reply out of mouse bytes and delivers it once", () => {
+        const native = new (loadWeztermNative().WeztermTerminal)(80, 24)
+        native.feed(Buffer.from("\x1b[5n\x1b[?1000;1006h"))
+        expect(native.encodeMouse(4, 2, "left", "press", false, false, false)).toEqual(Buffer.from("\x1b[<0;5;3M"))
+        expect(native.readResponse()).toEqual(Buffer.from("\x1b[0n"))
+        expect(native.readResponse()).toBeNull()
+      })
+    })
+
     // ── Key encoding ──
 
     describe("key encoding", () => {

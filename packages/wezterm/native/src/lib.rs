@@ -5,8 +5,8 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    color::ColorPalette, Alert, AlertHandler, KeyCode, KeyModifiers, Progress, Terminal,
-    TerminalConfiguration, TerminalSize,
+    color::ColorPalette, Alert, AlertHandler, KeyCode, KeyModifiers, MouseButton, MouseEvent,
+    MouseEventKind, Progress, Terminal, TerminalConfiguration, TerminalSize,
 };
 
 struct ResponseBufferState {
@@ -368,28 +368,82 @@ impl WeztermTerminal {
             modifiers.insert(KeyModifiers::SUPER);
         }
 
-        self.sync_responses()?;
-        let boundary = {
-            let (lock, _) = &*self.writer.inner;
-            let state = lock
-                .lock()
-                .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
-            state.buf.len()
-        };
-        self.term
-            .key_down(native_key, modifiers)
-            .map_err(|err| Error::from_reason(format!("wezterm key encoding failed: {err}")))?;
-        self.sync_responses()?;
-        let (lock, _) = &*self.writer.inner;
-        let mut state = lock
-            .lock()
-            .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
-        // Only native key output belongs to the encoder; queued replies stay in order.
-        Ok(state.buf.split_off(boundary).into())
+        self.encode_input(|term| {
+            term.key_down(native_key, modifiers)
+                .map_err(|err| Error::from_reason(format!("wezterm key encoding failed: {err}")))
+        })
     }
 
     #[napi]
     pub fn encode_paste(&mut self, text: String) -> Result<Buffer> {
+        self.encode_input(|term| {
+            term.send_paste(&text)
+                .map_err(|err| Error::from_reason(format!("wezterm paste encoding failed: {err}")))
+        })
+    }
+
+    /// Forward one input event; no implicit press or host-side encoding.
+    /// Like key and paste, a writer-boundary failure makes this instance unusable.
+    #[napi]
+    pub fn encode_mouse(
+        &mut self,
+        x: u32,
+        y: i32,
+        button: String,
+        action: String,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+    ) -> Result<Buffer> {
+        let button = match button.as_str() {
+            "left" => MouseButton::Left,
+            "middle" => MouseButton::Middle,
+            "right" => MouseButton::Right,
+            "wheelUp" => MouseButton::WheelUp(1),
+            "wheelDown" => MouseButton::WheelDown(1),
+            "none" => MouseButton::None,
+            _ => {
+                return Err(Error::from_reason(format!(
+                    "wezterm mouse button is unknown: {button}"
+                )))
+            }
+        };
+        let kind = match action.as_str() {
+            "press" => MouseEventKind::Press,
+            "release" => MouseEventKind::Release,
+            "move" => MouseEventKind::Move,
+            _ => {
+                return Err(Error::from_reason(format!(
+                    "wezterm mouse action is unknown: {action}"
+                )))
+            }
+        };
+        let mut modifiers = KeyModifiers::empty();
+        if shift {
+            modifiers.insert(KeyModifiers::SHIFT);
+        }
+        if ctrl {
+            modifiers.insert(KeyModifiers::CTRL);
+        }
+        if alt {
+            modifiers.insert(KeyModifiers::ALT);
+        }
+        let event = MouseEvent {
+            kind,
+            x: x as usize,
+            y: i64::from(y),
+            x_pixel_offset: 0,
+            y_pixel_offset: 0,
+            button,
+            modifiers,
+        };
+        self.encode_input(|term| {
+            term.mouse_event(event)
+                .map_err(|err| Error::from_reason(format!("wezterm mouse encoding failed: {err}")))
+        })
+    }
+
+    fn encode_input(&mut self, encode: impl FnOnce(&mut Terminal) -> Result<()>) -> Result<Buffer> {
         self.sync_responses()?;
         let boundary = {
             let (lock, _) = &*self.writer.inner;
@@ -398,15 +452,13 @@ impl WeztermTerminal {
                 .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
             state.buf.len()
         };
-        self.term
-            .send_paste(&text)
-            .map_err(|err| Error::from_reason(format!("wezterm paste encoding failed: {err}")))?;
+        encode(&mut self.term)?;
         self.sync_responses()?;
         let (lock, _) = &*self.writer.inner;
         let mut state = lock
             .lock()
             .map_err(|_| Error::from_reason("wezterm SharedWriter mutex poisoned"))?;
-        // Only the native paste output belongs to the encoder; queued replies stay in order.
+        // Only this native input's output belongs to the encoder; queued replies stay in order.
         Ok(state.buf.split_off(boundary).into())
     }
 
@@ -630,7 +682,9 @@ impl WeztermTerminal {
     /// Serialize the current engine-owned directory without reconstructing its input.
     #[napi]
     pub fn get_cwd(&self) -> Option<String> {
-        self.term.get_current_dir().map(|url| url.as_str().to_owned())
+        self.term
+            .get_current_dir()
+            .map(|url| url.as_str().to_owned())
     }
 
     /// Project current engine state, without inventing last-report history.
