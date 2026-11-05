@@ -86,6 +86,7 @@ const ResponseHandler = struct {
     ) !void {
         const terminal = self.readonly.terminal;
         switch (action) {
+            .report_pwd => try terminal.setPwd(value.url),
             .progress_report => {
                 // Record the engine's emitted report verbatim, then forward it unchanged (readonly ignores it).
                 self.progress.* = value;
@@ -256,6 +257,7 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "getCursor", try js.createFunction(getCursor));
     try js.setNamedProperty(exports, "getMode", try js.createFunction(getMode));
     try js.setNamedProperty(exports, "getTitle", try js.createFunction(getTitle));
+    try js.setNamedProperty(exports, "getCwd", try js.createFunction(getCwd));
     try js.setNamedProperty(exports, "getProgress", try js.createFunction(getProgress));
     try js.setNamedProperty(exports, "getToasts", try js.createFunction(getToasts));
     try js.setNamedProperty(exports, "getScrollback", try js.createFunction(getScrollback));
@@ -817,6 +819,10 @@ fn getMode(handle: *TerminalHandle, mode_name: []const u8) ?bool {
 
 fn getTitle(handle: *TerminalHandle) []const u8 {
     return handle.title;
+}
+
+fn getCwd(handle: *TerminalHandle) ?[]const u8 {
+    return handle.terminal.getPwd();
 }
 
 // ─── Progress ───────────────────────────────────────────
