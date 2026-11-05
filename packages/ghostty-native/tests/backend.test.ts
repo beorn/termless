@@ -19,6 +19,95 @@ try {
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    // Native text rules and lifecycle belong to the real addon, not a shared host encoder.
+    test("encodes native paste on the same handle without callbacks or state changes", () => {
+      const encoder = new TextEncoder()
+      const decoder = new TextDecoder()
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const other = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const onResponse = vi.fn()
+      backend.onResponse = onResponse
+      try {
+        expect(backend.capabilities.extensions.has("paste-encoding")).toBe(true)
+        expect([...backend.encodePaste("")]).toEqual([])
+        expect(decoder.decode(backend.encodePaste("é中😀\t\n\r\r\n\x1b\x00"))).toBe("é中😀\t\r\r\r\r  ")
+        backend.feed(encoder.encode("one\r\ntwo\r\nthree\x1b[?2004h\x1b[20h"))
+        const before = {
+          text: backend.getText(),
+          cursor: backend.getCursor(),
+          scrollback: backend.getScrollback(),
+          lines: backend.getLines(),
+          mode: backend.getMode("bracketedPaste"),
+        }
+        const result = backend.encodePaste("é中😀\t\n\r\r\n\x1b[201~\x00")
+        expect(result).toBeInstanceOf(Uint8Array)
+        expect(decoder.decode(result)).toBe("\x1b[200~é中😀\t\n\r\r\n [201~ \x1b[201~")
+        expect(decoder.decode(backend.encodePaste(""))).toBe("\x1b[200~\x1b[201~")
+        expect(decoder.decode(other.encodePaste("x\n"))).toBe("x\r")
+        expect({
+          text: backend.getText(),
+          cursor: backend.getCursor(),
+          scrollback: backend.getScrollback(),
+          lines: backend.getLines(),
+          mode: backend.getMode("bracketedPaste"),
+        }).toEqual(before)
+        expect(onResponse).not.toHaveBeenCalled()
+        backend.feed(encoder.encode("\x1b[?2004l"))
+        expect(decoder.decode(backend.encodePaste("x\n"))).toBe("x\r")
+        backend.feed(encoder.encode("\x1b[?2004h"))
+        backend.reset()
+        expect(backend.getMode("bracketedPaste")).toBe(false)
+        expect(decoder.decode(backend.encodePaste("x\n"))).toBe("x\r")
+      } finally {
+        backend.destroy()
+        other.destroy()
+      }
+      expect(() => backend.encodePaste("x")).toThrow(/not initialized/)
+      backend.init({ cols: 10, rows: 2 })
+      try {
+        expect(decoder.decode(backend.encodePaste("x\n"))).toBe("x\r")
+      } finally {
+        backend.destroy()
+      }
+      const uninitialized = createGhosttyNativeBackend()
+      expect(() => uninitialized.encodePaste("x")).toThrow(/not initialized/)
+    })
+
+    test("native paste copies byte views and returns owned bytes, including empty input", () => {
+      const native = loadGhosttyNative()
+      const handle = native.createTerminal(10, 2, 100)
+      const encoder = new TextEncoder()
+      const backing = encoder.encode("!é中\n\x1b?")
+      const original = backing.slice()
+      let result: Uint8Array
+      try {
+        const view = backing.subarray(1, backing.length - 1)
+        result = native.encodePaste(handle, view)
+        expect(result).toBeInstanceOf(Uint8Array)
+        expect([...result]).toEqual([...encoder.encode("é中\r ")])
+        expect(backing).toEqual(original)
+        expect([...native.encodePaste(handle, new Uint8Array())]).toEqual([])
+        expect(() => native.encodePaste(handle, new Uint16Array([1]) as unknown as Uint8Array)).toThrow()
+      } finally {
+        native.destroyTerminal(handle)
+      }
+      expect([...result!]).toEqual([...encoder.encode("é中\r ")])
+    })
+
+    test("an old addon missing native paste gives the existing rebuild guidance", () => {
+      const native = loadGhosttyNative()
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const original = native.encodePaste
+      try {
+        Object.defineProperty(native, "encodePaste", { value: undefined, configurable: true, writable: true })
+        expect(() => backend.encodePaste("x")).toThrow(/predates encodePaste.*rebuild it:/s)
+        expect(() => backend.encodePaste("x")).toThrow(/cd packages\/ghostty-native && bash build\/build.sh/)
+      } finally {
+        Object.defineProperty(native, "encodePaste", { value: original, configurable: true, writable: true })
+        backend.destroy()
+      }
+    })
+
     /**
      * @failure #32271: Ghostty emits every OSC 9;4 as a progress_report action (332b2aef stream.zig:2042-2043), but the
      * embedding forwarded it to a readonly handler that ignores it, so no reader saw the report Ghostty parsed.

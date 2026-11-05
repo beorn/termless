@@ -289,7 +289,10 @@ interface BellExtension {
 returns the engine's native input bytes in its current mode, including its own
 framing and text rules. It preserves modes and queued replies, does not feed the
 parser or write to a PTY, and never calls the backend's `onResponse`. Libvterm,
-WezTerm, vt100, vt220 and vterm implement it. The historical vt100/vt220 encoders
+WezTerm, vt100, vt220, vterm, Kitty and Ghostty-native implement it. Kitty uses
+native Screen paste policy rather than application-level Window sanitization.
+Ghostty-native normalizes controls to spaces; outside bracketed mode it also
+converts line feeds to carriage returns. The historical vt100/vt220 encoders
 never frame paste; modern vterm follows its native mode 2004 and removes payload
 framing markers only while bracketed. Those three native libraries preserve
 newlines regardless of LNM. Another backend may omit the extension when no path is exposed.

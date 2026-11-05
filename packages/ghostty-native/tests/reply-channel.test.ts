@@ -23,6 +23,40 @@ const decoder = new TextDecoder()
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native reply channel${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
+    test("native paste leaves pending replies intact and never delivers them to onResponse", () => {
+      const native = loadGhosttyNative()
+      const handle = native.createTerminal(10, 2, 100)
+      try {
+        native.feed(handle, encoder.encode("\x1b[?2004h\x1b[5n\x1b[?2004$p"))
+        expect(native.hasResponse!(handle)).toBe(true)
+        expect(decoder.decode(native.encodePaste(handle, encoder.encode("x\n\x1b")))).toBe("\x1b[200~x\n \x1b[201~")
+        expect(native.hasResponse!(handle)).toBe(true)
+        expect(native.readResponse!(handle)).toBe("\x1b[0n\x1b[?2004;1$y")
+        expect(native.hasResponse!(handle)).toBe(false)
+      } finally {
+        native.destroyTerminal(handle)
+      }
+
+      const backend = createGhosttyNativeBackend({ cols: 10, rows: 2 })
+      const replies: string[] = []
+      backend.onResponse = (bytes) => {
+        replies.push(decoder.decode(bytes))
+        expect(decoder.decode(backend.encodePaste("callback\n"))).toBe("callback\r")
+      }
+      try {
+        expect(decoder.decode(backend.encodePaste("before\n"))).toBe("before\r")
+        expect(replies).toEqual([])
+        backend.feed(encoder.encode("\x1b[5n"))
+        expect(replies).toEqual(["\x1b[0n"])
+        expect(decoder.decode(backend.encodePaste("after\n"))).toBe("after\r")
+        expect(replies).toEqual(["\x1b[0n"])
+        backend.feed(encoder.encode("\x1b[?2004$p"))
+        expect(replies).toEqual(["\x1b[0n", "\x1b[?2004;2$y"])
+      } finally {
+        backend.destroy()
+      }
+    })
+
     test("delivers each engine reply to onResponse in input order, once", () => {
       const backend = createGhosttyNativeBackend({ cols: 10, rows: 3 })
       const replies: string[] = []
