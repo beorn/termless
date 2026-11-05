@@ -341,6 +341,92 @@ describe.skipIf(nativeBuildError !== null)(
       }
     })
 
+    // Accepted requirement: ordered completed OSC777 callbacks; existing OSC9 tests miss its separate history.
+    test("OSC 777 retains copied native callback fields beside OSC 9 and other native state", () => {
+      const backend = createVt100RustBackend({ cols: 30, rows: 3 })
+      const feed = (text: string) => backend.feed(Buffer.from(text))
+      const read = () => {
+        if (!hasExtension<OscMetadataExtension>(backend, "osc-metadata") || !backend.getOsc777Payloads) {
+          throw new Error("vt100-rust osc-metadata lacks native OSC777 callback reader")
+        }
+        return backend.getOsc777Payloads()
+      }
+      const responses: Uint8Array[] = []
+      backend.onResponse = (bytes) => responses.push(bytes)
+      try {
+        expect(read()).toEqual([])
+        feed("\x1b]777;notify;first;body\x07\x1b]777;notify;first;body\x1b\\")
+        expect(read()).toEqual(["notify;first;body", "notify;first;body"])
+        feed("\x1b]777\x07\x1b]777;\x07\x1b]777;split")
+        expect(read()).toEqual(["notify;first;body", "notify;first;body", "", ""])
+        feed(";räv;尾\x07")
+        expect(read().at(-1)).toBe("split;räv;尾")
+        const fields = Array.from({ length: 18 }, (_, index) => `f${index}`)
+        feed(`\x1b]777;${fields.join(";")}\x07`)
+        expect(read().at(-1)).toBe(fields.slice(0, 15).join(";"))
+        backend.feed(
+          Buffer.concat([Buffer.from("\x1b]777;bad-"), Buffer.from([0xff, 0x2d, 0xc3, 0x28]), Buffer.from("\x07")]),
+        )
+        expect(read().at(-1)).toBe("bad-�-�(")
+        const expected = [...read()]
+        const copy = read() as string[]
+        copy.push("not a native event")
+        copy[0] = "mutated"
+        expect(read()).toEqual(expected)
+        const payload = Buffer.from("clipboard-control").toString("base64")
+        feed(
+          `\x1b]9;notification control\x07\x1b]2;title control\x07\x1b]7;file:///cwd\x07\x1b]633;P;Cwd=/literal\\x3b;tail\x07\x1b]52;c;${payload}\x07plain\x1b[6n`,
+        )
+        expect(read()).toEqual(expected)
+        expect(backend.getNotifications()).toEqual(["notification control"])
+        expect(backend.getTitle()).toBe("title control")
+        expect(backend.getCwd()).toBe("/literal\\x3b;tail")
+        expect(backend.getClipboardState?.().writes).toEqual([{ selector: "c", payload, text: "clipboard-control" }])
+        expect(backend.getText()).toContain("plain")
+        expect(responses).toEqual([])
+      } finally {
+        backend.destroy()
+      }
+    })
+
+    // One native callback owner is replaced on reset: OSC9 and OSC777 histories CLEAR together.
+    test("OSC 777 native callback history clears with OSC 9 on reset and re-init and stays per instance", () => {
+      const backend = createVt100RustBackend({ cols: 20, rows: 2 })
+      const other = createVt100RustBackend({ cols: 20, rows: 2 })
+      const read = (value = backend) => {
+        if (!hasExtension<OscMetadataExtension>(value, "osc-metadata") || !value.getOsc777Payloads) {
+          throw new Error("vt100-rust osc-metadata lacks native OSC777 callback reader")
+        }
+        return value.getOsc777Payloads()
+      }
+      try {
+        expect(read()).toEqual([])
+        backend.feed(Buffer.from("\x1b]9;old9\x07\x1b]777;old777\x07"))
+        expect(read()).toEqual(["old777"])
+        expect(read(other)).toEqual([])
+        backend.feed(Buffer.from("\x1b]777;stale-reset"))
+        backend.reset()
+        backend.feed(Buffer.from("reset-tail\x07"))
+        expect(read()).toEqual([])
+        expect(backend.getNotifications()).toEqual([])
+        expect(backend.getText()).toContain("reset-tail")
+        backend.feed(Buffer.from("\x1b]9;new9\x07\x1b]777;new777\x07"))
+        expect(read()).toEqual(["new777"])
+        expect(backend.getNotifications()).toEqual(["new9"])
+        backend.feed(Buffer.from("\x1b]777;stale-reinit"))
+        backend.init({ cols: 20, rows: 2 })
+        backend.feed(Buffer.from("reinit-tail\x07"))
+        expect(read()).toEqual([])
+        expect(backend.getNotifications()).toEqual([])
+        expect(backend.getText()).toContain("reinit-tail")
+        backend.destroy()
+        expect(() => read()).toThrow("not initialized")
+      } finally {
+        backend.destroy()
+        other.destroy()
+      }
+    })
+
     // Accepted requirement: expose this parser's public unhandled_osc callback. Existing title
     // and clipboard tests exercise different callbacks and miss discarded notification payloads.
     test("OSC 9 public callback retains ordered native payloads without other OSC commands", () => {
