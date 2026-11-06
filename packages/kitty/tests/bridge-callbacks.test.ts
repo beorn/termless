@@ -43,9 +43,18 @@ test.skipIf(!isKittyAvailable())(
       expect(report()).toEqual([{ kind: "osc", code: "633" }])
       backend.feed(Buffer.from("\x1b]2;second-control\x07"))
       expect(report()).toEqual([{ kind: "osc", code: "633" }])
+      // A diagnostic listing several OSCs cannot decide one exact code.
+      backend.feed(Buffer.from("\x1b]13;?\x07"))
+      expect(report()).toEqual([{ kind: "osc", code: "633" }])
+      backend.feed(Buffer.from("\x1b]440;bell.wav\x07"))
+      expect(report()).toEqual([
+        { kind: "osc", code: "633" },
+        { kind: "osc", code: "440" },
+      ])
       backend.feed(Buffer.from("\x1b]113\x07\x1b[9 p"))
       expect(report()).toEqual([
         { kind: "osc", code: "633" },
+        { kind: "osc", code: "440" },
         { kind: "osc", code: "113" },
         { kind: "csi", code: " p" },
       ])

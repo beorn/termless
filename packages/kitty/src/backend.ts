@@ -763,7 +763,7 @@ export function createKittyBackend(
       for (const error of ensureSnapshot().parserErrors ?? []) {
         // Native 0.49.2 diagnostics only: never reconstruct a sequence from fed input.
         if (error.version !== "0.49.2") continue
-        const osc = /^(?:Unknown OSC escape code: ([0-9]+)(?:;[\s\S]*)?|Ignoring OSC ([0-9]+)(?:,[\s\S]*)?)$/u.exec(
+        const osc = /^(?:Unknown OSC escape code: ([0-9]+)(?:;[\s\S]*)?|Ignoring OSC ([0-9]+)(?:,? [\s\S]*)?)$/u.exec(
           error.message,
         )
         const code = osc?.[1] ?? osc?.[2]
