@@ -37,7 +37,6 @@ import type {
   TerminalCapabilities,
   Color,
   EmulatorWarning,
-  ReplyDeliveryExtension,
   WarningExtension,
   HyperlinkExtension,
   SemanticMarkExtension,
@@ -46,7 +45,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { isNamedKey } from "../../../src/terminal/key-mapping.ts"
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 import { execFileSync } from "node:child_process"
 import { existsSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -305,7 +304,6 @@ export function createKittyBackend(
 ): TerminalBackend &
   KeyEncodingExtension &
   WarningExtension &
-  ReplyDeliveryExtension &
   HyperlinkExtension &
   PasteEncodingExtension &
   AdapterSourcesExtension &
@@ -693,7 +691,7 @@ export function createKittyBackend(
       "adapter-sources",
       "paste-encoding",
       "warnings",
-      "reply-delivery",
+
       "hyperlinks",
       "semantic-command-end",
       "semantic-marks",
@@ -715,7 +713,6 @@ export function createKittyBackend(
     KeyEncodingExtension &
     MouseEncodingExtension &
     WarningExtension &
-    ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
     Pick<
@@ -795,7 +792,6 @@ export function createKittyBackend(
     clearWarnings: () => {
       warnings.length = 0
     },
-    replyDelivery,
   }
 
   return backend

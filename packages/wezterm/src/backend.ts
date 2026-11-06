@@ -19,7 +19,6 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
-  ReplyDeliveryExtension,
   HyperlinkExtension,
   OscMetadataExtension,
   PasteEncodingExtension,
@@ -30,7 +29,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module loading
@@ -222,7 +221,6 @@ export function createWeztermBackend(
   PasteEncodingExtension &
   KeyEncodingExtension &
   MouseEncodingExtension &
-  ReplyDeliveryExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
   let term: WeztermTerminal | null = null
@@ -454,7 +452,7 @@ export function createWeztermBackend(
       "adapter-sources",
       "hyperlinks",
       "osc-metadata",
-      "reply-delivery",
+
       "paste-encoding",
       "key-encoding",
       "mouse-encoding",
@@ -466,7 +464,6 @@ export function createWeztermBackend(
     PasteEncodingExtension &
     KeyEncodingExtension &
     MouseEncodingExtension &
-    ReplyDeliveryExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
@@ -499,7 +496,6 @@ export function createWeztermBackend(
     encodePaste,
     encodeMouse,
     capabilities,
-    replyDelivery,
   }
 
   return backend

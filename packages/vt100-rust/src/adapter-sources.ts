@@ -1,7 +1,4 @@
-// Adapter identity only. This engine's reply-delivery capability is unchanged.
-// Re-audited for nullable conceal/strikethrough and public OSC notification/Cwd readback.
-// OSC777 uses the same native callback owner and copied metadata read path; reply delivery is unchanged.
-// Unhandled OSC/CSI reports copy native callback fields on the same owner; handling and reply delivery are unchanged.
+// Adapter implementation identity.
 export const adapterDeclaration = {
   sources: [
     {

@@ -36,7 +36,6 @@ export type {
   SixelImage,
   SixelStorageExtension,
   AdapterSourcesExtension,
-  ReplyDeliveryExtension,
   MouseButton,
   MouseEvent,
   MouseModifiers,

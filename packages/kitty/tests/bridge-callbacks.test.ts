@@ -1101,7 +1101,7 @@ print(json.dumps({"raw": [cell["hyperlink"] for cell in raw], "actual": [cell.ge
   })
 })
 
-// Native paste must stay outside persistent parser history and the ordinary reply-delivery stream.
+// Native paste must stay outside persistent parser history and the ordinary response stream.
 describe.skipIf(!isKittyAvailable())("native Kitty paste encoding", () => {
   test("uses Screen framing and verbatim bytes with native lifecycle", () => {
     const backend = createKittyBackend()

@@ -7,14 +7,13 @@
  * Supports every SGR attribute, cursor shapes, OSC 8 hyperlinks, and more.
  */
 
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 import { createVtermScreen as createScreen, type ScreenCell, type VtermScreen as Screen } from "vterm.js"
 import type {
   AdapterSourcesExtension,
   PasteEncodingExtension,
   MouseEncodingExtension,
   TerminalBackend,
-  ReplyDeliveryExtension,
   HyperlinkExtension,
   OscMetadataExtension,
   SemanticMark,
@@ -75,7 +74,6 @@ export function createVtermBackend(
   OscMetadataExtension &
   SemanticMarkExtension &
   SixelStorageExtension &
-  ReplyDeliveryExtension &
   AdapterSourcesExtension &
   MouseEncodingExtension &
   PasteEncodingExtension {
@@ -327,7 +325,7 @@ export function createVtermBackend(
 
     extensions: new Set([
       "adapter-sources",
-      "reply-delivery",
+
       "mouse-encoding",
       "paste-encoding",
       "hyperlinks", // Parsed per-cell OSC 8 URI metadata
@@ -360,7 +358,6 @@ export function createVtermBackend(
     OscMetadataExtension &
     SemanticMarkExtension &
     SixelStorageExtension &
-    ReplyDeliveryExtension &
     AdapterSourcesExtension &
     MouseEncodingExtension &
     PasteEncodingExtension = {
@@ -414,7 +411,6 @@ export function createVtermBackend(
       return encodeMouseReport(event, { tracking, encoding })
     },
     capabilities,
-    replyDelivery,
   }
 
   // Eagerly init if opts provided

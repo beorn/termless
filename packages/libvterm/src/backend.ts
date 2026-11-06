@@ -38,11 +38,10 @@ import type {
   MouseEncodingExtension,
   PasteEncodingExtension,
   OscMetadataExtension,
-  ReplyDeliveryExtension,
 } from "../../../src/terminal/types.ts"
 import type { Mode } from "@termless/core/io"
 import { isNamedKey } from "../../../src/terminal/key-mapping.ts"
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 
 // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
 type LegacyBackend = TerminalBackend
@@ -690,7 +689,7 @@ export function createLibvtermBackend(
     },
     extensions: new Set<string>([
       "adapter-sources",
-      "reply-delivery",
+
       "key-encoding",
       "mouse-encoding",
       "paste-encoding",
@@ -699,7 +698,6 @@ export function createLibvtermBackend(
   }
 
   const backend: LegacyBackend &
-    ReplyDeliveryExtension &
     AdapterSourcesExtension &
     KeyEncodingExtension &
     MouseEncodingExtension &
@@ -736,7 +734,6 @@ export function createLibvtermBackend(
     encodeMouse,
     encodePaste,
     capabilities,
-    replyDelivery,
   }
 
   return backend

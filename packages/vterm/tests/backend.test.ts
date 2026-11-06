@@ -2,7 +2,7 @@ import type {
   MouseEvent,
   PasteEncodingExtension,
   OscMetadataExtension,
-  ReplyDeliveryExtension,
+  AdapterSourcesExtension,
   SemanticMarkExtension,
   SixelStorageExtension,
 } from "../../../src/terminal/types.ts"
@@ -204,18 +204,18 @@ describe("createVtermBackend", () => {
   })
 
   // Adapter-byte pins remain mandatory with source and packed/registry engines.
-  test("declares reply delivery bound to actual imported adapter bytes", () => {
+  test("exposes actual imported adapter source bytes", () => {
     const backend = createVtermBackend({ cols: 80, rows: 24 })
     try {
-      expect(hasExtension(backend, "reply-delivery")).toBe(true)
-      if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
-        throw new Error("initialized backend declares no reply delivery")
+      expect(hasExtension(backend, "adapter-sources")).toBe(true)
+      if (!hasExtension<AdapterSourcesExtension>(backend, "adapter-sources")) {
+        throw new Error("initialized backend exposes no adapter sources")
       }
-      const declaration = backend.replyDelivery
+      const sources = backend.getAdapterSources()
       const repo = fileURLToPath(new URL("../../../", import.meta.url))
       // Resolve the actual entry and implementation imports independently of declaration paths.
       const importedSources = [import.meta.resolve("../src/index.ts"), import.meta.resolve("../src/backend.ts")]
-      expect(declaration.adapterSources).toEqual(
+      expect(sources).toEqual(
         importedSources.map((url) => {
           const target = realpathSync(fileURLToPath(url))
           const bytes = readFileSync(target)
@@ -223,73 +223,6 @@ describe("createVtermBackend", () => {
           return { path: relative(repo, target).replaceAll("\\", "/"), blobOid }
         }),
       )
-    } finally {
-      backend.destroy()
-    }
-  })
-
-  test("reply delivery declaration is well formed", () => {
-    const backend = createVtermBackend({ cols: 80, rows: 24 })
-    try {
-      const declaration = backend.replyDelivery
-      expect(declaration.boundary).toBe("feed-and-getCursor")
-      expect(declaration.engine.kind).toBe("source")
-      if (declaration.engine.kind !== "source") throw new Error("expected audited source engine declaration")
-      expect(Object.keys(declaration.engine).sort()).toEqual(["kind", "repository", "treeOid"])
-      expect(declaration.engine.repository.trim()).not.toBe("")
-      expect(declaration.engine.treeOid).toMatch(/^[a-f0-9]{40}$/)
-      expect(declaration.adapterSources.length).toBeGreaterThan(0)
-      const repo = fileURLToPath(new URL("../../../", import.meta.url))
-      for (const source of declaration.adapterSources) {
-        expect(source.blobOid).toMatch(/^[a-f0-9]{40}$/)
-        expect(existsSync(join(repo, source.path)), source.path).toBe(true)
-      }
-    } finally {
-      backend.destroy()
-    }
-  })
-
-  test("reply delivery engine projection matches its owning source checkout", (context) => {
-    const backend = createVtermBackend({ cols: 80, rows: 24 })
-    try {
-      const declaration = backend.replyDelivery
-      if (declaration.engine.kind !== "source") throw new Error("expected audited source engine declaration")
-      const entry = realpathSync(fileURLToPath(import.meta.resolve("vterm.js")))
-      const engineRoot = dirname(dirname(entry))
-      // Hooks export the adapter's Git context; engines own another checkout.
-      const engineGitEnv = { ...process.env }
-      for (const key of ["GIT_DIR", "GIT_COMMON_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"]) delete engineGitEnv[key]
-      const owner = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-        cwd: engineRoot,
-        env: engineGitEnv,
-        encoding: "utf8",
-      })
-      if (owner.error) throw owner.error
-      const skipReason =
-        "engine projection not exercised: vterm.js is a packed or registry install with no owning checkout"
-      if (owner.status !== 0) context.skip(skipReason)
-      const toplevel = realpathSync(owner.stdout.trim())
-      const remote = spawnSync("git", ["remote", "get-url", "origin"], {
-        cwd: toplevel,
-        env: engineGitEnv,
-        encoding: "utf8",
-      })
-      if (remote.error) throw remote.error
-      const packagePath = relative(toplevel, engineRoot).replaceAll("\\", "/")
-      if (
-        remote.status !== 0 ||
-        remote.stdout.trim() !== declaration.engine.repository ||
-        packagePath.startsWith("..") ||
-        packagePath.split("/").includes("node_modules")
-      ) {
-        context.skip(skipReason)
-      }
-      const treeOid = execFileSync("git", ["rev-parse", "HEAD:" + packagePath], {
-        cwd: toplevel,
-        env: engineGitEnv,
-        encoding: "utf8",
-      }).trim()
-      expect(declaration.engine).toEqual({ kind: "source", repository: remote.stdout.trim(), treeOid })
     } finally {
       backend.destroy()
     }
