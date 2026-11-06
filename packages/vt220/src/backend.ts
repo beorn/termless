@@ -219,7 +219,7 @@ export function createVt220Backend(
 
   const capabilities: TerminalCapabilities = {
     name: "vt220",
-    version: "0.13.0",
+    version: "0.13.1",
     truecolor: false,
     kittyKeyboard: false,
     kittyGraphics: false,
