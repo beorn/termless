@@ -690,6 +690,12 @@ export interface CellSemanticTypeExtension {
   getCellSemanticType(row: number, col: number): CellSemanticType
 }
 
+/** Logical mouse pointer state, separate from the text caret; declared by "mouse-shape". */
+export interface MouseShapeExtension {
+  /** The engine's canonical W3C shape name, including its actual initial/default shape. */
+  getMouseShape(): string
+}
+
 /** Raw payload storage, without decoded pixels, raster dimensions, or image cell geometry. */
 export interface SixelImage {
   /** Exact stored Sixel payload after q; DCS framing and parameters are not included. */

@@ -26,6 +26,11 @@ import type {
   PasteEncodingExtension,
   KeyDescriptor,
   KeyEncodingExtension,
+  SemanticMark,
+  SemanticMarkExtension,
+  CellSemanticType,
+  CellSemanticTypeExtension,
+  MouseShapeExtension,
 } from "../../../src/terminal/types.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
 
@@ -35,6 +40,7 @@ import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // Opaque pointer — napigen wraps this as a JS object
 type NativeTerminalHandle = Record<string, never>
+type ClipboardState = ReturnType<NonNullable<TerminalBackend["getClipboardState"]>>
 
 interface NativeCell {
   text: string
@@ -111,6 +117,11 @@ interface NativeModule {
   getMode(handle: NativeTerminalHandle, mode: string): boolean | null
   getTitle(handle: NativeTerminalHandle): string
   getCwd(handle: NativeTerminalHandle): string | null
+  getMouseShape(handle: NativeTerminalHandle): string
+  getSemanticMarks(handle: NativeTerminalHandle): SemanticMark[]
+  getCellSemanticType(handle: NativeTerminalHandle, row: number, col: number): CellSemanticType
+  getClipboardState(handle: NativeTerminalHandle): ClipboardState
+  getKittyGraphics(): boolean
   /** The engine-emitted OSC 9;4 report; reported false before the first, value -1 when the engine stored none. */
   getProgress(handle: NativeTerminalHandle): { reported: boolean; state: number; value: number }
   /** Every engine-emitted OSC 9/777 toast since createTerminal, in order; OSC 9's title is "". */
@@ -266,6 +277,10 @@ export function createGhosttyNativeBackend(
   HyperlinkExtension &
   DefaultColorsExtension &
   AdapterSourcesExtension &
+  SemanticMarkExtension &
+  CellSemanticTypeExtension &
+  MouseShapeExtension &
+  Pick<Required<TerminalBackend>, "getClipboardState"> &
   Pick<Required<OscMetadataExtension>, "getCwd" | "getProgress" | "getToasts"> {
   let handle: NativeTerminalHandle | null = null
 
@@ -470,8 +485,16 @@ export function createGhosttyNativeBackend(
     version: "1.3.1",
     truecolor: true,
     kittyKeyboard: true,
-    // The imported ghostty-vt module disables Kitty graphics, unlike the full Ghostty application.
-    kittyGraphics: false,
+    // Read the option compiled into this addon, rather than inferring it from the application.
+    get kittyGraphics() {
+      const native = loadGhosttyNative()
+      if (typeof native.getKittyGraphics !== "function") {
+        throw new Error(
+          "The loaded Ghostty native addon predates getKittyGraphics; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+        )
+      }
+      return native.getKittyGraphics()
+    },
     sixel: false,
     osc8Hyperlinks: true,
     semanticPrompts: true,
@@ -485,6 +508,10 @@ export function createGhosttyNativeBackend(
       "osc-metadata",
       "paste-encoding",
       "key-encoding",
+      "semantic-marks",
+      "semantic-command-end",
+      "semantic-cells",
+      "mouse-shape",
     ]),
   }
 
@@ -497,6 +524,61 @@ export function createGhosttyNativeBackend(
       )
     }
     return native.getCwd(currentHandle)
+  }
+
+  function getMouseShape(): string {
+    const currentHandle = ensureHandle()
+    const native = loadGhosttyNative()
+    if (typeof native.getMouseShape !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getMouseShape; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    // Ghostty's enum spells W3C hyphens as Zig identifier underscores; aliases already resolve in the engine.
+    return native.getMouseShape(currentHandle).replaceAll("_", "-")
+  }
+
+  function getSemanticMarks(): readonly SemanticMark[] {
+    const currentHandle = ensureHandle()
+    const native = loadGhosttyNative()
+    if (typeof native.getSemanticMarks !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getSemanticMarks; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    return native.getSemanticMarks(currentHandle)
+  }
+
+  function getCellSemanticType(row: number, col: number): CellSemanticType {
+    const currentHandle = ensureHandle()
+    const native = loadGhosttyNative()
+    if (typeof native.getCellSemanticType !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getCellSemanticType; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    if (
+      !Number.isInteger(row) ||
+      !Number.isInteger(col) ||
+      row < 0 ||
+      col < 0 ||
+      row > 0xffffffff ||
+      col > 0xffffffff
+    ) {
+      throw new RangeError("Semantic cell coordinates must be nonnegative integers")
+    }
+    return native.getCellSemanticType(currentHandle, row, col)
+  }
+
+  function getClipboardState(): ClipboardState {
+    const currentHandle = ensureHandle()
+    const native = loadGhosttyNative()
+    if (typeof native.getClipboardState !== "function") {
+      throw new Error(
+        "The loaded Ghostty native addon predates getClipboardState; rebuild it:\n  cd packages/ghostty-native && bash build/build.sh",
+      )
+    }
+    return native.getClipboardState(currentHandle)
   }
 
   function getProgress(): { state: number; value: number | null } | null {
@@ -527,6 +609,10 @@ export function createGhosttyNativeBackend(
     HyperlinkExtension &
     DefaultColorsExtension &
     AdapterSourcesExtension &
+    SemanticMarkExtension &
+    CellSemanticTypeExtension &
+    MouseShapeExtension &
+    Pick<Required<TerminalBackend>, "getClipboardState"> &
     Pick<Required<OscMetadataExtension>, "getCwd" | "getProgress" | "getToasts"> = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty-native",
@@ -549,6 +635,10 @@ export function createGhosttyNativeBackend(
     getMode,
     getTitle,
     getCwd,
+    getMouseShape,
+    getSemanticMarks,
+    getCellSemanticType,
+    getClipboardState,
     getProgress,
     getToasts,
     getScrollback,

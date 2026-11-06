@@ -28,6 +28,7 @@ export type {
   KeyEncodingExtension,
   HyperlinkExtension,
   MouseEncodingExtension,
+  MouseShapeExtension,
   PasteEncodingExtension,
   OscMetadataExtension,
   SemanticMark,
