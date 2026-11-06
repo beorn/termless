@@ -790,8 +790,8 @@ export function createGhosttyBackend(
     return [...warnings]
   }
 
-  function getUnhandledSequences(): { readonly kind: "osc"; readonly code: string }[] {
-    const report: { readonly kind: "osc"; readonly code: string }[] = []
+  function getUnhandledSequences(): { readonly kind: "osc" | "csi"; readonly code: string }[] {
+    const report: { readonly kind: "osc" | "csi"; readonly code: string }[] = []
     for (const warning of warnings) {
       // Keep one entry per engine diagnostic, including allocator failures. Their paired rejection
       // is two entries, so the consumer's exact-one rule cannot mistake a host limitation for a negative.
@@ -801,6 +801,13 @@ export function createGhosttyBackend(
         )
       const code = match?.[1] ?? match?.[2]
       if (code !== undefined) report.push({ kind: "osc", code })
+      // Ghostty web 0.4.0 omits parameters from this P warning, including for CSI 1#P.
+      // The consumer binds its own feed and exact one-entry delta; do not invent #0P.
+      if (warning.message === "warning(stream): ignoring unimplemented CSI P with intermediates: #") {
+        report.push({ kind: "csi", code: "#P" })
+      } else if (warning.message === "warning(stream): unimplemented CSI action: ESC [ # {  } Q") {
+        report.push({ kind: "csi", code: "#Q" })
+      }
     }
     return report
   }

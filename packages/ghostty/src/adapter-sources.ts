@@ -5,6 +5,7 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // failed reads throw, and write scratch is freed in finally. Tests exercise real allocation failure
 // and DA1/DA2 behind a 900-byte backlog. The WASM is reproduced by vendor/ghostty-web/rebuild.ts.
 // This declaration excludes itself; determining source or artifact edits require re-audit.
+// Re-audit: palette-stack CSI warnings now reach the public report; OSC/reply lifetime is unchanged.
 export const adapterDeclaration = {
   sources: [
     {
@@ -13,7 +14,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/ghostty/src/backend.ts",
-      blobOid: "952a1bf86af5a400ca8cc94e968995bf91bda586",
+      blobOid: "081c308cac481c2f59b60de9c634f92f4eb12731",
     },
     {
       path: "packages/ghostty/src/load-native.ts",

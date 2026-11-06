@@ -1132,6 +1132,29 @@ describe("ghostty backend", () => {
       }
     })
 
+    // @failure The engine rejects a palette-stack CSI, but its public report drops the native warning.
+    // @consumer Terminfo's two palette-stack cells through OscMetadataExtension.getUnhandledSequences.
+    test.each([
+      ["#P", "warning(stream): ignoring unimplemented CSI P with intermediates: #"],
+      ["#Q", "warning(stream): unimplemented CSI action: ESC [ # {  } Q"],
+    ])("reports the real palette-stack rejection %s without inventing parameters", (code, warning) => {
+      const own = createGhosttyBackend(undefined, ghostty)
+      own.init({ cols: 80, rows: 24 })
+      try {
+        feedText(own, "\x1b[0m\x1b[1mC")
+        expect(own.getCell(0, 0).bold).toBe(true)
+        expect(own.getUnhandledSequences()).toEqual([])
+        feedText(own, `\x1b[${code}`)
+        expect(own.getWarnings().map((entry) => entry.message)).toContain(warning)
+        expect(own.getUnhandledSequences()).toEqual([{ kind: "csi", code }])
+        own.clearWarnings()
+        feedText(own, "\x1b[1;2;3#Z\x1b[#R\x1b[1#Q")
+        expect(own.getUnhandledSequences()).toEqual([])
+      } finally {
+        own.destroy()
+      }
+    })
+
     // @failure A stale distribution pretends an expected reader is absent, or an engine error becomes null.
     // @consumer OscMetadataExtension.getCwd; successful engine feeds cannot force these failure paths.
     test("rejects a stale directory reader and propagates lookup errors", () => {
