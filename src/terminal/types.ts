@@ -218,7 +218,7 @@ export interface Terminal {
   getClipboardState?(): {
     writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
     pasteSelector?: string
-    /** The engine's effective clipboard permission option, when the backend reports one (kitty clipboard_control) */
+    /** The engine's effective clipboard permission option (Kitty clipboard_control or Alacritty osc52). */
     control?: readonly string[]
   }
   getScrollback(): ScrollbackState
