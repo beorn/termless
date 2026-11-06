@@ -485,8 +485,15 @@ export function createWeztermBackend(
     getTextRange,
     getCell,
     getCellSemanticType(row, col) {
-      if (!Number.isSafeInteger(row) || !Number.isSafeInteger(col) || row < 0 || col < 0) {
-        throw new RangeError("wezterm semantic cell coordinates must be nonnegative integers")
+      if (
+        !Number.isSafeInteger(row) ||
+        !Number.isSafeInteger(col) ||
+        row < 0 ||
+        col < 0 ||
+        row > 0xffffffff ||
+        col > 0xffffffff
+      ) {
+        throw new RangeError("wezterm semantic cell coordinates must be uint32 integers")
       }
       return ensureTerm().getCellSemanticType(row, col)
     },
