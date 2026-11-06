@@ -50,11 +50,11 @@
     "@modelcontextprotocol/sdk": "1.32.1",
     "@napi-rs/canvas": "1.0.11",
     "@resvg/resvg-js": "2.6.2",
-    "@silvery/commander": "^0.18.2",
+    "@silvery/commander": "^0.27.0",
     "@termless/vterm": "^0.11.0",
-    "loggily": "^0.10.2",
+    "loggily": "^0.13.0",
     "react": "^19.0.0",
-    "silvery": "^0.24.0",
+    "silvery": "^0.27.0",
     "zod": "^4.6.5"
   },
   "peerDependencies": {

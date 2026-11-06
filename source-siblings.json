@@ -25,20 +25,20 @@
     {
       "name": "@silvery/commander",
       "repository": "beorn/silvery",
-      "commit": "c375b961de8f8cb8ada240e929a72c646fb20145",
+      "commit": "be468e44f3ffee529f307d96ae24a38604462a11",
       "directory": "packages/commander",
       "pack": true
     },
     {
       "name": "loggily",
       "repository": "beorn/loggily",
-      "commit": "2d7a37f2dc87b5bc421b25ccaf2dc10f3f8c167c",
+      "commit": "55bdc5a0f5604edb8947c4a295c5f00593030f93",
       "pack": true
     },
     {
       "name": "silvery",
       "repository": "beorn/silvery",
-      "commit": "c375b961de8f8cb8ada240e929a72c646fb20145",
+      "commit": "be468e44f3ffee529f307d96ae24a38604462a11",
       "pack": true
     },
     {
