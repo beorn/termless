@@ -44,7 +44,7 @@
         "upng-js": "^2.1.0",
       },
       "peerDependencies": {
-        "@termless/ghostty": "^0.10.2",
+        "@termless/ghostty": "^0.11.0",
         "node-pty": ">=1.0.0",
       },
       "optionalPeers": [
@@ -54,17 +54,17 @@
     },
     "packages/alacritty": {
       "name": "@termless/alacritty",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/cli": {
       "name": "@termless/cli",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "bin": {
         "termless": "./bin/termless.ts",
       },
@@ -73,18 +73,18 @@
         "@napi-rs/canvas": "1.0.11",
         "@resvg/resvg-js": "2.6.2",
         "@silvery/commander": "^0.18.2",
-        "@termless/vterm": "^0.10.2",
+        "@termless/vterm": "^0.11.0",
         "loggily": "^0.10.2",
         "react": "^19.0.0",
         "silvery": "^0.24.0",
         "zod": "^4.6.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
-        "@termless/ghostty": "^0.10.2",
-        "@termless/peekaboo": "^0.10.2",
-        "@termless/vt100": "^0.10.2",
-        "@termless/xtermjs": "^0.10.2",
+        "@termless/core": "^0.11.0",
+        "@termless/ghostty": "^0.11.0",
+        "@termless/peekaboo": "^0.11.0",
+        "@termless/vt100": "^0.11.0",
+        "@termless/xtermjs": "^0.11.0",
         "playwright": "^1.59.0",
       },
       "optionalPeers": [
@@ -96,70 +96,70 @@
     },
     "packages/ghostty": {
       "name": "@termless/ghostty",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "@napi-rs/canvas": "1.0.11",
         "ghostty-web": "file:../../vendor/ghostty-web",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/ghostty-native": {
       "name": "@termless/ghostty-native",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/kitty": {
       "name": "@termless/kitty",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/libvterm": {
       "name": "@termless/libvterm",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/peekaboo": {
       "name": "@termless/peekaboo",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
-        "@termless/vterm": "^0.10.2",
+        "@termless/core": "^0.11.0",
+        "@termless/vterm": "^0.11.0",
       },
     },
     "packages/swash-render": {
       "name": "@termless/swash-render",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "devDependencies": {
         "@napi-rs/cli": "3.10.5",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/termless": {
       "name": "termless",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "@termless/core": "workspace:*",
       },
     },
     "packages/viterm": {
       "name": "@termless/test",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "optionalDependencies": {
         "@napi-rs/canvas": "1.0.11",
         "@resvg/resvg-js": "^2.6.2",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
         "playwright": "^1.59.0",
         "vitest": "^5.0.0",
       },
@@ -169,34 +169,34 @@
     },
     "packages/vt100": {
       "name": "@termless/vt100",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "vt100.js": "0.13.1",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/vt100-rust": {
       "name": "@termless/vt100-rust",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/vt220": {
       "name": "@termless/vt220",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "vt220.js": "0.13.1",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/vterm": {
       "name": "@termless/vterm",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "vterm.js": "^0.13.1",
       },
@@ -204,35 +204,35 @@
         "@termless/xtermjs": "workspace:*",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/web-player": {
       "name": "@termless/web-player",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "@xterm/xterm": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/wezterm": {
       "name": "@termless/wezterm",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
       },
     },
     "packages/xtermjs": {
       "name": "@termless/xtermjs",
-      "version": "0.10.2",
+      "version": "0.11.0",
       "dependencies": {
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
       },
       "peerDependencies": {
-        "@termless/core": "^0.10.2",
+        "@termless/core": "^0.11.0",
         "silvery": ">=0.4.2",
       },
       "optionalPeers": [
@@ -728,7 +728,7 @@
 
     "@termless/cli": ["@termless/cli@workspace:packages/cli"],
 
-    "@termless/core": ["@termless/core@root:", {}],
+    "@termless/core": ["@termless/core@link:.", { "hasInstallScript": true }],
 
     "@termless/ghostty": ["@termless/ghostty@workspace:packages/ghostty"],
 
@@ -1554,8 +1554,6 @@
 
     "@silvery/ansi/@silvery/color": ["@silvery/color@0.18.1", "", {}, "sha512-Ov8/CaXrpmfn1niCJI4qDViXHl8RLsLlvV9WflKsbk0wd+r5H/VfJGunqDNbos2AWNJqDOhcgbdDap+gQ1c+fQ=="],
 
-    "@termless/core/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
-
     "@termless/ghostty/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 
     "@vue/compiler-core/entities": ["entities@7.0.1", "", {}, "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA=="],
@@ -1583,6 +1581,10 @@
     "router/path-to-regexp": ["path-to-regexp@8.4.2", "", {}, "sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA=="],
 
     "silvery/@silvery/commander": ["@silvery/commander@0.24.0", "", { "dependencies": { "@silvery/ansi": "0.24.0", "commander": ">=15.0.0", "zod": ">=3.0.0" } }, "sha512-/Hv3GyLppOK+uA+TMvTLwiNNSYu2rb9axzs+f8OgQtqLA9RdV3KxXV0+RMim1hpMnuxt/DO2H6lQkjzbn/syng=="],
+
+    "silvery/@termless/core": ["@termless/core@root:", {}],
+
+    "termless/@termless/core": ["@termless/core@root:", {}],
 
     "tinyglobby/picomatch": ["picomatch@4.0.5", "", {}, "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A=="],
 
@@ -1615,6 +1617,10 @@
     "cliui/strip-ansi/ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 
     "silvery/@silvery/commander/@silvery/ansi": ["@silvery/ansi@0.24.0", "", { "dependencies": { "@silvery/color": "0.24.0", "string-width": "^8.2.2" } }, "sha512-LpPrwg1KFM+AKy0NHvWLtYDBxu3BvESOwe9pJAeXrQwAw/fcQGP9dP9tUq2bt6bw05NCNYx7FTJFLZ410RW5fg=="],
+
+    "silvery/@termless/core/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
+
+    "termless/@termless/core/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 
     "vitest/vite/fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
 
