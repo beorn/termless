@@ -35,7 +35,6 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public",
     "bin": {
       "termless": "./dist/cli.mjs"
     },
@@ -44,7 +43,8 @@
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

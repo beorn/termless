@@ -122,21 +122,21 @@ describe("createXtermBackend", () => {
       const parserGetter = Object.getOwnPropertyDescriptor(xterm.Terminal.prototype, "parser")?.get
       if (!parserGetter) throw new Error("xterm public parser getter unavailable")
       const registrations: { callback: (payload: string) => boolean | Promise<boolean>; disposed: () => number }[] = []
-      const parserSpy = vi
-        .spyOn(xterm.Terminal.prototype, "parser", "get")
-        .mockImplementation(function (this: InstanceType<typeof xterm.Terminal>) {
-          const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
-          const register = parser.registerOscHandler.bind(parser)
-          vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
-            const handle = register(ident, callback)
-            if (ident === command) {
-              const dispose = vi.spyOn(handle, "dispose")
-              registrations.push({ callback, disposed: () => dispose.mock.calls.length })
-            }
-            return handle
-          })
-          return parser
+      const parserSpy = vi.spyOn(xterm.Terminal.prototype, "parser", "get").mockImplementation(function (
+        this: InstanceType<typeof xterm.Terminal>,
+      ) {
+        const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
+        const register = parser.registerOscHandler.bind(parser)
+        vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
+          const handle = register(ident, callback)
+          if (ident === command) {
+            const dispose = vi.spyOn(handle, "dispose")
+            registrations.push({ callback, disposed: () => dispose.mock.calls.length })
+          }
+          return handle
         })
+        return parser
+      })
       const backend = createXtermBackend()
       try {
         backend.init({ cols: 80, rows: 24 })
@@ -219,24 +219,24 @@ describe("createXtermBackend", () => {
       callback: (payload: string) => boolean | Promise<boolean>
       disposed: () => number
     }[] = []
-    const parserSpy = vi
-      .spyOn(xterm.Terminal.prototype, "parser", "get")
-      .mockImplementation(function (this: InstanceType<typeof xterm.Terminal>) {
-        const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
-        if (!wrapped.has(parser)) {
-          wrapped.add(parser)
-          const register = parser.registerOscHandler.bind(parser)
-          vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
-            const handle = register(ident, callback)
-            if (ident === 7 || ident === 633) {
-              const dispose = vi.spyOn(handle, "dispose")
-              registrations.push({ id: ident, callback, disposed: () => dispose.mock.calls.length })
-            }
-            return handle
-          })
-        }
-        return parser
-      })
+    const parserSpy = vi.spyOn(xterm.Terminal.prototype, "parser", "get").mockImplementation(function (
+      this: InstanceType<typeof xterm.Terminal>,
+    ) {
+      const parser = parserGetter.call(this) as InstanceType<typeof xterm.Terminal>["parser"]
+      if (!wrapped.has(parser)) {
+        wrapped.add(parser)
+        const register = parser.registerOscHandler.bind(parser)
+        vi.spyOn(parser, "registerOscHandler").mockImplementation((ident, callback) => {
+          const handle = register(ident, callback)
+          if (ident === 7 || ident === 633) {
+            const dispose = vi.spyOn(handle, "dispose")
+            registrations.push({ id: ident, callback, disposed: () => dispose.mock.calls.length })
+          }
+          return handle
+        })
+      }
+      return parser
+    })
     const backend = createXtermBackend()
     try {
       backend.init({ cols: 80, rows: 24 })

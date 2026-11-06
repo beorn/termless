@@ -34,14 +34,14 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs",
         "default": "./dist/index.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "bash build/build.sh && tsdown"
