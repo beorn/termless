@@ -40,7 +40,6 @@
     "./io": "./src/io/index.ts"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
@@ -52,7 +51,8 @@
         "import": "./dist/io/index.mjs",
         "default": "./dist/io/index.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown && tsdown -W 'packages/*'",
@@ -90,7 +90,7 @@
     "@vitest/expect": "5.0.4",
     "@vue/server-renderer": "3.5.43",
     "loggily": "0.13.0",
-    "oxfmt": "0.38.0",
+    "oxfmt": "0.76.0",
     "silvery": "0.27.0",
     "tsdown": "0.22.13",
     "typescript": "^5.9.3",
