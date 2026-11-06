@@ -697,6 +697,27 @@ describe.skipIf(nativeBuildError !== null)(
     // @level l5
     // @consumer Real WezTerm native mouse encoder through the public backend.
     describe("mouse encoding", () => {
+      // Pixel input must reach the real engine; the cell-only journey cannot observe sub-cell offsets.
+      test("forwards pixel offsets with native tracking, cell-mode and reset controls", () => {
+        backend.init({ cols: 80, rows: 24, pixelGeometry: { cellWidth: 10, cellHeight: 20 } })
+        const event = { x: 4, y: 2, button: "left", action: "press", pixel: { x: 43, y: 47 } } as const
+        backend.feed(encode("\x1b[?1016h"))
+        expect(backend.encodeMouse(event)).toBeNull()
+        backend.feed(encode("\x1b[?1003;1006h"))
+        expect(backend.encodeMouse(event)).toEqual(encode("\x1b[<0;5;3M"))
+        expect(backend.encodeMouse({ ...event, action: "release" })).toEqual(encode("\x1b[<0;5;3m"))
+        backend.feed(encode("\x1b[?1016h"))
+        for (const [pixel, report] of [
+          [{ x: 43, y: 47 }, "\x1b[<0;44;48M"],
+          [{ x: 47, y: 53 }, "\x1b[<0;48;54M"],
+        ] as const) {
+          expect(backend.encodeMouse({ ...event, pixel })).toEqual(encode(report))
+          expect(backend.encodeMouse({ ...event, pixel, action: "release" })).toEqual(encode(report.replace("M", "m")))
+        }
+        backend.feed(encode("\x1b[?1016l\x1b[?1006h"))
+        expect(backend.encodeMouse(event)).toEqual(encode("\x1b[<0;5;3M"))
+      })
+
       test("forwards native buttons, actions and modifiers without inventing input", () => {
         const event = { x: 4, y: 2, button: "left", action: "press" } as const
         const screen = backend.getText()
@@ -721,7 +742,7 @@ describe.skipIf(nativeBuildError !== null)(
         expect(backend.encodeMouse({ ...event, button: "none" })).toBeNull()
         expect(backend.encodeMouse({ ...event, shift: true, ctrl: true, alt: true })).toEqual(encode("\x1b[<28;5;3M"))
         expect(() => backend.encodeMouse({ ...event, pixel: { x: 40, y: 24 } })).toThrow(
-          "mouse encoding unavailable: WezTerm pixel-coordinate path is not bound",
+          "WezTerm pixel mouse input requires declared pixel geometry",
         )
         expect(backend.getText()).toBe(screen)
         expect(backend.getCursor()).toEqual(cursor)

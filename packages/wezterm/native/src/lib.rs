@@ -430,7 +430,23 @@ impl WeztermTerminal {
         shift: bool,
         ctrl: bool,
         alt: bool,
+        pixel_x: Option<i64>,
+        pixel_y: Option<i64>,
     ) -> Result<Buffer> {
+        let (x, y, x_pixel_offset, y_pixel_offset) = match (pixel_x, pixel_y) {
+            (Some(px), Some(py)) if self.cell_width > 0 && self.cell_height > 0 => (
+                px as usize / self.cell_width,
+                py / self.cell_height as i64,
+                (px % self.cell_width as i64) as isize,
+                (py % self.cell_height as i64) as isize,
+            ),
+            (None, None) => (x as usize, i64::from(y), 0, 0),
+            _ => {
+                return Err(Error::from_reason(
+                    "WezTerm pixel mouse input requires declared pixel geometry",
+                ))
+            }
+        };
         let button = match button.as_str() {
             "left" => MouseButton::Left,
             "middle" => MouseButton::Middle,
@@ -466,10 +482,10 @@ impl WeztermTerminal {
         }
         let event = MouseEvent {
             kind,
-            x: x as usize,
-            y: i64::from(y),
-            x_pixel_offset: 0,
-            y_pixel_offset: 0,
+            x,
+            y,
+            x_pixel_offset,
+            y_pixel_offset,
             button,
             modifiers,
         };

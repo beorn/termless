@@ -82,7 +82,17 @@ interface WeztermTerminal {
   feed(data: Buffer): void
   encodePaste(text: string): Buffer
   encodeKey(key: string, shift: boolean, ctrl: boolean, alt: boolean, superKey: boolean): Buffer
-  encodeMouse(x: number, y: number, button: string, action: string, shift: boolean, ctrl: boolean, alt: boolean): Buffer
+  encodeMouse(
+    x: number,
+    y: number,
+    button: string,
+    action: string,
+    shift: boolean,
+    ctrl: boolean,
+    alt: boolean,
+    pixelX?: number,
+    pixelY?: number,
+  ): Buffer
   resize(cols: number, rows: number): void
   reset(): void
   getText(): string
@@ -394,15 +404,22 @@ export function createWeztermBackend(
 
   function encodeMouse(event: MouseEvent): Uint8Array | null {
     const t = ensureTerm()
-    if (event.pixel !== undefined) {
-      throw new Error("mouse encoding unavailable: WezTerm pixel-coordinate path is not bound")
-    }
     if (typeof t.encodeMouse !== "function") {
       throw new Error(
         "The loaded WezTerm native addon predates encodeMouse; rebuild and copy it from the Termless root:\n  nix shell .#native-tools --command bun run --cwd packages/wezterm build:native",
       )
     }
-    const bytes = t.encodeMouse(event.x, event.y, event.button, event.action, !!event.shift, !!event.ctrl, !!event.alt)
+    const bytes = t.encodeMouse(
+      event.x,
+      event.y,
+      event.button,
+      event.action,
+      !!event.shift,
+      !!event.ctrl,
+      !!event.alt,
+      event.pixel?.x,
+      event.pixel?.y,
+    )
     return bytes.length === 0 ? null : new Uint8Array(bytes)
   }
 
