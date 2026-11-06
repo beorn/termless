@@ -6,15 +6,15 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/libvterm/src/backend.ts",
-      blobOid: "edc95f8da80ed5cd79e5d54f11a865b4147002a7",
+      blobOid: "fff111feabbcf729b6a071c33db2365b55706e7f",
     },
     {
       path: "packages/libvterm/src/wasm-bindings.ts",
-      blobOid: "9ff9e59c30efe03ca0ee6ec18faf9521d045323b",
+      blobOid: "a983fb2cd6fc9a97c0d035a3a4bccb967f0bcfd4",
     },
     {
       path: "packages/libvterm/wasm/libvterm.js",
-      blobOid: "a57d8193c36702e3d9f72e446a0677f5d0e83e2a",
+      blobOid: "35ae07fbdb0fc67ee1a73477fe53ea6cff89a985",
     },
     {
       path: "src/terminal/key-mapping.ts",

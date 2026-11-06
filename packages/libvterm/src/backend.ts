@@ -641,13 +641,13 @@ export function createLibvtermBackend(
     })
   }
 
-  function getUnhandledSequences(): readonly { readonly kind: "osc"; readonly code: string }[] {
+  function getUnhandledSequences(): readonly { readonly kind: "osc" | "csi" | "apc"; readonly code: string }[] {
     const m = ensureInit()
-    if (m.getValue(cursorPropsPtr + 64, "i32")) throw new Error("libvterm OSC observation failed")
-    const count = m.termless_vterm_unhandled_osc_count(cursorPropsPtr)
+    if (m.getValue(cursorPropsPtr + 64, "i32")) throw new Error("libvterm sequence observation failed")
+    const count = m.termless_vterm_unhandled_count(cursorPropsPtr)
     return Array.from({ length: count }, (_, index) => ({
-      kind: "osc",
-      code: String(m.termless_vterm_unhandled_osc_get(cursorPropsPtr, index)),
+      kind: m.termless_vterm_unhandled_kind(cursorPropsPtr, index),
+      code: m.termless_vterm_unhandled_code(cursorPropsPtr, index),
     }))
   }
 

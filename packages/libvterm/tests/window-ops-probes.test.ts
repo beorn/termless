@@ -95,6 +95,59 @@ test("unhandled OSC numbers follow the native observer lifetime without recordin
   }
 })
 
+// R1: OSC-only coverage cannot detect absent CSI/APC fallbacks. Exercise the
+// actual engine and its handled control, without a parser mock or extra seam.
+test("native CSI rejection reports preserve normalized codes and exclude applied DECSCUSR", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 20, rows: 2 })
+  const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+  try {
+    feed("\x1b[6 q")
+    expect(backend.getCursor().style).toBe("beam")
+    expect(backend.getUnhandledSequences?.()).toEqual([])
+    for (const [sequence, code] of [
+      ["\x1b[9 p", " 9p"],
+      ["\x1b[?99999z", "?99999z"],
+      ["\x1b[1;:3$z", "$1;0:3z"],
+    ]) {
+      const before = backend.getUnhandledSequences?.() ?? []
+      feed(sequence!)
+      expect(backend.getUnhandledSequences?.()).toEqual([...before, { kind: "csi", code }])
+    }
+    const before = backend.getUnhandledSequences?.()
+    // Upstream drops # and * before its public fallback; absence is no report.
+    feed("\x1b[#P\x1b[#Q\x1b[2*x")
+    expect(backend.getUnhandledSequences?.()).toEqual(before)
+  } finally {
+    backend.destroy()
+  }
+})
+
+test("native APC reports keep only the initial byte, ordered with CSI and OSC, and clear on reset", async () => {
+  const backend = createLibvtermBackend(undefined, await initLibvterm())
+  backend.init({ cols: 20, rows: 2 })
+  const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+  try {
+    feed("\x1b]2;handled control\x07")
+    expect(backend.getTitle()).toBe("handled control")
+    expect(backend.getUnhandledSequences?.()).toEqual([])
+    feed("\x1b_Ga=t;private payload")
+    expect(backend.getUnhandledSequences?.()).toEqual([{ kind: "apc", code: "G" }])
+    feed("more payload\x1b\\\x1b]999;unknown\x07\x1b[9 p\x1b_Zmade-up\x1b\\")
+    // libvterm has no handled APC: made-up APC is rejected too.
+    expect(backend.getUnhandledSequences?.()).toEqual([
+      { kind: "apc", code: "G" },
+      { kind: "osc", code: "999" },
+      { kind: "csi", code: " 9p" },
+      { kind: "apc", code: "Z" },
+    ])
+    backend.reset()
+    expect(backend.getUnhandledSequences?.()).toEqual([])
+  } finally {
+    backend.destroy()
+  }
+})
+
 // The old suite observes application-cursor state and window properties, but
 // cannot catch missing keypad state or a declared-only reflow capability.
 test("reports native keypad transitions and the instance's actual reflow setting", async () => {
