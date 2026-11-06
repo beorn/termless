@@ -30,6 +30,7 @@ import type {
 } from "@termless/core"
 import { encodeKeyToAnsi, encodeMouseReport, type MouseEncodingState } from "@termless/core"
 import { vtermEngineIdentity } from "./engine-identity.ts"
+import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 
 // ═══════════════════════════════════════════════════════
 // Backend factory
@@ -87,6 +88,7 @@ export function createVtermBackend(
   }
 
   function init(options: TerminalOptions): void {
+    const geometry = declaredPixelGeometry("vterm", options)
     stopOsc777?.()
     stopOsc777 = null
     osc777Payloads = []
@@ -95,6 +97,7 @@ export function createVtermBackend(
       cols: options.cols,
       rows: options.rows,
       scrollbackLimit: options.scrollbackLimit ?? 1000,
+      pixelGeometry: geometry,
       onResponse: (data: string) => {
         // Forward DA1/DA2/DSR responses to the terminal layer
         if (backend.onResponse) {
@@ -419,6 +422,7 @@ export function createVtermBackend(
       cols: opts.cols ?? DEFAULT_COLS,
       rows: opts.rows ?? DEFAULT_ROWS,
       scrollbackLimit: opts.scrollbackLimit,
+      pixelGeometry: opts.pixelGeometry,
     })
   }
 

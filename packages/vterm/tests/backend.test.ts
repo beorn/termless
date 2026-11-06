@@ -17,6 +17,30 @@ import { createVtermScreen } from "vterm.js"
 import { createVtermBackend } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
+  // @failure Eager options or a cached first declaration drop the host's pixel size before it reaches the engine.
+  // @level l0
+  // @consumer Headless collectors initializing the Vterm adapter through existing TerminalOptions.
+  test("forwards declared pixel geometry on eager init and re-init", () => {
+    const backend = createVtermBackend({
+      cols: 80,
+      rows: 24,
+      pixelGeometry: { cellWidth: 10, cellHeight: 20 },
+    })
+    const replies: string[] = []
+    backend.onResponse = (bytes) => replies.push(new TextDecoder().decode(bytes))
+    const query = new TextEncoder().encode("\x1b[16t")
+    try {
+      backend.feed(query)
+      backend.init({ cols: 12, rows: 3, pixelGeometry: { cellWidth: 7, cellHeight: 13 } })
+      backend.feed(query)
+      backend.init({ cols: 12, rows: 3 })
+      backend.feed(query)
+      expect(replies).toEqual(["\x1b[6;20;10t", "\x1b[6;13;7t", "\x1b[6;0;0t"])
+    } finally {
+      backend.destroy()
+    }
+  })
+
   // @failure Native paste must use this adapter instance without leaking bytes to responses.
   // @level l0
   // @consumer Library-native paste probes through PasteEncodingExtension.

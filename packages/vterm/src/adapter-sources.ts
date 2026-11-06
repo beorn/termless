@@ -6,7 +6,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vterm/src/backend.ts",
-      blobOid: "96a59d4fff0b1e81db743d30b145eeec2bdffacf",
+      blobOid: "57f73e60c2a52c16147a6000b7c823be66afbd95",
     },
   ],
 } as const
