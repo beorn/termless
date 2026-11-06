@@ -241,7 +241,7 @@
     },
   },
   "overrides": {
-    "@termless/core": "link:.",
+    "@termless/core": "file:.",
     "ghostty-web": "file:./vendor/ghostty-web",
   },
   "packages": {
@@ -735,7 +735,7 @@
 
     "@termless/cli": ["@termless/cli@workspace:packages/cli"],
 
-    "@termless/core": ["@termless/core@link:.", { "hasInstallScript": true }],
+    "@termless/core": ["@termless/core@root:", {}],
 
     "@termless/ghostty": ["@termless/ghostty@workspace:packages/ghostty"],
 
@@ -1568,6 +1568,8 @@
     "@shikijs/primitive/@shikijs/types": ["@shikijs/types@4.4.3", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5" } }, "sha512-UEJxmRR++MAGR6hugn0vgVS2W/6lWAts84FFSrnlH9sP0LNol7E5+NQ792pH8liWUhyMyjhTgSUH3k7iD7tc5g=="],
 
     "@silvery/syntax/shiki": ["shiki@4.4.3", "", { "dependencies": { "@shikijs/core": "4.4.3", "@shikijs/engine-javascript": "4.4.3", "@shikijs/engine-oniguruma": "4.4.3", "@shikijs/langs": "4.4.3", "@shikijs/themes": "4.4.3", "@shikijs/types": "4.4.3", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5" } }, "sha512-Mb/GvXPHBAXdgGIcnfU5L3ldpn1XcxrGkPHwqgRx17/I2XRfqlFKk2vGkHWINn1kdXvzJZeuO3is6I9KLPFm0g=="],
+
+    "@termless/core/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 
     "@termless/ghostty/ghostty-web": ["ghostty-web@file:vendor/ghostty-web", {}],
 

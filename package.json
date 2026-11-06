@@ -122,7 +122,7 @@
     "upng-js": "^2.1.0"
   },
   "overrides": {
-    "@termless/core": "link:.",
+    "@termless/core": "file:.",
     "ghostty-web": "file:./vendor/ghostty-web"
   },
   "tsdown": {
