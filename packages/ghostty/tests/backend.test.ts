@@ -1122,9 +1122,9 @@ describe("ghostty backend", () => {
           { kind: "osc", code: "113" },
         ])
         feedText(own, "\x1b[9 p")
-        expect(own.getUnhandledSequences()).toHaveLength(2)
+        expect(own.getUnhandledSequences()).toHaveLength(3)
         own.reset()
-        expect(own.getUnhandledSequences()).toHaveLength(2)
+        expect(own.getUnhandledSequences()).toHaveLength(3)
         own.clearWarnings()
         expect(own.getUnhandledSequences()).toEqual([])
       } finally {
