@@ -773,8 +773,10 @@ export function createKittyBackend(
         }
         const csi = /^Unknown CSI (.) sequence with start and end modifiers: '(.)' '(.)'$/u.exec(error.message)
         if (csi) {
+          const [, final, start, end] = csi
+          if (final === undefined || start === undefined || end === undefined) continue
           const modifier = (value: string) => (value === "\0" ? "" : value)
-          report.push({ kind: "csi", code: modifier(csi[2]!) + modifier(csi[3]!) + csi[1]! })
+          report.push({ kind: "csi", code: modifier(start) + modifier(end) + final })
         }
       }
       return report
