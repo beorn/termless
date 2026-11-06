@@ -10,7 +10,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "1b9aea8f58ca9bb1fc98b3c09cdf08d2a0ceba65",
+      blobOid: "473d25a335c4e739f915a254625607f617ed9d1e",
     },
     {
       path: "packages/kitty/build/layout.c",

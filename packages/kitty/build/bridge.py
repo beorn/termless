@@ -733,7 +733,8 @@ def handle_command(cmd):
         try:
             sent = native.send_mouse_event(
                 screen, event["x"], event["y"], buttons[event["button"]], actions[event["action"]], mods,
-                pixel["x"] if pixel is not None else 0, pixel["y"] if pixel is not None else 0,
+                # Termless pixel offsets are zero-based; Kitty writes these wire coordinates verbatim.
+                pixel["x"] + 1 if pixel is not None else 0, pixel["y"] + 1 if pixel is not None else 0,
             )
             encoded = callbacks.responses[len(response_prefix):]
             if callback_errors:
