@@ -22,7 +22,10 @@ pub fn build(b: *std.Build) !void {
     // libghostty-vt shared library needed). Uses ghostty's own build system which
     // handles all dependencies (unicode tables, SIMD, etc.).
     if (b.lazyDependency("ghostty", .{})) |ghostty_dep| {
-        root_module.addImport("ghostty", ghostty_dep.module("ghostty-vt"));
+        const ghostty_module = ghostty_dep.module("ghostty-vt");
+        root_module.addImport("ghostty", ghostty_module);
+        // Read the very same generated options module as the library, without selecting or overriding its flags.
+        root_module.addImport("ghostty_terminal_options", ghostty_module.import_table.get("terminal_options").?);
     }
 
     // Build as a shared library (.dylib/.so)

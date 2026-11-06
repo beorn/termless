@@ -336,6 +336,17 @@ const term = createTerminal({ backend: b })
 
 Native Ghostty backend using Ghostty's VT Zig module via napigen N-API bindings. Same VT parser as the WASM `@termless/ghostty` backend, but running natively with no WASM overhead.
 
+The `mouse-shape` extension reads the engine's logical W3C pointer state.
+`semantic-cells` reads stored prompt/input/output cell types; `semantic-marks`
+and `semantic-command-end` share the copied action-history reader. The adapter
+retains typed command-end actions because the engine keeps no exit status.
+Optional clipboard readback retains raw encoded writes and observes a typed
+read request passed to the app; it supplies no clipboard reply. Histories last
+until re-init/destroy, while reset follows the engine's actual cell/pointer state.
+See [backend API](../api/backend.md) for status validation and reader lifetimes.
+`kittyGraphics` reads the library's actual compiled flag; the pinned ghostty-vt
+build disables its graphics support independently of the full application.
+
 **Feature support:** [Ghostty results on terminfo.dev](https://terminfo.dev/terminals/ghostty) combine application and parser-backend results; no separate page isolates this library.
 
 - **Engine**: ghostty-vt Zig module pinned to Ghostty 1.3.1 (napigen N-API)
@@ -366,8 +377,8 @@ The `semantic-command-end` extension exposes the same
 `{ type: "command-end", rawStatus: string }` entries from native OSC 133 D
 callbacks. There are no coordinates or validated process exit codes: raw status
 strings, including empty, zero, negative-looking and nonnumeric values, survive
-verbatim. Kitty declares only this key, not the start-marker key `semantic-marks`.
-An engine recording both kinds declares both keys on the one reader.
+verbatim. Kitty also declares `semantic-marks` for positional prompt, input and
+output starts; both keys use the one reader.
 
 Kitty's callback history preserves equal entries and survives reset and batch
 replay. Cached rereads add nothing; `init()` starts fresh and `destroy()` clears

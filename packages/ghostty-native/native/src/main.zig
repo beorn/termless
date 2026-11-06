@@ -6,6 +6,7 @@
 const std = @import("std");
 const napigen = @import("napigen");
 const ghostty = @import("ghostty");
+const ghostty_options = @import("ghostty_terminal_options");
 
 // ghostty's lib_vt.zig public API — types are exported directly,
 // not under a `terminal` namespace.
@@ -61,6 +62,19 @@ const Toast = struct {
     body: []const u8,
 };
 
+/// Owned copies of typed engine actions; Terminal itself does not retain command-end status.
+const SemanticMark = struct {
+    kind: enum { prompt, command, output, command_end },
+    row: u16 = 0,
+    col: u16 = 0,
+    status: []const u8 = "",
+};
+
+const ClipboardWrite = struct {
+    selector: u8,
+    payload: []const u8,
+};
+
 const ResponseHandler = struct {
     readonly: ReadonlyHandler,
     title: *[]const u8,
@@ -68,6 +82,9 @@ const ResponseHandler = struct {
     progress: *?ProgressReport,
     /// Every toast the engine emitted since the handle was created, in order.
     toasts: *std.ArrayList(Toast),
+    semantic_marks: *std.ArrayList(SemanticMark),
+    clipboard_writes: *std.ArrayList(ClipboardWrite),
+    paste_selector: *?u8,
     /// Reply bytes not yet read by `readResponse`, in stream order.
     pending: std.ArrayList(u8) = .empty,
     /// The bytes handed to JS by the last `readResponse`; valid until the next read.
@@ -86,6 +103,52 @@ const ResponseHandler = struct {
     ) !void {
         const terminal = self.readonly.terminal;
         switch (action) {
+            .semantic_prompt => {
+                // A may first move to a fresh line. Read the resulting engine state, never pre-action coordinates.
+                try self.readonly.vt(action, value);
+                const cursor = &terminal.screens.active.cursor;
+                switch (value.action) {
+                    .fresh_line_new_prompt, .prompt_start, .new_command => {
+                        if (cursor.semantic_content == .prompt and cursor.page_row.semantic_prompt != .none) {
+                            try self.semantic_marks.append(allocator, .{ .kind = .prompt, .row = cursor.y, .col = cursor.x });
+                        }
+                    },
+                    .end_prompt_start_input, .end_prompt_start_input_terminate_eol => {
+                        if (cursor.semantic_content == .input) {
+                            try self.semantic_marks.append(allocator, .{ .kind = .command, .row = cursor.y, .col = cursor.x });
+                        }
+                    },
+                    .end_input_start_output => {
+                        if (cursor.semantic_content == .output) {
+                            try self.semantic_marks.append(allocator, .{ .kind = .output, .row = cursor.y, .col = cursor.x });
+                        }
+                    },
+                    .end_command => {
+                        // Ghostty 332b semantic_prompt.zig:137-159 validates the first token as i32.
+                        // Preserve its original spelling only when the engine's own reader accepts it.
+                        const raw = value.options_unvalidated;
+                        const status = if (value.readOption(.exit_code) != null)
+                            raw[0 .. std.mem.indexOfScalar(u8, raw, ';') orelse raw.len]
+                        else
+                            "";
+                        const copy = try allocator.dupe(u8, status);
+                        errdefer allocator.free(copy);
+                        try self.semantic_marks.append(allocator, .{ .kind = .command_end, .status = copy });
+                    },
+                    .fresh_line => {},
+                }
+            },
+            .clipboard_contents => {
+                // The engine passes encoded payload bytes unchanged; only exact '?' is a host read request.
+                if (value.data.len == 1 and value.data[0] == '?') {
+                    self.paste_selector.* = value.kind;
+                } else {
+                    const copy = try allocator.dupe(u8, value.data);
+                    errdefer allocator.free(copy);
+                    try self.clipboard_writes.append(allocator, .{ .selector = value.kind, .payload = copy });
+                }
+                try self.readonly.vt(action, value);
+            },
             .report_pwd => try terminal.setPwd(value.url),
             .progress_report => {
                 // Record the engine's emitted report verbatim, then forward it unchanged (readonly ignores it).
@@ -233,6 +296,9 @@ const TerminalHandle = struct {
     title: []const u8,
     progress: ?ProgressReport,
     toasts: std.ArrayList(Toast),
+    semantic_marks: std.ArrayList(SemanticMark),
+    clipboard_writes: std.ArrayList(ClipboardWrite),
+    paste_selector: ?u8,
 };
 
 // ─── Module init ────────────────────────────────────────
@@ -258,6 +324,11 @@ fn initModule(js: *napigen.JsContext, exports: napigen.napi_value) napigen.Error
     try js.setNamedProperty(exports, "getMode", try js.createFunction(getMode));
     try js.setNamedProperty(exports, "getTitle", try js.createFunction(getTitle));
     try js.setNamedProperty(exports, "getCwd", try js.createFunction(getCwd));
+    try js.setNamedProperty(exports, "getMouseShape", try js.createFunction(getMouseShape));
+    try js.setNamedProperty(exports, "getSemanticMarks", try js.createFunction(getSemanticMarks));
+    try js.setNamedProperty(exports, "getCellSemanticType", try js.createFunction(getCellSemanticType));
+    try js.setNamedProperty(exports, "getClipboardState", try js.createFunction(getClipboardState));
+    try js.setNamedProperty(exports, "getKittyGraphics", try js.createFunction(getKittyGraphics));
     try js.setNamedProperty(exports, "getProgress", try js.createFunction(getProgress));
     try js.setNamedProperty(exports, "getToasts", try js.createFunction(getToasts));
     try js.setNamedProperty(exports, "getScrollback", try js.createFunction(getScrollback));
@@ -284,11 +355,17 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     handle.title = "";
     handle.progress = null;
     handle.toasts = .empty;
+    handle.semantic_marks = .empty;
+    handle.clipboard_writes = .empty;
+    handle.paste_selector = null;
     handle.stream = .initAlloc(allocator, .{
         .readonly = handle.terminal.vtHandler(),
         .title = &handle.title,
         .progress = &handle.progress,
         .toasts = &handle.toasts,
+        .semantic_marks = &handle.semantic_marks,
+        .clipboard_writes = &handle.clipboard_writes,
+        .paste_selector = &handle.paste_selector,
     });
     handle.cols = cols;
     handle.rows = rows;
@@ -307,6 +384,12 @@ fn destroyTerminal(handle: *TerminalHandle) void {
         allocator.free(toast.body);
     }
     handle.toasts.deinit(allocator);
+    for (handle.semantic_marks.items) |mark| {
+        if (mark.status.len > 0) allocator.free(mark.status);
+    }
+    handle.semantic_marks.deinit(allocator);
+    for (handle.clipboard_writes.items) |write| allocator.free(write.payload);
+    handle.clipboard_writes.deinit(allocator);
     allocator.destroy(handle);
 }
 
@@ -823,6 +906,48 @@ fn getTitle(handle: *TerminalHandle) []const u8 {
 
 fn getCwd(handle: *TerminalHandle) ?[]const u8 {
     return handle.terminal.getPwd();
+}
+
+fn getMouseShape(handle: *TerminalHandle) []const u8 {
+    return @tagName(handle.terminal.mouse_shape);
+}
+
+fn getKittyGraphics() bool {
+    return ghostty_options.kitty_graphics;
+}
+
+fn getCellSemanticType(handle: *TerminalHandle, row: u32, col: u32) ![]const u8 {
+    if (col >= handle.cols) return error.CellOutOfBounds;
+    const pages = &handle.terminal.screens.active.pages;
+    const pin = pages.pin(.{ .screen = .{ .x = @intCast(col), .y = row } }) orelse return error.CellOutOfBounds;
+    return @tagName(pin.rowAndCell().cell.semantic_content);
+}
+
+fn getSemanticMarks(js: *napigen.JsContext, handle: *TerminalHandle) !napigen.napi_value {
+    const arr = try js.createArrayWithLength(@intCast(handle.semantic_marks.items.len));
+    for (handle.semantic_marks.items, 0..) |mark, index| {
+        const value = if (mark.kind == .command_end)
+            try js.write(.{ .type = @as([]const u8, "command-end"), .rawStatus = mark.status })
+        else
+            try js.write(.{ .type = @tagName(mark.kind), .startRow = mark.row, .startCol = mark.col });
+        try js.setElement(arr, @intCast(index), value);
+    }
+    return arr;
+}
+
+fn getClipboardState(js: *napigen.JsContext, handle: *TerminalHandle) !napigen.napi_value {
+    const result = try js.createObject();
+    const writes = try js.createArrayWithLength(@intCast(handle.clipboard_writes.items.len));
+    for (handle.clipboard_writes.items, 0..) |write, index| {
+        const selector = [_]u8{write.selector};
+        try js.setElement(writes, @intCast(index), try js.write(.{ .selector = @as([]const u8, &selector), .payload = write.payload }));
+    }
+    try js.setNamedProperty(result, "writes", writes);
+    if (handle.paste_selector) |selector| {
+        const bytes = [_]u8{selector};
+        try js.setNamedProperty(result, "pasteSelector", try js.write(@as([]const u8, &bytes)));
+    }
+    return result;
 }
 
 // ─── Progress ───────────────────────────────────────────
