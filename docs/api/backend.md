@@ -361,7 +361,7 @@ Check `hasExtension<SemanticMarkExtension>(backend, "semantic-marks")` for start
 observations or `hasExtension<SemanticMarkExtension>(backend, "semantic-command-end")`
 for end observations. Both keys use the same getter; an engine recording both kinds
 declares both keys. Narrow `mark.type` before reading variant fields. vterm declares
-only starts; Kitty declares only ends. Each read returns copied, ordered records;
+only starts; Kitty and Ghostty native declare starts and ends. Each read returns copied, ordered records;
 an empty array means no stored records, while an absent key means that kind of
 observation is not declared. vterm reset and snapshot restore clear its starts.
 Kitty's cumulative callback history survives reset and batch replay, preserves
@@ -372,6 +372,28 @@ absolute buffer rows or tracked zone boundaries. Command-end entries have no
 coordinates. Kitty preserves the native raw status string verbatim, including an
 empty string, `"0"`, negative-looking and nonnumeric strings; it is not a validated
 process exit status. Neither variant supplies command text or bounded zones.
+
+Ghostty native retains its library's typed semantic action in the adapter: the
+library itself keeps no command-end status. Its raw status is the original first
+token only when the pinned engine's exit-code reader accepts it; `D;0017` keeps
+`"0017"`, while `D;aid=9` and bare `D` yield `""`. Start coordinates follow the
+engine effect, including A's fresh-line movement. Its `semantic-cells` reader
+returns the actual stored cell type at the same row origin as `getCell` and throws
+for invalid coordinates. Reset/RIS resets engine cell semantics; retained action
+history survives until re-init/destroy. Every read returns independent copies.
+
+`MouseShapeExtension` (`mouse-shape`) exposes `getMouseShape(): string`: logical
+W3C pointer state, separate from the text caret. Ghostty native starts at `text`,
+resolves aliases in the engine, ignores unknown names and preserves the actual
+pointer through reset/RIS; re-init starts fresh. The getter requires a live handle.
+Its existing `kittyGraphics` capability reads the flag compiled into the addon.
+
+Ghostty native's optional `getClipboardState()` retains typed clipboard actions,
+not OS clipboard delivery. Writes keep the engine's raw encoded `payload` and
+selector without inventing decoded text. Only an exact `?` request sets
+`pasteSelector`; the adapter supplies no clipboard reply. Copied, non-draining
+history survives reset/RIS and starts fresh on re-init/destroy.
+
 Check `hasExtension<SixelStorageExtension>(backend, "sixel-storage")` before reading
 vterm's copied raw image records; reset and snapshot restore clear those records.
 Sixel `data` is the exact stored payload after `q`, without DCS framing

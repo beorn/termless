@@ -16,6 +16,132 @@ try {
   nativeBuildError = error instanceof Error ? error.message : String(error)
 }
 
+// R3's existing cwd/toast journeys cannot witness semantic state, pointer state or borrowed OSC 52 data.
+describe.skipIf(nativeBuildError !== null)("Ghostty native semantic, pointer and clipboard readers", () => {
+  test("reads canonical mouse state and the compiled graphics capability across native lifetimes", () => {
+    const backend = createGhosttyNativeBackend({ cols: 12, rows: 3 })
+    const other = createGhosttyNativeBackend({ cols: 12, rows: 3 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    try {
+      expect(backend.capabilities.extensions.has("mouse-shape")).toBe(true)
+      expect(backend.getMouseShape()).toBe("text")
+      for (const shape of ["context-menu", "all-scroll", "vertical-text"]) {
+        feed(`\x1b]22;${shape}\x07`)
+        expect(backend.getMouseShape()).toBe(shape)
+      }
+      feed("\x1b]22;made-up-r3-shape\x07")
+      expect(backend.getMouseShape()).toBe("vertical-text")
+      feed("\x1b]22;hand\x07")
+      expect(backend.getMouseShape()).toBe("pointer")
+      expect(other.getMouseShape()).toBe("text")
+      backend.reset()
+      expect(backend.getMouseShape()).toBe("pointer")
+      feed("\x1bc")
+      expect(backend.getMouseShape()).toBe("pointer")
+      backend.init({ cols: 12, rows: 3 })
+      expect(backend.getMouseShape()).toBe("text")
+      const native = loadGhosttyNative()
+      expect(native.getKittyGraphics()).toBe(false)
+      expect(backend.capabilities.kittyGraphics).toBe(false)
+      const flag = vi.spyOn(native, "getKittyGraphics").mockReturnValue(true)
+      try {
+        expect(backend.capabilities.kittyGraphics).toBe(true)
+      } finally {
+        flag.mockRestore()
+      }
+    } finally {
+      backend.destroy()
+      other.destroy()
+    }
+    expect(() => backend.getMouseShape()).toThrow(/not initialized/)
+  })
+
+  test("reads stored cell semantics and retains typed completion with faithful raw status", () => {
+    const backend = createGhosttyNativeBackend({ cols: 16, rows: 4 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    try {
+      expect(backend.capabilities.extensions.has("semantic-cells")).toBe(true)
+      feed("x\x1b]133;A\x07P\x1b]133;B\x07I\x1b]133;C\x07O")
+      expect([0, 1, 2].map((col) => backend.getCellSemanticType(1, col))).toEqual(["prompt", "input", "output"])
+      expect(backend.getSemanticMarks()).toEqual([
+        { type: "prompt", startRow: 1, startCol: 0 },
+        { type: "command", startRow: 1, startCol: 1 },
+        { type: "output", startRow: 1, startCol: 2 },
+      ])
+      const first = backend.getSemanticMarks()
+      feed("\x1b]133;Z\x07")
+      expect(backend.getSemanticMarks()).toEqual(first)
+      for (const [options, status] of [
+        ["0", "0"],
+        ["17;aid=9", "17"],
+        ["aid=9", ""],
+        ["", ""],
+        ["0017", "0017"],
+        ["words", ""],
+      ]) {
+        feed(`\x1b]133;D${options ? `;${options}` : ""}\x07`)
+        expect(backend.getSemanticMarks().at(-1)).toEqual({ type: "command-end", rawStatus: status })
+      }
+      expect(first).toHaveLength(3)
+      const firstPrompt = first.find((mark) => mark.type === "prompt")
+      if (!firstPrompt) throw new Error("Expected the retained prompt mark")
+      ;(firstPrompt as { startRow: number }).startRow = 99
+      expect(backend.getSemanticMarks()[0]).toEqual({ type: "prompt", startRow: 1, startCol: 0 })
+      expect(() => backend.getCellSemanticType(-1, 0)).toThrow()
+      expect(() => backend.getCellSemanticType(0, 16)).toThrow()
+      const retained = backend.getSemanticMarks()
+      backend.reset()
+      expect(backend.getCellSemanticType(0, 0)).toBe("output")
+      expect(backend.getSemanticMarks()).toEqual(retained)
+      feed("\x1bc")
+      expect(backend.getSemanticMarks()).toEqual(retained)
+      backend.init({ cols: 16, rows: 4 })
+      expect(backend.getSemanticMarks()).toEqual([])
+    } finally {
+      backend.destroy()
+    }
+    expect(() => backend.getSemanticMarks()).toThrow(/not initialized/)
+  })
+
+  test("retains raw typed clipboard writes and exact query handoff without replying", () => {
+    const backend = createGhosttyNativeBackend({ cols: 12, rows: 3 })
+    const feed = (text: string) => backend.feed(new TextEncoder().encode(text))
+    const response = vi.fn()
+    backend.onResponse = response
+    try {
+      expect(typeof backend.getClipboardState).toBe("function")
+      expect(backend.getClipboardState()).toEqual({ writes: [] })
+      feed("\x1b]52;c;Zmlyc3Q=\x07\x1b]52;p;c2Vjb25k\x1b\\")
+      const snapshot = backend.getClipboardState()
+      expect(snapshot).toEqual({
+        writes: [
+          { selector: "c", payload: "Zmlyc3Q=" },
+          { selector: "p", payload: "c2Vjb25k" },
+        ],
+      })
+      feed("\x1b]52;c;??\x07\x1b]52;c;?\x07\x1b]0;reuse-parser-storage\x07")
+      const state = backend.getClipboardState()
+      expect(state.writes).toEqual([...snapshot.writes, { selector: "c", payload: "??" }])
+      expect(state.pasteSelector).toBe("c")
+      expect(snapshot.writes).toHaveLength(2)
+      const firstWrite = snapshot.writes.at(0)
+      if (!firstWrite) throw new Error("Expected the first retained clipboard write")
+      firstWrite.payload = "mutated"
+      expect(backend.getClipboardState().writes.at(0)).toEqual({ selector: "c", payload: "Zmlyc3Q=" })
+      expect(response).not.toHaveBeenCalled()
+      backend.reset()
+      expect(backend.getClipboardState()).toEqual(state)
+      feed("\x1bc")
+      expect(backend.getClipboardState()).toEqual(state)
+      backend.init({ cols: 12, rows: 3 })
+      expect(backend.getClipboardState()).toEqual({ writes: [] })
+    } finally {
+      backend.destroy()
+    }
+    expect(() => backend.getClipboardState()).toThrow(/not initialized/)
+  })
+})
+
 describe.skipIf(nativeBuildError !== null)(
   `Ghostty native backend attributes${nativeBuildError ? ` (unavailable: ${nativeBuildError})` : ""}`,
   () => {
