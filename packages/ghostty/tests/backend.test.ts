@@ -1122,9 +1122,9 @@ describe("ghostty backend", () => {
           { kind: "osc", code: "113" },
         ])
         feedText(own, "\x1b[9 p")
-        expect(own.getUnhandledSequences()).toHaveLength(2)
+        expect(own.getUnhandledSequences()).toHaveLength(3)
         own.reset()
-        expect(own.getUnhandledSequences()).toHaveLength(2)
+        expect(own.getUnhandledSequences()).toHaveLength(3)
         own.clearWarnings()
         expect(own.getUnhandledSequences()).toEqual([])
       } finally {
@@ -1132,19 +1132,21 @@ describe("ghostty backend", () => {
       }
     })
 
-    // @failure The engine rejects a palette-stack CSI, but its public report drops the native warning.
-    // @consumer Terminfo's two palette-stack cells through OscMetadataExtension.getUnhandledSequences.
+    // @failure The engine rejects an audited CSI, but its public report drops the native warning.
+    // @consumer Terminfo's palette-stack, DECSACE and DECSSCLS cells through getUnhandledSequences.
     test.each([
-      ["#P", "warning(stream): ignoring unimplemented CSI P with intermediates: #"],
-      ["#Q", "warning(stream): unimplemented CSI action: ESC [ # {  } Q"],
-    ])("reports the real palette-stack rejection %s without inventing parameters", (code, warning) => {
+      ["#P", "\x1b[#P", "warning(stream): ignoring unimplemented CSI P with intermediates: #"],
+      ["#Q", "\x1b[#Q", "warning(stream): unimplemented CSI action: ESC [ # {  } Q"],
+      ["*2x", "\x1b[2*x", "warning(stream): unimplemented CSI action: ESC [ * { 2 } x"],
+      [" p", "\x1b[9 p", "warning(stream): ignoring unimplemented CSI p with intermediates:  "],
+    ])("reports the real CSI rejection %s without inventing parameters", (code, sequence, warning) => {
       const own = createGhosttyBackend(undefined, ghostty)
       own.init({ cols: 80, rows: 24 })
       try {
         feedText(own, "\x1b[0m\x1b[1mC")
         expect(own.getCell(0, 0).bold).toBe(true)
         expect(own.getUnhandledSequences()).toEqual([])
-        feedText(own, `\x1b[${code}`)
+        feedText(own, sequence)
         expect(own.getWarnings().map((entry) => entry.message)).toContain(warning)
         expect(own.getUnhandledSequences()).toEqual([{ kind: "csi", code }])
         own.clearWarnings()
