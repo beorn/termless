@@ -10,6 +10,8 @@
 
 import type {
   AdapterSourcesExtension,
+  CellSemanticType,
+  CellSemanticTypeExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -85,6 +87,7 @@ interface WeztermTerminal {
   getText(): string
   getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string
   getCell(row: number, col: number): NapiCell
+  getCellSemanticType(row: number, col: number): CellSemanticType
   getLine(row: number): NapiCell[]
   getCursor(): NapiCursor
   getMode(mode: string): boolean | null
@@ -218,6 +221,7 @@ export function createWeztermBackend(
   native?: NativeModule,
   // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend &
+  CellSemanticTypeExtension &
   HyperlinkExtension &
   PasteEncodingExtension &
   KeyEncodingExtension &
@@ -437,7 +441,7 @@ export function createWeztermBackend(
     version: "0.1.0-fork.5",
     truecolor: true,
     kittyKeyboard: true,
-    kittyGraphics: false, // Not available in headless mode
+    kittyGraphics: true,
     sixel: true,
     osc8Hyperlinks: true,
     semanticPrompts: true,
@@ -451,6 +455,7 @@ export function createWeztermBackend(
     // Parsed toasts, current progress and engine-owned Cwd; no raw OSC 9/777 payload.
     extensions: new Set([
       "adapter-sources",
+      "semantic-cells",
       "hyperlinks",
       "osc-metadata",
 
@@ -462,6 +467,7 @@ export function createWeztermBackend(
 
   // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend &
+    CellSemanticTypeExtension &
     HyperlinkExtension &
     PasteEncodingExtension &
     KeyEncodingExtension &
@@ -478,6 +484,19 @@ export function createWeztermBackend(
     getText,
     getTextRange,
     getCell,
+    getCellSemanticType(row, col) {
+      if (
+        !Number.isSafeInteger(row) ||
+        !Number.isSafeInteger(col) ||
+        row < 0 ||
+        col < 0 ||
+        row > 0xffffffff ||
+        col > 0xffffffff
+      ) {
+        throw new RangeError("wezterm semantic cell coordinates must be uint32 integers")
+      }
+      return ensureTerm().getCellSemanticType(row, col)
+    },
     getHyperlinkAt(row, col) {
       return getCell(row, col).hyperlink
     },

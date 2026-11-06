@@ -78,6 +78,10 @@ impl TerminalConfiguration for HeadlessConfig {
         true
     }
 
+    fn enable_kitty_graphics(&self) -> bool {
+        true
+    }
+
     fn color_palette(&self) -> ColorPalette {
         ColorPalette::default()
     }
@@ -580,6 +584,31 @@ impl WeztermTerminal {
         match line.get_cell(col as usize) {
             Some(cell) => convert_cell(cell, &palette),
             None => empty_cell(),
+        }
+    }
+
+    #[napi]
+    pub fn get_cell_semantic_type(&self, row: u32, col: u32) -> napi::Result<String> {
+        let screen = self.term.screen();
+        if row as usize >= screen.scrollback_rows() || col as usize >= self.cols {
+            return Err(napi::Error::from_reason(
+                "WezTerm semantic cell coordinates are outside the stored grid",
+            ));
+        }
+        let lines = screen.lines_in_phys_range(row as usize..row as usize + 1);
+        let line = lines
+            .first()
+            .ok_or_else(|| napi::Error::from_reason("WezTerm semantic cell row is missing"))?;
+        let cell = line
+            .get_cell(col as usize)
+            .ok_or_else(|| napi::Error::from_reason("WezTerm semantic cell is missing"))?;
+        match format!("{:?}", cell.attrs().semantic_type()).as_str() {
+            "Prompt" => Ok("prompt".to_string()),
+            "Input" => Ok("input".to_string()),
+            "Output" => Ok("output".to_string()),
+            other => Err(napi::Error::from_reason(format!(
+                "Unknown WezTerm cell semantic type {other}"
+            ))),
         }
     }
 

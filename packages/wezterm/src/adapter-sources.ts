@@ -6,11 +6,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/wezterm/src/backend.ts",
-      blobOid: "e7b9d32395b3209ef48247c2e3d7f7f21cbd10a6",
+      blobOid: "a260d3df32acf13ee7aedfbd4eabfc99c69330b9",
     },
     {
       path: "packages/wezterm/native/src/lib.rs",
-      blobOid: "69a9d1ebc4fd86d46c131a378a9d897cdd6824b3",
+      blobOid: "7040dba8959e01fb6fde625e426b6059a5ef65f3",
     },
     {
       path: "src/load-native.ts",

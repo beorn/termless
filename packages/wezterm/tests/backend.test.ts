@@ -58,6 +58,19 @@ describe.skipIf(nativeBuildError !== null)(
       backend.destroy()
     })
 
+    // Existing cell tests cannot distinguish stored semantic types from the current pen.
+    // The bounds check also prevents N-API uint32 coercion aliasing a different cell.
+    test("reads stored semantic cells across pen changes and reset without coordinate aliasing", () => {
+      backend.feed(encode("\x1b]133;P\x07P\x1b]133;B\x07I\x1b]133;C\x07O"))
+      expect([0, 1, 2].map((col) => backend.getCellSemanticType(0, col))).toEqual(["prompt", "input", "output"])
+      expect(() => backend.getCellSemanticType(2 ** 32, 0)).toThrow()
+      expect(() => backend.getCellSemanticType(0, 2 ** 32)).toThrow()
+      backend.reset()
+      backend.feed(encode("R"))
+      expect(backend.getCell(0, 0).char).toBe("R")
+      expect(backend.getCellSemanticType(0, 0)).toBe("output")
+    })
+
     // Existing toast/progress tests do not observe the directory or its native instance boundary.
     test("reads engine-owned Cwd without changing replies or sharing instance state", () => {
       const metadata = backend as typeof backend & Required<Pick<OscMetadataExtension, "getCwd">>
