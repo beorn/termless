@@ -73,16 +73,16 @@ but can be called ahead of time to fail fast if the native module is missing.
 
 ## Capabilities
 
-| Capability              | Supported     |
-| ----------------------- | ------------- |
-| True color (24-bit)     | Yes           |
-| Kitty keyboard protocol | Yes           |
-| Kitty graphics          | No (headless) |
-| Sixel                   | Yes           |
-| OSC 8 hyperlinks        | Yes           |
-| Semantic prompts        | Yes           |
-| Unicode 15.1            | Yes           |
-| Line reflow             | Yes           |
+| Capability              | Supported      |
+| ----------------------- | -------------- |
+| True color (24-bit)     | Yes            |
+| Kitty keyboard protocol | Yes            |
+| Kitty graphics          | Yes (protocol) |
+| Sixel                   | Yes            |
+| OSC 8 hyperlinks        | Yes            |
+| Semantic prompts        | Yes            |
+| Unicode 15.1            | Yes            |
+| Line reflow             | Yes            |
 
 ## Architecture
 
@@ -103,3 +103,5 @@ read-only `application_cursor_keys_enabled` getter and its lifecycle test.
 commit is not a claim of an identical clean source tree. Native receipts bind
 the maintained bytes through `nativeTreeOid`, with `sourceKind` and
 `baseArchiveSha256` instead of a registry checksum for the patched crate.
+
+The backend declares `semantic-cells`: `getCellSemanticType(row, col)` reads the stored prompt/input/output type using the same row origin as `getCell`; invalid requested coordinates throw. This is per-cell state, not mark history or command completion. Native Kitty graphics is enabled; protocol replies do not attest rendered pixels.

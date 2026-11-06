@@ -33,6 +33,8 @@ export type {
   SemanticMark,
   SemanticStartMark,
   SemanticMarkExtension,
+  CellSemanticType,
+  CellSemanticTypeExtension,
   SixelImage,
   SixelStorageExtension,
   AdapterSourcesExtension,

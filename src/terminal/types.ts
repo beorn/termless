@@ -682,6 +682,14 @@ export interface SemanticMarkExtension {
   getSemanticMarks(): readonly SemanticMark[]
 }
 
+export type CellSemanticType = "prompt" | "input" | "output"
+
+/** Current stored cell state, not insertion history; declared by "semantic-cells". */
+export interface CellSemanticTypeExtension {
+  /** Same row origin as getCell. Invalid requested coordinates throw rather than inventing a type. */
+  getCellSemanticType(row: number, col: number): CellSemanticType
+}
+
 /** Raw payload storage, without decoded pixels, raster dimensions, or image cell geometry. */
 export interface SixelImage {
   /** Exact stored Sixel payload after q; DCS framing and parameters are not included. */
