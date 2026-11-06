@@ -1,4 +1,4 @@
-# vendor-kit: release@2bcd2dff4153 — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
+# vendor-kit: release@bc9a6ec2f22d — generated; edit km/packages/km-infra/vendor-kit/templates/release.yml in km, then re-sync
 name: Release
 
 on:
@@ -35,7 +35,7 @@ jobs:
           registry-url: https://registry.npmjs.org
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
-          bun-version: 1.3.14
+          bun-version: 1.4.4
 
       - name: Validate dispatch identity and planned package versions
         env:
@@ -64,16 +64,17 @@ jobs:
           try { root = JSON.parse(readFileSync('package.json', 'utf8')) }
           catch (error) { fail('invalid root manifest package.json: ' + String(error)) }
           const workspaces = root.workspaces === undefined ? [] : root.workspaces
-          if (!Array.isArray(workspaces)) fail('workspaces must be an array of <dir>/* patterns')
-          const directories = [], exclusions = []
+          if (!Array.isArray(workspaces)) fail('workspaces must be an array of literal directories or <dir>/* patterns')
+          const directories = [], literals = [], exclusions = []
           for (const pattern of workspaces) {
             if (typeof pattern === 'string' && /^![^/*?\[\]{}!\\]+$/.test(pattern) && !pattern.slice(1).startsWith('.')) exclusions.push(pattern.slice(1))
             else if (typeof pattern === 'string' && /^[^/*?\[\]{}!\\]+\/\*$/.test(pattern) && !pattern.startsWith('.')) directories.push(pattern.slice(0, -2))
+            else if (typeof pattern === 'string' && /^[^/*?\[\]{}!\\]+$/.test(pattern) && !pattern.startsWith('.')) literals.push(pattern)
             else fail('unsupported workspace pattern ' + String(pattern) + ' in package.json')
           }
           const paths = tracked.stdout.split('\0').filter(path => {
             const parts = path.split('/')
-            return path === 'package.json' || (parts.length === 3 && directories.includes(parts[0]) && !exclusions.includes(parts[0]) && parts[1] !== '' && parts[2] === 'package.json')
+            return path === 'package.json' || (parts.length === 2 && literals.includes(parts[0]) && !exclusions.includes(parts[0]) && parts[1] === 'package.json') || (parts.length === 3 && directories.includes(parts[0]) && !exclusions.includes(parts[0]) && parts[1] !== '' && parts[2] === 'package.json')
           })
           const manifests = paths.map(path => {
             try { return { path, value: JSON.parse(readFileSync(path, 'utf8')) } }
