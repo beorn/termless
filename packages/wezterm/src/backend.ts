@@ -226,6 +226,7 @@ export function createWeztermBackend(
 ): TerminalBackend &
   CellSemanticTypeExtension &
   CellImageCountExtension &
+  // oxlint-disable-next-line typescript/no-deprecated -- Strengthen the existing clipboard method while this adapter retains TerminalBackend until unterm phase A4.
   Required<Pick<TerminalBackend, "getClipboardState">> &
   HyperlinkExtension &
   PasteEncodingExtension &
@@ -475,6 +476,7 @@ export function createWeztermBackend(
   const backend: TerminalBackend &
     CellSemanticTypeExtension &
     CellImageCountExtension &
+    // oxlint-disable-next-line typescript/no-deprecated -- Strengthen the existing clipboard method while this adapter retains TerminalBackend until unterm phase A4.
     Required<Pick<TerminalBackend, "getClipboardState">> &
     HyperlinkExtension &
     PasteEncodingExtension &
