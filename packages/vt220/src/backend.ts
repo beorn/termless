@@ -40,6 +40,7 @@ const DEFAULT_ROWS = 24
  */
 export function createVt220Backend(
   opts?: Partial<TerminalOptions>,
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
   let screen: Screen | null = null
 
@@ -230,6 +231,7 @@ export function createVt220Backend(
     extensions: new Set(["adapter-sources", "paste-encoding", "osc-metadata"]),
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt220",

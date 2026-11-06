@@ -156,6 +156,7 @@ const DEFAULT_ROWS = 24
  */
 export function createAlacrittyBackend(
   opts?: Partial<TerminalOptions>,
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend & HyperlinkExtension & AdapterSourcesExtension {
   let term: NativeAlacrittyTerminal | null = null
 
@@ -336,6 +337,7 @@ export function createAlacrittyBackend(
     extensions: new Set(["adapter-sources", "hyperlinks", "mouse-encoding"]),
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend & HyperlinkExtension & AdapterSourcesExtension & MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "alacritty",

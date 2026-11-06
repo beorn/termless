@@ -6,7 +6,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/vt220/src/backend.ts",
-      blobOid: "9ca91101da1fa65aa11f7348c4dd3f6411edef8e",
+      blobOid: "c610a3444be73358594ed000a738f32cc86075d4",
     },
   ],
 } as const

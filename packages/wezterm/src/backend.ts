@@ -216,6 +216,7 @@ const DEFAULT_ROWS = 24
 export function createWeztermBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend &
   HyperlinkExtension &
   PasteEncodingExtension &
@@ -459,6 +460,7 @@ export function createWeztermBackend(
     ]),
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend &
     HyperlinkExtension &
     PasteEncodingExtension &
