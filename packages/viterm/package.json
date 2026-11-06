@@ -40,7 +40,6 @@
     "./fixture": "./src/fixture.ts"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
@@ -57,7 +56,8 @@
         "import": "./dist/fixture.mjs",
         "default": "./dist/fixture.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown"

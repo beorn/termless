@@ -68,9 +68,7 @@ valid `.tty` bundle with zero artifact churn.)
   "reproducible": true, // frames projection regenerable from io?
   "originWallMs": 1754620000000, // OPTIONAL: wall-clock ms of µs-origin 0
   "sourceResolution": "us", // OPTIONAL, write-new (D10): declared source clock resolution
-  "fingerprint": {
-    /* RendererFingerprint */
-  }, // OPTIONAL, frames-bearing only
+  "fingerprint": {/* RendererFingerprint */}, // OPTIONAL, frames-bearing only
 
   // Sealed members. Every listed member is complete and immutable.
   "members": [

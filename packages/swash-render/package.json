@@ -31,13 +31,13 @@
     ".": "./src/index.ts"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "scripts": {
     "build:prebuild": "bunx @napi-rs/cli@3.5.1 build --manifest-path native/Cargo.toml --package-json-path package.json --platform --release --no-js --dts native/target/index.d.ts --output-dir .",

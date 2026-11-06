@@ -37,7 +37,6 @@
     "./backends": "./src/backends.ts"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.mts",
@@ -64,7 +63,8 @@
         "import": "./dist/backends.mjs",
         "default": "./dist/backends.mjs"
       }
-    }
+    },
+    "access": "public"
   },
   "dependencies": {
     "@termless/core": "workspace:*"
