@@ -147,7 +147,11 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       throw new Error("Generated libvterm module does not expose cwrap")
     }
     const module = loaded as LibvtermModule & {
-      cwrap(name: string, returnType: "number" | null, argumentTypes: string[]): (...args: number[]) => number
+      cwrap<R extends number | string = number>(
+        name: string,
+        returnType: R extends string ? "string" : "number" | null,
+        argumentTypes: string[],
+      ): (...args: number[]) => R
     }
     if (!located) throw new Error("libvterm did not request the pinned WASM file")
     if (
@@ -265,8 +269,14 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.termless_vterm_notification_len = cwrap("termless_vterm_notification_len", "number", ["number", "number"])
     module.termless_vterm_osc777_count = cwrap("termless_vterm_osc777_count", "number", ["number"])
     module.termless_vterm_unhandled_count = cwrap("termless_vterm_unhandled_count", "number", ["number"])
-    module.termless_vterm_unhandled_kind = cwrap("termless_vterm_unhandled_kind", "string", ["number", "number"])
-    module.termless_vterm_unhandled_code = cwrap("termless_vterm_unhandled_code", "string", ["number", "number"])
+    module.termless_vterm_unhandled_kind = cwrap<"osc" | "csi" | "apc">("termless_vterm_unhandled_kind", "string", [
+      "number",
+      "number",
+    ])
+    module.termless_vterm_unhandled_code = cwrap<string>("termless_vterm_unhandled_code", "string", [
+      "number",
+      "number",
+    ])
     module.termless_vterm_osc777_get = cwrap("termless_vterm_osc777_get", "number", ["number", "number"])
     module.termless_vterm_osc777_len = cwrap("termless_vterm_osc777_len", "number", ["number", "number"])
     module.termless_vterm_history_cols = cwrap("termless_vterm_history_cols", "number", ["number", "number"])
