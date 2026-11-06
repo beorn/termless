@@ -14,6 +14,7 @@ baseArchiveSha256 = "7f3678674adc87f210ec01e2134e1972d6b0bd194bf82242f7e7beee3ae
 crate-type = ["cdylib"]
 
 [dependencies]
+anyhow = "1"
 napi = { version = "3", features = ["napi8"] }
 napi-derive = "3"
 tattoy-wezterm-term = { version = "=0.1.0-fork.5", path = "vendor/tattoy-wezterm-term" }

@@ -218,7 +218,7 @@ export interface Terminal {
   getClipboardState?(): {
     writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
     pasteSelector?: string
-    /** The engine's effective clipboard permission option, when the backend reports one (kitty clipboard_control) */
+    /** The engine's effective clipboard permission option (Kitty clipboard_control or Alacritty osc52). */
     control?: readonly string[]
   }
   getScrollback(): ScrollbackState
@@ -688,6 +688,12 @@ export type CellSemanticType = "prompt" | "input" | "output"
 export interface CellSemanticTypeExtension {
   /** Same row origin as getCell. Invalid requested coordinates throw rather than inventing a type. */
   getCellSemanticType(row: number, col: number): CellSemanticType
+}
+
+/** Stored image attachments, not rendered pixels; declared by "cell-images". */
+export interface CellImageCountExtension {
+  /** Same row origin as getCell. Invalid requested coordinates throw. */
+  getCellImageCount(row: number, col: number): number
 }
 
 /** Raw payload storage, without decoded pixels, raster dimensions, or image cell geometry. */

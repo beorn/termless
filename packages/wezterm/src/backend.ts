@@ -12,6 +12,7 @@ import type {
   AdapterSourcesExtension,
   CellSemanticType,
   CellSemanticTypeExtension,
+  CellImageCountExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -88,6 +89,8 @@ interface WeztermTerminal {
   getTextRange(startRow: number, startCol: number, endRow: number, endCol: number): string
   getCell(row: number, col: number): NapiCell
   getCellSemanticType(row: number, col: number): CellSemanticType
+  getCellImageCount(row: number, col: number): number
+  getClipboardWrites(): { selector: string; text: string }[]
   getLine(row: number): NapiCell[]
   getCursor(): NapiCursor
   getMode(mode: string): boolean | null
@@ -222,6 +225,9 @@ export function createWeztermBackend(
   // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend &
   CellSemanticTypeExtension &
+  CellImageCountExtension &
+  // oxlint-disable-next-line typescript/no-deprecated -- Strengthen the existing clipboard method while this adapter retains TerminalBackend until unterm phase A4.
+  Required<Pick<TerminalBackend, "getClipboardState">> &
   HyperlinkExtension &
   PasteEncodingExtension &
   KeyEncodingExtension &
@@ -456,6 +462,7 @@ export function createWeztermBackend(
     extensions: new Set([
       "adapter-sources",
       "semantic-cells",
+      "cell-images",
       "hyperlinks",
       "osc-metadata",
 
@@ -468,6 +475,9 @@ export function createWeztermBackend(
   // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend &
     CellSemanticTypeExtension &
+    CellImageCountExtension &
+    // oxlint-disable-next-line typescript/no-deprecated -- Strengthen the existing clipboard method while this adapter retains TerminalBackend until unterm phase A4.
+    Required<Pick<TerminalBackend, "getClipboardState">> &
     HyperlinkExtension &
     PasteEncodingExtension &
     KeyEncodingExtension &
@@ -496,6 +506,26 @@ export function createWeztermBackend(
         throw new RangeError("wezterm semantic cell coordinates must be uint32 integers")
       }
       return ensureTerm().getCellSemanticType(row, col)
+    },
+    getCellImageCount(row, col) {
+      if (
+        !Number.isSafeInteger(row) ||
+        !Number.isSafeInteger(col) ||
+        row < 0 ||
+        col < 0 ||
+        row > 0xffffffff ||
+        col > 0xffffffff
+      ) {
+        throw new RangeError("wezterm image cell coordinates must be uint32 integers")
+      }
+      return ensureTerm().getCellImageCount(row, col)
+    },
+    getClipboardState() {
+      return {
+        writes: ensureTerm()
+          .getClipboardWrites()
+          .map(({ selector, text }) => ({ selector, text, payload: Buffer.from(text, "utf8").toString("base64") })),
+      }
     },
     getHyperlinkAt(row, col) {
       return getCell(row, col).hyperlink

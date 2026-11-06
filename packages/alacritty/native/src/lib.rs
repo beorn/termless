@@ -13,8 +13,8 @@ use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::term::cell::Flags as CellFlags;
 use alacritty_terminal::term::ClipboardType;
-use alacritty_terminal::term::Config;
 use alacritty_terminal::term::Term;
+use alacritty_terminal::term::{Config, Osc52};
 use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor, Rgb};
 
 use napi::bindgen_prelude::*;
@@ -24,6 +24,10 @@ use napi_derive::napi;
 
 /// A colour query the engine raised: the colour index and the engine's own reply formatter.
 type ColorRequest = (usize, Arc<dyn Fn(Rgb) -> String + Sync + Send + 'static>);
+type ClipboardRequest = (
+    ClipboardType,
+    Arc<dyn Fn(&str) -> String + Sync + Send + 'static>,
+);
 
 /// Captures terminal events (title changes, bell, PTY responses) for JS consumption.
 #[derive(Clone)]
@@ -33,6 +37,7 @@ struct EventProxy {
     response_buf: Arc<Mutex<Vec<u8>>>,
     color_requests: Arc<Mutex<Vec<ColorRequest>>>,
     clipboard_writes: Arc<Mutex<Vec<(ClipboardType, String)>>>,
+    clipboard_requests: Arc<Mutex<Vec<ClipboardRequest>>>,
     /// The text area at the declared cell size, or None when the caller declared none.
     window: Arc<Mutex<Option<WindowSize>>>,
 }
@@ -45,6 +50,7 @@ impl EventProxy {
             response_buf: Arc::new(Mutex::new(Vec::new())),
             color_requests: Arc::new(Mutex::new(Vec::new())),
             clipboard_writes: Arc::new(Mutex::new(Vec::new())),
+            clipboard_requests: Arc::new(Mutex::new(Vec::new())),
             window: Arc::new(Mutex::new(None)),
         }
     }
@@ -73,6 +79,12 @@ impl EventListener for EventProxy {
                     .lock()
                     .unwrap_or_else(PoisonError::into_inner)
                     .push((selection, text));
+            }
+            Event::ClipboardLoad(selection, formatter) => {
+                self.clipboard_requests
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push((selection, formatter));
             }
             Event::PtyWrite(text) => {
                 if let Ok(mut buf) = self.response_buf.lock() {
@@ -308,6 +320,7 @@ pub struct AlacrittyTerminal {
     rows: usize,
     cell_width: Option<u32>,
     cell_height: Option<u32>,
+    osc52: Osc52,
 }
 
 #[napi]
@@ -327,6 +340,8 @@ impl AlacrittyTerminal {
         }
         let mut config = Config::default();
         config.scrolling_history = scrollback_limit.unwrap_or(1000) as usize;
+        let osc52 = Osc52::CopyPaste;
+        config.osc52 = osc52;
 
         let size = TermSize {
             cols: cols as usize,
@@ -343,6 +358,7 @@ impl AlacrittyTerminal {
             rows: rows as usize,
             cell_width,
             cell_height,
+            osc52,
         })
     }
 
@@ -361,6 +377,34 @@ impl AlacrittyTerminal {
                                 buf.extend_from_slice(formatter(rgb).as_bytes());
                             }
                         }
+                    }
+                }
+                // Read the last preceding write for this selection, before the next byte can replace it.
+                let mut requests = self
+                    .proxy
+                    .clipboard_requests
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner);
+                if !requests.is_empty() {
+                    let writes = self
+                        .proxy
+                        .clipboard_writes
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner);
+                    let mut buf = self
+                        .proxy
+                        .response_buf
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner);
+                    for (selection, formatter) in requests.drain(..) {
+                        // The isolated clipboard starts empty; no OS clipboard is consulted.
+                        let text = writes
+                            .iter()
+                            .rev()
+                            .find(|(stored, _)| *stored == selection)
+                            .map(|(_, text)| text.as_str())
+                            .unwrap_or("");
+                        buf.extend_from_slice(formatter(text).as_bytes());
                     }
                 }
             }
@@ -662,6 +706,11 @@ impl AlacrittyTerminal {
             let bytes = std::mem::take(&mut *buf);
             Some(Buffer::from(bytes))
         }
+    }
+
+    #[napi]
+    pub fn get_clipboard_control(&self) -> String {
+        format!("osc52={:?}", self.osc52)
     }
 
     #[napi]
