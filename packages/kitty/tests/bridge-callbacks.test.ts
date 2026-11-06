@@ -126,11 +126,11 @@ print(json.dumps(results))
 // @failure Kitty's mouse extension must return its native Screen's reports, with held-button motion and wheel mapping,
 // while a tracking-off Screen stays silent and encoding does not consume or deliver parser replies.
 // @level l5
-// @consumer Terminfo's five cell-coordinate mouse criteria; pixel and prompt-click paths remain unmeasured.
+// @consumer Terminfo's cell and pixel mouse criteria; prompt-click behavior remains unmeasured.
 test.skipIf(!isKittyAvailable())(
   "native mouse reports follow tracking, buttons and actions without leaking replies",
   () => {
-    const backend = createKittyBackend({ cols: 20, rows: 5 })
+    const backend = createKittyBackend({ cols: 20, rows: 5, pixelGeometry: { cellWidth: 10, cellHeight: 20 } })
     const bytes = (value: string) => new TextEncoder().encode(value)
     const replies: string[] = []
     backend.onResponse = (value) => replies.push(new TextDecoder().decode(value))
@@ -150,7 +150,16 @@ test.skipIf(!isKittyAvailable())(
       expect(backend.encodeMouse({ ...press, action: "move" })).toEqual(bytes("\x1b[<32;5;3M"))
       expect(backend.encodeMouse({ ...press, button: "none", action: "move" })).toBeNull()
       expect(backend.encodeMouse({ ...press, shift: true, ctrl: true, alt: true })).toEqual(bytes("\x1b[<28;5;3M"))
-      expect(() => backend.encodeMouse({ ...press, pixel: { x: 40, y: 24 } })).toThrow(/^mouse encoding unavailable:/)
+      const pixelPress = { ...press, x: 3, y: 4, pixel: { x: 37, y: 91 } }
+      backend.feed(bytes("\x1b[?1003h"))
+      expect(backend.encodeMouse(pixelPress)).toEqual(bytes("\x1b[<0;4;5M"))
+      backend.feed(bytes("\x1b[?1016h"))
+      expect(backend.encodeMouse(pixelPress)).toEqual(bytes("\x1b[<0;37;91M"))
+      expect(backend.encodeMouse({ ...pixelPress, pixel: { x: 39, y: 99 } })).toEqual(bytes("\x1b[<0;39;99M"))
+      backend.feed(bytes("\x1b[?1000;1002;1003l"))
+      expect(backend.encodeMouse(pixelPress)).toBeNull()
+      backend.feed(bytes("\x1b[?1003h\x1b[?1016l\x1b[?1006h"))
+      expect(backend.encodeMouse(pixelPress)).toEqual(bytes("\x1b[<0;4;5M"))
       expect(replies).toEqual([])
       backend.getCursor()
       expect(replies).toEqual(["\x1b[1;1R"])

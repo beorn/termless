@@ -428,10 +428,6 @@ export function createKittyBackend(
 
   function encodeMouse(event: MouseEvent): Uint8Array | null {
     ensureInit()
-    // This adapter binds cell-coordinate mouse events only; pixel input remains a separate unmeasured path.
-    if (event.pixel !== undefined) {
-      throw new Error("mouse encoding unavailable: Kitty pixel-coordinate path is not bound")
-    }
     const encoded = replayAndSnapshot({ op: "encode-mouse", event }).encodedMouse
     if (encoded === null) return null
     if (typeof encoded !== "string" || Buffer.from(encoded, "base64").toString("base64") !== encoded) {
