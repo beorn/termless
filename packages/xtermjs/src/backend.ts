@@ -6,7 +6,7 @@
  */
 
 // @xterm/headless is CJS — use default import for Node.js ESM compat
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 import xterm from "@xterm/headless"
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
@@ -78,7 +78,6 @@ import { Unicode11Addon } from "@xterm/addon-unicode11"
 import type {
   AdapterSourcesExtension,
   TerminalBackend,
-  ReplyDeliveryExtension,
   HyperlinkExtension,
   MouseEncodingExtension,
   OscMetadataExtension,
@@ -175,7 +174,6 @@ export function createXtermBackend(
   // oxlint-disable-next-line typescript/no-deprecated -- Registered adapter still implements this lifecycle.
 ): TerminalBackend &
   HyperlinkExtension &
-  ReplyDeliveryExtension &
   MouseEncodingExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> {
@@ -869,13 +867,12 @@ export function createXtermBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "hyperlinks", "reply-delivery", "mouse-encoding", "osc-metadata"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "mouse-encoding", "osc-metadata"]),
   }
 
   // oxlint-disable-next-line typescript/no-deprecated -- The registered adapter still implements this lifecycle.
   const backend: TerminalBackend &
     HyperlinkExtension &
-    ReplyDeliveryExtension &
     MouseEncodingExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getNotifications" | "getOsc777Payloads" | "getCwd"> = {
@@ -919,7 +916,6 @@ export function createXtermBackend(
     encodeKey: encodeKeyToAnsi,
     encodeMouse,
     capabilities,
-    replyDelivery,
   }
 
   return backend

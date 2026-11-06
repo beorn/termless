@@ -19,7 +19,7 @@ import { initLibvterm, loadedLibvtermWasm, type LibvtermModule } from "../src/wa
 import {
   hasExtension,
   type OscMetadataExtension,
-  type ReplyDeliveryExtension,
+  type AdapterSourcesExtension,
   type TerminalBackend,
 } from "../../../src/terminal/types.ts"
 
@@ -444,21 +444,6 @@ describeWasm(`window-op probe responses — libvterm backend${skipReason ? ` (sk
       expect(new TextEncoder().encode(expected).length).toBeGreaterThan(1024)
       backend.feed(new TextEncoder().encode(positions.map(([row, col]) => `\x1b[${row};${col}H\x1b[6n`).join("")))
       expect(responses.join("")).toBe(expected)
-    } finally {
-      backend.destroy()
-    }
-  })
-
-  // CTO 2cfdb6e8: complete delivery is declared after full DA1/DECRQSS replies were measured above, and binds the WASM
-  // this suite actually loaded; the declaration test alone reads only the receipt.
-  test("declares complete reply delivery for the loaded WASM", () => {
-    const backend = createLibvtermBackend(undefined, wasmModule!)
-    backend.init({ cols: 80, rows: 24 })
-    try {
-      if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
-        throw new Error("libvterm declares no reply delivery")
-      }
-      expect(backend.replyDelivery.engine).toEqual({ kind: "wasm", sha256: loadedLibvtermWasm().sha256 })
     } finally {
       backend.destroy()
     }

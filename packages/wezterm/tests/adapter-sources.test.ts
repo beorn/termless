@@ -9,25 +9,20 @@ import { readFileSync, realpathSync } from "node:fs"
 import { relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { expect, test } from "vitest"
-import { hasExtension, type ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
+import { hasExtension, type AdapterSourcesExtension } from "../../../src/terminal/types.ts"
 import { createWeztermBackend } from "../src/backend.ts"
 
 // Declaration integrity is independent of addon availability; no init/feed is performed.
 // The native behaviour tests skip without a built addon, so they cannot catch a missing or stale source binding.
-test("declares audited native reply delivery without initializing the engine", () => {
+test("exposes actual adapter source bytes without initializing the engine", () => {
   const backend = createWeztermBackend()
-  expect(hasExtension(backend, "reply-delivery")).toBe(true)
-  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
-    throw new Error("WezTerm declares no reply delivery")
+  expect(hasExtension(backend, "adapter-sources")).toBe(true)
+  if (!hasExtension<AdapterSourcesExtension>(backend, "adapter-sources")) {
+    throw new Error("WezTerm exposes no adapter sources")
   }
-  expect(backend.replyDelivery.engine).toEqual({
-    kind: "native",
-    sha256: "4753e20984ab7e15ea7ef8d4ddf9bd11237f79146087939e9c37771aaadbf186",
-  })
-  expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
   const sources = ["../src/index.ts", "../src/backend.ts", "../native/src/lib.rs", "../../../src/load-native.ts"]
-  expect(backend.replyDelivery.adapterSources).toEqual(
+  expect(backend.getAdapterSources()).toEqual(
     sources.map((path) => {
       const target = realpathSync(fileURLToPath(new URL(path, import.meta.url)))
       const bytes = readFileSync(target)

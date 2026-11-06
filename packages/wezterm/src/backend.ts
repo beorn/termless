@@ -19,7 +19,6 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
-  ReplyDeliveryExtension,
   HyperlinkExtension,
   OscMetadataExtension,
   PasteEncodingExtension,
@@ -30,7 +29,7 @@ import type {
 } from "../../../src/terminal/types.ts"
 import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module loading
@@ -217,12 +216,12 @@ const DEFAULT_ROWS = 24
 export function createWeztermBackend(
   opts?: Partial<TerminalOptions>,
   native?: NativeModule,
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
 ): TerminalBackend &
   HyperlinkExtension &
   PasteEncodingExtension &
   KeyEncodingExtension &
   MouseEncodingExtension &
-  ReplyDeliveryExtension &
   AdapterSourcesExtension &
   Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> {
   let term: WeztermTerminal | null = null
@@ -454,19 +453,19 @@ export function createWeztermBackend(
       "adapter-sources",
       "hyperlinks",
       "osc-metadata",
-      "reply-delivery",
+
       "paste-encoding",
       "key-encoding",
       "mouse-encoding",
     ]),
   }
 
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
   const backend: TerminalBackend &
     HyperlinkExtension &
     PasteEncodingExtension &
     KeyEncodingExtension &
     MouseEncodingExtension &
-    ReplyDeliveryExtension &
     AdapterSourcesExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd"> = {
     getAdapterSources: () => adapterDeclaration.sources,
@@ -499,7 +498,6 @@ export function createWeztermBackend(
     encodePaste,
     encodeMouse,
     capabilities,
-    replyDelivery,
   }
 
   return backend

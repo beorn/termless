@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 (unreleased)
+
+### Changed
+
+- **Breaking API change:** remove `ReplyDeliveryExtension`, the backend
+  `replyDelivery` property and the `reply-delivery` capability. Source identity
+  remains available through `AdapterSourcesExtension` and `getAdapterSources()`
+  with the same readonly path/blob OID shape. Observe actual responses through
+  `onResponse`, `feed()` and the backend's immediate drain.
+- Publish all eighteen packages together at 0.11.0 with matching sibling ranges.
+
 ## 0.10.2 (unreleased)
 
 ### Changed

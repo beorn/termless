@@ -579,28 +579,9 @@ export interface WarningExtension {
 // Extension Interfaces (optional)
 // ═══════════════════════════════════════════════════════
 
-/** Declared adapter implementation identity, independent of reply delivery capability. */
+/** Adapter implementation identity. */
 export interface AdapterSourcesExtension {
-  getAdapterSources(): ReplyDeliveryExtension["replyDelivery"]["adapterSources"]
-}
-
-/**
- * An adapter-owned audit of complete, synchronous engine reply delivery.
- * Absence gives no delivery guarantee; this never declares protocol support.
- */
-export interface ReplyDeliveryExtension {
-  readonly replyDelivery: {
-    /** Every engine reply reaches onResponse in input order by this boundary. */
-    readonly boundary: "feed-and-getCursor"
-    /** Audited imported entry and reply glue; the declaration module never lists itself. */
-    readonly adapterSources: readonly { readonly path: string; readonly blobOid: string }[]
-    /** Expected existing runtime evidence, compared by the collecting identity owner. */
-    readonly engine:
-      | { readonly kind: "registry"; readonly lockIntegrity: string }
-      | { readonly kind: "source"; readonly repository: string; readonly treeOid: string }
-      | { readonly kind: "wasm"; readonly sha256: string }
-      | { readonly kind: "native"; readonly sha256: string }
-  }
+  getAdapterSources(): readonly { readonly path: string; readonly blobOid: string }[]
 }
 
 export interface MouseEvent {

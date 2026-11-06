@@ -56,24 +56,13 @@ Fast unit tests and high-fidelity terminal tests are different tools. Use in-mem
 For a comprehensive, interactive capability matrix across all backends, visit **[terminfo.dev](https://terminfo.dev)** — powered by termless census probes.
 :::
 
-## Reply delivery
+## Adapter source identity
 
-Adapters may expose `ReplyDeliveryExtension` through `hasExtension(backend, "reply-delivery")`.
-Its `replyDelivery` value declares that every engine reply reaches `onResponse`, in input order,
-before `feed()` or its immediate `getCursor()` drain returns. It does not declare protocol support.
-Answers derived from true engine state are allowed; invented protocol constants are not.
-
-The declaration lives with the adapter and binds the imported entry and reply glue by Git blob OID,
-plus an audited registry integrity, source repository/tree OID or WASM digest. The declaration module
-never hashes itself. A consumer compares those facts with its measured loaded runtime; matching
-package versions alone provide no qualification. Each declaring adapter's owning tests hash its
-actual resolved import bytes, so an unaudited edit fails before commit as well as in clean CI.
-
-Xtermjs, vt100, vt220, vterm, libvterm, Alacritty, WezTerm and Kitty declare complete paths; Kitty's
-replies return from its batch replay by the next `getCursor()`. Ghostty's exposed response queue does
-not establish delivery of every engine reply class. An absent extension
-provides no complete-delivery guarantee. See the [probe evidence contract](https://github.com/beorn/terminfo.dev/blob/main/packages/probe-defs/README.md)
-for the source-bound sentinel consumer and its late-reply checks.
+All eleven library backends expose `AdapterSourcesExtension` through `adapter-sources`.
+`getAdapterSources()` returns the implementation paths and Git blob OIDs. Each backend's
+tests independently hash its actual imported files; the identity module excludes itself.
+This source list identifies implementation bytes. Response behavior is observed through
+`onResponse`, `feed()` and the backend's immediate drain, rather than declared by metadata.
 
 ## Backend Details
 

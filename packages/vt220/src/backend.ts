@@ -6,14 +6,13 @@
  * insert mode (IRM), selective erase (DECSED/DECSEL), and soft reset (DECSTR).
  */
 
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 import { createVt220Screen as createScreen, type ScreenCell, type Vt220Screen as Screen } from "vt220.js"
 import type {
   AdapterSourcesExtension,
   PasteEncodingExtension,
   OscMetadataExtension,
   TerminalBackend,
-  ReplyDeliveryExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -41,7 +40,8 @@ const DEFAULT_ROWS = 24
  */
 export function createVt220Backend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+): TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -228,14 +228,11 @@ export function createVt220Backend(
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding", "osc-metadata"]),
+    extensions: new Set(["adapter-sources", "paste-encoding", "osc-metadata"]),
   }
 
-  const backend: TerminalBackend &
-    ReplyDeliveryExtension &
-    AdapterSourcesExtension &
-    PasteEncodingExtension &
-    OscMetadataExtension = {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+  const backend: TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt220",
     init,
@@ -261,7 +258,6 @@ export function createVt220Backend(
       return ensureScreen().encodePaste(text)
     },
     capabilities,
-    replyDelivery,
   }
 
   return backend

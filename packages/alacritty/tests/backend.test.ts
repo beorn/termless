@@ -6,7 +6,7 @@
  *
  * TODO: Tests require the native Rust module to be built first.
  * Run: cd packages/alacritty/native && cargo build --release
- * @failure Accepted clipboard callbacks disappear or leak across instances; native reply delivery binds stale bytes.
+ * @failure Accepted clipboard callbacks disappear or leak across instances; adapter source identity binds stale bytes.
  * @level l0
  * @consumer Headless collector native reply eligibility.
  * @testonly none
@@ -17,7 +17,7 @@ import type { TerminalBackend } from "../../../src/terminal/types.ts"
 import {
   hasExtension,
   type HyperlinkExtension,
-  type ReplyDeliveryExtension,
+  type AdapterSourcesExtension,
   type MouseEncodingExtension,
 } from "../../../src/terminal/types.ts"
 import { createHash } from "node:crypto"
@@ -27,20 +27,15 @@ import { fileURLToPath } from "node:url"
 
 // N1/N2: declaration integrity is independent of addon availability; no init/feed is performed.
 // Existing native behavior tests cannot detect a missing or stale source binding when builds are absent.
-test("declares audited native reply delivery without initializing the engine", () => {
+test("exposes actual adapter source bytes without initializing the engine", () => {
   const backend = createAlacrittyBackend()
-  expect(hasExtension(backend, "reply-delivery")).toBe(true)
-  if (!hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
-    throw new Error("Alacritty declares no reply delivery")
+  expect(hasExtension(backend, "adapter-sources")).toBe(true)
+  if (!hasExtension<AdapterSourcesExtension>(backend, "adapter-sources")) {
+    throw new Error("Alacritty exposes no adapter sources")
   }
-  expect(backend.replyDelivery.engine).toEqual({
-    kind: "native",
-    sha256: "5f5e89db7fae602482e561f0b8625965f56ae2a91337b0de28f05147412941cd",
-  })
-  expect(backend.replyDelivery.boundary).toBe("feed-and-getCursor")
   const repo = fileURLToPath(new URL("../../../", import.meta.url))
   const sources = ["../src/index.ts", "../src/backend.ts", "../native/src/lib.rs", "../../../src/load-native.ts"]
-  expect(backend.replyDelivery.adapterSources).toEqual(
+  expect(backend.getAdapterSources()).toEqual(
     sources.map((path) => {
       const target = realpathSync(fileURLToPath(new URL(path, import.meta.url)))
       const bytes = readFileSync(target)

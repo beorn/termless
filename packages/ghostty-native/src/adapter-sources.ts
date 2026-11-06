@@ -1,7 +1,4 @@
-// Adapter identity only. This engine's reply-delivery capability is unchanged.
-// Re-audited for chronological retained native rows: the rebuilt engine receipt binds the changed Zig source tree.
-// Native paste uses the existing handle's encoder and copied bytes; it never feeds or drains the reply stream.
-// Re-audited for native report_pwd stored in Terminal and direct getCwd readback; reply ownership is unchanged.
+// Adapter implementation identity.
 export const adapterDeclaration = {
   sources: [
     {

@@ -6,14 +6,13 @@
  * inspired by the Rust vt100 crate's design.
  */
 
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 import { createVt100Screen as createScreen, type ScreenCell, type Vt100Screen as Screen } from "vt100.js"
 import type {
   AdapterSourcesExtension,
   OscMetadataExtension,
   PasteEncodingExtension,
   TerminalBackend,
-  ReplyDeliveryExtension,
   TerminalOptions,
   Cell,
   Cursor,
@@ -44,7 +43,8 @@ const DEFAULT_ROWS = 24
  */
 export function createVt100Backend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+): TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension {
   let screen: Screen | null = null
 
   function ensureScreen(): Screen {
@@ -246,14 +246,11 @@ export function createVt100Backend(
     semanticPrompts: false,
     unicode: "1.0",
     reflow: false,
-    extensions: new Set(["adapter-sources", "reply-delivery", "paste-encoding", "osc-metadata"]),
+    extensions: new Set(["adapter-sources", "paste-encoding", "osc-metadata"]),
   }
 
-  const backend: TerminalBackend &
-    ReplyDeliveryExtension &
-    AdapterSourcesExtension &
-    PasteEncodingExtension &
-    OscMetadataExtension = {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+  const backend: TerminalBackend & AdapterSourcesExtension & PasteEncodingExtension & OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vt100",
     init,
@@ -279,7 +276,6 @@ export function createVt100Backend(
       return ensureScreen().encodePaste(text)
     },
     capabilities,
-    replyDelivery,
   }
 
   return backend

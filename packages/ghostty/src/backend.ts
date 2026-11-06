@@ -1,4 +1,4 @@
-import { adapterDeclaration, replyDelivery } from "./adapter-sources.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 /**
  * Ghostty backend for termless.
  *
@@ -40,7 +40,6 @@ import { readFileSync, realpathSync } from "node:fs"
 import { resolveGhosttyWebWasm } from "./load-native.ts"
 import type {
   AdapterSourcesExtension,
-  ReplyDeliveryExtension,
   TerminalBackend,
   TerminalOptions,
   Cell,
@@ -776,7 +775,7 @@ export function createGhosttyBackend(
     // osc-metadata forwards the engine directory, parsed toasts and OSC 9;4 state; no raw OSC 9/777 payload.
     extensions: new Set([
       "adapter-sources",
-      "reply-delivery",
+
       "dirtyTracking",
       "warnings",
       "hyperlinks",
@@ -864,12 +863,11 @@ export function createGhosttyBackend(
     WarningExtension &
     HyperlinkExtension &
     AdapterSourcesExtension &
-    ReplyDeliveryExtension &
     MouseEncodingExtension &
     KeyEncodingExtension &
     Pick<Required<OscMetadataExtension>, "getToasts" | "getProgress" | "getCwd" | "getUnhandledSequences"> = {
     getAdapterSources: () => adapterDeclaration.sources,
-    replyDelivery,
+
     name: "ghostty",
     init,
     destroy,

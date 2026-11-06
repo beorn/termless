@@ -18,7 +18,6 @@ import type {
   ScrollbackState,
   TerminalCapabilities,
   Color,
-  ReplyDeliveryExtension,
   HyperlinkExtension,
   MouseEvent,
   MouseEncodingExtension,
@@ -27,7 +26,7 @@ import { declaredPixelGeometry } from "../../../src/terminal/types.ts"
 import { encodeKeyToAnsi } from "../../../src/terminal/key-encoding.ts"
 import { encodeMouseReport, type MouseEncodingState } from "../../../src/terminal/mouse-encoding.ts"
 import { loadNativeAddon } from "../../../src/load-native.ts"
-import { adapterDeclaration, replyDelivery } from "./reply-delivery.ts"
+import { adapterDeclaration } from "./adapter-sources.ts"
 
 // ═══════════════════════════════════════════════════════
 // Native module types (from napi-rs)
@@ -157,7 +156,8 @@ const DEFAULT_ROWS = 24
  */
 export function createAlacrittyBackend(
   opts?: Partial<TerminalOptions>,
-): TerminalBackend & ReplyDeliveryExtension & HyperlinkExtension & AdapterSourcesExtension {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+): TerminalBackend & HyperlinkExtension & AdapterSourcesExtension {
   let term: NativeAlacrittyTerminal | null = null
 
   function ensureTerm(): NativeAlacrittyTerminal {
@@ -334,14 +334,11 @@ export function createAlacrittyBackend(
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
-    extensions: new Set(["adapter-sources", "reply-delivery", "hyperlinks", "mouse-encoding"]),
+    extensions: new Set(["adapter-sources", "hyperlinks", "mouse-encoding"]),
   }
 
-  const backend: TerminalBackend &
-    ReplyDeliveryExtension &
-    HyperlinkExtension &
-    AdapterSourcesExtension &
-    MouseEncodingExtension = {
+  // oxlint-disable-next-line typescript/no-deprecated -- This registered adapter retains the TerminalBackend lifecycle until unterm phase A4.
+  const backend: TerminalBackend & HyperlinkExtension & AdapterSourcesExtension & MouseEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "alacritty",
     init,
@@ -366,7 +363,6 @@ export function createAlacrittyBackend(
     encodeKey: encodeKeyToAnsi,
     encodeMouse,
     capabilities,
-    replyDelivery,
   }
 
   return backend

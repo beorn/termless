@@ -15,25 +15,17 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, test } from "vitest"
 import { backendLoaders } from "../src/backend/backend-loaders.ts"
-import {
-  hasExtension,
-  type AdapterSourcesExtension,
-  type ReplyDeliveryExtension,
-  type TerminalBackend,
-} from "../src/terminal/types.ts"
+import { hasExtension, type AdapterSourcesExtension, type TerminalBackend } from "../src/terminal/types.ts"
 
 interface Manifest {
   backends: Record<string, { package: string; type: string }>
 }
 
 describe("backendLoaders matches backends.json", () => {
-  // Universal identity AC: existing delivery tests cover only the nine delivery-capable engines.
-  // Real-file hashes catch stale runtime declarations that synthetic qualification identities cannot exercise.
-  // Keep the two non-delivery engines outside the reply-delivery membership.
-  test("every library backend exposes its exact source list and audited reply delivery", async () => {
+  // Real-file hashes catch stale source identities for all eleven engines.
+  test("every library backend exposes its exact source list", async () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
     const manifest = JSON.parse(readFileSync(join(root, "backends.json"), "utf8")) as Manifest
-    const delivery: string[] = []
     const engines = Object.entries(manifest.backends).filter(([, entry]) => entry.type !== "os")
     expect(engines).toHaveLength(11)
     for (const [name, entry] of engines) {
@@ -54,22 +46,7 @@ describe("backendLoaders matches backends.json", () => {
         const actual = execFileSync("git", ["hash-object", source.path], { cwd: root, encoding: "utf8" }).trim()
         expect.soft(source.blobOid, `${name}: ${source.path}`).toBe(actual)
       }
-      if (hasExtension<ReplyDeliveryExtension>(backend, "reply-delivery")) {
-        delivery.push(name)
-        expect(backend.replyDelivery.adapterSources, name).toBe(sources)
-      }
     }
-    expect(delivery.sort()).toEqual([
-      "alacritty",
-      "ghostty",
-      "kitty",
-      "libvterm",
-      "vt100",
-      "vt220",
-      "vterm",
-      "wezterm",
-      "xtermjs",
-    ])
   })
   test("the loader map and the manifest name the same packages", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "..")
