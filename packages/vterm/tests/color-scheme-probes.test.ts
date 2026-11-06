@@ -17,9 +17,10 @@ function responsesFor(query: string): string[] {
 }
 
 describe("@termless/vterm color scheme probes", () => {
-  test("stays silent on DSR ?996 when the engine has no color-scheme state", () => {
-    const responses = responsesFor("\x1b[?996n")
-
-    expect(responses).toEqual([])
+  test.each([
+    ["default dark background", "", "\x1b[?997;1n"],
+    ["declared light background", "\x1b]11;rgb:ffff/ffff/ffff\x1b\\", "\x1b[?997;2n"],
+  ])("forwards the released engine's color scheme for %s", (_name, setup, reply) => {
+    expect(responsesFor(setup + "\x1b[?996n")).toEqual([reply])
   })
 })

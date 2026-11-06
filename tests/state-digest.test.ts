@@ -208,12 +208,13 @@ test.each(["dim", "italic", "strikethrough", "blink", "hidden"] as const)(
   },
 )
 
-// Tracked alternate scroll now reads false instead of null; rendered visual bytes stay stable.
+// Released vterm 0.14 also reports smooth scroll as false instead of null; visual bytes stay stable.
 test("retained recording has the expanded mode digest and unchanged visual bytes", () => {
   const term = fed("\x1b[1;2;3;9mX\x1b[0mY", 8, 2)
   const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+  expect(terminalStateDigest(term).modes.smoothScroll).toBe(false)
   expect(hash(JSON.stringify(terminalStateDigest(term)))).toBe(
-    "0f87ab66cc17f3d4d0a5944701ed58ec5c4b79dd45c8b3d2cb2bcd29c1fc50fe",
+    "e5f5f0caa6ecbf9fbfbf54566347b2f86ce565ae0838befeb520f309b4a70be5",
   )
   expect(hash(snapshotVisualState(term))).toBe("41611b76d1676e78dbae650e298af3b0c36fb0f7316f19acdb78319c25f54580")
 })
