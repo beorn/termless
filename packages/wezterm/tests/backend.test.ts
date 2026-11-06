@@ -71,6 +71,65 @@ describe.skipIf(nativeBuildError !== null)(
       expect(backend.getCellSemanticType(0, 0)).toBe("output")
     })
 
+    // The collector's clipboard-write verdict cannot prove callback snapshot or instance isolation.
+    // @failure Clipboard callbacks disappear, alias returned snapshots or leak across native instances.
+    // @level l0
+    // @consumer WezTerm getClipboardState readers.
+    test("retains decoded clipboard callbacks without adding read replies or sharing snapshots", () => {
+      const replies: string[] = []
+      backend.onResponse = (data) => replies.push(new TextDecoder().decode(data))
+      expect(backend.getClipboardState().writes).toEqual([])
+      backend.feed(encode("\x1b]52;c;aGVsbG8=\x07\x1b]52;p;d29ybGQ=\x1b\\"))
+      const snapshot = backend.getClipboardState()
+      expect(snapshot.writes).toEqual([
+        { selector: "c", payload: "aGVsbG8=", text: "hello" },
+        { selector: "p", payload: "d29ybGQ=", text: "world" },
+      ])
+      snapshot.writes[0]!.text = "mutated"
+      backend.feed(encode("\x1b]52;c;?\x07"))
+      expect(replies).toEqual([])
+      expect(backend.getClipboardState().writes[0]?.text).toBe("hello")
+      backend.reset()
+      expect(backend.getClipboardState().writes).toHaveLength(2)
+      const other = createWeztermBackend({ cols: 80, rows: 24 })
+      try {
+        expect(other.getClipboardState().writes).toEqual([])
+        backend.init({ cols: 80, rows: 24 })
+        expect(backend.getClipboardState().writes).toEqual([])
+      } finally {
+        other.destroy()
+      }
+    })
+
+    // Reply-level tests cannot read cell images or detect N-API coordinate wrapping.
+    // @failure Valid empty cells throw, attachments disappear or invalid coordinates alias a stored cell.
+    // @level l0
+    // @consumer WezTerm getCellImageCount readers.
+    test("reads actual Kitty cell attachments and rejects out-of-range image coordinates", () => {
+      backend.init({ cols: 80, rows: 24, pixelGeometry: { cellWidth: 10, cellHeight: 20 } })
+      expect(backend.getCellImageCount(0, 0)).toBe(0)
+      backend.feed(encode("\x1b_Ga=t,f=24,s=1,v=1,t=d,i=71;/wAA\x1b\\"))
+      backend.feed(encode("\x1b_Ga=p,i=72,c=2,r=1,C=1\x1b\\"))
+      expect(backend.getCellImageCount(0, 0)).toBe(0)
+      backend.feed(encode("\x1b_Ga=p,i=71,c=2,r=1,C=1\x1b\\"))
+      expect(backend.getCellImageCount(0, 0)).toBe(1)
+      expect(backend.getCellImageCount(0, 2)).toBe(0)
+      for (const [row, col] of [
+        [-1, 0],
+        [0, -1],
+        [0.5, 0],
+        [0, 0.5],
+        [24, 0],
+        [0, 80],
+        [2 ** 32, 0],
+        [0, 2 ** 32],
+      ]) {
+        expect(() => backend.getCellImageCount(row!, col!)).toThrow()
+      }
+      backend.feed(encode("\x1b_Ga=d,d=I,i=71,q=2\x1b\\"))
+      expect(backend.getCellImageCount(0, 0)).toBe(0)
+    })
+
     // Existing toast/progress tests do not observe the directory or its native instance boundary.
     test("reads engine-owned Cwd without changing replies or sharing instance state", () => {
       const metadata = backend as typeof backend & Required<Pick<OscMetadataExtension, "getCwd">>

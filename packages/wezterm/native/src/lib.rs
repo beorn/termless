@@ -5,8 +5,8 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use tattoy_wezterm_surface::{CursorShape, CursorVisibility};
 use tattoy_wezterm_term::{
-    color::ColorPalette, Alert, AlertHandler, KeyCode, KeyModifiers, MouseButton, MouseEvent,
-    MouseEventKind, Progress, Terminal, TerminalConfiguration, TerminalSize,
+    color::ColorPalette, Alert, AlertHandler, Clipboard, ClipboardSelection, KeyCode, KeyModifiers,
+    MouseButton, MouseEvent, MouseEventKind, Progress, Terminal, TerminalConfiguration, TerminalSize,
 };
 
 struct ResponseBufferState {
@@ -165,6 +165,34 @@ struct TitleState {
 #[derive(Clone, Default)]
 struct TitleObserver(Arc<Mutex<TitleState>>);
 
+#[napi(object)]
+#[derive(Clone)]
+pub struct NapiClipboardWrite {
+    pub selector: String,
+    pub text: String,
+}
+
+#[derive(Clone, Default)]
+struct ClipboardObserver(Arc<Mutex<Vec<NapiClipboardWrite>>>);
+
+impl Clipboard for ClipboardObserver {
+    fn set_contents(&self, selection: ClipboardSelection, data: Option<String>) -> anyhow::Result<()> {
+        let selector = match selection {
+            ClipboardSelection::Clipboard => "c",
+            ClipboardSelection::PrimarySelection => "p",
+        };
+        self.0
+            .lock()
+            .expect("wezterm clipboard observer mutex poisoned")
+            .push(NapiClipboardWrite {
+                selector: selector.to_string(),
+                // None is the engine's explicit ClearSelection callback.
+                text: data.unwrap_or_default(),
+            });
+        Ok(())
+    }
+}
+
 impl AlertHandler for TitleObserver {
     fn alert(&mut self, alert: Alert) {
         match alert {
@@ -202,6 +230,7 @@ pub struct WeztermTerminal {
     cell_width: usize,
     cell_height: usize,
     titles: TitleObserver,
+    clipboard: ClipboardObserver,
 }
 
 /// wezterm-term reads pixel_width/pixel_height as the text area: CSI 14 t and XTSMGRAPHICS report them as-is, CSI 16 t
@@ -243,6 +272,8 @@ impl WeztermTerminal {
         );
         let titles = TitleObserver::default();
         term.set_notification_handler(Box::new(titles.clone()));
+        let clipboard = ClipboardObserver::default();
+        term.set_clipboard(&(Arc::new(clipboard.clone()) as Arc<dyn Clipboard>));
 
         WeztermTerminal {
             term,
@@ -253,6 +284,7 @@ impl WeztermTerminal {
             cell_width,
             cell_height,
             titles,
+            clipboard,
         }
     }
 
@@ -610,6 +642,34 @@ impl WeztermTerminal {
                 "Unknown WezTerm cell semantic type {other}"
             ))),
         }
+    }
+
+    #[napi]
+    pub fn get_cell_image_count(&self, row: u32, col: u32) -> napi::Result<u32> {
+        let screen = self.term.screen();
+        if row as usize >= screen.scrollback_rows() || col as usize >= self.cols {
+            return Err(napi::Error::from_reason(
+                "WezTerm image cell coordinates are outside the stored grid",
+            ));
+        }
+        let lines = screen.lines_in_phys_range(row as usize..row as usize + 1);
+        let line = lines
+            .first()
+            .ok_or_else(|| napi::Error::from_reason("WezTerm image cell row is missing"))?;
+        // A valid untouched column is stored sparsely and has no attached images.
+        Ok(line
+            .get_cell(col as usize)
+            .and_then(|cell| cell.attrs().images())
+            .map_or(0, |images| images.len() as u32))
+    }
+
+    #[napi]
+    pub fn get_clipboard_writes(&self) -> Vec<NapiClipboardWrite> {
+        self.clipboard
+            .0
+            .lock()
+            .expect("wezterm clipboard observer mutex poisoned")
+            .clone()
     }
 
     #[napi]

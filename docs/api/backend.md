@@ -62,11 +62,29 @@ not a `decodeError` entry.
 
 Reading does not drain the history, and RIS does not clear it. Reinitializing
 the backend creates a new instance with empty history; changing the returned
-snapshot cannot change that history. Alacritty supplies neither `control` nor
-`pasteSelector`. Its existing `OnlyCopy` default and clipboard-read behavior are
-unchanged: this reader neither handles `ClipboardLoad` nor synthesizes replies.
+snapshot cannot change that history. Alacritty enables `Osc52::CopyPaste` and
+reports `control: ["osc52=CopyPaste"]`. Its `ClipboardLoad` handler uses the
+engine's formatter to answer from the last preceding write for that selection,
+or empty text when no write exists. The engine preserves the query selector and
+terminator. Alacritty does not supply `pasteSelector`.
 A poisoned callback-state lock is reported as an error by the reader, never as
 an empty successful snapshot.
+
+WezTerm records decoded `Clipboard::set_contents` callbacks, with `c` for its
+clipboard and `p` for primary selection. An engine clear callback records empty
+text. Its snapshots have the same instance lifetime and copying behavior;
+the engine's clipboard-read requests remain silent. Neither reader accesses the
+operating system clipboard.
+
+## Stored cell observations
+
+WezTerm declares `semantic-cells` and `cell-images`. The corresponding optional
+extensions expose `getCellSemanticType(row, col)` and
+`getCellImageCount(row, col)`. Both use the same absolute buffer coordinates as
+`getCell` and throw for invalid coordinates. The image count reads actual
+attachments held by the engine's cell; zero means no attached images. It does
+not measure rendered pixels. The semantic type reads current prompt, input or
+output state, not mark history or command completion.
 
 ## TerminalOptions
 

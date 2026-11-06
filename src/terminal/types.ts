@@ -690,6 +690,12 @@ export interface CellSemanticTypeExtension {
   getCellSemanticType(row: number, col: number): CellSemanticType
 }
 
+/** Stored image attachments, not rendered pixels; declared by "cell-images". */
+export interface CellImageCountExtension {
+  /** Same row origin as getCell. Invalid requested coordinates throw. */
+  getCellImageCount(row: number, col: number): number
+}
+
 /** Raw payload storage, without decoded pixels, raster dimensions, or image cell geometry. */
 export interface SixelImage {
   /** Exact stored Sixel payload after q; DCS framing and parameters are not included. */
