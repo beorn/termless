@@ -1,13 +1,33 @@
 /**
  * @failure Packed @termless/ghostty cannot resolve bundled fonts from its peer
  * @termless/core, emitting missing-font warnings and throwing RangeError on
- * zero-width canvas rendering.
+ * zero-width canvas rendering, or silently loads public Ghostty engine bytes
+ * instead of its receipted private producer.
  * @level l3
  * @consumer @termless/ghostty installed public API
  * @testonly none
  */
 import assert from "node:assert/strict"
-import { renderAnsiPng } from "@termless/ghostty"
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const wasmPath = createRequire(import.meta.resolve("@termless/ghostty")).resolve("ghostty-web/ghostty-vt.wasm")
+const receipt = JSON.parse(
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.resolve("@termless/ghostty"))), "ghostty-web-RECEIPT.json"),
+    "utf8",
+  ),
+)
+assert.equal(
+  createHash("sha256").update(readFileSync(wasmPath)).digest("hex"),
+  receipt.outputs["ghostty-vt.wasm"],
+  "packed @termless/ghostty must load its receipted private engine",
+)
+
+const { renderAnsiPng } = await import("@termless/ghostty")
 
 const warnings = []
 const originalWarn = console.warn

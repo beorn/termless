@@ -45,13 +45,22 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.11",
-    "ghostty-web": "file:../../vendor/ghostty-web"
+    "ghostty-web": "0.4.0"
   },
   "peerDependencies": {
     "@termless/core": "^0.11.0"
   },
+  "bundleDependencies": [
+    "ghostty-web"
+  ],
   "tsdown": {
     "clean": true,
+    "copy": [
+      {
+        "from": "../../vendor/ghostty-web/RECEIPT.json",
+        "rename": "ghostty-web-RECEIPT.json"
+      }
+    ],
     "dts": true,
     "entry": "src/index.ts",
     "format": "esm"
