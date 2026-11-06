@@ -83,7 +83,9 @@ describe.skipIf(nativeBuildError !== null)("Ghostty native semantic, pointer and
         expect(backend.getSemanticMarks().at(-1)).toEqual({ type: "command-end", rawStatus: status })
       }
       expect(first).toHaveLength(3)
-      if (first[0].type === "prompt") (first[0] as { startRow: number }).startRow = 99
+      const firstPrompt = first.find((mark) => mark.type === "prompt")
+      if (!firstPrompt) throw new Error("Expected the retained prompt mark")
+      ;(firstPrompt as { startRow: number }).startRow = 99
       expect(backend.getSemanticMarks()[0]).toEqual({ type: "prompt", startRow: 1, startCol: 0 })
       expect(() => backend.getCellSemanticType(-1, 0)).toThrow()
       expect(() => backend.getCellSemanticType(0, 16)).toThrow()
@@ -122,8 +124,10 @@ describe.skipIf(nativeBuildError !== null)("Ghostty native semantic, pointer and
       expect(state.writes).toEqual([...snapshot.writes, { selector: "c", payload: "??" }])
       expect(state.pasteSelector).toBe("c")
       expect(snapshot.writes).toHaveLength(2)
-      snapshot.writes[0].payload = "mutated"
-      expect(backend.getClipboardState().writes[0].payload).toBe("Zmlyc3Q=")
+      const firstWrite = snapshot.writes.at(0)
+      if (!firstWrite) throw new Error("Expected the first retained clipboard write")
+      firstWrite.payload = "mutated"
+      expect(backend.getClipboardState().writes.at(0)).toEqual({ selector: "c", payload: "Zmlyc3Q=" })
       expect(response).not.toHaveBeenCalled()
       backend.reset()
       expect(backend.getClipboardState()).toEqual(state)

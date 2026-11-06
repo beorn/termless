@@ -40,7 +40,10 @@ import { loadNativeAddon } from "../../../src/load-native.ts"
 
 // Opaque pointer — napigen wraps this as a JS object
 type NativeTerminalHandle = Record<string, never>
-type ClipboardState = ReturnType<NonNullable<TerminalBackend["getClipboardState"]>>
+type ClipboardState = {
+  writes: { selector: string; payload: string }[]
+  pasteSelector?: string
+}
 
 interface NativeCell {
   text: string
@@ -279,9 +282,10 @@ export function createGhosttyNativeBackend(
   AdapterSourcesExtension &
   SemanticMarkExtension &
   CellSemanticTypeExtension &
-  MouseShapeExtension &
-  Pick<Required<TerminalBackend>, "getClipboardState"> &
-  Pick<Required<OscMetadataExtension>, "getCwd" | "getProgress" | "getToasts"> {
+  MouseShapeExtension & { getClipboardState(): ClipboardState } & Pick<
+    Required<OscMetadataExtension>,
+    "getCwd" | "getProgress" | "getToasts"
+  > {
   let handle: NativeTerminalHandle | null = null
 
   function ensureHandle(): NativeTerminalHandle {
@@ -611,9 +615,10 @@ export function createGhosttyNativeBackend(
     AdapterSourcesExtension &
     SemanticMarkExtension &
     CellSemanticTypeExtension &
-    MouseShapeExtension &
-    Pick<Required<TerminalBackend>, "getClipboardState"> &
-    Pick<Required<OscMetadataExtension>, "getCwd" | "getProgress" | "getToasts"> = {
+    MouseShapeExtension & { getClipboardState(): ClipboardState } & Pick<
+      Required<OscMetadataExtension>,
+      "getCwd" | "getProgress" | "getToasts"
+    > = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "ghostty-native",
     init,
