@@ -792,8 +792,8 @@ export function createGhosttyBackend(
   function getUnhandledSequences(): { readonly kind: "osc" | "csi"; readonly code: string }[] {
     const report: { readonly kind: "osc" | "csi"; readonly code: string }[] = []
     for (const warning of warnings) {
-      // Keep one entry per engine diagnostic, including allocator failures. Their paired rejection
-      // is two entries, so the consumer's exact-one rule cannot mistake a host limitation for a negative.
+      // Keep one entry per engine diagnostic, including the allocator/rejection pair.
+      // Consumers qualify their own target feed and same-run handled control.
       const match =
         /^warning\(osc\): (?:invalid OSC command: ([0-9]+)(?:;[\s\S]*)?|OSC ([0-9]+) requires an allocator, but none was provided)$/.exec(
           warning.message,
@@ -806,6 +806,10 @@ export function createGhosttyBackend(
         report.push({ kind: "csi", code: "#P" })
       } else if (warning.message === "warning(stream): unimplemented CSI action: ESC [ # {  } Q") {
         report.push({ kind: "csi", code: "#Q" })
+      } else if (warning.message === "warning(stream): unimplemented CSI action: ESC [ * { 2 } x") {
+        report.push({ kind: "csi", code: "*2x" })
+      } else if (warning.message === "warning(stream): ignoring unimplemented CSI p with intermediates:  ") {
+        report.push({ kind: "csi", code: " p" })
       }
     }
     return report
@@ -855,7 +859,10 @@ export function createGhosttyBackend(
     if (encodings.length > 1) {
       throw new Error(`mouse encoding unavailable: encoding modes ${encodings.map(([mode]) => mode).join("+")} all set`)
     }
-    const state: MouseEncodingState = { tracking: trackings[0] ?? 0, encoding: encodings[0]?.[1] ?? "legacy" }
+    const state: MouseEncodingState = {
+      tracking: trackings[0] ?? 0,
+      encoding: encodings[0]?.[1] ?? "legacy",
+    }
     return encodeMouseReport(event, state)
   }
 
