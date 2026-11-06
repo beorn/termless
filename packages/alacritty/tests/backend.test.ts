@@ -71,13 +71,13 @@ function feedText(backend: TerminalBackend, text: string): void {
 }
 
 describeNative("alacritty accepted clipboard callbacks", () => {
-  test("records accepted selections and text without inventing clipboard replies", () => {
+  test("records accepted writes and answers reads in stream order with the engine formatter", () => {
     const backend = createBackend()
     const control = { selector: "c", text: "clipboard-control", payload: "Y2xpcGJvYXJkLWNvbnRyb2w=" }
     const expected = [control]
     try {
       feedText(backend, `\x1b]52;c;${control.payload}\x07`)
-      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      expect(backend.getClipboardState?.()?.writes).toEqual(expected)
       for (const [selector, text] of [
         ["p", "primary"],
         ["s", "secondary"],
@@ -87,18 +87,28 @@ describeNative("alacritty accepted clipboard callbacks", () => {
         feedText(backend, `\x1b]52;${selector};${payload}\x07`)
         expected.push({ selector: selector === "c" ? "c" : "p", text, payload })
       }
-      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      expect(backend.getClipboardState?.()?.writes).toEqual(expected)
       for (const rejected of ["\x1b]52;x;YQ==\x07", "\x1b]52;c;%%%\x07", "\x1b]52;c;/w==\x07"]) {
         feedText(backend, rejected)
-        expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+        expect(backend.getClipboardState?.()?.writes).toEqual(expected)
       }
       const replies: Uint8Array[] = []
       backend.onResponse = (data) => replies.push(data)
       feedText(backend, "\x1b]52;c;?\x07")
-      expect(replies).toEqual([])
-      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      expect(Buffer.concat(replies).toString()).toBe("\x1b]52;c;c25vd21hbiDimIM=\x07")
+      expect(backend.getClipboardState?.()?.control).toEqual(["osc52=CopyPaste"])
+      replies.length = 0
+      // The engine maps p/s to one selection while retaining the requested selector and terminator.
+      feedText(backend, "\x1b]52;p;?\x1b\\\x1b]52;s;?\x07\x1b]52;x;?\x07")
+      expect(Buffer.concat(replies).toString()).toBe("\x1b]52;p;c2Vjb25kYXJ5\x1b\\\x1b]52;s;c2Vjb25kYXJ5\x07")
+      replies.length = 0
+      // A single feed must not answer both reads with the later clipboard value.
+      feedText(backend, "\x1b]52;c;YQ==\x07\x1b]52;c;?\x07\x1b]52;c;Yg==\x07\x1b]52;c;?\x07")
+      expect(Buffer.concat(replies).toString()).toBe("\x1b]52;c;YQ==\x07\x1b]52;c;Yg==\x07")
+      expected.push({ selector: "c", text: "a", payload: "YQ==" }, { selector: "c", text: "b", payload: "Yg==" })
+      expect(backend.getClipboardState?.()?.writes).toEqual(expected)
       backend.reset()
-      expect(backend.getClipboardState?.()).toEqual({ writes: expected })
+      expect(backend.getClipboardState?.()?.writes).toEqual(expected)
     } finally {
       backend.destroy()
     }
@@ -110,16 +120,20 @@ describeNative("alacritty accepted clipboard callbacks", () => {
     try {
       feedText(backend, "\x1b]52;c;YQ==\x07")
       const snapshot = backend.getClipboardState?.()
-      expect(snapshot).toEqual({ writes: [{ selector: "c", payload: "YQ==", text: "a" }] })
+      expect(snapshot?.writes).toEqual([{ selector: "c", payload: "YQ==", text: "a" }])
       if (!snapshot) throw new Error("Engine clipboard callback snapshot missing")
       snapshot.writes[0]!.text = "changed snapshot"
       snapshot.writes.length = 0
-      expect(backend.getClipboardState?.()).toEqual({ writes: [{ selector: "c", payload: "YQ==", text: "a" }] })
-      expect(independent.getClipboardState?.()).toEqual({ writes: [] })
+      expect(backend.getClipboardState?.()?.writes).toEqual([{ selector: "c", payload: "YQ==", text: "a" }])
+      expect(independent.getClipboardState?.()?.writes).toEqual([])
+      const replies: Uint8Array[] = []
+      independent.onResponse = (data) => replies.push(data)
+      feedText(independent, "\x1b]52;c;?\x07")
+      expect(Buffer.concat(replies).toString()).toBe("\x1b]52;c;\x07")
       backend.destroy()
       expect(() => backend.getClipboardState?.()).toThrow("not initialized")
       backend.init({ cols: 80, rows: 24 })
-      expect(backend.getClipboardState?.()).toEqual({ writes: [] })
+      expect(backend.getClipboardState?.()?.writes).toEqual([])
     } finally {
       backend.destroy()
       independent.destroy()

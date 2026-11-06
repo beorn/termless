@@ -72,6 +72,7 @@ interface NativeAlacrittyTerminal {
   getMode(mode: string): boolean | null
   getTitle(): string
   getClipboardWrites(): { selector: string; text: string }[]
+  getClipboardControl(): string
   getScrollback(): [number, number, number] // [viewportOffset, totalLines, screenLines]
   scrollViewport(delta: number): void
   destroy(): void
@@ -260,6 +261,7 @@ export function createAlacrittyBackend(
 
   function getClipboardState() {
     return {
+      control: [ensureTerm().getClipboardControl()],
       writes: ensureTerm()
         .getClipboardWrites()
         .map(({ selector, text }) => ({
