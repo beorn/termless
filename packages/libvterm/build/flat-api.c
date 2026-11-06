@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -190,6 +191,11 @@ typedef struct {
 } TermlessNotificationHistory;
 
 typedef struct {
+  const char *kind;
+  char *code;
+} TermlessUnhandledSequence;
+
+typedef struct {
   TermlessPropRecord props; // Existing 68-byte WASM32 prefix, owned by C.
   VTermState *state;
   TermlessHistoryRow *rows;
@@ -199,7 +205,7 @@ typedef struct {
   TermlessNotificationHistory notifications[2]; // OSC 9 and OSC 777 share one owner.
   TermlessStringProp cwd_payload; // Complete public OSC callback payload, before 633 property selection.
   TermlessStringProp cwd;
-  int *unhandled_osc;
+  TermlessUnhandledSequence *unhandled;
   int unhandled_count;
   int unhandled_cap;
 } TermlessObserver;
@@ -259,7 +265,11 @@ static int history_pop(int cols, VTermScreenCell *cells, void *user) {
 }
 
 static int observe_osc(int command, VTermStringFragment frag, void *user);
-static const VTermStateFallbacks observer_fallbacks = { .osc = observe_osc };
+static int observe_csi(const char *leader, const long args[], int argcount, const char *intermed, char command, void *user);
+static int observe_apc(VTermStringFragment frag, void *user);
+static const VTermStateFallbacks observer_fallbacks = {
+  .osc = observe_osc, .csi = observe_csi, .apc = observe_apc,
+};
 
 TermlessObserver *termless_vterm_observer_new(VTermState *state, int limit) {
   if (!state || limit < 0) return NULL;
@@ -310,8 +320,9 @@ static int observe_string_prop(TermlessStringProp *rec, VTermStringFragment frag
 }
 
 static void clear_notifications(TermlessObserver *observer) {
-  free(observer->unhandled_osc);
-  observer->unhandled_osc = NULL;
+  for (int i = 0; i < observer->unhandled_count; i++) free(observer->unhandled[i].code);
+  free(observer->unhandled);
+  observer->unhandled = NULL;
   observer->unhandled_count = observer->unhandled_cap = 0;
   for (int family = 0; family < 2; family++) {
     TermlessNotificationHistory *history = &observer->notifications[family];
@@ -327,26 +338,65 @@ static void clear_cwd(TermlessObserver *observer) {
   clear_string_prop(&observer->cwd);
 }
 
+// One arrival-ordered owner, with the existing INT_MAX bound and failure flag.
+// Takes ownership even on failure; none of the records retain string payloads.
+static void record_unhandled(TermlessObserver *observer, const char *kind, char *code) {
+  if (!code || observer->props.failed || observer->unhandled_count == INT_MAX) goto failed;
+  if (observer->unhandled_count == observer->unhandled_cap) {
+    int cap = observer->unhandled_cap ? observer->unhandled_cap : 8;
+    if (observer->unhandled_cap) cap = cap > INT_MAX / 2 ? INT_MAX : cap * 2;
+    TermlessUnhandledSequence *grown = (size_t)cap > SIZE_MAX / sizeof(*grown) ? NULL :
+      realloc(observer->unhandled, (size_t)cap * sizeof(*grown));
+    if (!grown) goto failed;
+    observer->unhandled = grown;
+    observer->unhandled_cap = cap;
+  }
+  observer->unhandled[observer->unhandled_count++] = (TermlessUnhandledSequence){ kind, code };
+  return;
+failed:
+  free(code);
+  observer->props.failed = 1;
+}
+
+static int observe_csi(const char *leader, const long args[], int argcount, const char *intermed, char command, void *user) {
+  TermlessObserver *observer = user;
+  if (observer->props.failed) return 0;
+  size_t leader_len = leader ? strlen(leader) : 0;
+  size_t intermed_len = intermed ? strlen(intermed) : 0;
+  // A decimal long plus separator fits this per-argument allocation. The
+  // public parser supplies bounded leader/intermediate strings and argcount.
+  size_t capacity = leader_len + intermed_len + (size_t)argcount * (sizeof(long) * 3 + 2) + 2;
+  char *code = malloc(capacity);
+  if (code) {
+    size_t offset = 0;
+    if (leader_len) { memcpy(code, leader, leader_len); offset += leader_len; }
+    if (intermed_len) { memcpy(code + offset, intermed, intermed_len); offset += intermed_len; }
+    for (int i = 0; i < argcount; i++) {
+      if (i) code[offset++] = CSI_ARG_HAS_MORE(args[i - 1]) ? ':' : ';';
+      offset += (size_t)snprintf(code + offset, capacity - offset, "%ld", (long)CSI_ARG_OR(args[i], 0));
+    }
+    code[offset++] = command;
+    code[offset] = '\0';
+  }
+  record_unhandled(observer, "csi", code);
+  return 0;
+}
+
+static int observe_apc(VTermStringFragment frag, void *user) {
+  if (!frag.initial) return 0;
+  char *code = malloc(2);
+  if (code) { code[0] = frag.len ? frag.str[0] : '\0'; code[1] = '\0'; }
+  record_unhandled(user, "apc", code);
+  return 0;
+}
+
 static int observe_osc(int command, VTermStringFragment frag, void *user) {
   TermlessObserver *observer = user;
-  // Record the library's first callback fragment only, before the existing
-  // delivery handlers select their payloads. Do not change its return policy.
+  // Preserve the first-fragment report and existing OSC delivery return policy.
   if (frag.initial && !observer->props.failed) {
-    if (observer->unhandled_count == INT_MAX) observer->props.failed = 1;
-    else {
-      if (observer->unhandled_count == observer->unhandled_cap) {
-        int cap = observer->unhandled_cap ? observer->unhandled_cap : 8;
-        if (observer->unhandled_cap) cap = cap > INT_MAX / 2 ? INT_MAX : cap * 2;
-        int *grown = (size_t)cap > SIZE_MAX / sizeof(*grown) ? NULL :
-          realloc(observer->unhandled_osc, (size_t)cap * sizeof(*grown));
-        if (!grown) observer->props.failed = 1;
-        else {
-          observer->unhandled_osc = grown;
-          observer->unhandled_cap = cap;
-        }
-      }
-      if (!observer->props.failed) observer->unhandled_osc[observer->unhandled_count++] = command;
-    }
+    char *code = malloc(sizeof(int) * 3 + 2);
+    if (code) snprintf(code, sizeof(int) * 3 + 2, "%d", command);
+    record_unhandled(observer, "osc", code);
   }
   if (command != 7 && command != 633 && command != 9 && command != 777) return 0;
   if (observer->props.failed) return 1;
@@ -475,9 +525,12 @@ int termless_vterm_notification_len(const TermlessObserver *observer, int index)
   return index >= 0 && index < history->count ? (int)history->entries[index].len : 0;
 }
 int termless_vterm_osc777_count(const TermlessObserver *observer) { return observer->notifications[1].count; }
-int termless_vterm_unhandled_osc_count(const TermlessObserver *observer) { return observer->unhandled_count; }
-int termless_vterm_unhandled_osc_get(const TermlessObserver *observer, int index) {
-  return index >= 0 && index < observer->unhandled_count ? observer->unhandled_osc[index] : -1;
+int termless_vterm_unhandled_count(const TermlessObserver *observer) { return observer->unhandled_count; }
+const char *termless_vterm_unhandled_kind(const TermlessObserver *observer, int index) {
+  return index >= 0 && index < observer->unhandled_count ? observer->unhandled[index].kind : "";
+}
+const char *termless_vterm_unhandled_code(const TermlessObserver *observer, int index) {
+  return index >= 0 && index < observer->unhandled_count ? observer->unhandled[index].code : "";
 }
 const char *termless_vterm_osc777_get(const TermlessObserver *observer, int index) {
   const TermlessNotificationHistory *history = &observer->notifications[1];

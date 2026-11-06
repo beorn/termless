@@ -643,7 +643,7 @@ export interface HyperlinkExtension {
  */
 export interface OscMetadataExtension {
   /** Copied reports from the library's own unhandled callbacks, in order; OSC code is its command number, CSI code its native parameters and final byte. No entry means no decision. */
-  getUnhandledSequences?(): readonly { readonly kind: "osc" | "csi"; readonly code: string }[]
+  getUnhandledSequences?(): readonly { readonly kind: "osc" | "csi" | "apc"; readonly code: string }[]
   /** Exact directory value from engine state or its public OSC7 / OSC633 P;Cwd callback (literal, not unescaped); null means no reported directory. */
   getCwd?(): string | null
   /** A copy of the OSC 9 payloads the engine stores, or passes to its public OSC handler, in order, without filtering or invented title/body fields. */
