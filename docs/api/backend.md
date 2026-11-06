@@ -316,6 +316,11 @@ can witness a state feature the library did not handle, while a delivery feature
 can succeed through that same callback. Recording the callback does not create
 library state or change how the library handles the sequence.
 
+Kitty exposes the same getter from its native diagnostic-parser error rows, separately
+from host delivery. Its message parser is pinned to 0.49.2; unmatched messages and other
+versions contribute no entry. CSI codes keep only the reported modifiers and final byte,
+never omitted parameters. Batch replay retains the ordered feed history until re-init.
+
 VT100.js reports completed OSC command numbers only, without payloads, and finite
 non-negative safe-integer operands its SGR path ignored, with `m` appended. It does
 not reconstruct discarded colon groups. Its engine keeps at least the most recent

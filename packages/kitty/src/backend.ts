@@ -171,6 +171,8 @@ interface BridgeSnapshot {
   notifications?: string[]
   /** Cumulative OSC 777 payloads after "777;", in feed order. Omitted only when empty. */
   osc777Payloads?: string[]
+  /** Native diagnostic-parser error rows, retained in feed order; omitted only when empty. */
+  parserErrors?: { version: string; message: string }[]
   /** kitty's stored Window.progress after its first accepted OSC 9;4 update: state value and percent. Omitted before. */
   progress?: { state: number; value: number }
 }
@@ -307,7 +309,10 @@ export function createKittyBackend(
   HyperlinkExtension &
   PasteEncodingExtension &
   AdapterSourcesExtension &
-  Pick<Required<OscMetadataExtension>, "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress"> &
+  Pick<
+    Required<OscMetadataExtension>,
+    "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress" | "getUnhandledSequences"
+  > &
   SemanticMarkExtension {
   let cols = DEFAULT_COLS
   let rows = DEFAULT_ROWS
@@ -713,7 +718,10 @@ export function createKittyBackend(
     ReplyDeliveryExtension &
     HyperlinkExtension &
     SemanticMarkExtension &
-    Pick<Required<OscMetadataExtension>, "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress"> &
+    Pick<
+      Required<OscMetadataExtension>,
+      "getCwd" | "getNotifications" | "getOsc777Payloads" | "getProgress" | "getUnhandledSequences"
+    > &
     AdapterSourcesExtension &
     PasteEncodingExtension & { getClipboardState(): ClipboardState } = {
     getAdapterSources: () => adapterDeclaration.sources,
@@ -750,6 +758,27 @@ export function createKittyBackend(
     getCwd: () => ensureSnapshot().cwd,
     getNotifications: () => [...(ensureSnapshot().notifications ?? [])],
     getOsc777Payloads: () => [...(ensureSnapshot().osc777Payloads ?? [])],
+    getUnhandledSequences: () => {
+      const report: { kind: "osc" | "csi"; code: string }[] = []
+      for (const error of ensureSnapshot().parserErrors ?? []) {
+        // Native 0.49.2 diagnostics only: never reconstruct a sequence from fed input.
+        if (error.version !== "0.49.2") continue
+        const osc = /^(?:Unknown OSC escape code: ([0-9]+)(?:;[\s\S]*)?|Ignoring OSC ([0-9]+)(?:,[\s\S]*)?)$/u.exec(
+          error.message,
+        )
+        const code = osc?.[1] ?? osc?.[2]
+        if (code !== undefined) {
+          report.push({ kind: "osc", code })
+          continue
+        }
+        const csi = /^Unknown CSI (.) sequence with start and end modifiers: '(.)' '(.)'$/u.exec(error.message)
+        if (csi) {
+          const modifier = (value: string) => (value === "\0" ? "" : value)
+          report.push({ kind: "csi", code: modifier(csi[2]!) + modifier(csi[3]!) + csi[1]! })
+        }
+      }
+      return report
+    },
     getProgress: () => {
       const progress = ensureSnapshot().progress
       return progress ? { state: progress.state, value: progress.value } : null

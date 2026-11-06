@@ -43,6 +43,7 @@ from collections import deque
 from pathlib import Path
 
 from kitty.clipboard import Clipboard, ClipboardRequestManager, ClipboardType
+from kitty.constants import version as KITTY_VERSION
 from kitty.fast_data_types import Screen, get_boss, get_options, set_boss, set_options
 from kitty.notifications import DesktopIntegration, NotificationManager, PayloadType
 from kitty.options.types import defaults
@@ -254,6 +255,7 @@ class Callbacks:
         self.cmd_output_markings = []  # Exact positional native callback arguments, in observation order
         self.notifications = []  # OSC 9 payloads kitty hands its notification manager, decoded as kitty does
         self.osc777_payloads = []  # Every OSC 777 payload kitty's parser dispatches, decoded as kitty does
+        self.parser_errors = []  # Native diagnostic-parser error rows, not callback receipts
         self.progress = ReportedProgress()  # Window.progress: kitty's stored OSC 9;4 state, as kitty's Window.__init__ does
         self.clipboard_request_manager = ClipboardRequestManager(self.id)  # as kitty's Window.__init__ does
 
@@ -363,6 +365,15 @@ class Callbacks:
         self.osc777_payloads = []
         return payloads
 
+    def record_parser_event(self, *event):
+        if len(event) >= 3 and event[1] == "error":
+            self.parser_errors.append({"version": ".".join(map(str, KITTY_VERSION)), "message": str(event[2])})
+
+    def drain_parser_errors(self):
+        errors = self.parser_errors
+        self.parser_errors = []
+        return errors
+
     def __getattr__(self, name):
         """Record any other callback kitty invokes (clipboard, file transfer, resize report, remote control)."""
         if name.startswith("__"):
@@ -384,7 +395,7 @@ def parse_bytes(s, data):
         dest = s.test_create_write_buffer()
         n = s.test_commit_write_buffer(data, dest)
         data = data[n:]
-        s.test_parse_written_data()
+        s.test_parse_written_data(callbacks.record_parser_event)
 
 
 def _safe_width(line, col):
@@ -570,6 +581,7 @@ def make_snapshot():
     cmd_output_markings = callbacks.drain_cmd_output_markings() if callbacks else []
     notifications = callbacks.drain_notifications() if callbacks else []
     osc777_payloads = callbacks.drain_osc777_payloads() if callbacks else []
+    parser_errors = callbacks.drain_parser_errors() if callbacks else []
 
     cwd = screen.last_reported_cwd
     result = {
@@ -596,6 +608,8 @@ def make_snapshot():
         result["notifications"] = notifications
     if osc777_payloads:
         result["osc777Payloads"] = osc777_payloads
+    if parser_errors:
+        result["parserErrors"] = parser_errors
     if callbacks and callbacks.progress.reported:
         # kitty's stored state verbatim: ProgressState value (unset=0 .. paused=4) and its stored percent.
         result["progress"] = {"state": callbacks.progress.state.value, "value": callbacks.progress.percent}
@@ -669,6 +683,7 @@ def handle_command(cmd):
             callbacks.drain_cmd_output_markings()
             callbacks.drain_notifications()
             callbacks.drain_osc777_payloads()
+            callbacks.drain_parser_errors()
         parse_bytes(screen, data)
         if callback_errors:
             raised = "".join(callback_errors)
@@ -695,6 +710,9 @@ def handle_command(cmd):
             osc777_payloads = callbacks.drain_osc777_payloads()
             if osc777_payloads:
                 result["osc777Payloads"] = osc777_payloads
+            parser_errors = callbacks.drain_parser_errors()
+            if parser_errors:
+                result["parserErrors"] = parser_errors
         return result
 
     elif op == "encode-mouse":
@@ -832,6 +850,7 @@ def batch_main():
         all_cmd_output_markings = []  # Native observations; retain duplicate-valued callbacks and reset history
         all_notifications = []  # Likewise: every OSC 9 payload in feed order, duplicates included
         all_osc777_payloads = []  # Likewise for OSC 777
+        all_parser_errors = []  # Preserve one native error row per parser event, in feed order
         for cmd in commands:
             result = handle_command(cmd)
             if result.get("error"):
@@ -852,6 +871,7 @@ def batch_main():
             all_cmd_output_markings.extend(result.get("cmdOutputMarkings", ()))
             all_notifications.extend(result.get("notifications", ()))
             all_osc777_payloads.extend(result.get("osc777Payloads", ()))
+            all_parser_errors.extend(result.get("parserErrors", ()))
 
         # Return the final snapshot with accumulated responses
         snapshot = make_snapshot()
@@ -870,6 +890,9 @@ def batch_main():
         all_osc777_payloads.extend(snapshot.get("osc777Payloads", ()))
         if all_osc777_payloads:
             snapshot["osc777Payloads"] = all_osc777_payloads
+        all_parser_errors.extend(snapshot.get("parserErrors", ()))
+        if all_parser_errors:
+            snapshot["parserErrors"] = all_parser_errors
         if all_responses:
             snapshot["responses"] = base64.b64encode(all_responses).decode("ascii")
         if all_unreproduced:

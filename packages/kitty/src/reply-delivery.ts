@@ -45,6 +45,8 @@ import type { ReplyDeliveryExtension } from "../../../src/terminal/types.ts"
 // Re-audited for native A/C callback-time public cursor coordinates; D tuples, replay and reply delivery are unchanged.
 // Native mouse encoding is an ephemeral final replay command: send_mouse_event writes the returned bytes, while
 // both callback buffer prefixes are restored and ordinary queued replies retain feed-and-getCursor delivery.
+// Native diagnostic-parser error rows are retained separately from Window callbacks and child bytes.
+// The same-state fixture checks ordinary and diagnostic arms; response accumulation and delivery keep their owner.
 export const adapterDeclaration = {
   sources: [
     {
@@ -53,11 +55,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "88dd0f299e059457946b92edfc6eb324ac3c7e30",
+      blobOid: "8fbea3c4c851bdf4d037c0ccc2a24cdcf888368f",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "95a46fee6da18621bf9293f5acddc18ff357d349",
+      blobOid: "c78e427917d4e22453414db76c4d52509cc8b82f",
     },
     {
       path: "packages/kitty/build/layout.c",

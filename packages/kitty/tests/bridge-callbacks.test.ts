@@ -25,6 +25,95 @@ import {
 import { createKittyBackend, isKittyAvailable } from "../src/backend.ts"
 import * as hostKeyEncoding from "../../../src/terminal/key-encoding.ts"
 
+// @failure Native parser rejections vanish at the bridge, or replay duplicates prior feed reports.
+// @level l5
+// @consumer Terminfo exact-code unhandled-sequence observations
+test.skipIf(!isKittyAvailable())(
+  "native parser error reports survive feeds through the existing OSC metadata reader",
+  async () => {
+    const backend = createKittyBackend({ cols: 20, rows: 5 })
+    const metadata = backend as OscMetadataExtension
+    const report = () => metadata.getUnhandledSequences?.() ?? []
+    try {
+      backend.feed(Buffer.from("\x1b]2;handled-control\x07\x1b[1mA"))
+      expect(backend.getTitle()).toBe("handled-control")
+      expect(backend.getCell(0, 0).bold).toBe(true)
+      expect(report()).toEqual([])
+      backend.feed(Buffer.from("\x1b]633;B\x07"))
+      expect(report()).toEqual([{ kind: "osc", code: "633" }])
+      backend.feed(Buffer.from("\x1b]2;second-control\x07"))
+      expect(report()).toEqual([{ kind: "osc", code: "633" }])
+      backend.feed(Buffer.from("\x1b]113\x07\x1b[9 p"))
+      expect(report()).toEqual([
+        { kind: "osc", code: "633" },
+        { kind: "osc", code: "113" },
+        { kind: "csi", code: " p" },
+      ])
+      const copied = report() as Array<{ kind: "osc" | "csi"; code: string }>
+      copied[0]!.code = "changed-copy"
+      expect(report()[0]).toEqual({ kind: "osc", code: "633" })
+      backend.init({ cols: 20, rows: 5 })
+      const actual = await vi.importActual<typeof childProcess>("node:child_process")
+      vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
+        const parsed = JSON.parse(String(actual.execFileSync(file, args, options))) as Record<string, unknown>
+        parsed.parserErrors = [
+          { version: "0.0.0", message: "Unknown OSC escape code: 113" },
+          { version: "0.49.2", message: "unmatched diagnostic for OSC 113" },
+        ]
+        return JSON.stringify(parsed)
+      })
+      expect(report()).toEqual([])
+    } finally {
+      backend.destroy()
+      vi.mocked(childProcess.execFileSync).mockClear()
+    }
+  },
+)
+
+// @failure Selecting Kitty's diagnostic parser variant changes the native state/reply path.
+// @level l5
+// @consumer Every Kitty feed, including already-decided Terminfo rows
+test.skipIf(!isKittyAvailable())("diagnostic and ordinary parser arms retain the same real Screen state", () => {
+  const bridgeDir = fileURLToPath(new URL("../build/", import.meta.url))
+  const script = `
+import bridge, json
+data = b'\\x1b]2;parser-control\\x07\\x1b[1mA\\x1b[0m\\x1b]633;B\\x07\\x1b]59999;x\\x07\\x1b[9 pafter\\x1b[6n'
+results = []
+for arm in ['plain', 'diagnostic']:
+    bridge.handle_command({'op':'init','cols':20,'rows':5})
+    if arm == 'diagnostic':
+        bridge.parse_bytes(bridge.screen, data)
+    else:
+        remaining = memoryview(data)
+        while remaining:
+            dest = bridge.screen.test_create_write_buffer()
+            n = bridge.screen.test_commit_write_buffer(remaining, dest)
+            remaining = remaining[n:]
+            bridge.screen.test_parse_written_data()
+    results.append(bridge.make_snapshot())
+print(json.dumps(results))
+`
+  const configDir = mkdtempSync(join(tmpdir(), "termless-kitty-parser-config-"))
+  try {
+    const output = execFileSync(
+      process.env.KITTY_BINARY ?? "kitty",
+      ["+runpy", `import sys; sys.path.insert(0, ${JSON.stringify(bridgeDir)}); exec(${JSON.stringify(script)}, {})`],
+      { encoding: "utf8", stdio: "pipe", timeout: 30_000, env: { ...process.env, KITTY_CONFIG_DIRECTORY: configDir } },
+    )
+    const [plain, diagnostic] = JSON.parse(output) as Array<Record<string, unknown>>
+    const { parserErrors, ...diagnosticState } = diagnostic!
+    expect(diagnosticState).toEqual(plain)
+    expect(parserErrors).toEqual([
+      { version: "0.49.2", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" },
+      { version: "0.49.2", message: "Unknown OSC escape code: 59999;x" },
+      { version: "0.49.2", message: "Unknown CSI p sequence with start and end modifiers: '\0' ' '" },
+    ])
+  } finally {
+    rmSync(configDir, { recursive: true, force: true })
+    vi.mocked(childProcess.execFileSync).mockClear()
+  }
+})
+
 // @failure Kitty's mouse extension must return its native Screen's reports, with held-button motion and wheel mapping,
 // while a tracking-off Screen stays silent and encoding does not consume or deliver parser replies.
 // @level l5
