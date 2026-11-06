@@ -717,6 +717,7 @@ def handle_command(cmd):
 
     elif op == "encode-mouse":
         event = cmd["event"]
+        pixel = event.get("pixel")
         # send_mouse_event takes protocol button numbers, not GLFW mouse button constants.
         buttons = {"left": 1, "middle": 2, "right": 3, "wheelUp": 4, "wheelDown": 5, "none": 0}
         actions = {
@@ -732,6 +733,8 @@ def handle_command(cmd):
         try:
             sent = native.send_mouse_event(
                 screen, event["x"], event["y"], buttons[event["button"]], actions[event["action"]], mods,
+                # Termless pixel offsets are zero-based; Kitty writes these wire coordinates verbatim.
+                pixel["x"] + 1 if pixel is not None else 0, pixel["y"] + 1 if pixel is not None else 0,
             )
             encoded = callbacks.responses[len(response_prefix):]
             if callback_errors:

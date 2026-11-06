@@ -6,11 +6,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/src/backend.ts",
-      blobOid: "4cfc0a1707e4c92211c501cd27d8e1944ebe66db",
+      blobOid: "e62a355791eb48369620caa44fe60a989a7c2501",
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "c78e427917d4e22453414db76c4d52509cc8b82f",
+      blobOid: "473d25a335c4e739f915a254625607f617ed9d1e",
     },
     {
       path: "packages/kitty/build/layout.c",
