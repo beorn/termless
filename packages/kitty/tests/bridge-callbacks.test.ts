@@ -331,17 +331,17 @@ test.skipIf(!isKittyAvailable())(
         )
         expect(result.error).toBeUndefined()
         expect(result.status).toBe(0)
-        // The OSC633 negative deliberately reaches Kitty's unsupported parser path. Assert its diagnostic without
-        // forwarding it to the root harness as unexpected test output; every other stderr byte remains a failure.
-        expect(result.stderr).toMatch(
-          /^\[\d+\.\d+\] \[PARSE ERROR\] Ignoring OSC 633, use by Windows Terminal for VSCode actions\n$/,
-        )
+        // Native diagnostics travel in the snapshot carrier; stderr remains reserved for unexpected failures.
+        expect(result.stderr).toBe("")
         const outputs = result.stdout
           .trim()
           .split("\n")
           .map((line) => JSON.parse(line) as Record<string, unknown>)
         expect(outputs).toHaveLength(mode === "stream" ? history.length + 1 : 1)
         for (const output of outputs) expect(output.error).toBeUndefined()
+        expect(outputs.map((output) => output.parserErrors).filter((value) => value !== undefined)).toEqual([
+          [{ version: "0.49.2", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" }],
+        ])
         if (mode === "stream") {
           expect(outputs.shift()).toEqual({ ready: true })
           expect(outputs[1]!.cmdOutputMarkings).toBeUndefined()
@@ -422,7 +422,7 @@ test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 
     backend.feed(typeof value === "string" ? new TextEncoder().encode(value) : value)
     return backend.getCwd()
   }
-  // Like the progress journey below, capture native diagnostics and reject every unexpected byte.
+  // Native diagnostics have their own report carrier; reject every unexpected stderr byte.
   const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
   try {
     expect(backend.getCwd()).toBeNull()
@@ -439,6 +439,11 @@ test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 
     expect(feed("\x1b]633;P;Cwd=/ignored-bel\x07")).toBe("file:///next")
     expect(feed("\x1b]633;P;Cwd=/ignored-st\x1b\\")).toBe("file:///next")
     expect(feed("\x1b]633;A\x07")).toBe("file:///next")
+    expect(backend.getUnhandledSequences()).toEqual([
+      { kind: "osc", code: "633" },
+      { kind: "osc", code: "633" },
+      { kind: "osc", code: "633" },
+    ])
     expect(feed("\x1b]7;\x07")).toBeNull()
     expect(feed(new Uint8Array([27, 93, 55, 59, 47, 255, 254, 7]))).toBe("/\ufffd\ufffd")
     const long = "/" + "x".repeat(4096)
@@ -455,12 +460,8 @@ test.skipIf(!isKittyAvailable())("reads literal native cwd across completed OSC 
     other.feed(new TextEncoder().encode("\x1b]7;/other\x07"))
     expect(other.getCwd()).toBe("/other")
     expect(backend.getCwd()).toBeNull()
-    expect(stderr.mock.calls.length).toBeGreaterThan(0)
-    for (const [chunk] of stderr.mock.calls) {
-      expect(String(chunk)).toMatch(
-        /^(?:\[\d+\.\d+\] \[PARSE ERROR\] Ignoring OSC 633, use by Windows Terminal for VSCode actions\n)+$/,
-      )
-    }
+    expect(backend.getUnhandledSequences()).toEqual([])
+    expect(stderr).not.toHaveBeenCalled()
   } finally {
     backend.destroy()
     other.destroy()
