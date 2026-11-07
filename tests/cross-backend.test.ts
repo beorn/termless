@@ -274,10 +274,11 @@ describe("cross-backend conformance", () => {
 
   describe("OSC title", () => {
     forEachBackend((_name, create) => {
-      test("OSC 2 sets title", () => {
+      test("OSC 2 respects backend title support", () => {
         const b = init(create)
         feedText(b, "\x1b]2;My Title\x07")
-        expect(b.getTitle()).toBe("My Title")
+        // DEC VT100 consumes OSC strings without xterm title updates.
+        expect(b.getTitle()).toBe(_name === "vt100" ? "" : "My Title")
       })
     })
   })
