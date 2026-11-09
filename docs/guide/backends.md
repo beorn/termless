@@ -377,8 +377,9 @@ The `semantic-command-end` extension exposes the same
 `{ type: "command-end", rawStatus: string }` entries from native OSC 133 D
 callbacks. There are no coordinates or validated process exit codes: raw status
 strings, including empty, zero, negative-looking and nonnumeric values, survive
-verbatim. Kitty also declares `semantic-marks` for positional prompt, input and
-output starts; both keys use the one reader.
+verbatim. Kitty also declares `semantic-marks` for positional prompt and
+output starts. It has no command/input start: Kitty 0.49.2 handles OSC 133
+A, C and D, and 133 B is ignored. Both keys use the one reader.
 
 Kitty's callback history preserves equal entries and survives reset and batch
 replay. Cached rereads add nothing; `init()` starts fresh and `destroy()` clears

@@ -370,6 +370,21 @@ test.skipIf(!isKittyAvailable())(
   },
 )
 
+test("kitty guide does not claim a command/input start", () => {
+  const guide = readFileSync(new URL("../../../docs/guide/backends.md", import.meta.url), "utf8")
+  const kitty = guide.slice(guide.indexOf("### @termless/kitty"))
+  const next = kitty.indexOf("\n### ", 4)
+  const section = next < 0 ? kitty : kitty.slice(0, next)
+  expect(section).toContain("no command/input start")
+  expect(section).not.toContain("prompt, input and")
+})
+
+test("kitty semanticPrompts stays false without a command start", () => {
+  const source = readFileSync(new URL("../src/backend.ts", import.meta.url), "utf8")
+  expect(source).toContain("semanticPrompts: false")
+  expect(source).not.toMatch(/type:\s*"command"/)
+})
+
 // Private bridge coverage cannot catch an absent public reader, cache-object leaks, fabricated coordinates,
 // or reset clearing callback history that native replay retains. This tests the public projection/lifetime contract.
 test.skipIf(!isKittyAvailable())(
@@ -385,6 +400,10 @@ test.skipIf(!isKittyAvailable())(
       feed("\x1b]133;A\x07X")
       expect(backend.getSemanticMarks()).toEqual(expected)
       expect(hasExtension(backend, "semantic-marks")).toBe(true)
+      expect(backend.capabilities.semanticPrompts).toBe(false)
+      feed("\x1b]133;B\x07")
+      expect(backend.getSemanticMarks().some((mark) => mark.type === "command")).toBe(false)
+      expect(backend.getSemanticMarks()).toEqual(expected)
       feed("\x1b[2;3H\x1b]133;C;cmdline=echo hi\x07X")
       expected.push({ type: "output", startRow: 1, startCol: 2 })
       expect(backend.getSemanticMarks()).toEqual(expected)

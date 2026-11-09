@@ -678,6 +678,8 @@ export function createKittyBackend(
     kittyGraphics: true,
     sixel: false,
     osc8Hyperlinks: true,
+    // Prompt and output starts plus command ends. No command/input start
+    // (OSC 133 B), so this is not the prompt/command/output set vterm reports.
     semanticPrompts: false,
     unicode: "15.1",
     reflow: true,
