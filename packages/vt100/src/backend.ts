@@ -261,6 +261,11 @@ export function createVt100Backend(
     getText,
     getTextRange,
     getCell,
+    nativeCellKeys(row, col) {
+      const cell = absoluteLine(row)?.[col]
+      if (!cell) throw new Error(`vt100 native cell (${row}, ${col}) is unavailable`)
+      return Object.keys(cell)
+    },
     getLine,
     getLines,
     getRow: getLine,

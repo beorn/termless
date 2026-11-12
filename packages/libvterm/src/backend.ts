@@ -713,6 +713,15 @@ export function createLibvtermBackend(
     getText,
     getTextRange,
     getCell,
+    nativeCellKeys(row, col) {
+      const m = ensureInit()
+      if (col < 0 || col >= rowColumns(row)) {
+        throw new Error(`libvterm native cell (${row}, ${col}) is unavailable`)
+      }
+      // The existing read loads the actual native flat cell into cellPtr.
+      getCell(row, col)
+      return Object.keys(readCell(m, cellPtr))
+    },
     // oxlint-disable-next-line typescript/no-deprecated -- Legacy method required by TerminalBackend.
     getLine,
     getRow: getLine,

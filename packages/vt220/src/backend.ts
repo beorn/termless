@@ -243,6 +243,13 @@ export function createVt220Backend(
     getText,
     getTextRange,
     getCell,
+    nativeCellKeys(row, col) {
+      const s = ensureScreen()
+      const history = s.getScrollbackLength()
+      const cell = row < history ? s.snapshot().scrollback[row]?.[col] : s.getCell(row - history, col)
+      if (!cell) throw new Error(`vt220 native cell (${row}, ${col}) is unavailable`)
+      return Object.keys(cell)
+    },
     getLine,
     getLines,
     getRow: getLine,

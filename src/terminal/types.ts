@@ -282,6 +282,9 @@ export interface ScreenshotOptions {
 export interface TerminalBackend extends Terminal {
   readonly name: string
 
+  /** Own keys read from the live native cell, before normalization; absent when unavailable. */
+  nativeCellKeys?(row: number, col: number): readonly string[]
+
   // Lifecycle
   init(opts: TerminalOptions): void
   destroy(): void
