@@ -10,7 +10,7 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/bridge.py",
-      blobOid: "473d25a335c4e739f915a254625607f617ed9d1e",
+      blobOid: "94e5f97e5933625355b5c988721027f684f9f204",
     },
     {
       path: "packages/kitty/build/layout.c",
@@ -18,11 +18,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/native-mode-layout.json",
-      blobOid: "b131e26069edf2129b4ff70aa2ce88c154dea811",
+      blobOid: "37594baca0cbd3ebf847478a47db999d937506ba",
     },
     {
       path: "packages/kitty/build/native-mode-layout.receipt.json",
-      blobOid: "3e2dfd878a701eba5430a31948bc26a372ebdcfc",
+      blobOid: "0951bab18714bb2dd7c6f9343816685a7691fbe7",
     },
   ],
 } as const

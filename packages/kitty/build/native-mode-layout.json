@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kittyVersion": "0.49.2",
   "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-  "nativeModuleSha256": "29b52a80e6bf4ccc3429e84324636178665a3ebd7db9db06c5db3b67f037dc71",
+  "reviewedArchiveHash": "sha256-1XNhi5EenEYb1CG5bBPHTH8csvGsnDJ4GNT/hDZs9cY=",
   "platform": {
     "system": "Linux",
     "machine": "x86_64",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sha256": "44d2aafedfb2c33a3ad65322ef4bde50a0603fe6495ceaa13821b2fd0ace6fed",
+  "sha256": "4d426be18b6a3c588e7503ff8714a79153dc284f712b9d7d5184001c97b3f5bb",
   "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
   "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz",
   "sourceNarHash": "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=",
@@ -9,7 +9,7 @@
     "gitBlob": "f58c0e943ad60daf20d54360184e039e16ff3826",
     "sha256": "0a9c12d39546083eb2e814d5ea96328df944162d790dd776704b18a562564863"
   },
-  "recipeSha256": "e6aed43f90f7b18d681d09bc71052ca23be807427e187fdf64b1943767d9bf27",
+  "recipeSha256": "1edd4e2dd28cea1167e7cd20792e5888028ea5d228b7afdbed8014b8793cfb1a",
   "flakeLockSha256": "01f99a311f8683aaea319d7fb164b25c4bd9e8e4ac03f9030c78cfb489d0a27c",
   "headers": [
     {
@@ -105,7 +105,7 @@
     "schemaVersion": 1,
     "kittyVersion": "0.49.2",
     "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-    "nativeModuleSha256": "29b52a80e6bf4ccc3429e84324636178665a3ebd7db9db06c5db3b67f037dc71",
+    "reviewedArchiveHash": "sha256-1XNhi5EenEYb1CG5bBPHTH8csvGsnDJ4GNT/hDZs9cY=",
     "platform": {
       "system": "Linux",
       "machine": "x86_64",

@@ -10,7 +10,7 @@ import { describe, expect, test, vi } from "vitest"
 import * as childProcess from "node:child_process"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -179,9 +179,25 @@ vi.mock("node:child_process", async (importOriginal) => {
   return { ...actual, execFileSync: vi.fn(actual.execFileSync) }
 })
 
+interface FaultContext {
+  /** The kitty on PATH's own identity file, which the valid-layout journeys prove matches its loaded module. */
+  real: Record<string, unknown>
+  reviewed: unknown
+  modulePath: string
+  identityPath: string
+}
+
+interface FaultRow {
+  fault: string
+  edit?: (layout: Record<string, unknown>) => void
+  /** Identity faults run the real module copied into a fixture prefix beside this file; undefined writes none. */
+  identity?: (real: Record<string, unknown>) => unknown
+  cause: string | ((at: FaultContext) => string)
+}
+
 // Native journeys cover valid layouts. These resource faults must reject native mode reads before any pointer
 // access, while ordinary snapshot consumers keep working; use the real bridge/runtime, not a fabricated snapshot.
-test.skipIf(!isKittyAvailable()).each([
+test.skipIf(!isKittyAvailable()).each<FaultRow>([
   { fault: "missing manifest", cause: "missing" },
   { fault: "malformed manifest", cause: "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)" },
   { fault: "stale receipt", cause: "stale" },
@@ -199,12 +215,58 @@ test.skipIf(!isKittyAvailable()).each([
     },
     cause: "Kitty source revision: expected 'unreviewed'; observed 'b2cb871254fbdac19a085188813c8dfb258b95cd'",
   },
+  // A changed upstream archive with unchanged offsets: refused until the offsets are re-reviewed (34034).
   {
-    fault: "native module identity",
+    fault: "reviewed archive hash",
     edit: (layout: Record<string, unknown>) => {
-      layout.nativeModuleSha256 = "unreviewed"
+      layout.reviewedArchiveHash = "sha256-unreviewed"
     },
-    cause: "module",
+    cause: (at: FaultContext) => `archive hash: expected 'sha256-unreviewed'; observed '${at.real.archiveHash}'`,
+  },
+  // The identity file is trusted for its equalities only; every other shape of it is the same named refusal.
+  {
+    fault: "identity file missing",
+    identity: () => undefined,
+    cause: (at: FaultContext) =>
+      `native identity: no share/termless/kitty-native-identity.json above ${at.modulePath}; not the pinned kitty build`,
+  },
+  {
+    fault: "identity file does not parse",
+    identity: () => "{",
+    cause: (at: FaultContext) =>
+      `native identity ${at.identityPath}: does not parse: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)`,
+  },
+  {
+    fault: "identity file not an object",
+    identity: () => "[]",
+    cause: (at: FaultContext) => `native identity ${at.identityPath}: expected an object; observed list`,
+  },
+  {
+    fault: "identity schemaVersion",
+    identity: (real: Record<string, unknown>) => ({ ...real, schemaVersion: 2 }),
+    cause: "native identity schemaVersion: expected 1; observed 2",
+  },
+  ...["schemaVersion", "archiveHash", "nativeModulePath", "nativeModuleSha256"].map((field) => ({
+    fault: `identity lacks ${field}`,
+    identity: (real: Record<string, unknown>) => Object.fromEntries(Object.entries(real).filter(([key]) => key !== field)),
+    cause: (at: FaultContext) => `native identity ${at.identityPath}: lacks ${field}`,
+  })),
+  {
+    fault: "identity names another module path",
+    identity: (real: Record<string, unknown>) => ({ ...real, nativeModulePath: "lib/other.so" }),
+    cause: (at: FaultContext) =>
+      `native module path: expected 'lib/other.so'; observed '${String(at.real.nativeModulePath)}'`,
+  },
+  {
+    fault: "identity names another module sha",
+    identity: (real: Record<string, unknown>) => ({ ...real, nativeModuleSha256: "0".repeat(64) }),
+    cause: (at: FaultContext) =>
+      `native module sha256: expected '${"0".repeat(64)}'; observed '${String(at.real.nativeModuleSha256)}'`,
+  },
+  {
+    fault: "identity names another archive",
+    identity: (real: Record<string, unknown>) => ({ ...real, archiveHash: "sha256-other" }),
+    cause: (at: FaultContext) => `archive hash: expected '${String(at.reviewed)}'; observed 'sha256-other'`,
   },
   {
     fault: "Python build flags",
@@ -228,17 +290,38 @@ test.skipIf(!isKittyAvailable()).each([
     },
     cause: "syncOutput.offset: 3888 is outside Screen size 3888",
   },
-])("keeps generic reads healthy and reports unavailable native modes: $fault", async ({ fault, edit, cause }) => {
+])("keeps generic reads healthy and reports unavailable native modes: $fault", async ({
+  fault,
+  edit,
+  identity,
+  cause,
+}) => {
   const bridgeDir = dirname(fileURLToPath(new URL("../build/bridge.py", import.meta.url)))
-  const fixtureDir = mkdtempSync(join(tmpdir(), "termless-kitty-layout-fault-"))
+  const fixtureDir = realpathSync(mkdtempSync(join(tmpdir(), "termless-kitty-layout-fault-")))
   const layoutPath = join(fixtureDir, "native-mode-layout.json")
   const receiptPath = join(fixtureDir, "native-mode-layout.receipt.json")
   copyFileSync(join(bridgeDir, "bridge.py"), join(fixtureDir, "bridge.py"))
   const layout = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.json"), "utf8")) as Record<string, unknown>
-  // The committed pin is the real module's sha (the valid-layout journeys prove it), so the observed value is read
-  // from it rather than copied here, where every Kitty rebuild would stale it (34024).
-  const pinnedModuleSha = layout.nativeModuleSha256
+  const reviewed = layout.reviewedArchiveHash
   edit?.(layout)
+  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  // Observed values come from the kitty on PATH, never literals here, which every rebuild would stale (34024).
+  const kittyPrefix = dirname(dirname(realpathSync(actual.execFileSync("sh", ["-c", "command -v kitty"], { encoding: "utf8" }).trim())))
+  const real = JSON.parse(
+    readFileSync(join(kittyPrefix, "share/termless/kitty-native-identity.json"), "utf8"),
+  ) as Record<string, unknown>
+  const fixturePrefix = join(fixtureDir, "kitty-prefix")
+  const modulePath = join(fixturePrefix, String(real.nativeModulePath))
+  const identityPath = join(fixturePrefix, "share/termless/kitty-native-identity.json")
+  if (identity) {
+    mkdirSync(dirname(modulePath), { recursive: true })
+    copyFileSync(join(kittyPrefix, String(real.nativeModulePath)), modulePath)
+    const written = identity(structuredClone(real))
+    if (written !== undefined) {
+      mkdirSync(dirname(identityPath), { recursive: true })
+      writeFileSync(identityPath, typeof written === "string" ? written : JSON.stringify(written))
+    }
+  }
   const rawLayout = fault === "malformed manifest" ? "{" : JSON.stringify(layout)
   if (fault !== "missing manifest") writeFileSync(layoutPath, rawLayout)
   const receipt = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.receipt.json"), "utf8")) as Record<
@@ -248,7 +331,10 @@ test.skipIf(!isKittyAvailable()).each([
   const actualLayoutSha = createHash("sha256").update(rawLayout).digest("hex")
   if (fault !== "stale receipt") receipt.sha256 = actualLayoutSha
   writeFileSync(receiptPath, JSON.stringify(receipt))
-  const actual = await vi.importActual<typeof childProcess>("node:child_process")
+  // An identity fault points the loaded module at its byte-identical copy, so the bridge finds the fixture prefix.
+  const relocate = identity
+    ? `import kitty.fast_data_types as loaded; loaded.__file__ = ${JSON.stringify(modulePath)}; `
+    : ""
   const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
     expect(args?.[0]).toBe("+runpy")
     const script = args![1]!.replace(JSON.stringify(bridgeDir), JSON.stringify(fixtureDir))
@@ -261,7 +347,10 @@ test.skipIf(!isKittyAvailable()).each([
       file,
       [
         "+runpy",
-        script.replace("bridge.batch_main()", `import ctypes; exec(${JSON.stringify(hook)}); bridge.batch_main()`),
+        script.replace(
+          "bridge.batch_main()",
+          `import ctypes; ${relocate}exec(${JSON.stringify(hook)}); bridge.batch_main()`,
+        ),
       ],
       options,
     )
@@ -277,8 +366,8 @@ test.skipIf(!isKittyAvailable()).each([
         ? `[Errno 2] No such file or directory: '${layoutPath}'`
         : cause === "stale"
           ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
-          : cause === "module"
-            ? `native module sha256: expected 'unreviewed'; observed '${pinnedModuleSha}'`
+          : typeof cause === "function"
+            ? cause({ real, reviewed, modulePath, identityPath })
             : cause
     const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
     for (const mode of ["reverseVideo", "syncOutput", "mouseTracking"] as const) {

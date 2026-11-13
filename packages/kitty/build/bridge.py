@@ -410,6 +410,12 @@ class NativeModeStateUnavailable(RuntimeError):
     pass
 
 
+# Written into the kitty install prefix by the build that unpacks and patches the official archive:
+# {"schemaVersion": 1, "archiveHash", "nativeModulePath" (relative to the prefix), "nativeModuleSha256" (as patched)}.
+# A kitty without it (a system or pip kitty) refuses native modes by name.
+NATIVE_IDENTITY = Path("share/termless/kitty-native-identity.json")
+
+
 def read_native_modes(native_screen):
     """Read only the header-derived fields of the independently attested Screen layout."""
     layout_path = Path(__file__).with_name("native-mode-layout.json")
@@ -431,8 +437,27 @@ def read_native_modes(native_screen):
         match("manifest schemaVersion", layout["schemaVersion"], 1)
         match("Kitty version", ".".join(map(str, version)), layout["kittyVersion"])
         match("Kitty source revision", native.KITTY_VCS_REV, layout["sourceCommit"])
-        module_path = Path(native.__file__)
-        match("native module sha256", hashlib.sha256(module_path.read_bytes()).hexdigest(), layout["nativeModuleSha256"])
+        # The loaded module must be the one the pinned build produced from the reviewed archive. That build records
+        # the patched module's path and sha beside it, so a re-patch (rpath, interpreter) needs no edit here (34034).
+        module_path = Path(native.__file__).resolve()
+        prefix = next((parent for parent in module_path.parents if (parent / NATIVE_IDENTITY).is_file()), None)
+        if prefix is None:
+            raise ValueError(f"native identity: no {NATIVE_IDENTITY} above {module_path}; not the pinned kitty build")
+        identity_path = prefix / NATIVE_IDENTITY
+        try:
+            identity = json.loads(identity_path.read_bytes())
+        except json.JSONDecodeError as error:
+            raise ValueError(f"native identity {identity_path}: does not parse: {error}") from error
+        if type(identity) is not dict:
+            raise ValueError(f"native identity {identity_path}: expected an object; observed {type(identity).__name__}")
+        for field in ("schemaVersion", "archiveHash", "nativeModulePath", "nativeModuleSha256"):
+            if field not in identity:
+                raise ValueError(f"native identity {identity_path}: lacks {field}")
+        # Trusted for these equalities only: the prefix is the one whose recorded path names the loaded module.
+        match("native identity schemaVersion", identity["schemaVersion"], 1)
+        match("native module path", module_path.relative_to(prefix).as_posix(), identity["nativeModulePath"])
+        match("native module sha256", hashlib.sha256(module_path.read_bytes()).hexdigest(), identity["nativeModuleSha256"])
+        match("archive hash", identity["archiveHash"], layout["reviewedArchiveHash"])
         if type(native_screen) is not native.Screen:
             raise ValueError(f"Screen type identity: expected {native.Screen!r}; observed {type(native_screen)!r}")
 

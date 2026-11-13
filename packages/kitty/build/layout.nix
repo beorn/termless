@@ -30,9 +30,12 @@ expected = {"size": 3888, "reverseVideo": {"offset": 667, "width": 1, "cType": "
             "mouseTracking": {"offset": 684, "width": 4, "cType": "unsigned int"}}
 if measured["screen"] != expected:
     raise SystemExit("Kitty header layout disagrees with independently inspected native ELF: " + repr(measured["screen"]))
+# A kitty bump changes two places by hand: reviewedArchiveHash here and the archive hash pinned by the kitty build
+# that writes share/termless/kitty-native-identity.json, after re-reviewing the offsets above. Until they agree,
+# the bridge refuses with "archive hash: expected <here>; observed <that build>". A re-patch changes neither (34034).
 manifest = {"schemaVersion": 1, "kittyVersion": "0.49.2",
             "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-            "nativeModuleSha256": "29b52a80e6bf4ccc3429e84324636178665a3ebd7db9db06c5db3b67f037dc71",
+            "reviewedArchiveHash": "sha256-1XNhi5EenEYb1CG5bBPHTH8csvGsnDJ4GNT/hDZs9cY=",
             **measured}
 def encoded(value):
     return (json.dumps(value, indent=2) + "\n").encode()
