@@ -248,7 +248,8 @@ test.skipIf(!isKittyAvailable()).each<FaultRow>([
   },
   ...["schemaVersion", "archiveHash", "nativeModulePath", "nativeModuleSha256"].map((field) => ({
     fault: `identity lacks ${field}`,
-    identity: (real: Record<string, unknown>) => Object.fromEntries(Object.entries(real).filter(([key]) => key !== field)),
+    identity: (real: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(real).filter(([key]) => key !== field)),
     cause: (at: FaultContext) => `native identity ${at.identityPath}: lacks ${field}`,
   })),
   {
@@ -290,97 +291,100 @@ test.skipIf(!isKittyAvailable()).each<FaultRow>([
     },
     cause: "syncOutput.offset: 3888 is outside Screen size 3888",
   },
-])("keeps generic reads healthy and reports unavailable native modes: $fault", async ({
-  fault,
-  edit,
-  identity,
-  cause,
-}) => {
-  const bridgeDir = dirname(fileURLToPath(new URL("../build/bridge.py", import.meta.url)))
-  const fixtureDir = realpathSync(mkdtempSync(join(tmpdir(), "termless-kitty-layout-fault-")))
-  const layoutPath = join(fixtureDir, "native-mode-layout.json")
-  const receiptPath = join(fixtureDir, "native-mode-layout.receipt.json")
-  copyFileSync(join(bridgeDir, "bridge.py"), join(fixtureDir, "bridge.py"))
-  const layout = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.json"), "utf8")) as Record<string, unknown>
-  const reviewed = layout.reviewedArchiveHash
-  edit?.(layout)
-  const actual = await vi.importActual<typeof childProcess>("node:child_process")
-  // Observed values come from the kitty on PATH, never literals here, which every rebuild would stale (34024).
-  const kittyPrefix = dirname(dirname(realpathSync(actual.execFileSync("sh", ["-c", "command -v kitty"], { encoding: "utf8" }).trim())))
-  const real = JSON.parse(
-    readFileSync(join(kittyPrefix, "share/termless/kitty-native-identity.json"), "utf8"),
-  ) as Record<string, unknown>
-  const fixturePrefix = join(fixtureDir, "kitty-prefix")
-  const modulePath = join(fixturePrefix, String(real.nativeModulePath))
-  const identityPath = join(fixturePrefix, "share/termless/kitty-native-identity.json")
-  if (identity) {
-    mkdirSync(dirname(modulePath), { recursive: true })
-    copyFileSync(join(kittyPrefix, String(real.nativeModulePath)), modulePath)
-    const written = identity(structuredClone(real))
-    if (written !== undefined) {
-      mkdirSync(dirname(identityPath), { recursive: true })
-      writeFileSync(identityPath, typeof written === "string" ? written : JSON.stringify(written))
-    }
-  }
-  const rawLayout = fault === "malformed manifest" ? "{" : JSON.stringify(layout)
-  if (fault !== "missing manifest") writeFileSync(layoutPath, rawLayout)
-  const receipt = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.receipt.json"), "utf8")) as Record<
-    string,
-    unknown
-  >
-  const actualLayoutSha = createHash("sha256").update(rawLayout).digest("hex")
-  if (fault !== "stale receipt") receipt.sha256 = actualLayoutSha
-  writeFileSync(receiptPath, JSON.stringify(receipt))
-  // An identity fault points the loaded module at its byte-identical copy, so the bridge finds the fixture prefix.
-  const relocate = identity
-    ? `import kitty.fast_data_types as loaded; loaded.__file__ = ${JSON.stringify(modulePath)}; `
-    : ""
-  const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
-    expect(args?.[0]).toBe("+runpy")
-    const script = args![1]!.replace(JSON.stringify(bridgeDir), JSON.stringify(fixtureDir))
-    expect(script).not.toBe(args![1])
-    // Import ctypes first so the hook observes only target reads. Any invalid layout reaching from_address fails
-    // the whole real snapshot, which the generic-read assertions below would reject for an independent reason.
-    const hook =
-      "def reject_native_read(event, args):\n    if event == 'ctypes.cdata':\n        raise AssertionError('Fault fixture reached native pointer access')\nsys.addaudithook(reject_native_read)"
-    return actual.execFileSync(
-      file,
-      [
-        "+runpy",
-        script.replace(
-          "bridge.batch_main()",
-          `import ctypes; ${relocate}exec(${JSON.stringify(hook)}); bridge.batch_main()`,
-        ),
-      ],
-      options,
+])(
+  "keeps generic reads healthy and reports unavailable native modes: $fault",
+  async ({ fault, edit, identity, cause }) => {
+    const bridgeDir = dirname(fileURLToPath(new URL("../build/bridge.py", import.meta.url)))
+    const fixtureDir = realpathSync(mkdtempSync(join(tmpdir(), "termless-kitty-layout-fault-")))
+    const layoutPath = join(fixtureDir, "native-mode-layout.json")
+    const receiptPath = join(fixtureDir, "native-mode-layout.receipt.json")
+    copyFileSync(join(bridgeDir, "bridge.py"), join(fixtureDir, "bridge.py"))
+    const layout = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.json"), "utf8")) as Record<
+      string,
+      unknown
+    >
+    const reviewed = layout.reviewedArchiveHash
+    edit?.(layout)
+    const actual = await vi.importActual<typeof childProcess>("node:child_process")
+    // Observed values come from the kitty on PATH, never literals here, which every rebuild would stale (34024).
+    const kittyPrefix = dirname(
+      dirname(realpathSync(actual.execFileSync("sh", ["-c", "command -v kitty"], { encoding: "utf8" }).trim())),
     )
-  })
-  const backend = createKittyBackend({ cols: 10, rows: 3 })
-  try {
-    backend.feed(new TextEncoder().encode("A"))
-    expect(backend.getCell(0, 0).char).toBe("A")
-    expect(backend.getCursor()).toMatchObject({ x: 1, y: 0 })
-    expect(backend.getMode("colorSchemeReporting")).toBe(false)
-    const reason =
-      cause === "missing"
-        ? `[Errno 2] No such file or directory: '${layoutPath}'`
-        : cause === "stale"
-          ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
-          : typeof cause === "function"
-            ? cause({ real, reviewed, modulePath, identityPath })
-            : cause
-    const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
-    for (const mode of ["reverseVideo", "syncOutput", "mouseTracking"] as const) {
-      expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))
+    const real = JSON.parse(
+      readFileSync(join(kittyPrefix, "share/termless/kitty-native-identity.json"), "utf8"),
+    ) as Record<string, unknown>
+    const fixturePrefix = join(fixtureDir, "kitty-prefix")
+    const modulePath = join(fixturePrefix, String(real.nativeModulePath))
+    const identityPath = join(fixturePrefix, "share/termless/kitty-native-identity.json")
+    if (identity) {
+      mkdirSync(dirname(modulePath), { recursive: true })
+      copyFileSync(join(kittyPrefix, String(real.nativeModulePath)), modulePath)
+      const written = identity(structuredClone(real))
+      if (written !== undefined) {
+        mkdirSync(dirname(identityPath), { recursive: true })
+        writeFileSync(identityPath, typeof written === "string" ? written : JSON.stringify(written))
+      }
     }
-    expect(backend.getCell(0, 0).char).toBe("A")
-    expect(replay).toHaveBeenCalledTimes(1)
-  } finally {
-    backend.destroy()
-    replay.mockClear()
-    rmSync(fixtureDir, { recursive: true, force: true })
-  }
-})
+    const rawLayout = fault === "malformed manifest" ? "{" : JSON.stringify(layout)
+    if (fault !== "missing manifest") writeFileSync(layoutPath, rawLayout)
+    const receipt = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.receipt.json"), "utf8")) as Record<
+      string,
+      unknown
+    >
+    const actualLayoutSha = createHash("sha256").update(rawLayout).digest("hex")
+    if (fault !== "stale receipt") receipt.sha256 = actualLayoutSha
+    writeFileSync(receiptPath, JSON.stringify(receipt))
+    // An identity fault points the loaded module at its byte-identical copy, so the bridge finds the fixture prefix.
+    const relocate = identity
+      ? `import kitty.fast_data_types as loaded; loaded.__file__ = ${JSON.stringify(modulePath)}; `
+      : ""
+    const replay = vi.mocked(childProcess.execFileSync).mockImplementationOnce((file, args, options) => {
+      expect(args?.[0]).toBe("+runpy")
+      const script = args![1]!.replace(JSON.stringify(bridgeDir), JSON.stringify(fixtureDir))
+      expect(script).not.toBe(args![1])
+      // Import ctypes first so the hook observes only target reads. Any invalid layout reaching from_address fails
+      // the whole real snapshot, which the generic-read assertions below would reject for an independent reason.
+      const hook =
+        "def reject_native_read(event, args):\n    if event == 'ctypes.cdata':\n        raise AssertionError('Fault fixture reached native pointer access')\nsys.addaudithook(reject_native_read)"
+      return actual.execFileSync(
+        file,
+        [
+          "+runpy",
+          script.replace(
+            "bridge.batch_main()",
+            `import ctypes; ${relocate}exec(${JSON.stringify(hook)}); bridge.batch_main()`,
+          ),
+        ],
+        options,
+      )
+    })
+    const backend = createKittyBackend({ cols: 10, rows: 3 })
+    try {
+      backend.feed(new TextEncoder().encode("A"))
+      expect(backend.getCell(0, 0).char).toBe("A")
+      expect(backend.getCursor()).toMatchObject({ x: 1, y: 0 })
+      expect(backend.getMode("colorSchemeReporting")).toBe(false)
+      const reason =
+        cause === "missing"
+          ? `[Errno 2] No such file or directory: '${layoutPath}'`
+          : cause === "stale"
+            ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
+            : typeof cause === "function"
+              ? cause({ real, reviewed, modulePath, identityPath })
+              : cause
+      const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
+      for (const mode of ["reverseVideo", "syncOutput", "mouseTracking"] as const) {
+        expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))
+      }
+      expect(backend.getCell(0, 0).char).toBe("A")
+      expect(replay).toHaveBeenCalledTimes(1)
+    } finally {
+      backend.destroy()
+      replay.mockClear()
+      rmSync(fixtureDir, { recursive: true, force: true })
+    }
+  },
+)
 
 // Exercise the full native callback protocol, including starts that the public command-end reader does not expose.
 // Other callback cases miss dropped command marks, raw status coercion and feed/reset/replay losses or duplicates.
