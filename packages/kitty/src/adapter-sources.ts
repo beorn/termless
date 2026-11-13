@@ -18,11 +18,11 @@ export const adapterDeclaration = {
     },
     {
       path: "packages/kitty/build/native-mode-layout.json",
-      blobOid: "20b976ba87de032248a787fcb8b5adc64c640f07",
+      blobOid: "b131e26069edf2129b4ff70aa2ce88c154dea811",
     },
     {
       path: "packages/kitty/build/native-mode-layout.receipt.json",
-      blobOid: "1e1e450aa08538ffb2d7ba80d45015aae4d86921",
+      blobOid: "3e2dfd878a701eba5430a31948bc26a372ebdcfc",
     },
   ],
 } as const
