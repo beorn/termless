@@ -204,8 +204,7 @@ test.skipIf(!isKittyAvailable()).each([
     edit: (layout: Record<string, unknown>) => {
       layout.nativeModuleSha256 = "unreviewed"
     },
-    cause:
-      "native module sha256: expected 'unreviewed'; observed '6f28bbff8e8276d076957a718b9c1db21d1a42a7592890fab5171ee31db99619'",
+    cause: "module",
   },
   {
     fault: "Python build flags",
@@ -236,6 +235,9 @@ test.skipIf(!isKittyAvailable()).each([
   const receiptPath = join(fixtureDir, "native-mode-layout.receipt.json")
   copyFileSync(join(bridgeDir, "bridge.py"), join(fixtureDir, "bridge.py"))
   const layout = JSON.parse(readFileSync(join(bridgeDir, "native-mode-layout.json"), "utf8")) as Record<string, unknown>
+  // The committed pin is the real module's sha (the valid-layout journeys prove it), so the observed value is read
+  // from it rather than copied here, where every Kitty rebuild would stale it (34024).
+  const pinnedModuleSha = layout.nativeModuleSha256
   edit?.(layout)
   const rawLayout = fault === "malformed manifest" ? "{" : JSON.stringify(layout)
   if (fault !== "missing manifest") writeFileSync(layoutPath, rawLayout)
@@ -275,7 +277,9 @@ test.skipIf(!isKittyAvailable()).each([
         ? `[Errno 2] No such file or directory: '${layoutPath}'`
         : cause === "stale"
           ? `manifest sha256: expected '${receipt.sha256}'; observed '${actualLayoutSha}'`
-          : cause
+          : cause === "module"
+            ? `native module sha256: expected 'unreviewed'; observed '${pinnedModuleSha}'`
+            : cause
     const diagnostic = `KITTY_NATIVE_STATE_UNAVAILABLE: Kitty native modes at ${layoutPath} (receipt ${receiptPath}): ${reason}`
     for (const mode of ["reverseVideo", "syncOutput", "mouseTracking"] as const) {
       expect(() => backend.getMode(mode)).toThrow(new Error(diagnostic))
