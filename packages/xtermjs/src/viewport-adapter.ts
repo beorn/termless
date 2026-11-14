@@ -389,7 +389,13 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
   let disposed = false
   let outputScheduled = false
   let outputTimer: ReturnType<typeof setTimeout> | null = null
-  const decoder = new TextDecoder()
+  // Output and input decode SEPARATELY, and only the output side streams (termless issue 10). A
+  // stdout chunk boundary can fall inside a multi-byte character, so the output decoder holds that
+  // tail until the next chunk instead of emitting U+FFFD for it; the input decoder stays a plain
+  // per-call decode, and keeping the two apart means an input feed can no longer flush the
+  // output's half character (or the reverse) as it did while both shared one decoder.
+  const outputDecoder = new TextDecoder()
+  const inputDecoder = new TextDecoder()
   const sizeListeners = new Set<(size: { cols: number; rows: number }) => void>()
   const outputListeners = new Set<() => void>()
   const modeListeners = new Set<(modes: IslandProtocolModes) => void>()
@@ -466,10 +472,25 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
 
   function feedAnsi(chunk: Uint8Array | string): void {
     if (!term || disposed) return
-    const data = typeof chunk === "string" ? chunk : decoder.decode(chunk)
+    const data = typeof chunk === "string" ? chunk : outputDecoder.decode(chunk, { stream: true })
     scanMouseDecsetTracking(data, trackMouse, mouseModes, recomputeMouseTracking)
     writeSync(term, data)
     scheduleOutput()
+  }
+
+  /**
+   * The tail the output decoder is holding: a stream that ended inside a multi-byte character leaves
+   * bytes no later chunk can complete. Dispose is the one lifecycle hook this adapter is guaranteed to
+   * get, so the retained tail surfaces there as the replacement character the caller would have seen
+   * mid-stream instead of vanishing with the decoder.
+   */
+  function flushOutputDecoder(): void {
+    if (!term) return
+    const tail = outputDecoder.decode()
+    if (tail.length === 0) return
+    writeSync(term, tail)
+    bufferRows = cloneBufferRows(snapshotBuffer(term, palettePassthrough))
+    buffer = bufferFromRows(bufferRows)
   }
 
   const onStdoutData = (chunk: XtermDataChunk): void => {
@@ -617,7 +638,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
         return () => pasteListeners.delete(handler)
       },
       feed(bytes) {
-        writeToChild(decoder.decode(bytes))
+        writeToChild(inputDecoder.decode(bytes))
         emitInputEvent({ kind: "feed", bytes })
       },
       events() {
@@ -661,6 +682,7 @@ function createXtermIslandHandle(opts: XtermIslandHandleOptions): XtermGuestHand
       if (disposed) return
       disposed = true
       cancelScheduledOutput()
+      flushOutputDecoder()
       opts.child?.stdout?.off?.("data", onStdoutData)
       unsubscribeStreamResize?.()
       for (const disposable of disposables) {

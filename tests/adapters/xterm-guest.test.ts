@@ -9,7 +9,7 @@
 import { describe, expect, test } from "vitest"
 
 import { xtermGuest, type XtermGuestChild, type XtermGuestHandle } from "../../packages/xtermjs/src/index.ts"
-import type { IslandContext } from "../../packages/xtermjs/src/silvery-compat.ts"
+import type { IslandContext, IslandHandle } from "../../packages/xtermjs/src/silvery-compat.ts"
 
 function createContext(cols: number, rows: number): IslandContext {
   const controller = new AbortController()
@@ -70,6 +70,14 @@ function flushMicrotasks(): Promise<void> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** The first row's text, read back through the same cell accessor a consumer uses. */
+function rowText(handle: IslandHandle): string {
+  const buffer = handle.output.buffer
+  let line = ""
+  for (let col = 0; col < buffer.cols; col++) line += buffer.getCell(col, 0).char
+  return line.trimEnd()
 }
 
 describe("xtermGuest", () => {
@@ -150,6 +158,63 @@ describe("xtermGuest", () => {
 
     unsubscribe()
     await handle.dispose()
+  })
+
+  test("a character split across two stdout chunks renders whole (termless issue 10)", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 20, rows: 2 }).init(createContext(20, 2))
+    const line = Buffer.from("Café 日本")
+    const cut = line.indexOf(0xe6) + 1
+
+    child.emitStdout(line.subarray(0, cut))
+    child.emitStdout(line.subarray(cut))
+    await flushMicrotasks()
+
+    expect(rowText(handle)).toBe("Café 日本")
+    await handle.dispose()
+  })
+
+  test("the same bytes in one chunk render the same text (termless issue 10 control)", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 20, rows: 2 }).init(createContext(20, 2))
+
+    child.emitStdout(Buffer.from("Café 日本"))
+    await flushMicrotasks()
+
+    expect(rowText(handle)).toBe("Café 日本")
+    await handle.dispose()
+  })
+
+  test("input feeding cannot flush the output decoder half character (termless issue 10)", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 20, rows: 2 }).init(createContext(20, 2))
+    const line = Buffer.from("日本")
+
+    child.emitStdout(line.subarray(0, 2))
+    const feed = handle.input?.feed
+    if (!feed) throw new Error("the guest declares an input feed")
+    feed.call(handle.input, new Uint8Array([0x78]))
+    child.emitStdout(line.subarray(2))
+    await flushMicrotasks()
+
+    expect(rowText(handle)).toBe("日本")
+    expect(child.stdinWrites, "the input path still writes exactly what it was handed").toEqual(["x"])
+    await handle.dispose()
+  })
+
+  test("a truncated trailing character is flushed on dispose instead of being dropped (termless issue 10)", async () => {
+    const child = createChild()
+    const handle = await xtermGuest({ child, cols: 10, rows: 2 }).init(createContext(10, 2))
+
+    child.emitStdout(Buffer.from("A"))
+    child.emitStdout(Buffer.from([0xe6, 0x97]))
+    await flushMicrotasks()
+
+    expect(rowText(handle), "a half character mid-stream must not be invented as U+FFFD").toBe("A")
+
+    await handle.dispose()
+
+    expect(rowText(handle), "the retained tail must surface at teardown, not vanish").toBe("A\uFFFD")
   })
 
   test("coalesces async stdout bursts when an output window is configured", async () => {
