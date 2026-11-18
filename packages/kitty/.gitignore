@@ -1,4 +1,0 @@
-build/tmp/
-*.node
-node_modules/
-__pycache__/

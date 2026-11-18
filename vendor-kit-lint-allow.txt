@@ -1,3 +1,0 @@
-# vendor-kit boundary-lint allowlist — substring matches against hit line or file path.
-@km/infra/ # tracking-bead provenance in header comments + links.yml (Visual Eyes epic, lychee rollout)
-Type "bun test" # VHS tape demo keystrokes in docs/guide/screenshots.md — recording example, not a runner instruction
