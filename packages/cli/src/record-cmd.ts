@@ -569,6 +569,8 @@ async function interactiveRecord(
   // host's stdin → PTY pipe stays intact, so Ctrl-D / Ctrl-C / typing all
   // reach the recorded child. `--live-chrome none` skips the overlay and
   // falls back to today's raw-stdout-pipe (byte-identical to pre-overlay).
+  // The process crash record for the overlay's lifetime, bound to this function so it outlives the block below.
+  using _crash = useOverlay ? await (await import("./record-crash-record.ts")).installRecordCrashRecord() : undefined
   if (useOverlay) {
     const { startRecLiveOverlay } = await import("./rec-live-overlay.tsx")
     liveView = startRecLiveOverlay({
