@@ -10,11 +10,15 @@
     },
 
     .dependencies = .{
-        // napigen — comptime N-API bindings for Zig
-        // Pinned to main HEAD as of 2025-11-09
-        .napigen = .{
-            .url = "git+https://github.com/cztomsik/napigen#bc2c8259d95be774847e60fce9bfc203ab623b30",
-            .hash = "napigen-0.1.0-YpiIumJ9AAA4yVKISHKfN_2H0u7-su18jRHSSq_UUTNN",
+        // Node-API C headers (translated via Ghostty's bundled translate_c for Zig 0.17+)
+        .node_api = .{
+            .url = "git+https://github.com/nodejs/node-api-headers?ref=main#d46edabd5bbacc08393578eb19fc2eba7021b597",
+            .hash = "N-V-__8AAASNAQA0UI0mvQk4LyFEhdFuFBPgH8HSokdFFpnz",
+        },
+
+        // Ghostty's translate_c wrapper (Zig 0.17 removed @cImport)
+        .translate_c = .{
+            .path = ".ghostty-src/pkg/translate-c",
         },
 
         // ghostty — terminal emulation core (Zig module)

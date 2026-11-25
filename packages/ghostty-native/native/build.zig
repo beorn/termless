@@ -1,4 +1,5 @@
 const std = @import("std");
+const translate_c = @import("translate_c");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -9,13 +10,28 @@ pub fn build(b: *std.Build) !void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = optimize != .Debug,
+        .strip = optimize != .debug,
         .link_libc = true,
     });
 
-    // napigen dependency — provides N-API bindings for Zig
-    const napigen_dep = b.dependency("napigen", .{});
-    root_module.addImport("napigen", napigen_dep.module("napigen"));
+    // Local napigen module backed by translate_c over node_api.h (Zig 0.17 removed @cImport)
+    const node_api_dep = b.dependency("node_api", .{});
+    const napigen_module = b.createModule(.{
+        .root_source_file = b.path("src/napigen.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    try translate_c.addImportToModule(b, "napi_c", napigen_module, .{
+        .source = .{ .includes = .{
+            .generated_name = "napi_c.h",
+            .files = &.{.{ .path = "node_api.h", .type = .user }},
+        } },
+        .target = target,
+        .optimize = optimize,
+        .include_paths = &.{node_api_dep.path("include")},
+    });
+    root_module.addImport("napigen", napigen_module);
 
     // ghostty dependency — provides the terminal emulation core as a Zig module.
     // This compiles ghostty's terminal code directly into our library (no separate

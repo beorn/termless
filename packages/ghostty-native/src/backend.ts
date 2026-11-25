@@ -486,7 +486,7 @@ export function createGhosttyNativeBackend(
 
   const capabilities: TerminalCapabilities = {
     name: "ghostty-native",
-    version: "1.3.1",
+    version: "1.4.0",
     truecolor: true,
     kittyKeyboard: true,
     // Read the option compiled into this addon, rather than inferring it from the application.

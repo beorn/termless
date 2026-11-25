@@ -1,10 +1,10 @@
 { pkgs }:
 pkgs.stdenv.mkDerivation {
   pname = "termless-kitty-native-mode-layout";
-  version = "0.49.2";
+  version = "0.51.1";
   src = pkgs.fetchzip {
-    url = "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz";
-    hash = "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=";
+    url = "https://github.com/kovidgoyal/kitty/archive/1dadc7931b7ccfa1b05d2fbe044e1c094e766862.tar.gz";
+    hash = "sha256-ioQlffhcAJUI78Y+wMfd5q9Uwn19ZeAq8V0qpzo4glA=";
   };
   nativeBuildInputs = [ pkgs.python314 ];
   dontConfigure = true;
@@ -25,17 +25,17 @@ pkgs.stdenv.mkDerivation {
 import hashlib, json, os, pathlib, sys, sysconfig
 out = pathlib.Path(os.environ["KITTY_LAYOUT_OUT"])
 measured = json.loads(pathlib.Path("measured.json").read_text())
-expected = {"size": 3888, "reverseVideo": {"offset": 667, "width": 1, "cType": "bool"},
-            "syncOutput": {"offset": 1112, "width": 8, "cType": "int64_t"},
-            "mouseTracking": {"offset": 684, "width": 4, "cType": "unsigned int"}}
+expected = {"size": 7688, "reverseVideo": {"offset": 691, "width": 1, "cType": "bool"},
+            "syncOutput": {"offset": 1184, "width": 8, "cType": "int64_t"},
+            "mouseTracking": {"offset": 708, "width": 4, "cType": "unsigned int"}}
 if measured["screen"] != expected:
     raise SystemExit("Kitty header layout disagrees with independently inspected native ELF: " + repr(measured["screen"]))
 # A kitty bump changes two places by hand: reviewedArchiveHash here and the archive hash pinned by the kitty build
 # that writes share/termless/kitty-native-identity.json, after re-reviewing the offsets above. Until they agree,
 # the bridge refuses with "archive hash: expected <here>; observed <that build>". A re-patch changes neither (34034).
-manifest = {"schemaVersion": 1, "kittyVersion": "0.49.2",
-            "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-            "reviewedArchiveHash": "sha256-1XNhi5EenEYb1CG5bBPHTH8csvGsnDJ4GNT/hDZs9cY=",
+manifest = {"schemaVersion": 1, "kittyVersion": "0.51.1",
+            "sourceCommit": "1dadc7931b7ccfa1b05d2fbe044e1c094e766862",
+            "reviewedArchiveHash": "sha256-0wm+l48Bfb3MyuF10oEJL+/nyLxkR4+mIFgWBKsLU8A=",
             **measured}
 def encoded(value):
     return (json.dumps(value, indent=2) + "\n").encode()
@@ -60,8 +60,8 @@ if set(active_headers) != set(headers) - {"kitty/kitty-verstable.h", "3rdparty/v
 generator = pathlib.Path("${./layout.c}").read_bytes()
 receipt = {"schemaVersion": 1, "sha256": sha256(manifest_bytes),
            "sourceCommit": manifest["sourceCommit"],
-           "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz",
-           "sourceNarHash": "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=",
+           "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/1dadc7931b7ccfa1b05d2fbe044e1c094e766862.tar.gz",
+           "sourceNarHash": "sha256-ioQlffhcAJUI78Y+wMfd5q9Uwn19ZeAq8V0qpzo4glA=",
            "generator": {"path": "packages/kitty/build/layout.c", "gitBlob": git_blob(generator), "sha256": sha256(generator)},
            "recipeSha256": "${builtins.hashFile "sha256" ./layout.nix}",
            "flakeLockSha256": "${builtins.hashFile "sha256" ../../../flake.lock}",

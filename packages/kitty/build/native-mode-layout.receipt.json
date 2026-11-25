@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "sha256": "4d426be18b6a3c588e7503ff8714a79153dc284f712b9d7d5184001c97b3f5bb",
-  "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-  "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/b2cb871254fbdac19a085188813c8dfb258b95cd.tar.gz",
-  "sourceNarHash": "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=",
+  "sha256": "82aff28220cb8162821e50bd945b24856c6d93bdc20efc706826afdeb2492e77",
+  "sourceCommit": "1dadc7931b7ccfa1b05d2fbe044e1c094e766862",
+  "sourceUrl": "https://github.com/kovidgoyal/kitty/archive/1dadc7931b7ccfa1b05d2fbe044e1c094e766862.tar.gz",
+  "sourceNarHash": "sha256-ioQlffhcAJUI78Y+wMfd5q9Uwn19ZeAq8V0qpzo4glA=",
   "generator": {
     "path": "packages/kitty/build/layout.c",
     "gitBlob": "f58c0e943ad60daf20d54360184e039e16ff3826",
     "sha256": "0a9c12d39546083eb2e814d5ea96328df944162d790dd776704b18a562564863"
   },
-  "recipeSha256": "ac31c34bbeed842d525b528646036b5639c066a06c83fd8ebc0150547bf0bd9f",
+  "recipeSha256": "55ef74349596095e5f975f2a3b17dbde30a8020bfec1860e6c2337be04c26b47",
   "flakeLockSha256": "01f99a311f8683aaea319d7fb164b25c4bd9e8e4ac03f9030c78cfb489d0a27c",
   "headers": [
     {
@@ -22,19 +22,19 @@
     },
     {
       "path": "kitty/data-types.h",
-      "sha256": "4009985e60726cf564be85938b4867aa0cbd8244bbdcf39237f6ffc300152f13"
+      "sha256": "76f37aa696b1605169a5744b26b5b3921c1ef8630ae19dd03bc0796ec20ba879"
     },
     {
       "path": "kitty/glfw-wrapper.h",
-      "sha256": "394543f073da7726d0752cf48db126f50b77e50d3026282df0563a087b0d25dc"
+      "sha256": "689195e6db3c5b00d18315587a98764906cf9520376dbc5a4eeae22197cbfdde"
     },
     {
       "path": "kitty/graphics.h",
-      "sha256": "3e44043b1a6682608d49dffd94c99ccb2243d85850f10cc3fb28d10aa3721511"
+      "sha256": "7d8122f772167ec03f22c1d2ebeeceadcb431f28fcf164fe94e6981d6fc6c815"
     },
     {
       "path": "kitty/history.h",
-      "sha256": "8949cc386d3b26e62bde8c262430ebcb3d785183a8c0ea9b59ea55cee4171c83"
+      "sha256": "8a38809c0dccc8ddfab5dfb96b573ac3dcc45f463158838c43364544344bf6e3"
     },
     {
       "path": "kitty/kitty-verstable.h",
@@ -46,15 +46,15 @@
     },
     {
       "path": "kitty/line.h",
-      "sha256": "06610034f2c3b2f72880f4dd2ad30b3a1f6da0f66bf1c9d17196ecf7c429e606"
+      "sha256": "25c3f441fe78c7882ae5f833a9d9222d9253ac657898500880dab5bc2022aeb5"
     },
     {
       "path": "kitty/monotonic.h",
-      "sha256": "a2a2abaead04ff43386265a253cfdd9f139a9602c23d23884f8d1c776519244c"
+      "sha256": "11209b6b97e0bae3f2a59dbf8b6f493d0647ea45451bc4df5688ebb1dd1c6cd5"
     },
     {
       "path": "kitty/screen.h",
-      "sha256": "77515d774f932d03e0d6ab06221e6235059eb6aae9b1c23802a0b60630a50b3b"
+      "sha256": "6c1f02361bdd20e9c190058821138f884838ed119bc1b871ec70736f7c21adc9"
     },
     {
       "path": "kitty/text-cache.h",
@@ -62,7 +62,7 @@
     },
     {
       "path": "kitty/vt-parser.h",
-      "sha256": "d06715b1fd6a55719b23914e69c0b2587ddd8c4c12d0779266c9aee908bc20ba"
+      "sha256": "4a3e807370822ab0367a329ab6b5001d6795c8898e3fcef2e52f1434643deee4"
     }
   ],
   "activeCompilerHeaders": [
@@ -99,13 +99,13 @@
     "screenTypeModule": "fast_data_types",
     "screenTypeName": "Screen",
     "screenItemSize": 0,
-    "screenBasicSize": 3888
+    "screenBasicSize": 7688
   },
   "measured": {
     "schemaVersion": 1,
-    "kittyVersion": "0.49.2",
-    "sourceCommit": "b2cb871254fbdac19a085188813c8dfb258b95cd",
-    "reviewedArchiveHash": "sha256-1XNhi5EenEYb1CG5bBPHTH8csvGsnDJ4GNT/hDZs9cY=",
+    "kittyVersion": "0.51.1",
+    "sourceCommit": "1dadc7931b7ccfa1b05d2fbe044e1c094e766862",
+    "reviewedArchiveHash": "sha256-0wm+l48Bfb3MyuF10oEJL+/nyLxkR4+mIFgWBKsLU8A=",
     "platform": {
       "system": "Linux",
       "machine": "x86_64",
@@ -121,19 +121,19 @@
       "pyGilDisabled": 0
     },
     "screen": {
-      "size": 3888,
+      "size": 7688,
       "reverseVideo": {
-        "offset": 667,
+        "offset": 691,
         "width": 1,
         "cType": "bool"
       },
       "syncOutput": {
-        "offset": 1112,
+        "offset": 1184,
         "width": 8,
         "cType": "int64_t"
       },
       "mouseTracking": {
-        "offset": 684,
+        "offset": 708,
         "width": 4,
         "cType": "unsigned int"
       }

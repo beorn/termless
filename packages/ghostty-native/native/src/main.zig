@@ -16,7 +16,7 @@ const PageList = ghostty.PageList;
 const Cell = ghostty.Cell;
 const Page = ghostty.Page;
 const Style = ghostty.Style;
-const ReadonlyHandler = ghostty.ReadonlyHandler;
+const ReadonlyHandler = ghostty.TerminalStream.Handler;
 const StreamAction = ghostty.StreamAction;
 const modes = ghostty.modes;
 const point = ghostty.point;
@@ -24,7 +24,7 @@ const size = ghostty.size;
 
 // ─── Allocator ──────────────────────────────────────────
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa: std.heap.DebugAllocator(.{}) = .init;
 const allocator = gpa.allocator();
 
 /// Copy native bytes into JS-owned storage; shared by native input encoders.
@@ -100,12 +100,22 @@ const ResponseHandler = struct {
         self: *ResponseHandler,
         comptime action: StreamAction.Tag,
         value: StreamAction.Value(action),
+    ) void {
+        self.vtFallible(action, value) catch {
+            self.readonly.semantic_failure = true;
+        };
+    }
+
+    fn vtFallible(
+        self: *ResponseHandler,
+        comptime action: StreamAction.Tag,
+        value: StreamAction.Value(action),
     ) !void {
         const terminal = self.readonly.terminal;
         switch (action) {
             .semantic_prompt => {
                 // A may first move to a fresh line. Read the resulting engine state, never pre-action coordinates.
-                try self.readonly.vt(action, value);
+                self.readonly.vt(action, value);
                 const cursor = &terminal.screens.active.cursor;
                 switch (value.action) {
                     .fresh_line_new_prompt, .prompt_start, .new_command => {
@@ -147,13 +157,13 @@ const ResponseHandler = struct {
                     errdefer allocator.free(copy);
                     try self.clipboard_writes.append(allocator, .{ .selector = value.kind, .payload = copy });
                 }
-                try self.readonly.vt(action, value);
+                self.readonly.vt(action, value);
             },
             .report_pwd => try terminal.setPwd(value.url),
             .progress_report => {
                 // Record the engine's emitted report verbatim, then forward it unchanged (readonly ignores it).
                 self.progress.* = value;
-                try self.readonly.vt(action, value);
+                self.readonly.vt(action, value);
             },
             .show_desktop_notification => {
                 // Record the engine's emitted toast verbatim, then forward it unchanged (readonly ignores it).
@@ -162,7 +172,7 @@ const ResponseHandler = struct {
                 const body = try allocator.dupe(u8, value.body);
                 errdefer allocator.free(body);
                 try self.toasts.append(allocator, .{ .title = title, .body = body });
-                try self.readonly.vt(action, value);
+                self.readonly.vt(action, value);
             },
             .window_title => {
                 // The engine validates and emits this title; never parse OSC bytes here.
@@ -185,7 +195,14 @@ const ResponseHandler = struct {
                     const y = if (origin) cursor.y -| terminal.scrolling_region.top else cursor.y;
                     try self.reply("\x1B[{};{}R", .{ y + 1, x + 1 });
                 },
-                .color_scheme => {},
+                .cursor_position_extended => {
+                    const cursor = terminal.screens.active.cursor;
+                    const origin = terminal.modes.get(.origin);
+                    const x = if (origin) cursor.x -| terminal.scrolling_region.left else cursor.x;
+                    const y = if (origin) cursor.y -| terminal.scrolling_region.top else cursor.y;
+                    try self.reply("\x1B[?{};{};1R", .{ y + 1, x + 1 });
+                },
+                .color_scheme, .visibility => {},
             },
             .kitty_keyboard_query => try self.reply("\x1b[?{}u", .{terminal.screens.active.kitty_keyboard.current().int()}),
             .color_operation => {
@@ -231,7 +248,7 @@ const ResponseHandler = struct {
                         var one: @TypeOf(value.requests) = .{};
                         defer one.deinit(allocator);
                         try one.append(allocator, request.*);
-                        try self.readonly.vt(.color_operation, .{ .op = value.op, .requests = one, .terminator = value.terminator });
+                        self.readonly.vt(.color_operation, .{ .op = value.op, .requests = one, .terminator = value.terminator });
                     },
                 };
             },
@@ -264,15 +281,15 @@ const ResponseHandler = struct {
                     },
                     else => {
                         var one = [_]@TypeOf(item){item};
-                        try self.readonly.vt(.kitty_color_report, .{
-                            .list = .{ .items = &one, .capacity = one.len },
+                        self.readonly.vt(.kitty_color_report, .{
+                            .list = .{ .items = &one, .capacity = one.len, .pointer_stability = .{} },
                             .terminator = value.terminator,
                         });
                     },
                 };
                 if (wrote) try self.reply("{s}", .{value.terminator.string()});
             },
-            else => try self.readonly.vt(action, value),
+            else => self.readonly.vt(action, value),
         }
     }
 
@@ -345,10 +362,10 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     const handle = allocator.create(TerminalHandle) catch return error.OutOfMemory;
     errdefer allocator.destroy(handle);
 
-    handle.terminal = Terminal.init(allocator, .{
+    handle.terminal = Terminal.init(ghostty.TinyIo.init.io(), allocator, .{
         .cols = cols,
         .rows = rows,
-        .max_scrollback = @as(usize, max_scrollback),
+        .max_scrollback_bytes = @as(usize, max_scrollback),
     }) catch return error.TerminalCreationFailed;
     errdefer handle.terminal.deinit(allocator);
 
@@ -358,14 +375,17 @@ fn createTerminal(cols: u16, rows: u16, max_scrollback: u32) !*TerminalHandle {
     handle.semantic_marks = .empty;
     handle.clipboard_writes = .empty;
     handle.paste_selector = null;
-    handle.stream = .initAlloc(allocator, .{
-        .readonly = handle.terminal.vtHandler(),
-        .title = &handle.title,
-        .progress = &handle.progress,
-        .toasts = &handle.toasts,
-        .semantic_marks = &handle.semantic_marks,
-        .clipboard_writes = &handle.clipboard_writes,
-        .paste_selector = &handle.paste_selector,
+    handle.stream = .init(.{
+        .allocator = allocator,
+        .handler = .{
+            .readonly = handle.terminal.vtHandler(),
+            .title = &handle.title,
+            .progress = &handle.progress,
+            .toasts = &handle.toasts,
+            .semantic_marks = &handle.semantic_marks,
+            .clipboard_writes = &handle.clipboard_writes,
+            .paste_selector = &handle.paste_selector,
+        },
     });
     handle.cols = cols;
     handle.rows = rows;
@@ -406,7 +426,7 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     var data_len: usize = 0;
     if (napi.napi_get_buffer_info(env, data_val, @ptrCast(&data_ptr), &data_len) == napi.napi_ok) {
         if (data_ptr) |ptr| {
-            try handle.stream.nextSlice(ptr[0..data_len]);
+            handle.stream.nextSlice(ptr[0..data_len]);
             return;
         }
     }
@@ -420,14 +440,14 @@ fn feed(js: *napigen.JsContext, handle: *TerminalHandle, data_val: napigen.napi_
     if (napi.napi_get_typedarray_info(env, data_val, &typed_type, &typed_len, &typed_data, &typed_buf, &typed_offset) == napi.napi_ok) {
         if (typed_data) |ptr| {
             const bytes: [*]u8 = @ptrCast(ptr);
-            try handle.stream.nextSlice(bytes[0..typed_len]);
+            handle.stream.nextSlice(bytes[0..typed_len]);
             return;
         }
     }
 
     // Fall back to string
     const str = try js.readString(data_val);
-    try handle.stream.nextSlice(str);
+    handle.stream.nextSlice(str);
 }
 
 /// Encode input for the existing Terminal without parsing it or touching replies.
@@ -517,7 +537,7 @@ fn readResponse(handle: *TerminalHandle) ?[]const u8 {
 }
 
 fn resizeTerm(handle: *TerminalHandle, cols: u16, rows: u16) void {
-    handle.terminal.resize(allocator, cols, rows) catch {};
+    handle.terminal.resize(allocator, .{ .cols = cols, .rows = rows }) catch {};
     handle.cols = cols;
     handle.rows = rows;
 }
@@ -559,7 +579,7 @@ fn getTextRange(handle: *TerminalHandle, start_row: u32, start_col: u16, end_row
             const rac = p.rowAndCell();
             const cell = rac.cell;
 
-            try appendCellTextFromCell(&result_buf, cell, p.node.data);
+            try appendCellTextFromCell(&result_buf, cell, p.node.page().*);
         }
     }
 
@@ -629,7 +649,7 @@ fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
     const p = pages.pin(.{ .screen = .{ .x = col, .y = row } }) orelse return defaultCell();
     const rac = p.rowAndCell();
     const cell = rac.cell;
-    const page = &p.node.data;
+    const page = p.node.page();
 
     // Extract text (codepoint + grapheme cluster)
     var text_buf: [64]u8 = undefined;
@@ -737,7 +757,7 @@ fn readCellAt(handle: *TerminalHandle, row: u32, col: u16) JsCell {
         // Handle bg-only cells (content_tag == .bg_color_palette or .bg_color_rgb)
         switch (cell.content_tag) {
             .bg_color_palette => {
-                const idx = cell.content.color_palette;
+                const idx = cell.content.color_palette.data;
                 const rgb = handle.terminal.colors.palette.current[idx];
                 bg_r = rgb.r;
                 bg_g = rgb.g;

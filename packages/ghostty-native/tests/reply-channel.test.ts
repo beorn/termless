@@ -98,7 +98,7 @@ describe.skipIf(nativeBuildError !== null)(
       try {
         backend.feed(encoder.encode("\x1b[?2004h\x1b[?2004$p")) // DECRQM, private mode set
         backend.feed(encoder.encode("\x1b[?1004$p")) // DECRQM, private mode reset
-        backend.feed(encoder.encode("\x1b[?5522$p")) // DECRQM, mode outside the engine's table
+        backend.feed(encoder.encode("\x1b[?59999$p")) // DECRQM, mode outside the engine's table
         backend.feed(encoder.encode("ab\x1b[6n")) // DSR 6, cursor position
         backend.feed(encoder.encode("\x1b[5n")) // DSR 5, operating status
         backend.feed(encoder.encode("\x1b[?u")) // kitty keyboard flags query
@@ -106,7 +106,7 @@ describe.skipIf(nativeBuildError !== null)(
         expect(replies).toEqual([
           "\x1b[?2004;1$y",
           "\x1b[?1004;2$y",
-          "\x1b[?5522;0$y",
+          "\x1b[?59999;0$y",
           "\x1b[1;3R",
           "\x1b[0n",
           "\x1b[?0u",
@@ -143,14 +143,14 @@ describe.skipIf(nativeBuildError !== null)(
       backend.onResponse = (data) => replies.push(decoder.decode(data))
       try {
         if (_name === "kitty graphics query") {
-          // A live reply path rules out dead transport; the imported ghostty-vt build disables graphics.
+          // A live reply path rules out dead transport; the headless handler emits no kitty graphics reply.
           backend.feed(encoder.encode("\x1b[5n"))
           expect(replies).toEqual(["\x1b[0n"])
           replies.length = 0
         }
         backend.feed(encoder.encode(query))
         expect(replies).toEqual([])
-        if (_name === "kitty graphics query") expect(backend.capabilities.kittyGraphics).toBe(false)
+        if (_name === "kitty graphics query") expect(backend.capabilities.kittyGraphics).toBe(true)
       } finally {
         backend.destroy()
       }

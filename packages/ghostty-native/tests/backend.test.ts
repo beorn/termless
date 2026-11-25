@@ -41,11 +41,11 @@ describe.skipIf(nativeBuildError !== null)("Ghostty native semantic, pointer and
       backend.init({ cols: 12, rows: 3 })
       expect(backend.getMouseShape()).toBe("text")
       const native = loadGhosttyNative()
-      expect(native.getKittyGraphics()).toBe(false)
-      expect(backend.capabilities.kittyGraphics).toBe(false)
-      const flag = vi.spyOn(native, "getKittyGraphics").mockReturnValue(true)
+      expect(native.getKittyGraphics()).toBe(true)
+      expect(backend.capabilities.kittyGraphics).toBe(true)
+      const flag = vi.spyOn(native, "getKittyGraphics").mockReturnValue(false)
       try {
-        expect(backend.capabilities.kittyGraphics).toBe(true)
+        expect(backend.capabilities.kittyGraphics).toBe(false)
       } finally {
         flag.mockRestore()
       }

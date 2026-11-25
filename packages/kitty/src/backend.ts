@@ -672,7 +672,7 @@ export function createKittyBackend(
 
   const capabilities: TerminalCapabilities = {
     name: "kitty",
-    version: "0.49.2",
+    version: "0.51.1",
     truecolor: true,
     kittyKeyboard: true,
     kittyGraphics: true,
@@ -756,8 +756,8 @@ export function createKittyBackend(
     getUnhandledSequences: () => {
       const report: { kind: "osc" | "csi"; code: string }[] = []
       for (const error of ensureSnapshot().parserErrors ?? []) {
-        // Native 0.49.2 diagnostics only: never reconstruct a sequence from fed input.
-        if (error.version !== "0.49.2") continue
+        // Native 0.51.1 diagnostics only: never reconstruct a sequence from fed input.
+        if (error.version !== "0.51.1") continue
         const osc = /^(?:Unknown OSC escape code: ([0-9]+)(?:;[\s\S]*)?|Ignoring OSC ([0-9]+)(?:,? [\s\S]*)?)$/u.exec(
           error.message,
         )

@@ -67,7 +67,7 @@ test.skipIf(!isKittyAvailable())(
         const parsed = JSON.parse(String(actual.execFileSync(file, args, options))) as Record<string, unknown>
         parsed.parserErrors = [
           { version: "0.0.0", message: "Unknown OSC escape code: 113" },
-          { version: "0.49.2", message: "unmatched diagnostic for OSC 113" },
+          { version: "0.51.1", message: "unmatched diagnostic for OSC 113" },
         ]
         return JSON.stringify(parsed)
       })
@@ -113,9 +113,9 @@ print(json.dumps(results))
     const { parserErrors, ...diagnosticState } = diagnostic!
     expect(diagnosticState).toEqual(plain)
     expect(parserErrors).toEqual([
-      { version: "0.49.2", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" },
-      { version: "0.49.2", message: "Unknown OSC escape code: 59999;x" },
-      { version: "0.49.2", message: "Unknown CSI p sequence with start and end modifiers: '\0' ' '" },
+      { version: "0.51.1", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" },
+      { version: "0.51.1", message: "Unknown OSC escape code: 59999;x" },
+      { version: "0.51.1", message: "Unknown CSI p sequence with start and end modifiers: '\0' ' '" },
     ])
   } finally {
     rmSync(configDir, { recursive: true, force: true })
@@ -206,14 +206,14 @@ test.skipIf(!isKittyAvailable()).each<FaultRow>([
     edit: (layout: Record<string, unknown>) => {
       layout.kittyVersion = "0.0.0"
     },
-    cause: "Kitty version: expected '0.0.0'; observed '0.49.2'",
+    cause: "Kitty version: expected '0.0.0'; observed '0.51.1'",
   },
   {
     fault: "source revision",
     edit: (layout: Record<string, unknown>) => {
       layout.sourceCommit = "unreviewed"
     },
-    cause: "Kitty source revision: expected 'unreviewed'; observed 'b2cb871254fbdac19a085188813c8dfb258b95cd'",
+    cause: "Kitty source revision: expected 'unreviewed'; observed '1dadc7931b7ccfa1b05d2fbe044e1c094e766862'",
   },
   // A changed upstream archive with unchanged offsets: refused until the offsets are re-reviewed (34034).
   {
@@ -279,17 +279,17 @@ test.skipIf(!isKittyAvailable()).each<FaultRow>([
   {
     fault: "Screen size",
     edit: (layout: Record<string, unknown>) => {
-      ;(layout.screen as Record<string, unknown>).size = 3889
+      ;(layout.screen as Record<string, unknown>).size = 7689
     },
-    cause: "Screen basicsize: expected 3889; observed 3888",
+    cause: "Screen basicsize: expected 7689; observed 7688",
   },
   {
     fault: "field bounds",
     edit: (layout: Record<string, unknown>) => {
       const screen = layout.screen as Record<string, Record<string, unknown>>
-      screen.syncOutput!.offset = 3888
+      screen.syncOutput!.offset = 7688
     },
-    cause: "syncOutput.offset: 3888 is outside Screen size 3888",
+    cause: "syncOutput.offset: 7688 is outside Screen size 7688",
   },
 ])(
   "keeps generic reads healthy and reports unavailable native modes: $fault",
@@ -446,7 +446,7 @@ test.skipIf(!isKittyAvailable())(
         expect(outputs).toHaveLength(mode === "stream" ? history.length + 1 : 1)
         for (const output of outputs) expect(output.error).toBeUndefined()
         expect(outputs.map((output) => output.parserErrors).filter((value) => value !== undefined)).toEqual([
-          [{ version: "0.49.2", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" }],
+          [{ version: "0.51.1", message: "Ignoring OSC 633, use by Windows Terminal for VSCode actions" }],
         ])
         if (mode === "stream") {
           expect(outputs.shift()).toEqual({ ready: true })
