@@ -216,6 +216,10 @@ export interface Terminal {
   getIconLabel?(): string
   /** Present only when the backend exposes the engine's clipboard callback state. */
   getClipboardState?(): {
+    /**
+     * Each clipboard write, in order, with the selector as the engine reports it: vterm.js hands over the raw OSC 52
+     * selector ("pc"), libvterm only its selection mask, read back as letters in cpqs01234567 order ("cp") (#38825).
+     */
     writes: { selector: string; payload: string; text?: string; decodeError?: string }[]
     pasteSelector?: string
     /** The engine's effective clipboard permission option (Kitty clipboard_control or Alacritty osc52). */
