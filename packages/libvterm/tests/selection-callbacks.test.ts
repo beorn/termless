@@ -137,6 +137,32 @@ test("OSC 52 clipboard writes roundtrip through per-instance selection callbacks
   }
 })
 
+// #38825 (@cpo/term 3ad6dc0e): the roundtrip above proves a read-back, which is read evidence. The write is graded from
+// what libvterm handed the selection callback, so each accepted set must be recorded as it completed.
+test("records each accepted OSC 52 set as the clipboard write witness; a refused set and a query record nothing", () => {
+  const backend = createLibvtermBackend(undefined, module)
+  try {
+    backend.init({ cols: 80, rows: 24 })
+    expect(typeof backend.getClipboardState).toBe("function")
+    const one = Buffer.from("terminfo-osc52-one").toString("base64")
+    const fox = Buffer.from("clipboard café 🦊").toString("base64")
+    backend.feed(encoder.encode(`\x1b]52;c;${one}\x07`))
+    for (const part of ["\x1b]52;c;", fox.slice(0, 7), fox.slice(7), "\x1b\\"]) backend.feed(encoder.encode(part))
+    backend.feed(encoder.encode(`\x1b]52;p;${one}\x07`)) // primary only: the embedder refuses it
+    backend.feed(encoder.encode(`\x1b]52;pc;${one}\x07`))
+    backend.feed(encoder.encode(query))
+    expect(backend.getClipboardState!().writes).toEqual([
+      { selector: "c", payload: one, text: "terminfo-osc52-one" },
+      { selector: "c", payload: fox, text: "clipboard café 🦊" },
+      { selector: "cp", payload: one, text: "terminfo-osc52-one" },
+    ])
+    backend.init({ cols: 80, rows: 24 })
+    expect(backend.getClipboardState!().writes).toEqual([])
+  } finally {
+    backend.destroy()
+  }
+})
+
 // Accepted OSC 777 requirement: the existing OSC 9 tests never read completed
 // 777 payloads, so cannot catch a missing native fallback/export/getter binding.
 describe("OSC 777 notifications", () => {

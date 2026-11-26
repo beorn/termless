@@ -87,6 +87,7 @@ emcc -O2 \
     "_termless_vterm_output_attach",
     "_termless_vterm_output_read",
     "_termless_vterm_output_detach",
+    "_termless_vterm_selection_writes",
     "_vterm_obtain_screen",
     "_vterm_screen_reset",
     "_vterm_screen_enable_altscreen",

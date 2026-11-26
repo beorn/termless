@@ -176,6 +176,36 @@ function writeBytes(mod: LibvtermModule, ptr: number, data: Uint8Array): void {
   }
 }
 
+type ClipboardWrite = { selector: string; payload: string; text?: string; decodeError?: string }
+
+/** VTermSelectionMask bits in libvterm's order (vterm.h): c, p, q, s, then cut buffers 0-7. */
+const SELECTION_LETTERS = "cpqs01234567"
+
+/**
+ * The write log's records, [uint32 mask][uint32 len][len bytes] little-endian (build/flat-api.c), as the selector the
+ * mask names and the bytes libvterm decoded and handed the callback, re-encoded as base64.
+ */
+function clipboardWrites(log: Uint8Array): ClipboardWrite[] {
+  const view = new DataView(log.buffer, log.byteOffset, log.byteLength)
+  const writes: ClipboardWrite[] = []
+  for (let at = 0; at < log.length;) {
+    if (log.length - at < 8) throw new Error(`libvterm clipboard write log ends inside a record header at byte ${at}`)
+    const mask = view.getUint32(at, true)
+    const length = view.getUint32(at + 4, true)
+    const bytes = log.subarray(at + 8, at + 8 + length)
+    if (bytes.length !== length) throw new Error(`libvterm clipboard write log ends inside a ${length}-byte record`)
+    at += 8 + length
+    const selector = [...SELECTION_LETTERS].filter((_, bit) => mask & (1 << bit)).join("")
+    const payload = Buffer.from(bytes).toString("base64")
+    try {
+      writes.push({ selector, payload, text: new TextDecoder("utf-8", { fatal: true }).decode(bytes) })
+    } catch (error) {
+      writes.push({ selector, payload, decodeError: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  return writes
+}
+
 function readBytes(mod: LibvtermModule, ptr: number, length: number): Uint8Array {
   const data = new Uint8Array(length)
   for (let i = 0; i < length; i++) {
@@ -211,6 +241,7 @@ export function createLibvtermBackend(
   let screen: number = 0 // VTermScreen* pointer
   let state: number = 0 // VTermState* pointer
   let output: number = 0 // TermlessOutputSink* holding replies until feed() drains them
+  let writes: ClipboardWrite[] = [] // each OSC 52 set the selection callback accepted, this instance (#38825)
   let module: LibvtermModule | null = mod ?? getLoadedModule()
   let cols = opts?.cols ?? DEFAULT_COLS
   let rows = opts?.rows ?? DEFAULT_ROWS
@@ -234,6 +265,7 @@ export function createLibvtermBackend(
     const historyLimit = checkedScrollbackLimit(options.scrollbackLimit ?? configuredLimit)
     // Clean up previous instance if re-initializing
     destroy()
+    writes = []
 
     // Resolve the module -- prefer injected, then shared
     module = mod ?? getLoadedModule()
@@ -332,6 +364,16 @@ export function createLibvtermBackend(
         if (bytesRead === 0) break
         backend.onResponse?.(readBytes(m, outBuf, bytesRead))
       }
+      // Then the clipboard writes this feed completed: the write witness (#38825, @cpo/term 3ad6dc0e).
+      const log = m.termless_vterm_selection_writes(output)
+      const records: number[] = []
+      for (;;) {
+        const bytesRead = m.termless_vterm_output_read(log, outBuf, outBufLen)
+        if (bytesRead < 0) throw new Error("libvterm clipboard write log could not grow; a write record was lost")
+        if (bytesRead === 0) break
+        records.push(...readBytes(m, outBuf, bytesRead))
+      }
+      if (records.length) writes.push(...clipboardWrites(Uint8Array.from(records)))
     } finally {
       m._free(outBuf)
     }
@@ -705,6 +747,7 @@ export function createLibvtermBackend(
     OscMetadataExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "libvterm",
+    getClipboardState: () => ({ writes: writes.map((write) => ({ ...write })) }),
     init,
     destroy,
     feed,

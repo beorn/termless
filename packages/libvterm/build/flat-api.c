@@ -66,6 +66,9 @@ typedef struct {
   TermlessOutputSink output; // First member preserves the existing opaque sink ABI.
   TermlessOutputSink clipboard;
   TermlessOutputSink staging;
+  // Every completed set the embedder accepted, in order, as [uint32 mask][uint32 len][len bytes] (#38825): the
+  // write witness, so a write is graded from what libvterm handed over rather than from the read-back.
+  TermlessOutputSink writes;
   VTermState *state;
   char selection_buffer[4096];
 } TermlessSelectionHost;
@@ -84,6 +87,9 @@ static int selection_set(VTermSelectionMask mask, VTermStringFragment frag, void
     host->clipboard = host->staging;
     host->staging = previous;
     host->staging.len = 0;
+    uint32_t header[2] = { (uint32_t)mask, (uint32_t)host->clipboard.len };
+    sink_output((const char *)header, sizeof header, &host->writes);
+    if (host->clipboard.len) sink_output(host->clipboard.bytes, host->clipboard.len, &host->writes);
   }
   return 1;
 }
@@ -141,6 +147,12 @@ int termless_vterm_output_read(TermlessOutputSink *sink, char *buf, int len) {
   return (int)n;
 }
 
+// The write log of the selection host that owns this reply sink; drained with termless_vterm_output_read, which
+// returns -1 once an allocation failure has lost a record.
+TermlessOutputSink *termless_vterm_selection_writes(TermlessOutputSink *sink) {
+  return &((TermlessSelectionHost *)sink)->writes;
+}
+
 void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
   TermlessSelectionHost *host = (TermlessSelectionHost *)sink;
   vterm_state_set_selection_callbacks(host->state, NULL, NULL, NULL, 0);
@@ -148,6 +160,7 @@ void termless_vterm_output_detach(VTerm *vt, TermlessOutputSink *sink) {
   free(sink->bytes);
   free(host->clipboard.bytes);
   free(host->staging.bytes);
+  free(host->writes.bytes);
   free(host);
 }
 

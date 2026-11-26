@@ -14,7 +14,7 @@ import { existsSync, readFileSync, realpathSync } from "node:fs"
 import { hasExtension } from "../../../src/terminal/types.ts"
 import { describe, test, expect } from "vitest"
 import { createVtermScreen } from "vterm.js"
-import { createVtermBackend } from "../src/backend.ts"
+import { createVtermBackend, engineHandsClipboardWrites } from "../src/backend.ts"
 
 describe("createVtermBackend", () => {
   // @failure Eager options or a cached first declaration drop the host's pixel size before it reaches the engine.
@@ -1323,5 +1323,43 @@ describe("createVtermBackend icon label state", () => {
     expect(backend.getIconLabel?.()).toBe("")
 
     backend.destroy()
+  })
+})
+
+// @failure An OSC 52 write on vterm.js can only be graded from the read-back, which is read evidence (#38825,
+//   @cpo/term 3ad6dc0e), or an engine without the hook is reported as having one, so the write grades on no evidence.
+describe("createVtermBackend clipboard write witness (#38825)", () => {
+  const enc = new TextEncoder()
+
+  test("records what each OSC 52 set handed the engine, as received; a query adds nothing", () => {
+    const backend = createVtermBackend({ cols: 20, rows: 2 })
+    expect(typeof backend.getClipboardState).toBe("function")
+    backend.feed(enc.encode(`\x1b]52;c;${btoa("one")}\x07`))
+    backend.feed(enc.encode("\x1b]52;pc;not base64!\x1b\\"))
+    backend.feed(enc.encode("\x1b]52;c;?\x07"))
+    const { writes } = backend.getClipboardState!()
+    expect(writes).toMatchObject([
+      { selector: "c", payload: btoa("one"), text: "one" },
+      { selector: "pc", payload: "not base64!", decodeError: expect.any(String) },
+    ])
+    expect(writes).toHaveLength(2)
+    backend.destroy()
+  })
+
+  test("a fresh init starts with no writes", () => {
+    const backend = createVtermBackend({ cols: 20, rows: 2 })
+    backend.feed(enc.encode(`\x1b]52;c;${btoa("before")}\x07`))
+    backend.init({ cols: 20, rows: 2 })
+    expect(backend.getClipboardState!().writes).toEqual([])
+    backend.destroy()
+  })
+
+  test("an engine that ignores onClipboardWrite has no hook, so the backend claims none", () => {
+    const withoutHook: typeof createVtermScreen = (options) => {
+      const { onClipboardWrite: _dropped, ...rest } = options ?? {}
+      return createVtermScreen(rest)
+    }
+    expect(engineHandsClipboardWrites(withoutHook)).toBe(false)
+    expect(engineHandsClipboardWrites(createVtermScreen)).toBe(true)
   })
 })

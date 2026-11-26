@@ -57,6 +57,40 @@ const BLANK_CELL: Cell = {
   hyperlink: null,
 }
 
+type ClipboardWrite = { selector: string; payload: string; text?: string; decodeError?: string }
+
+/** One OSC 52 set as the engine handed it over, with its text when the payload decodes as UTF-8 base64. */
+function clipboardWrite(selector: string, payload: string): ClipboardWrite {
+  try {
+    const bytes = Uint8Array.from(atob(payload), (char) => char.charCodeAt(0))
+    return { selector, payload, text: new TextDecoder("utf-8", { fatal: true }).decode(bytes) }
+  } catch (error) {
+    return { selector, payload, decodeError: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+const clipboardHookByEngine = new WeakMap<typeof createScreen, boolean>()
+
+/**
+ * Whether this engine hands OSC 52 sets to onClipboardWrite (#38825, @cto 18db9fba). Measured, not read from a version:
+ * an engine without the option ignores it silently, and the workspace override can carry the hook under an old version.
+ */
+export function engineHandsClipboardWrites(create: typeof createScreen = createScreen): boolean {
+  let handed = clipboardHookByEngine.get(create)
+  if (handed === undefined) {
+    handed = false
+    create({
+      cols: 1,
+      rows: 1,
+      onClipboardWrite: () => {
+        handed = true
+      },
+    }).process(new TextEncoder().encode("\x1b]52;c;AA==\x07"))
+    clipboardHookByEngine.set(create, handed)
+  }
+  return handed
+}
+
 /**
  * Create a full-featured vterm.js backend for termless.
  *
@@ -81,6 +115,7 @@ export function createVtermBackend(
   let screen: Screen | null = null
   let stopOsc777: (() => void) | null = null
   let osc777Payloads: string[] = []
+  let clipboardWrites: ClipboardWrite[] = []
 
   function ensureScreen(): Screen {
     if (!screen) throw new Error("vterm backend not initialized — call init() first")
@@ -93,7 +128,10 @@ export function createVtermBackend(
     stopOsc777 = null
     osc777Payloads = []
     const instanceOsc777Payloads = osc777Payloads
+    clipboardWrites = []
+    const instanceClipboardWrites = clipboardWrites
     screen = createScreen({
+      onClipboardWrite: (selector, payload) => instanceClipboardWrites.push(clipboardWrite(selector, payload)),
       cols: options.cols,
       rows: options.rows,
       scrollbackLimit: options.scrollbackLimit ?? 1000,
@@ -366,6 +404,10 @@ export function createVtermBackend(
     PasteEncodingExtension = {
     getAdapterSources: () => adapterDeclaration.sources,
     name: "vterm",
+    // Present only when the engine hands its OSC 52 sets over; an older vterm.js has no write witness (#38825).
+    ...(engineHandsClipboardWrites() && {
+      getClipboardState: () => ({ writes: clipboardWrites.map((write) => ({ ...write })) }),
+    }),
     init,
     destroy,
     feed,

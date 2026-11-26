@@ -32,6 +32,8 @@ export interface LibvtermModule {
   /** Moves up to len pending reply bytes, in order, into buf; -1 once the sink has lost a reply. */
   termless_vterm_output_read(sink: number, buf: number, len: number): number
   termless_vterm_output_detach(vt: number, sink: number): void
+  /** The clipboard write log of the selection host owning this reply sink; drain it with termless_vterm_output_read. */
+  termless_vterm_selection_writes(sink: number): number
   /** Temporarily captures native input output without changing the selection owner; 0 on allocation failure. */
   termless_vterm_output_capture_begin(vt: number): number
   /** Restores the original reply callback before freeing the temporary input sink. */
@@ -169,6 +171,7 @@ export async function initLibvterm(): Promise<LibvtermModule> {
       "_vterm_mouse_button",
       "_termless_vterm_output_capture_begin",
       "_termless_vterm_output_capture_end",
+      "_termless_vterm_selection_writes",
       "_termless_vterm_observer_new",
       "_termless_vterm_observer_free",
       "_termless_vterm_observer_enable_reflow",
@@ -214,6 +217,7 @@ export async function initLibvterm(): Promise<LibvtermModule> {
     module.termless_vterm_output_attach = cwrap("termless_vterm_output_attach", "number", ["number"])
     module.termless_vterm_output_read = cwrap("termless_vterm_output_read", "number", ["number", "number", "number"])
     module.termless_vterm_output_detach = cwrap("termless_vterm_output_detach", null, ["number", "number"])
+    module.termless_vterm_selection_writes = cwrap("termless_vterm_selection_writes", "number", ["number"])
     module.termless_vterm_output_capture_begin = cwrap("termless_vterm_output_capture_begin", "number", ["number"])
     module.termless_vterm_output_capture_end = cwrap("termless_vterm_output_capture_end", null, [
       "number",
